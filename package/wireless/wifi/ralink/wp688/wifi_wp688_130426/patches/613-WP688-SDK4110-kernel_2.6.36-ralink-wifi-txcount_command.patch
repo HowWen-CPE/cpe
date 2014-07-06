@@ -1,0 +1,90 @@
+diff -urN a/rt2860v2/ap/ap_cfg.c b/rt2860v2/ap/ap_cfg.c
+--- a/rt2860v2/ap/ap_cfg.c	2013-05-13 18:11:06.417973607 +0800
++++ b/rt2860v2/ap/ap_cfg.c	2013-05-13 18:11:52.081736706 +0800
+@@ -1255,6 +1255,7 @@
+ #endif /* AP_QLOAD_SUPPORT */
+ 
+ 	{"ra_interval",					Set_RateAdaptInterval},
++	{"txcount",				        Set_TxCount},
+ 
+ 
+ 	{"memdebug",					Set_MemDebug_Proc},
+diff -urN a/rt2860v2/common/cmm_info.c b/rt2860v2/common/cmm_info.c
+--- a/rt2860v2/common/cmm_info.c	2013-05-13 18:11:06.397973154 +0800
++++ b/rt2860v2/common/cmm_info.c	2013-05-13 18:12:33.869723396 +0800
+@@ -7732,6 +7732,21 @@
+ }
+ 
+ 
++INT Set_TxCount(
++	IN RTMP_ADAPTER *pAd,
++	IN PSTRING arg)
++{
++	UINT32 txcnt;
++	
++	DBGPRINT(RT_DEBUG_TRACE,("%s():%s\n", __FUNCTION__, arg));
++	
++	txcnt = simple_strtol(arg, 0, 10);
++	pAd->ra_txcnt = txcnt;
++
++	return TRUE;
++
++}
++
+ INT Set_VcoPeriod_Proc(
+ 	IN RTMP_ADAPTER		*pAd,
+ 	IN PSTRING			arg)
+diff -urN a/rt2860v2/common/rtmp_init.c b/rt2860v2/common/rtmp_init.c
+--- a/rt2860v2/common/rtmp_init.c	2013-05-13 18:11:06.393972914 +0800
++++ b/rt2860v2/common/rtmp_init.c	2013-05-13 18:12:45.226094146 +0800
+@@ -3424,6 +3424,7 @@
+ 	/*pAd->ra_interval = DEF_RA_TIME_INTRVAL; */
+ 	pAd->ra_interval = 100; /* Change from 500 to 100ms, for throughput sharp dropping issue */
+ 	pAd->ra_fast_interval = DEF_QUICK_RA_TIME_INTERVAL;
++	pAd->ra_txcnt = 15;
+ 
+ 	/* Tx Sw queue length setting */
+ 	pAd->TxSwQMaxLen = MAX_PACKETS_IN_QUEUE;
+diff -urN a/rt2860v2/include/rtmp.h b/rt2860v2/include/rtmp.h
+--- a/rt2860v2/include/rtmp.h	2013-05-13 18:11:06.401974545 +0800
++++ b/rt2860v2/include/rtmp.h	2013-05-13 18:13:13.353815248 +0800
+@@ -3896,6 +3896,7 @@
+ 	*/
+ 	UINT32			ra_interval;
+ 	UINT32			ra_fast_interval;
++	UINT32			ra_txcnt;
+ 
+ 	/* configuration: read from Registry & E2PROM */
+ 	BOOLEAN bLocalAdminMAC;	/* Use user changed MAC */
+@@ -8500,6 +8501,10 @@
+ 	IN RTMP_ADAPTER *pAd,
+ 	IN PSTRING arg);
+ 
++INT	Set_TxCount(
++	IN	PRTMP_ADAPTER	pAdapter, 
++	IN	PSTRING			arg);
++
+ 
+ #ifdef PRE_ANT_SWITCH
+ INT Set_PreAntSwitch_Proc(
+diff -urN a/rt2860v2/rate_ctrl/alg_legacy.c b/rt2860v2/rate_ctrl/alg_legacy.c
+--- a/rt2860v2/rate_ctrl/alg_legacy.c	2013-05-13 18:11:06.433972543 +0800
++++ b/rt2860v2/rate_ctrl/alg_legacy.c	2013-05-13 15:47:06.209722335 +0800
+@@ -361,7 +361,7 @@
+ #endif
+ 
+ 		/* Check for low traffic case */
+-        if (TxTotalCnt <= 15)
++        if (TxTotalCnt <= pAd->ra_txcnt)
+         {
+ 			UCHAR	TxRateIdx;
+ 			CHAR	mcs[24];
+@@ -628,7 +628,7 @@
+ 			MlmeRALog(pAd, pEntry, RAL_QUICK_DRS, TxErrorRatio, TxTotalCnt);
+ #endif /* DBG_CTRL_SUPPORT */
+ 
+-        if (TxCnt <= 15 && pEntry->HTPhyMode.field.MCS > 1)
++        if (TxCnt <= pAd->ra_txcnt && pEntry->HTPhyMode.field.MCS > 1)
+         {
+ 			MlmeClearAllTxQuality(pEntry);
+ 

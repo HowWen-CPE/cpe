@@ -1,0 +1,189 @@
+--- a/drivers/wlan_modules/hal/ah.c
++++ b/drivers/wlan_modules/hal/ah.c
+@@ -904,6 +904,11 @@ ath_hal_getcapability(struct ath_hal *ah
+         case 4:         /* extra power for certain rates */
+             *result = AH_PRIVATE(ah)->ah_extra_txpow;
+             return HAL_OK;
++	/*add for get max txpower function, daniel@liteon,2013-12-13----->*/		
++	 case 5:         /* hal max power*/
++            *result = AH_PRIVATE(ah)->ah_targetPower;
++            return HAL_OK;
++	/*<-----daniel@liteon,2013-12-13*/		
+         }
+         return HAL_ENOTSUPP;
+     case HAL_CAP_BSSIDMASK:     /* hardware supports bssid mask */
+--- a/drivers/wlan_modules/hal/ah_internal.h
++++ b/drivers/wlan_modules/hal/ah_internal.h
+@@ -686,6 +686,9 @@ struct ath_hal_private {
+     u_int32_t           ah_diagreg;         /* user-specified AR_DIAG_SW */
+     int16_t             ah_power_limit;      /* tx power cap */
+     u_int16_t           ah_max_power_level;   /* calculated max tx power */
++    /*add for get max txpower function, daniel@liteon,2013-12-13----->*/
++    u_int16_t			ah_targetPower;		/*tx calibration max value*/
++    /*<-----daniel@liteon,2013-12-13*/
+     u_int               ah_tp_scale;         /* tx power scale factor */
+     u_int16_t           ah_extra_txpow;     /* low rates extra-txpower */
+ #if AH_DEBUG || AH_PRINT_FILTER
+--- a/drivers/wlan_modules/hal/ar9300/ar9300_eeprom.c
++++ b/drivers/wlan_modules/hal/ar9300/ar9300_eeprom.c
+@@ -3176,6 +3176,9 @@ ar9300_eeprom_set_transmit_power(struct 
+     u_int8_t target_power_val_t2[ar9300_rate_size];
+     u_int8_t target_power_val_t2_eep[ar9300_rate_size];
+     int16_t twice_array_gain = 0, max_power_level = 0;
++    /*add for get max txpower function, daniel@liteon,2013-12-13----->*/
++    int16_t max_power_level_orig=0;
++    /*<-----daniel@liteon,2013-12-13*/
+     struct ath_hal_9300 *ahp = AH9300(ah);
+     int  i = 0;
+     u_int32_t tmp_paprd_rate_mask = 0, *tmp_ptr = NULL;
+@@ -3396,6 +3399,9 @@ ar9300_eeprom_set_transmit_power(struct 
+         i = ALL_TARGET_HT20_0_8_16;     /* ht20 */
+     }
+     max_power_level = target_power_val_t2[i];
++    /*add for get max txpower function, daniel@liteon,2013-12-13----->*/
++    max_power_level_orig=target_power_val_t2_eep[i];
++    /*<-----daniel@liteon,2013-12-13*/
+     /* Adjusting the ah_max_power_level based on chains and antennaGain*/
+     switch (ar9300_get_ntxchains(ahp->ah_tx_chainmask))
+     {
+@@ -3409,6 +3415,12 @@ ar9300_eeprom_set_transmit_power(struct 
+             max_power_level -= twice_array_gain;
+             /* Adjusting maxpower based on chain */
+             max_power_level += INCREASE_MAXPOW_BY_TWO_CHAIN;
++            /*add for get max txpower function, daniel@liteon,2013-12-13----->*/
++	     /* Adjusting maxpower_orig with antennaGain */
++            max_power_level_orig -= twice_array_gain;
++            /* Adjusting maxpower_orig based on chain */
++            max_power_level_orig += INCREASE_MAXPOW_BY_TWO_CHAIN;
++            /*<-----daniel@liteon,2013-12-13*/
+             break;
+         case 3:
+             twice_array_gain = (ahp->twice_antenna_gain >= ahp->twice_antenna_reduction)? 0:
+@@ -3419,12 +3431,20 @@ ar9300_eeprom_set_transmit_power(struct 
+             max_power_level -= twice_array_gain;
+             /* Adjusting maxpower based on chain */
+             max_power_level += INCREASE_MAXPOW_BY_THREE_CHAIN;
++             /*add for get max txpower function, daniel@liteon,2013-12-13----->*/
++            /* Adjusting maxpower with antennaGain */
++            max_power_level_orig -= twice_array_gain;
++            /* Adjusting maxpower based on chain */
++            max_power_level_orig += INCREASE_MAXPOW_BY_THREE_CHAIN;
++            /*<-----daniel@liteon,2013-12-13*/
+             break;
+         default:
+             HALASSERT(0); /* Unsupported number of chains */
+     }
+     AH_PRIVATE(ah)->ah_max_power_level = (int8_t)max_power_level;
+-
++    /*add for get max txpower function, daniel@liteon,2013-12-13----->*/
++    AH_PRIVATE(ah)->ah_targetPower = (int8_t)max_power_level_orig/2;
++    /*<-----daniel@liteon,2013-12-13*/
+     ar9300_calibration_apply(ah, chan->channel);
+ #undef ABS
+ 
+--- a/drivers/wlan_modules/include/ath_dev.h
++++ b/drivers/wlan_modules/include/ath_dev.h
+@@ -2260,6 +2260,9 @@ struct ath_ops {
+      */
+     void        (*get_current_country)(ath_dev_t, HAL_COUNTRY_ENTRY *ctry);
+ 
++    /*add for get max txpower function, daniel@liteon,2013-12-13----->*/
++    void	(*get_txmaxhalpower)(ath_dev_t, int8_t *pt);
++    /*<-----daniel@liteon,2013-12-13*/
+     /**
+      * Set the regulatory domain to hardware
+      * @param dev       : handle to LMAC device
+--- a/drivers/wlan_modules/lmac/ath_dev/ath_internal.h
++++ b/drivers/wlan_modules/lmac/ath_dev/ath_internal.h
+@@ -3431,6 +3431,10 @@ void        ath_process_phyerr(struct at
+     ath_hal_getcapability(_ah, HAL_CAP_TXPOW, 3, _scale)
+ #define ath_hal_settpscale(_ah, _v) \
+     ath_hal_setcapability(_ah, HAL_CAP_TXPOW, 3, _v, NULL)
++/*add for get max txpower function, daniel@liteon,2013-12-13----->*/
++#define ath_hal_getmaxhalpow(_ah,_ppow) \
++    ath_hal_getcapability(_ah, HAL_CAP_TXPOW, 5, _ppow)
++/*add for get max txpower function, daniel@liteon,2013-12-13----->*/
+ #define ath_hal_hastpc(_ah) \
+     (ath_hal_getcapability(_ah, HAL_CAP_TPC, 0, NULL) == HAL_OK)
+ #define ath_hal_gettpc(_ah) \
+--- a/drivers/wlan_modules/lmac/ath_dev/ath_main.c
++++ b/drivers/wlan_modules/lmac/ath_dev/ath_main.c
+@@ -341,6 +341,9 @@ void ath_set_tx_chainmask(ath_dev_t dev,
+ void ath_set_rx_chainmasklegacy(ath_dev_t dev, u_int8_t mask);
+ void ath_set_tx_chainmasklegacy(ath_dev_t dev, u_int8_t mask);
+ void ath_get_maxtxpower(ath_dev_t dev, u_int32_t *txpow);
++/*add for get max txpower function, daniel@liteon,2013-12-13----->*/
++static void ath_get_txmaxhalpower(ath_dev_t, int8_t *pt);
++/*<-----daniel@liteon,2013-12-13*/
+ void ath_read_from_eeprom(ath_dev_t dev, u_int16_t address, u_int32_t len, u_int16_t **value, u_int32_t *bytesread);
+ int ath_rate_newstate_set(ath_dev_t dev , int index, int up);
+ #if ATH_SUPPORT_WIFIPOS
+@@ -6647,6 +6650,9 @@ static const struct ath_ops ath_ar_ops =
+     ath_set_ps_state,           /* setpwrsavestate */
+     ath_set_country,            /* set_country */
+     ath_get_currentCountry,     /* get_current_country */
++    /*add for get max txpower function, daniel@liteon,2013-12-13----->*/
++    ath_get_txmaxhalpower,   /*get_txhalmaxpower*/
++    /*<-----daniel@liteon,2013-12-13*/
+     ath_set_regdomain,          /* set_regdomain */
+     ath_get_regdomain,          /* get_regdomain */
+     ath_get_dfsdomain,          /* get_dfsdomain */
+@@ -9937,6 +9943,20 @@ ath_get_common_power(u_int16_t freq)
+ {
+     return getCommonPower(freq);
+ }
++/*add for get max txpower function, daniel@liteon,2013-12-13----->*/
++/*
++ *
++Get hal calibration max power.
++ */
++static void
++ath_get_txmaxhalpower(ath_dev_t dev, int8_t *txpl)
++{
++    	struct ath_softc *sc = ATH_DEV_TO_SC(dev);
++	u_int32_t txpow;
++	ath_hal_getmaxhalpow(sc->sc_ah,&txpow);
++	*txpl = txpow;
++}
++/*<-----daniel@liteon,2013-12-13*/
+ 
+ #ifdef ATH_CHAINMASK_SELECT
+ 
+--- a/drivers/wlan_modules/os/linux/src/ath_iw_handler.c
++++ b/drivers/wlan_modules/os/linux/src/ath_iw_handler.c
+@@ -65,6 +65,9 @@ enum {
+ 
+ #define TABLE_SIZE(a)    (sizeof (a) / sizeof (a[0]))
+ 
++/*add for get max txpower function, daniel@liteon,2013-12-13----->*/
++#define TXMAXHAL_PARAM_SHIFT 0x100
++/*<-----daniel@liteon,2013-12-13*/
+ static const struct iw_priv_args ath_iw_priv_args[] = {
+     /*
+     ** HAL interface routines and parameters
+@@ -313,6 +316,9 @@ static const struct iw_priv_args ath_iw_
+     { ATH_PARAM_TXPOWER_LIMIT2G | ATH_PARAM_SHIFT
+         ,0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1,      "getTxPowLim2G" },
+ 
++    /*add for get max txpower function, daniel@liteon,2013-12-13----->*/
++    { TXMAXHAL_PARAM_SHIFT,0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1,       "getTxMaxPower2G" },
++    /*<-----daniel@liteon,2013-12-13*/
+     { ATH_PARAM_TXPOWER_LIMIT5G | ATH_PARAM_SHIFT,
+         IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0,       "TXPowLim5G" },
+     { ATH_PARAM_TXPOWER_LIMIT5G | ATH_PARAM_SHIFT
+@@ -1556,6 +1562,15 @@ static int ath_iw_getparam(struct net_de
+             retval = -EOPNOTSUPP;
+         }
+     }
++    /*add for get max txpower function, daniel@liteon,2013-12-13----->*/
++    else if (param & TXMAXHAL_PARAM_SHIFT)
++    {
++    	int8_t txpl;
++    	scn->sc_ops->get_txmaxhalpower(scn->sc_dev, &txpl);
++		retval = (int ) txpl;
++             val[0] = (int)txpl;
++    }
++    /*<-----daniel@liteon,2013-12-13*/
+     else
+     {
+         if ( !ath_hal_get_config_param(ah, (HAL_CONFIG_OPS_PARAMS_TYPE)param, extra) )

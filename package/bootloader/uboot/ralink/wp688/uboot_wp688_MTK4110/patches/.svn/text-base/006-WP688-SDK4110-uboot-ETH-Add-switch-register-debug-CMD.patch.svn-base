@@ -1,0 +1,133 @@
+--- old/drivers/rt2880_eth.c	2012-11-28 15:36:34.000000000 +0800
++++ new/drivers/rt2880_eth.c	2012-11-28 16:10:52.000000000 +0800
+@@ -3122,4 +3122,130 @@
+ );
+ #endif // RALINK_SWITCH_DEBUG_FUN //
+ 
++/*added by sean. Nov 2012, 28*/
++#ifdef LITEON_SRC_VALID
++#ifdef  LITEON_RALINK_SWITCH_DIAGNOSE
++int do_sw_ctrl_command(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
++{
++
++	ulong reg_addr;
++	u32 write_data;
++
++	reg_addr = simple_strtoul(argv[2], NULL, 16);
++	
++	if (strcmp("r", argv[1]) == 0 || strcmp("R", argv[1]) == 0) {
++		if (argc < 3) {
++			printf ("Usage:\n%s\n", cmdtp->usage);
++			return 1;
++		}
++
++		/*read*/
++		printf("Get: reg[%s] = 0x%x\n", argv[2], RALINK_REG(reg_addr));
++		
++	} else if (strcmp("w", argv[1]) == 0 || strcmp("W", argv[1]) == 0) {
++		if (argc < 4) {
++			printf ("Usage:\n%s\n", cmdtp->usage);
++			return 1;
++		}
++
++		/*write*/
++		printf("writing......\n");
++		write_data = simple_strtoul(argv[3], NULL, 16);
++		RALINK_REG(reg_addr) = write_data;
++
++		/*judge whether it was wrote successful.*/
++		if (RALINK_REG(reg_addr) == write_data) 
++			printf("Set: reg[%s] = 0x[%s]\n", argv[2], argv[3]);
++		else {
++			printf("Error: write failed!!!\n");
++			return 1;
++		}
++	} else {
++		printf ("Usage:\n%s\n", cmdtp->usage);
++		return 1;
++	}
++
++	
++	return 0;
++}
++
++U_BOOT_CMD(
++ 	sw_ctrl,	4,	1,	do_sw_ctrl_command,
++ 	"sw_ctrl  - mt7620 embedded switch command\n",
++ 	"<w> <register_addr> <value>\n"
++ 	"	- write value to register\n"
++ 	"<r> <register_addr>\n"
++ 	"	- read from register\n\n"
++ 	"Example: \n"
++ 	"sw_ctrl w 0xB0113000 0x5e333\n"
++ 	"	- write x5e333 to PMCR_P0\n"
++ 	"sw_ctrl r 0xB0000014\n"
++ 	"	- read from SYSCFG1\n"
++);
++
++int do_sw_phy_command(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
++{
++	u32 read_data, write_data;
++	u32 phy_addr, phy_register;
++
++	phy_addr = simple_strtoul(argv[2], NULL, 10);
++	phy_register = simple_strtoul(argv[3], NULL, 16);
++	
++	if (strcmp("r", argv[1]) == 0 || strcmp("R", argv[1]) == 0) {
++		if (argc < 4) {
++			printf ("Usage:\n%s\n", cmdtp->usage);
++			return 1;
++		}
++
++		/*read */
++		mii_mgr_read(phy_addr, phy_register, &read_data);
++		printf("Get: phy[%s] reg[%s] = 0x%x\n", argv[2], argv[3], read_data);
++		
++	} else if (strcmp("w", argv[1]) == 0 || strcmp("W", argv[1]) == 0) {
++		if (argc < 5) {
++			printf ("Usage:\n%s\n", cmdtp->usage);
++			return 1;
++		}
++
++		/*write*/
++		write_data = simple_strtoul(argv[4], NULL, 16);
++		mii_mgr_write(phy_addr, phy_register, write_data);
++
++		udelay(100);
++
++		/*read from register to judge if it was wrote correctly*/
++		mii_mgr_read(phy_addr, phy_register, &read_data);
++
++		if (read_data == write_data) 
++			printf("Set: phy[%s] reg[%s] = 0x[%x]\n", argv[2], argv[3], read_data);
++		else {
++			printf("Error: write failed!!!\n");
++			return 1;
++		}
++	} else {
++		printf ("Usage:\n%s\n", cmdtp->usage);
++		return 1;
++	}
++	
++	return 0;
++}
++
++U_BOOT_CMD(
++ 	sw_phy,	5,	1,	do_sw_phy_command,
++ 	"sw_phy  - mt7620 embedded switch command\n",
++ 	"<w> <phy_addr> <phy_register> <value>\n"
++ 	"	- write value to phy register of phy addr\n"
++ 	"<r> <phy_addr> <phy_register>\n"
++ 	"	- read from phy register of phy addr\n\n"
++ 	"Example: \n"
++ 	"sw_phy w 0 4 0x0461\n"
++ 	"	- write 0x0461 to register 4 of phy 0\n"
++ 	"sw_phy r 0 0\n"
++ 	"	- read from register 0 of phy 0\n"
++);
++
++#endif
++#endif //LITEON_SRC_VALID
++/*end sean.*/
++
+ #endif	/* CONFIG_TULIP */

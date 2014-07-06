@@ -1,0 +1,1023 @@
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/umac/extap/ieee80211_extap.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/umac/extap/ieee80211_extap.c	2013-08-27 07:05:29.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/extap/ieee80211_extap.c	2014-01-28 15:03:30.000000000 +0800
+@@ -139,15 +139,41 @@
+ 		switch(nd->nd_icmph.icmp6_type) {
+ 		case ADF_ND_NSOL:	/* ARP Request */
+ 			ha = (eth_icmp6_lladdr_t *)nd->nd_opt;
++			
++			/* Note down MAC-IP in output function, but not here.
++			 *  Felix@liteon, 2014-1-28 ----->
++			 */
++			#if 0
+ 			/* save source ip */
++			#if MI_TABLE_AS_TREE /*Felix@liteon, 2014-1-8 */
++			mi_add(vap->iv_ic->ic_table, iphdr->ipv6_saddr.s6_addr,
++				ha->addr, ATH_MITBL_IPV6);
++			#else
+ 			mi_add(&vap->iv_ic->ic_miroot, iphdr->ipv6_saddr.s6_addr,
+ 				ha->addr, ATH_MITBL_IPV6);
++			#endif
++			#endif
++			/*  <----- Felix@liteon, 2014-1-28 */
++			
+ 			return;
+ 		case ADF_ND_NADVT:	/* ARP Response */
+ 			ha = (eth_icmp6_lladdr_t *)nd->nd_opt;
++
++			/* Note down MAC-IP in output function, but not here.
++			 *  Felix@liteon, 2014-1-28 ----->
++			 */
++			#if 0
+ 			/* save target ip */
++			#if MI_TABLE_AS_TREE /*Felix@liteon, 2014-1-8 */
++			mi_add(vap->iv_ic->ic_table, nd->nd_target.s6_addr,
++				ha->addr, ATH_MITBL_IPV6);
++			#else
+ 			mi_add(&vap->iv_ic->ic_miroot, nd->nd_target.s6_addr,
+ 				ha->addr, ATH_MITBL_IPV6);
++			#endif
++			#endif
++			/*  <----- Felix@liteon, 2014-1-28 */
++			
+ 			/*
+ 			 * Unlike ipv4, source IP and MAC is not present.
+ 			 * Nothing to restore in the packet
+@@ -168,8 +194,17 @@
+ 			eaip6(iphdr->ipv6_saddr.s6_addr), eaip6(iphdr->ipv6_daddr.s6_addr),
+ 			eamac(eh->ether_shost), eamac(eh->ether_dhost));
+ 	}
++	#if MI_TABLE_AS_TREE /*Felix@liteon, 2014-1-8 */
++	if (vap->iv_ic->ic_table->busy == 0){
++		vap->iv_ic->ic_table->busy = 1;
++	mac = mi_lkup(vap->iv_ic->ic_table, iphdr->ipv6_daddr.s6_addr,
++			ATH_MITBL_IPV6);
++		vap->iv_ic->ic_table->busy = 0;
++	}
++	#else
+ 	mac = mi_lkup(vap->iv_ic->ic_miroot, iphdr->ipv6_daddr.s6_addr,
+ 			ATH_MITBL_IPV6);
++	#endif
+ 	if (mac) {
+ 		eadbg2(eh->ether_dhost, mac);
+ 		IEEE80211_ADDR_COPY(eh->ether_dhost, mac);
+@@ -210,13 +245,22 @@
+ 	    	    arp->ar_op == ADF_ARP_RREQ) {
+ 			return 0;
+ 		}
+-		mac = mi_lkup(vap->iv_ic->ic_miroot, arp->ar_sip,
++
++		/* The followinig code is Useless. For ARP reply package, arp->ar_sip will not be added to
++		 *  the MAC-IP table based on current design(ieee80211_extap_out_arp), so the mac is always NULL.
++		 *  Felix@liteon, 2014-1-8	-----> 
++		*/
++		#if 0	
++		mac = mi_lkup(vap->iv_ic->ic_table, arp->ar_sip,
+ 				ATH_MITBL_IPV4);
+-		if (mac) IEEE80211_ADDR_COPY(arp->ar_sha, mac);
++		if (mac) IEEE80211_ADDR_COPY(arp->ar_sha, mac);		
++		#endif
++		/* <-----Felix@liteon, 2014-1-8 */
+ 
+ 		print_arp(eh);
+ 		sip = arp->ar_sip;
+ 		dip = arp->ar_tip;
++		
+         	break;
+ 
+ 	case ETHERTYPE_PAE:
+@@ -234,8 +278,16 @@
+ 			__func__, __LINE__, eh->ether_type);
+ 		return 0;
+ 	}
+-
++	
++	#if MI_TABLE_AS_TREE /*Felix@liteon, 2014-1-8 */
++	if (vap->iv_ic->ic_table->busy == 0){
++		vap->iv_ic->ic_table->busy = 1;
++	mac = mi_lkup(vap->iv_ic->ic_table, dip, ATH_MITBL_IPV4);
++		vap->iv_ic->ic_table->busy = 0;
++	}
++	#else
+ 	mac = mi_lkup(vap->iv_ic->ic_miroot, dip, ATH_MITBL_IPV4);
++	#endif
+ 	/*
+ 	 * XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
+ 	 * XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
+@@ -282,10 +334,22 @@
+ 
+ 	print_arp(eh);
+ 
+-	/* For ARP requests, note down the sender's details */
+-	mi_add(&vap->iv_ic->ic_miroot, arp->ar_sip, arp->ar_sha,
+-		ATH_MITBL_IPV4);
+-
++	/* For ARP requests, note down the sender's details.
++	 *  Felix@liteon, 2014-1-8 -----> 
++	*/
++	#if MI_TABLE_AS_TREE /*Felix@liteon, 2014-1-8 */
++	if (vap->iv_ic->ic_table != NULL){
++		if (vap->iv_ic->ic_table->busy == 0){
++			vap->iv_ic->ic_table->busy = 1;
++			mi_add(vap->iv_ic->ic_table, arp->ar_sip, arp->ar_sha, ATH_MITBL_IPV4);
++			vap->iv_ic->ic_table->busy = 0;
++		}
++	}
++	#else
++	mi_add(&vap->iv_ic->ic_miroot, arp->ar_sip, arp->ar_sha, ATH_MITBL_IPV4);
++	#endif
++	/* <-----Felix@liteon, 2014-1-8 */
++	
+ #if 1
+ 	dbg4("\t\t\tout %s\t" eaistr "\t" eamstr "\t" eaistr "\t" eamstr "\n",
+ 		arps[arp->ar_op],
+@@ -302,11 +366,20 @@
+ 	/* Modify ARP content as if we initiated the req */
+ 	eadbg2(arp->ar_sha, vap->iv_myaddr);
+ 	IEEE80211_ADDR_COPY(arp->ar_sha, vap->iv_myaddr);
+-	/* For ARP replys, note down the target's details */
++	
++	/* Topology:	PC1----extsta----AP-----PC2
++	 *  The following code add MAC-IP of PC2 to extsta. Actually, we only need to
++	 *  added the MAC-IP of PC1, so the following code is useless based on the 
++	 *  current design.  Felix@liteon, 2014-1-8,-----> 
++	 */
++	#if 0	
++	/* For ARP replys, note down the target's details */	
+ 	if (arp->ar_op == ADF_ARP_RSP || arp->ar_op == ADF_ARP_RRSP) {
+-		mi_add(&vap->iv_ic->ic_miroot, arp->ar_tip, arp->ar_tha,
++		mi_add(vap->iv_ic->ic_table, arp->ar_tip, arp->ar_tha,
+ 			ATH_MITBL_IPV4);
+ 	}
++	#endif
++	/*<-----Felix@liteon, 2014-1-8*/
+ 
+ #if 1
+ 	dbg4("\t\t\tOUT %s\t" eaistr "\t" eamstr "\t" eaistr "\t" eamstr "\n",
+@@ -324,11 +397,37 @@
+ ieee80211_extap_out_ipv4(wlan_if_t vap, struct ether_header *eh)
+ {
+ 	adf_net_iphdr_t	*iphdr = (adf_net_iphdr_t *)(eh + 1);
+-	u_int8_t	*mac, *ip;
++	u_int8_t	*mac = NULL;
+ 
+-	ip = (u_int8_t *)&iphdr->ip_daddr;
+-	mac = mi_lkup(vap->iv_ic->ic_miroot, ip, ATH_MITBL_IPV4);
++	/* 
++	 * If MAC-IP entry non-exist, add IP packet information to MAC-IP tree
++	 * Felix@liteon, 2014-1-8 ----->
++	 */
++	#if MI_TABLE_AS_TREE
++	u_int8_t *ip_s = (u_int8_t *)&iphdr->ip_saddr;
++	if(vap->iv_ic->ic_table != NULL){
++		if (vap->iv_ic->ic_table->busy == 0){
++			vap->iv_ic->ic_table->busy = 1;
++		mac = mi_lkup(vap->iv_ic->ic_table, ip_s, ATH_MITBL_IPV4);
++			if (!mac)
++		mi_add(vap->iv_ic->ic_table, ip_s, eh->ether_shost, ATH_MITBL_IPV4);
++			vap->iv_ic->ic_table->busy = 0;
++		}
++	}
++	#endif
++	/* <----- Felix@liteon, 2014-1-8 */
++	
++
++	/* Topology:	PC1----extsta----AP-----PC2
++	 *  The following code add MAC-IP of PC2 to extsta. Actually, we only need to
++	 *  added the MAC-IP of PC1, so the following code is useless based on the 
++	 *  current design.  Felix@liteon, 2014-1-8,-----> 
++	 */
+ 
++	#if 0
++	u_int8_t *ip = (u_int8_t *)&iphdr->ip_daddr;
++	mac = mi_lkup(vap->iv_ic->ic_table, ip, ATH_MITBL_IPV4);
++	
+ 	/*
+ 	 * XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
+ 	 * XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
+@@ -345,7 +444,8 @@
+ 	} else {
+ 		/* XXX XXX what should we do XXX XXX */
+ 	}
+-
++	#endif
++	/*<----- Felix@liteon, 2014-1-8 */
+ 	eadbg2(eh->ether_shost, vap->iv_myaddr);
+ 	IEEE80211_ADDR_COPY(eh->ether_shost, vap->iv_myaddr);
+ }
+@@ -355,13 +455,38 @@
+ ieee80211_extap_out_ipv6(wlan_if_t vap, struct ether_header *eh)
+ {
+ 	adf_net_ipv6hdr_t	*iphdr = (adf_net_ipv6hdr_t *)(eh + 1);
+-	u_int8_t		*mac, *ip;
++	u_int8_t		*mac = NULL;
+ 
+ 	//dbg6("out ipv6(0x%x): " eastr6 " " eamstr,
+-	//	iphdr->ipv6_nexthdr,
+-	//	eaip6(iphdr->ipv6_saddr.s6_addr),
+-	//	eamac(eh->ether_shost));
+-	print_ipv6("out6", vap, eh);
++	//iphdr->ipv6_nexthdr,
++	//eaip6(iphdr->ipv6_saddr.s6_addr),
++	//eamac(eh->ether_shost));
++	//print_ipv6("out6", vap, eh);
++
++	/* This maybe limit the throughput, disable it here, maybe re-enable later 
++	 *  Felix@liteon, 2014-1-28 ----->
++	 */
++	#if 0
++	/*
++	 * If MAC-IP entry is non-exist, add IP packet information to MAC-IP tree, 
++	 * Felix@liteon 2014-1-8 ----->
++	 */
++	#if MI_TABLE_AS_TREE
++	u_int8_t *ip_s = iphdr->ipv6_saddr.s6_addr;
++	if(vap->iv_ic->ic_table != NULL)
++		if (vap->iv_ic->ic_table->busy == 0){
++			vap->iv_ic->ic_table->busy = 1;
++		mac = mi_lkup(vap->iv_ic->ic_table, ip_s, ATH_MITBL_IPV6);
++
++	if(!mac){
++		mi_add(vap->iv_ic->ic_table, ip_s, eh->ether_shost, ATH_MITBL_IPV6);
++			vap->iv_ic->ic_table->busy = 0;
++		}
++	}
++	#endif
++	/* <----- Felix@liteon 2014-1-8 */
++	#endif
++	/* <----- Felix@liteon, 2014-1-28 */
+ 
+ 	if (iphdr->ipv6_nexthdr == ADF_NEXTHDR_ICMP) {
+ 		adf_net_nd_msg_t	*nd = (adf_net_nd_msg_t *)(iphdr + 1);
+@@ -375,8 +500,17 @@
+ 		case ADF_ND_NSOL:	/* ARP Request */
+ 			ha = (eth_icmp6_lladdr_t *)nd->nd_opt;
+ 			/* save source ip */
+-			mi_add(&vap->iv_ic->ic_miroot, iphdr->ipv6_saddr.s6_addr,
+-				ha->addr, ATH_MITBL_IPV6);
++			#if MI_TABLE_AS_TREE /* Felix@liteon 2014-1-8 */
++			if(OS_MEMCMP(vap->iv_myaddr, ha->addr , IEEE80211_ADDR_LEN) == 0)
++				break;
++			if (vap->iv_ic->ic_table->busy == 0){
++				vap->iv_ic->ic_table->busy = 1;
++				mi_add(vap->iv_ic->ic_table, iphdr->ipv6_saddr.s6_addr, ha->addr, ATH_MITBL_IPV6);
++				vap->iv_ic->ic_table->busy = 0;
++			}
++			#else
++				mi_add(&vap->iv_ic->ic_miroot, iphdr->ipv6_saddr.s6_addr, ha->addr, ATH_MITBL_IPV6);
++			#endif
+ #define recheck	1
+ #if recheck
+ 			eadbg2(ha->addr, vap->iv_myaddr);
+@@ -391,10 +525,22 @@
+ #endif
+ 			break;
+ 		case ADF_ND_NADVT:	/* ARP Response */
++
++			/* Note down MAC-IP in ARP request , but not ARP response.
++			 *  Felix@liteon, 2014-1-28 ----->
++			 */
++			#if 0
+ 			ha = (eth_icmp6_lladdr_t *)nd->nd_opt;
+ 			/* save target ip */
++			#if MI_TABLE_AS_TREE /* Felix@liteon 2014-1-8 */
++			mi_add(vap->iv_ic->ic_table, nd->nd_target.s6_addr,
++				ha->addr, ATH_MITBL_IPV6);
++			#else
+ 			mi_add(&vap->iv_ic->ic_miroot, nd->nd_target.s6_addr,
+ 				ha->addr, ATH_MITBL_IPV6);
++			#endif
++			#endif
++			/* <----- Felix@liteon, 2014-1-28 */
+ #if recheck
+ 			eadbg2(ha->addr, vap->iv_myaddr);
+ 			IEEE80211_ADDR_COPY(ha->addr, vap->iv_myaddr);
+@@ -424,8 +570,14 @@
+ 			eamac(eh->ether_shost), eamac(eh->ether_dhost));
+ 	}
+ 
+-	ip = iphdr->ipv6_daddr.s6_addr;
+-	mac = mi_lkup(vap->iv_ic->ic_miroot, ip, ATH_MITBL_IPV6);
++	/* Topology:	PC1----extsta----AP-----PC2
++	 *  The following code add MAC-IP of PC2 to extsta. Actually, we only need to
++	 *  added the MAC-IP of PC1, so the following code is useless based on the 
++	 *  current design.  Felix@liteon, 2014-1-8,-----> 
++	 */
++	#if 0
++	u_int8_t *ip = iphdr->ipv6_daddr.s6_addr;
++	mac = mi_lkup(vap->iv_ic->ic_table, ip, ATH_MITBL_IPV6);
+ 
+ 	/*
+ 	 * XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
+@@ -443,7 +595,8 @@
+ 	} else {
+ 		/* XXX XXX what should we do XXX XXX */
+ 	}
+-
++	#endif
++	/*<----- Felix@liteon, 2014-1-8 */
+ 	eadbg2(eh->ether_shost, vap->iv_myaddr);
+ 	IEEE80211_ADDR_COPY(eh->ether_shost, vap->iv_myaddr);
+ 
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/umac/extap/ieee80211_mitbl.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/umac/extap/ieee80211_mitbl.c	2013-08-27 07:05:29.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/extap/ieee80211_mitbl.c	2014-01-28 14:59:13.000000000 +0800
+@@ -14,9 +14,9 @@
+  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
+-
+-#define MI_TABLE_AS_ARRAY	0
+-#define MI_TABLE_AS_TREE	1
++/* Moved to ieee80211_mitbl.h for using it in the other files, Felix@liteon, 2014-1-8 */
++//#define MI_TABLE_AS_ARRAY	0
++//#define MI_TABLE_AS_TREE	1
+ 
+ #include <osdep.h>
+ #include <if_llc.h>
+@@ -169,6 +169,15 @@
+ static int mi_prefix_match(u_int8_t *, u_int8_t *, int);
+ static int mi_addr_bit_set(u_int8_t *, int, int);
+ 
++/*Used by extsta function, Felix@liteon, 2014-1-8 ----->*/
++//support limiting max stations
++static int mi_tbl_lkup_mac(EXTAP_DBG_PARM mi_node_t *, u_int8_t *);
++//support againg mechacism
++static void mi_tbl_get_kick_entries(EXTAP_DBG_PARM mi_node_t *, timeout_entries_t *, const u_int32_t);
++//support limiting max stations and max MAC-IP entries
++static int mi_tbl_is_full(EXTAP_DBG_PARM mi_table_t *, timeout_entries_t *);
++/* <----- */
++
+ static __inline__ mi_node_t *
+ mi_node_alloc(void)
+ {
+@@ -223,7 +232,12 @@
+ 		}
+ 	}
+ 	node->ip_ver = ip_ver;
+-
++	
++	/* Initial timestamp. Felix@liteon, 2014-1-8 -----> */
++	#if MI_TABLE_AS_TREE
++	node->timestamp_ms = (u_int32_t)CONVERT_SYSTEM_TIME_TO_MS(OS_GET_TIMESTAMP());
++	#endif
++	/* <----- Felix@liteon, 2014-1-8 */ 		
+ }
+ 
+ static int
+@@ -283,12 +297,31 @@
+ 
+ 
+ mi_node_t *
++#if MI_TABLE_AS_TREE /* modify the input params, Felix@liteon, 2014-1-8 */
++mi_tbl_add(EXTAP_DBG_PARM mi_table_t *table, u_int8_t *ipaddr, u_int8_t *h_dest, int ip_ver)
++#else
+ mi_tbl_add(EXTAP_DBG_PARM mi_node_t **root, u_int8_t *ipaddr, u_int8_t *h_dest, int ip_ver)
++#endif
+ {
+ 
+ 	mi_node_t *fn, *in, *ln;
+ 	int bit = 0, i;
+ 
++	/* Felix@liteon, 2014-1-8, -----> */
++	#if MI_TABLE_AS_TREE
++	if(table == NULL)
++	{
++		printk("%s:%d---MAC-IP table was not initialized\n", __func__, __LINE__);
++		return NULL;
++	}
++	mi_node_t **root = &table->ic_miroot;
++
++	//Store MAC-IP information to a array and then delete them from the binary tree
++	struct timeout_entries kick_entries[NUM_MITBL_IP];	
++	OS_MEMSET(kick_entries, 0, sizeof(struct timeout_entries) * NUM_MITBL_IP);
++	#endif
++	/* <----- Felix@liteon, 2014-1-8*/
++
+ 	//if(ipv6_addr_type((struct in6_addr *)ipaddr) != IPV6_ADDR_UNICAST)
+ /*
+ 	if (ipaddr[0] == 254) {
+@@ -326,6 +359,15 @@
+ 			return NULL;
+ 		}
+ 		
++		/* Felix@liteon, 2014-1-8 -----> */
++		#if MI_TABLE_AS_TREE
++		table->mitbl_ip_count++;		//limit max IP entries
++		#if (MITBL_MAC_LIMIT_ENABLE == 1)
++		if (mi_tbl_lkup_mac(*root, h_dest) == 0)
++			table->mitbl_mac_count++;	//limit max MAC
++		#endif
++		#endif
++		/* <----- Felix@liteon, 2014-1-8 */
+ 		for (i = 0; i < 6; i++)
+ 			(*root)->h_dest[i] = h_dest[i];
+ 		(*root)->left = NULL;
+@@ -341,6 +383,12 @@
+ 				(*root)->ip[i] = ipaddr[i];
+ 			(*root)->len = 128;
+ 		}
++		/* Initial timestamp. Felix@liteon, 2014-1-8 -----> */
++		#if MI_TABLE_AS_TREE
++		(*root)->timestamp_ms = (u_int32_t)CONVERT_SYSTEM_TIME_TO_MS(OS_GET_TIMESTAMP());
++		#endif
++		/* <----- Felix@liteon, 2014-1-8 */
++
+ 		return (*root);
+ 	}
+ 
+@@ -352,6 +400,39 @@
+ 		 *      Prefix match returns no. of bits matched with the key
+ 		 */
+ 		if (fn->ip_ver && (fn->ip_ver != ip_ver)) {
++			/* 
++			 * If the table has been full, age the table. 
++			 * Felix@liteon 2014-1-8 -----> 
++			 */
++			#if MI_TABLE_AS_TREE
++			if(mi_tbl_is_full(table, kick_entries) == 1)
++			{
++				mi_tbl_refresh(table, kick_entries);
++				if(mi_tbl_is_full(table, kick_entries) == 1)
++					return NULL;
++			}
++
++			#if 0
++			//Debug Info.
++			printk("new MAC-IP entry:	");
++			for (i = 0; i < 6; i++){
++				printk("%2x:", h_dest[i]);
++			}
++			printk("----->");
++			if (ip_ver == ATH_MITBL_IPV4) {
++				for (i = 0; i < 4; i++){
++					 printk("%d.", ipaddr[i]);
++				}
++			} else if (ip_ver == ATH_MITBL_IPV6) {
++				for (i = 0; i < 16; i++){
++					printk("%d.", ipaddr[i]);
++				}
++			}
++			printk("\n");
++			#endif
++			#endif
++			/* <----- Felix@liteon 2014-1-8 */
++			
+ 			bit = 0;
+ 			/* create a new child node and intermediate node */
+ 			in = mi_node_alloc();
+@@ -363,6 +444,16 @@
+ 				if (ln) mi_node_free(ln);
+ 				return NULL;
+ 			}
++			
++			/* limit max IP and max MAC, Felix@liteon, 2014-1-8 -----> */
++			#if MI_TABLE_AS_TREE
++			table->mitbl_ip_count++;
++			#if (MITBL_MAC_LIMIT_ENABLE == 1)
++			if (mi_tbl_lkup_mac(*root, h_dest) == 0)
++				table->mitbl_mac_count++;
++			#endif
++			#endif
++			/* <----- Felix@liteon, 2014-1-8 */
+ 			fn->parent = in;
+ 			ln->parent = in;
+ 			in->parent = NULL;
+@@ -405,7 +496,9 @@
+ 					 */
+ 					for (i = 0; i < ETH_ALEN; i++)
+ 						fn->h_dest[i] = h_dest[i];
+-
++					#if MI_TABLE_AS_TREE
++					fn->timestamp_ms = (u_int32_t)CONVERT_SYSTEM_TIME_TO_MS(OS_GET_TIMESTAMP());	//Update timestamp. Felix@liteon, 2014-1-8
++					#endif
+ 					break;
+ 				}
+ 
+@@ -428,7 +521,9 @@
+ 					 */
+ 					for (i = 0; i < ETH_ALEN; i++)
+ 						fn->h_dest[i] = h_dest[i];
+-
++					#if MI_TABLE_AS_TREE
++					fn->timestamp_ms = (u_int32_t)CONVERT_SYSTEM_TIME_TO_MS(OS_GET_TIMESTAMP());	//Update timestamp. Felix@liteon, 2014-1-8
++					#endif
+ 					break;
+ 				}
+ 
+@@ -444,10 +539,56 @@
+ 
+ 			continue;
+ 		} else {
++			/*If the table has been full, age the table. 
++			 * Felix@liteon, 2014-1-8 -----> 
++			 */
++			#if MI_TABLE_AS_TREE
++			if(mi_tbl_is_full(table, kick_entries) == 1)
++			{
++				mi_tbl_refresh(table, kick_entries);
++				if(mi_tbl_is_full(table, kick_entries) == 1)
++					return NULL;
++			}
++			#if 0
++			//debug info.
++			printk("new MAC-IP entry:	");
++			for (i = 0; i < 6; i++){
++				printk("%2x:", h_dest[i]);
++			}
++			if (ip_ver == ATH_MITBL_IPV4) {
++				for (i = 0; i < 4; i++){
++					 printk("%d.", ipaddr[i]);
++				}
++			} else if (ip_ver == ATH_MITBL_IPV6) {
++				for (i = 0; i < 16; i++){
++					printk("%d.", ipaddr[i]);
++				}
++			}
++			printk("\n");
++			#endif
++			#endif
++			/* <-----Felix@liteon, 2014-1-8 */
++			
+ 			/* create a new child node and intermediate node */
+ 			in = mi_node_alloc();
+ 			ln = mi_node_alloc();
+ 
++			if(in == NULL || ln == NULL)
++			{
++				if (in) mi_node_free(in);
++				if (ln) mi_node_free(ln);
++				return NULL;
++			}
++			/* limit max MAC and max IP, Felix@liteon, 2014-1-8 -----> */
++			#if MI_TABLE_AS_TREE
++			#if (MITBL_MAC_LIMIT_ENABLE == 1)
++			if (mi_tbl_lkup_mac(*root, h_dest) == 0)
++				table->mitbl_mac_count++;
++			#endif
++			table->mitbl_ip_count++;
++			#endif
++			/* <----- Felix@liteon, 2014-1-8 */
++
+ 			in->parent = fn->parent;
+ 			//in->ip_ver = 0;
+ 			fn->parent = in;
+@@ -588,15 +729,28 @@
+ }
+ 
+ u_int8_t *
++#if MI_TABLE_AS_TREE	/* modify the input param, Felix@liteon, 2014-1-8 */
++mi_tbl_lkup(EXTAP_DBG_PARM mi_table_t *table, u_int8_t *ipaddr, int ip_ver)
++#else
+ mi_tbl_lkup(EXTAP_DBG_PARM mi_node_t *root, u_int8_t *ipaddr, int ip_ver)
++#endif
+ {
+ 	mi_node_t *fn, *next;
+ 	int dir = 0, i, bit;
+-
+-
++	
++	/* Felix@liteon, 2014-1-8 */
++	#if MI_TABLE_AS_TREE
++	if(table == NULL){
++		printk("MAC-IP table is not initialed\n");
++		return NULL;
++	}
++	mi_node_t *root = table->ic_miroot;
++	#endif
++	/* <----- Felix@liteon, 2014-1-8 */
+ 	/*
+ 	 *      Descend on a tree
+ 	 */
++	 
+ 	if (root == NULL) {
+ 		eadbg1("\nThere is no entry in the Table");
+ 		return NULL;
+@@ -634,6 +788,10 @@
+ 			for (i = 5; i >= 0; i--) {
+ 				eadbg1("%x:", next->h_dest[i]);
+ 			}
++			/* Update the timestamp, Felix@liteon, 2014-1-8*/
++			#if MI_TABLE_AS_TREE
++			next->timestamp_ms = (u_int32_t)CONVERT_SYSTEM_TIME_TO_MS(OS_GET_TIMESTAMP());// update timestamp Felix@liteon, 2014-1-8
++			#endif
+ 			return next->h_dest;
+ 		}
+ 
+@@ -644,6 +802,178 @@
+ 
+ }
+ 
++/*
++ * Description	:Traverse the MAC-IP tree and Record the timeout node into timeout_entries_t
++ * 			 what would be deleted from the binary.
++ * Author		:Felix@liteon
++ * Date		:2014-1-8
++*/
++static void
++mi_tbl_get_kick_entries(EXTAP_DBG_PARM mi_node_t *root, timeout_entries_t *kick_entries, const u_int32_t now)
++{
++	int i,j;
++	if(!root) {
++		eadbg1("There is no node in the MAC-IP tree\n");
++		return;
++	}
++	
++	if(!root->left) {		
++		if((now - root->timestamp_ms) >= MITBL_AGAING_PERIOD){
++			for(i=0; i<NUM_MITBL_IP; i++){
++				if(kick_entries[i].ip_ver == 0){
++					if(root->ip_ver == ATH_MITBL_IPV4){
++						kick_entries[i].ip_ver = ATH_MITBL_IPV4;
++						for (j=0; j < 4; j++){
++							kick_entries[i].ip[j] = root->ip[j];
++						}
++						for(j=0; j<ETH_ALEN; j++){
++							kick_entries[i].h_dest[j] = root->h_dest[j];
++						}
++					}
++					if(root->ip_ver == ATH_MITBL_IPV6){
++						kick_entries[i].ip_ver = ATH_MITBL_IPV6;
++						for (j=0; j < 16; j++){
++							kick_entries[i].ip[j] = root->ip[j];
++						}
++						for(j=0; j<ETH_ALEN; j++){
++							kick_entries[i].h_dest[j] = root->h_dest[j];
++						}
++					}
++					break;
++				}
++			}
++		}
++	} else {
++		mi_tbl_get_kick_entries(root->left, kick_entries, now);
++		mi_tbl_get_kick_entries(root->right, kick_entries, now);
++	}
++}	
++/*
++ * Description	: delete the timeout nodes after this function executed.
++ * Author		: Felix@liteon
++ * Date		: 2014-1-8
++*/
++void
++mi_tbl_refresh(EXTAP_DBG_PARM mi_table_t *table, struct timeout_entries *kick_entries)
++{
++	int i = 0;
++	u_int32_t now; 
++	
++	if(table == NULL){
++		printk("%s:%d------------MAC-IP table point to NULL\n", __func__, __LINE__);
++		return;
++	}
++	mi_node_t **root = &table->ic_miroot;
++	if(*root == NULL){
++		eadbg1("There is no node in the MAC-IP tree\n");
++		return;
++	}
++	now = (u_int32_t)CONVERT_SYSTEM_TIME_TO_MS(OS_GET_TIMESTAMP());
++	mi_tbl_get_kick_entries(*root, kick_entries, now);
++	while(kick_entries[i].ip_ver != 0)
++	{
++		if (kick_entries[i].ip_ver == ATH_MITBL_IPV4){
++			mi_tbl_del(root, kick_entries[i].ip, ATH_MITBL_IPV4);
++			table->mitbl_ip_count--;
++		}else if (kick_entries[i].ip_ver == ATH_MITBL_IPV6){
++			mi_tbl_del(root, kick_entries[i].ip, ATH_MITBL_IPV6);
++			table->mitbl_ip_count--;
++		}else{
++			continue;
++		}
++		#if (MITBL_MAC_LIMIT_ENABLE == 1)
++		if(mi_tbl_lkup_mac(*root, kick_entries[i].h_dest) == 0){
++			table->mitbl_mac_count--;
++		}
++		#endif
++		i++;
++	}
++}
++
++/*
++ * Description	: Traverse the binary tree, find the same MAC address.
++ * Return		: Find same MAC address return 1, otherwise return 0.
++ * Author		: Felix@liteon
++ * Date		: 2014-1-8
++*/
++static int
++mi_tbl_lkup_mac(EXTAP_DBG_PARM mi_node_t *root, u_int8_t *h_dest)
++{
++	if(root)
++	{
++		if(OS_MEMCMP(root->h_dest, h_dest, ETH_ALEN) == 0)
++		{
++			return 1;
++		}
++		if( 1 == mi_tbl_lkup_mac(root->left, h_dest))
++		{
++			return 1;
++		}
++		if( 1 == mi_tbl_lkup_mac(root->right, h_dest))
++		{
++			return 1;
++		}
++	}
++	return 0;
++}
++/*
++ * Description	: Is the number of MAC-IP entries  or the stations(have different MAC address) have been over max value
++ * Return		: If table is full, return 0 , otherwise return 1.
++ * Author		: Felix@liteon
++ * Date		: 2014-1-8
++*/
++static int mi_tbl_is_full(EXTAP_DBG_PARM mi_table_t *table, struct timeout_entries *kick_entries)
++{
++#if (MITBL_MAC_LIMIT_ENABLE == 1)
++	if (table->mitbl_ip_count < NUM_MITBL_IP && table->mitbl_mac_count < NUM_MITBL_MAC)
++#else
++	if (table->mitbl_ip_count < NUM_MITBL_IP)
++#endif
++		return 0;
++	else
++		return 1;
++}
++
++/*
++ * destroy the binary tree
++ * Felix@liteon, 2014-1-11
++*/
++static void mi_destroy_tree(mi_node_t *root)
++{
++	if(root == NULL)
++		return;
++	mi_destroy_tree(root->left);
++	mi_destroy_tree(root->right);
++	OS_FREE(root);
++}
++
++/* Felix@liteon, 2014-1-11 */
++void mi_attach(IEEE80211COM *mi_ic)
++{
++	mi_ic->ic_table = (mi_table_t *)OS_MALLOC(NULL, sizeof(mi_table_t), GFP_KERNEL);
++	if(mi_ic->ic_table != NULL)
++	{
++		mi_ic->ic_table->ic_miroot = NULL;
++		mi_ic->ic_table->mitbl_ip_count = 0;
++		mi_ic->ic_table->mitbl_mac_count = 0;
++		mi_ic->ic_table->busy = 0;
++	}
++}
++
++/*
++ * destroy the binary tree and table
++ * Felix@liteon, 2014-1-11
++*/
++void mi_detach(IEEE80211COM *mi_ic)
++{
++	mi_destroy_tree(mi_ic->ic_table->ic_miroot);
++	if(mi_ic->ic_table != NULL)
++	{
++		OS_FREE(mi_ic->ic_table);
++	}
++}
++
++
+ void
+ mi_tbl_purge(mi_node_t **root)
+ {
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/umac/if_lmac/if_ath.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/umac/if_lmac/if_ath.c	2013-08-27 07:05:29.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/if_lmac/if_ath.c	2014-01-28 14:59:13.000000000 +0800
+@@ -39,6 +39,10 @@
+ #include "ath_dfs_structs.h"
+ #include "ath_dfs_api.h"
+ #endif
++
++#if ATH_EXT_AP /*Felix@liteon, 2014-1-8 */
++#include "ieee80211_mitbl.h"
++#endif
+ #if ATH_DEBUG
+ extern unsigned long ath_rtscts_enable;      /* defined in ah_osdep.c  */
+ #endif
+@@ -9064,8 +9068,13 @@
+ #endif
+     ic = &scn->sc_ic;
+     ic->ic_osdev = osdev;
++
+ #ifdef ATH_EXT_AP
+-    ic->ic_miroot = NULL;
++    #if MI_TABLE_AS_TREE
++	mi_attach(ic);/*Felix@liteon, 2014-1-8*/
++	#else
++	ic->ic_miroot = NULL;
++	#endif
+ #endif
+ 
+     /* init IEEE80211_DPRINTF_IC control object */
+@@ -9749,6 +9758,13 @@
+     ath_amsdu_detach(scn);
+ #endif
+ 
++
++#ifdef ATH_EXT_AP
++#if MI_TABLE_AS_TREE
++	mi_detach(ic);/*Felix@liteon, 2014-1-8*/
++#endif
++#endif
++
+ #if ATH_SUPPORT_DFS
+     /* Detach DFS */
+     dfs_detach(ic);
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/umac/include/ieee80211_mitbl.h
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/umac/include/ieee80211_mitbl.h	2013-08-27 07:05:30.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/include/ieee80211_mitbl.h	2014-01-28 14:59:13.000000000 +0800
+@@ -34,8 +34,44 @@
+ 			len,
+ 			ip_ver,
+ 			ip[16];	/* v4 or v6 ip addr */
++
++#if MI_TABLE_AS_TREE
++	u_int32_t	timestamp_ms;	//Aging mechanism Felix.Zheng@liteon.com, 2014-1-8
++#endif
+ } mi_node_t;
+ 
++#if MI_TABLE_AS_TREE
++/* unify 2 struct: tree and array, add 2 counters,  Felix@liteon, 2014-1-8 -----> */
++typedef struct mi_table {
++
++	mi_node_t	*ic_miroot; /* EXTAP MAC - IP table Root */
++	u_int32_t	mitbl_mac_count;//record current STAs behind ext-STA
++	u_int32_t	mitbl_ip_count;	//record current MAC-IP entries in the table
++	u_int32_t	busy;
++}mi_table_t;
++/* <----- Felix@liteon, 2014-1-8 */
++
++/*
++ * Record the MAC-IP entries which are timeout.
++ * Felix.Zheng@liteon.com, 2014-1-8 ----> 
++ */
++
++//Limit the max number of STAs and MAC-IP entries
++#define MITBL_MAC_LIMIT_ENABLE	0	// 0--->disable,   1---> enable, 
++#define NUM_MITBL_MAC	64
++#define NUM_MITBL_IP	64
++
++//the limitation of againg period, 5 minuts
++#define MITBL_AGAING_PERIOD 5*60*1000
++
++typedef struct timeout_entries{
++	u_int8_t ip_ver;
++	u_int8_t ip[16];
++	u_int8_t h_dest[ETH_ALEN];
++}timeout_entries_t;
++#endif
++/* <----- Felix@liteon, 2014-1-8 */
++
+ #define minode_ip_len(n)	(((n)->ip_ver == ATH_MITBL_IPV4) ? 4 : 16)
+ #define mi_ip_len(n)		(((n) == ATH_MITBL_IPV4) ? 4 : 16)
+ 
+@@ -45,8 +81,17 @@
+ #	define EXTAP_DBG_PARM	/* */
+ #endif
+ 
++/* Felix@liteon, 2014-1-8*/
++#if MI_TABLE_AS_TREE
++void mi_attach(IEEE80211COM  *mi_ic);
++void mi_detach(IEEE80211COM *mi_ic);
++void mi_tbl_refresh(EXTAP_DBG_PARM mi_table_t *, timeout_entries_t *);
++mi_node_t *mi_tbl_add(EXTAP_DBG_PARM mi_table_t *, u_int8_t *, u_int8_t *, int);
++u_int8_t *mi_tbl_lkup(EXTAP_DBG_PARM mi_table_t *, u_int8_t *, int);
++#else
+ mi_node_t *mi_tbl_add(EXTAP_DBG_PARM mi_node_t **, u_int8_t *, u_int8_t *, int);
+ u_int8_t *mi_tbl_lkup(EXTAP_DBG_PARM mi_node_t *, u_int8_t *, int);
++#endif
+ void mi_tbl_del(EXTAP_DBG_PARM mi_node_t **, u_int8_t *, int);
+ 
+ #endif /* __IEEE80211_RDX_H__ */
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/umac/include/ieee80211_var.h
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/umac/include/ieee80211_var.h	2014-01-28 14:59:12.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/include/ieee80211_var.h	2014-01-28 14:59:13.000000000 +0800
+@@ -538,7 +538,11 @@
+     struct ieee80211_channel      *ic_curchan;   /* current channel */
+     struct ieee80211_channel      *ic_prevchan;  /* previous channel */
+ #ifdef ATH_EXT_AP
+-    struct mi_node *ic_miroot; /* EXTAP MAC - IP table Root */
++	#if MI_TABLE_AS_TREE
++	struct mi_table				*ic_table;	/* unify binary tree and array, Felix@liteon, 2014-1-8 */
++	#else
++	struct mi_node 				*ic_miroot; /* EXTAP MAC - IP table Root */
++	#endif
+ #endif
+ 
+     /* regulatory class ids */
+Index: wifi_QCA_10.1.436/perf_pwr_offload/drivers/host/wlan/lmac_offload_if/ol_if_ath.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/perf_pwr_offload/drivers/host/wlan/lmac_offload_if/ol_if_ath.c	2013-08-27 07:08:14.000000000 +0800
++++ wifi_QCA_10.1.436/perf_pwr_offload/drivers/host/wlan/lmac_offload_if/ol_if_ath.c	2014-01-28 15:02:05.000000000 +0800
+@@ -41,6 +41,11 @@
+ #include "a_debug.h"
+ #include "epping_test.h"
+ 
++/* Felix@liteon, 2014-1-8 */
++#if ATH_EXT_AP
++#include "ieee80211_mitbl.h"
++#endif
++
+ #if ATH_SUPPORT_DFS
+ #include "ol_if_dfs.h"
+ #endif
+@@ -2972,6 +2977,13 @@
+         ol_ath_phyerr_attach(ic);
+         ieee80211com_set_cap_ext(ic, IEEE80211_CEXT_PERF_PWR_OFLD);
+         ol_ath_dev_attach(scn, ieee80211_conf_parm);
++		
++/* Felix@liteon, 2014-1-8 */
++#if ATH_EXT_AP
++#if MI_TABLE_AS_TREE
++	mi_attach(ic);
++#endif
++#endif    
+         
+ #if ATH_SUPPORT_DFS
+         ol_if_dfs_setup(ic);
+@@ -3078,6 +3090,14 @@
+ 
+     if (!bypasswmi) {
+         ieee80211_stop_running(ic);
++
++/* Felix@liteon, 2014-1-8 */
++#ifdef ATH_EXT_AP
++#if MI_TABLE_AS_TREE
++	mi_detach(ic);
++#endif
++#endif
++
+ #if ATH_SUPPORT_DFS
+         ol_if_dfs_teardown(ic);
+ #endif
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c	2014-01-28 14:59:13.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c	2014-01-28 15:02:11.000000000 +0800
+@@ -53,6 +53,11 @@
+ /* For 11ac 5G RSSI, Sean@Liteon, 2014-02-07 */
+ #include <ol_if_athvar.h>
+
++/* Felix@liteon, 2014-1-8 */
++#if ATH_EXT_AP
++#include "ieee80211_mitbl.h"
++#endif
++
+ #define ONEMBPS 1000
+ #define THREE_HUNDRED_MBPS 300000
+ #define NETDEV_TO_VAP(_dev) (((osif_dev *)netdev_priv(_dev))->os_if)
+@@ -5476,14 +5482,22 @@
+         if (value) {
+             if (value == 3 /* dbg */) {
+                 extern void mi_tbl_dump(void *);
+-                mi_tbl_dump(vap->iv_ic->ic_miroot);
+-                break;
++				#if MI_TABLE_AS_TREE
++                mi_tbl_dump(vap->iv_ic->ic_table->ic_miroot);	/* Felix@liteon, 2014-1-8 */
++				#else
++				mi_tbl_dump(vap->iv_ic->ic_miroot);
++				#endif
++				break;
+             }
+             if (value == 2 /* dbg */) {
+                 extern void mi_tbl_purge(void *);
+                 IEEE80211_VAP_EXT_AP_DISABLE(vap);
+-                mi_tbl_purge(&vap->iv_ic->ic_miroot);
+-            }
++				#if MI_TABLE_AS_TREE
++                mi_tbl_purge(&vap->iv_ic->ic_table->ic_miroot);	/* Felix@liteon, 2014-1-8 */
++				#else
++				mi_tbl_purge(&vap->iv_ic->ic_miroot);
++				#endif
++			}
+             IEEE80211_VAP_EXT_AP_ENABLE(vap);
+             /* Set the auto assoc feature for Extender Station */
+             wlan_set_param(vap, IEEE80211_AUTO_ASSOC, 1);
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/BuildCaps.inc
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/os/linux/BuildCaps.inc	2013-08-27 07:05:24.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/BuildCaps.inc	2014-01-28 15:02:04.000000000 +0800
+@@ -1068,6 +1068,15 @@
+ ifeq ($(strip ${ATH_EXT_AP}),1)
+ COPTS+= -DATH_EXT_AP=1
+ #COPTS+= -DEXTAP_DEBUG=1
++
++ifeq ($(strip ${MI_TABLE_AS_TREE}),1)
++COPTS+= -DMI_TABLE_AS_TREE=1 -DMI_TABLE_AS_ARRAY=0
++endif
++
++ifeq ($(strip ${MI_TABLE_AS_ARRAY}),1)
++COPTS+= -DMI_TABLE_AS_TREE=0 -DMI_TABLE_AS_ARRAY=1
++endif
++
+ endif
+ 
+ ifneq ($(strip ${ATH_TX_BUF_FLOW_CNTL}),0)

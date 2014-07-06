@@ -1,0 +1,26 @@
+From 495f43ee95c70f02caaab1b77953fc597e96f193 Mon Sep 17 00:00:00 2001
+From: yanfei.zhang <yanfei.zhang@freescale.com>
+Date: Thu, 28 Oct 2010 17:00:15 +0800
+Subject: [PATCH] fix atheros driver compile compatibility
+
+Signed-off-by: yanfei.zhang <yanfei.zhang@freescale.com>
+---
+ include/linux/dma-mapping.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/include/linux/dma-mapping.h b/include/linux/dma-mapping.h
+index 91b7618..7c74df5 100644
+--- a/include/linux/dma-mapping.h
++++ b/include/linux/dma-mapping.h
+@@ -106,7 +106,7 @@ static inline int is_device_dma_capable(struct device *dev)
+ #endif
+ 
+ /* for backwards compatibility, removed soon */
+-static inline void __deprecated dma_sync_single(struct device *dev,
++static inline void dma_sync_single(struct device *dev,
+ 						dma_addr_t addr, size_t size,
+ 						enum dma_data_direction dir)
+ {
+-- 
+1.5.6.5
+

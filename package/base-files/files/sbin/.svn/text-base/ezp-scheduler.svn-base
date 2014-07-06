@@ -1,0 +1,99 @@
+#!/bin/sh
+
+schidx="0"
+schnum="$(nvram get sched_rule_num)"
+echcronfile="/var/spool/cron/cron_sched"
+# Release cache periodicly
+echo "3" > /proc/sys/vm/drop_caches 
+echo -n "" > $echcronfile
+# If WiFi scheduler function is disabled, then WiFi on/off should go with
+# switch/button !!
+# FIXME:If more scheduler cat are implement, we need add a nvram value to
+# enable and disable each category.
+[ "$schnum" = "0" -o "$(nvram get sched_enable)" = "0" ] && {
+    
+    wifion="$(nvram show wl_basic_rule 0 enable)"
+    wifibtnon="$(nvram show wl_origset_rule 0 enable)"
+    [ -z "$wifibtnon" ] && wifibtnon="$wifion"
+    [ "$wifion" != "$wifibtnon" ] && {
+        /sbin/ezp-wifionoff "$wifibtnon" "wlan2.4g"
+    }
+
+    ## SSID setting
+    #wifion="$(/sbin/ezp-chk-wl-enable noact)"
+    ## Wifi switch setting
+    #wifibtnon="$(nvram show wl_origset_rule 0 enable)"
+    #[ -z "$wifibtnon" ] && wifibtnon="$wifion"
+    #[ "$wifion" != "$wifibtnon" ] && {
+    #    /sbin/ezp-wifionoff "$wifibtnon"
+    #    nvram set wl_enabled_rule="$wifibtnon"
+    #}
+    exit 0
+}
+currentdatestr="$(date)"
+currweekday="$(date +%w)"
+currmon="$(date +%m)"
+currdate="$(date +%d)"
+currhour="$(date +%H)"
+currmin="$(date +%M)"
+sched_rule_enabled="0"
+
+ 
+while [ "$schidx" -lt "$schnum" ];
+do
+    if [ "$(nvram show sched_rule $schidx enable)" != "0" ]; then
+        schmonth="$(nvram show sched_rule $schidx month)"
+        [ -z "$schmonth" -o "$schmonth" = "everyday" -o "$schmonth" = "eve" ] && schmonth="*"
+        schdate="$(nvram show sched_rule $schidx date)"
+        [ -z "$schdate" -o "$schdate" = "everyday" -o "$schdate" = "eve" ] && schdate="*"
+        schweekday="$(nvram show sched_rule $schidx wkday)"
+        [ -z "$schweekday" -o "$schweekday" = "everyday" -o \
+          "$schweekday" = "eve" -o "$schweekday" = "7" ] && schweekday="*"
+        beghr="$(nvram show sched_rule $schidx beghr)"
+        begmin="$(nvram show sched_rule $schidx begmin)"
+        endhr="$(nvram show sched_rule $schidx endhr)"
+        endmin="$(nvram show sched_rule $schidx endmin)"
+        [ "$(nvram show sched_rule $schidx cat)" = "wireless" ] && {
+            # XXX: we need to check the WiFi On/Off switch at here. If it is off, bail
+            # out.
+            # handling error case that the starting and finishing time
+            # is not set
+            [ -z "$beghr" ] && beghr="00"
+            [ -z "$begmin" ] && begmin="00"
+            [ -z "$endhr" ] && endhr="23"
+            [ -z "$endmin" ] && endmin="59"
+            wlanstatus="$(nvram show sched_rule $schidx wlanstatus)"
+            [ -z "$wlanstatus" ] && wlanstatus=1
+            
+            # Applying rules...
+            # Strong assumption: 
+            # Every rule is applied for a single day.
+            # GUI will check begin time < end time
+
+            [ "$schmonth" = "*" -o "$currmon" = "$schmonth" ] && \
+            [ "$schdate" = "*" -o "$currdate" = "$schdate" ] && \
+            [ "$schweekday" = "*" -o "$currweekday" = "$schweekday" ] && {
+                wlancomplement="0"
+                [ "$wlanstatus" = "0" ] && wlancomplement="1"
+                wifion="$wlanstatus"
+                [ "$beghr" -gt "$currhour" -o "$endhr" -lt "$currhour" ] && \
+                    wifion="$wlancomplement"
+                [ "$beghr" -eq "$currhour" -a "$begmin" -gt "$currmin" ] && \
+                    wifion="$wlancomplement"
+                [ "$endhr" -eq "$currhour" -a "$endmin" -lt "$currmin" ] && \
+                    wifion="$wlancomplement"
+
+                wifi_enabled="$(nvram show wl_basic_rule 0 enable)"
+                [ -z "$wifi_enabled" -o "$wifi_enabled" != "$wifion" ] && 
+                [ "$(nvram show wl_origset_rule 0 enable)" = "1" ] &&
+                {
+                    #nvram replace attr wl_basic_rule 0 enable "$wifion"
+                    /sbin/ezp-wifionoff "$wifion" "wlan2.4g" 
+                    #nvram set wl_enabled_rule="$wifion"
+                }
+            }
+        }
+        sched_rule_enabled="1"
+    fi
+    schidx="$(($schidx + 1))"
+done

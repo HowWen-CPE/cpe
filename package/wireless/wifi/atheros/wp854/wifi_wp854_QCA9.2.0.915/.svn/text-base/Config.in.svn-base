@@ -1,0 +1,16 @@
+menu "Configuration"
+	depends on PACKAGE_kmod-madwifi
+
+config MADWIFI_DEBUG
+	bool "Enable compilation of debugging features"
+	depends on DEVEL
+	default n
+
+config MADWIFI_COMPRESSION
+	bool "Enable Atheros Super A/G Compression"
+	depends !TARGET_ar71xx
+	default n
+	help
+	  Enables Atheros Super A/G Hardware Compression Engine.
+
+endmenu

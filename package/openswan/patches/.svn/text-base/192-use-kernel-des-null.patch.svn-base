@@ -1,0 +1,109 @@
+--- openswan.old/packaging/makefiles/module.defs	2013-08-20 13:56:24.000000000 +0800
++++ openswan.new/packaging/makefiles/module.defs	2013-08-20 14:01:55.000000000 +0800
+@@ -27,10 +27,13 @@
+ CONFIG_KLIPS_ALG_SHA1=m
+ CONFIG_KLIPS_ALG_SHA2=m
+ #CONFIG_KLIPS_ALG_CAST=n
+-#CONFIG_KLIPS_ALG_NULL=n
+ 
+ # Use CryptoAPI for ALG? - by default, no.
+-CONFIG_KLIPS_ENC_CRYPTOAPI=n
++#CONFIG_KLIPS_ENC_CRYPTOAPI=n
++# Enabled for null and 1des encryption
++CONFIG_KLIPS_ENC_CRYPTOAPI=y
++CONFIG_KLIPS_ENC_1DES=y
++CONFIG_KLIPS_ENC_NULL=y
+ 
+ 
+ # IP Compression: new, probably still has minor bugs.
+--- openswan.old/linux/net/ipsec/ipsec_alg.c	2013-08-20 16:04:11.000000000 +0800
++++ openswan.new/linux/net/ipsec/ipsec_alg.c	2013-08-20 16:06:48.000000000 +0800
+@@ -926,11 +926,15 @@
+ #endif
+ 
+ 	/* If we are doing CryptoAPI, then init */
+-#if defined(CONFIG_KLIPS_ENC_CRYPTOAPI) && CONFIG_KLIPS_ENC_CRYPTOAPI && !defined(CONFIG_KLIPS_ENC_CRYPTOAPI_MODULE)
+-	{
+-                extern int ipsec_cryptoapi_init(void);
+-                ipsec_cryptoapi_init();
+-        }
++#if defined(CONFIG_KLIPS_ENC_CRYPTOAPI) && !defined(CONFIG_KLIPS_ENC_CRYPTOAPI_MODULE)
++#if defined(CONFIG_KLIPS_ENC_CRYPTOAPI) && CONFIG_KLIPS_ENC_CRYPTOAPI
++    /* Warning for Crypto API support */
++#warning "Using built-in crypto api rather than Kernel CryptoAPI"
++#endif
++	{	
++		extern int ipsec_cryptoapi_init(void);
++		ipsec_cryptoapi_init();
++	}	
+ #endif
+ 
+ 
+--- openswan.old/linux/net/ipsec/defconfig	2014-02-24 11:08:12.000000000 +0800
++++ openswan.new/linux/net/ipsec/defconfig	2014-02-24 11:09:24.000000000 +0800
+@@ -52,6 +52,10 @@
+ # Use CryptoAPI for ALG - by default, yes.
+ CONFIG_KLIPS_ENC_CRYPTOAPI=y
+ 
++# Enabled for null and 1des encryption
++CONFIG_KLIPS_ENC_1DES=y
++CONFIG_KLIPS_ENC_NULL=y
++
+ # IP Compression: new, probably still has minor bugs.
+ CONFIG_KLIPS_IPCOMP=y
+ 
+--- openswan.old/packaging/linus/config-all.h	2014-02-24 11:17:33.000000000 +0800
++++ openswan.new/packaging/linus/config-all.h	2014-02-24 11:18:35.000000000 +0800
+@@ -66,6 +66,14 @@
+ #define CONFIG_KLIPS_ENC_AES 1
+ #endif
+ 
++#ifndef CONFIG_KLIPS_ENC_1DES
++#define CONFIG_KLIPS_ENC_1DES 1
++#endif
++    
++#ifndef CONFIG_KLIPS_ENC_NULL
++#define CONFIG_KLIPS_ENC_NULL 1
++#endif
++
+ #ifndef CONFIG_KLIPS_ENC_CRYPTOAPI
+ #define CONFIG_KLIPS_ENC_CRYPTOAPI 1
+ #endif
+--- openswan.old/linux/net/ipsec/ipsec_alg_cryptoapi.c	2014-02-24 12:49:10.000000000 +0800
++++ openswan.new/linux/net/ipsec/ipsec_alg_cryptoapi.c	2014-02-24 12:49:59.000000000 +0800
+@@ -177,7 +177,7 @@
+ #endif /* if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19) */
+ 
+ #ifdef CONFIG_KLIPS_ENC_NULL
+-# define CIPHERNAME_NULL		cbc(null)
++# define CIPHERNAME_NULL		ecb(cipher_null)
+ #endif
+ #define CIPHERNAME_AES		cbc(aes)
+ #define CIPHERNAME_1DES		cbc(des)
+@@ -205,6 +205,8 @@
+ module_param(noauto,int,0644);
+ 
+ MODULE_PARM_DESC(noauto, "Dont try all known algos, just setup enabled ones");
++#define NULL_KEY_SIZE      0
++#define NULL_BLOCK_SIZE        1
+ 
+ #ifdef CONFIG_KLIPS_ENC_NULL
+ static int cipher_null[] = {-1, -1};
+@@ -233,7 +235,7 @@
+ module_param_array(twofish,int,NULL,0444);
+ 
+ #ifdef CONFIG_KLIPS_ENC_NULL
+-MODULE_PARM_DESC(cipher_null, "0: disable | 1: force_enable | min,max: dontuse");
++MODULE_PARM_DESC(cipher_null, "0: disable | 1: force_enable | min,max: keybitlens");
+ #endif
+ #ifdef CONFIG_KLIPS_ENC_1DES
+ MODULE_PARM_DESC(des_ede1, "0: disable | 1: force_enable | min,max: dontuse");
+@@ -265,7 +267,7 @@
+   { CIPHERNAME_1DES,     8,  64,  64, des_ede1, { ixt_common:{ ixt_support:{ ias_id: ESP_DES,}}}},
+ #endif
+ #ifdef CONFIG_KLIPS_ENC_NULL
+-  { CIPHERNAME_NULL,     1,  0,  0, cipher_null, { ias_id: ESP_NULL,}},
++  { CIPHERNAME_NULL,     NULL_BLOCK_SIZE,  NULL_KEY_SIZE,  NULL_KEY_SIZE, cipher_null, { ixt_common:{ ixt_support:{ ias_id: ESP_NULL,}}}},
+ #endif
+   { NULL, 0, 0, 0, NULL, {} }
+ };

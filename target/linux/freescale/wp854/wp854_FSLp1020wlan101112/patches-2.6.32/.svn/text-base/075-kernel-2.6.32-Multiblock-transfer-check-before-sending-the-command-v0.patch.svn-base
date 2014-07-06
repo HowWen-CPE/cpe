@@ -1,0 +1,40 @@
+From c238ea6d5f442081efa1c08f16203089382f5c1a Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Tue, 12 Jan 2010 19:39:18 +0800
+Subject: [PATCH] Multiblock transfer check before sending the command
+
+Signed-off-by: Dipen Dudhat <dipen.dudhat@freescale.com>
+---
+ drivers/mmc/host/sdhci.c |    3 +++
+ drivers/mmc/host/sdhci.h |    1 +
+ 2 files changed, 4 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/mmc/host/sdhci.c b/drivers/mmc/host/sdhci.c
+index 4e2596e..8859966 100644
+--- a/drivers/mmc/host/sdhci.c
++++ b/drivers/mmc/host/sdhci.c
+@@ -932,6 +932,9 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
+ 	if (cmd->data)
+ 		flags |= SDHCI_CMD_DATA;
+ 
++	if (host->mrq->data && (cmd == host->mrq->data->stop))
++		flags = flags | SDHCI_CMD_ABORT;
++
+ 	sdhci_writew(host, SDHCI_MAKE_CMD(cmd->opcode, flags), SDHCI_COMMAND);
+ }
+ 
+diff --git a/drivers/mmc/host/sdhci.h b/drivers/mmc/host/sdhci.h
+index de9b534..437b3e2 100644
+--- a/drivers/mmc/host/sdhci.h
++++ b/drivers/mmc/host/sdhci.h
+@@ -39,6 +39,7 @@
+ #define  SDHCI_CMD_CRC		0x08
+ #define  SDHCI_CMD_INDEX	0x10
+ #define  SDHCI_CMD_DATA		0x20
++#define  SDHCI_CMD_ABORT	0xC0
+ 
+ #define  SDHCI_CMD_RESP_NONE	0x00
+ #define  SDHCI_CMD_RESP_LONG	0x01
+-- 
+1.5.6.3
+

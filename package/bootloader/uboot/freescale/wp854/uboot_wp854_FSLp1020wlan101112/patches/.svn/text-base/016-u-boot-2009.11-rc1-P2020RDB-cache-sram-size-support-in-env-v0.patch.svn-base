@@ -1,0 +1,41 @@
+From 994d9501874e87158fb4f2cbea056a31b1e3438a Mon Sep 17 00:00:00 2001
+From: Rajesh Gumasta <Rajesh.Gumasta@freescale.com>
+Date: Thu, 12 Nov 2009 16:57:41 +0530
+Subject: [PATCH]  P2020RDB: cache-sram-size support in env
+
+Modified the default othbootargs to include the cache-sram-size
+parameter.This parameter is needed as the L2 as SRAM is ON by
+default in the P2020RDB kernel and used by the Gianfar driver.
+
+And also modified nandboot uImage and dts partition offsets.
+
+Signed-off-by: Rajesh Gumasta <Rajesh.Gumasta@freescale.com>
+---
+ include/configs/P1_P2_RDB.h |    8 ++++----
+ 1 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/include/configs/P1_P2_RDB.h b/include/configs/P1_P2_RDB.h
+index ff9fb28..70d0d93 100644
+--- a/include/configs/P1_P2_RDB.h
++++ b/include/configs/P1_P2_RDB.h
+@@ -657,13 +657,13 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ 	"norbootaddr=ef080000\0"	\
+ 	"norfdtaddr=ef040000\0"	\
+ 	"jffs2nand=mtdblock9\0"	\
+-	"nandbootaddr=100000\0"	\
+-	"nandfdtaddr=80000\0"		\
++	"nandbootaddr=200000\0"	\
++	"nandfdtaddr=100000\0"		\
+ 	"nandimgsize=400000\0"		\
+-	"nandfdtsize=80000\0"		\
++	"nandfdtsize=100000\0"		\
+ 	"usb_phy_type=ulpi\0"		\
+ 	"vscfw_addr=ef000000\0"	\
+-	"othbootargs=ramdisk_size=600000\0" \
++	"othbootargs=ramdisk_size=700000 cache-sram-size=0x10000\0" \
+ 	"usbfatboot=setenv bootargs root=/dev/ram rw "	\
+ 	"console=$consoledev,$baudrate $othbootargs; "	\
+ 	"usb start;"			\
+-- 
+1.5.6.5
+

@@ -1,0 +1,280 @@
+--- a/rt2860v2/chips/rt6352.c
++++ b/rt2860v2/chips/rt6352.c
+@@ -4684,7 +4684,7 @@ VOID RT6352_AsicAdjustTxPower(
+ 			}
+ 			/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/
+ 			#ifdef LITEON_SRC_VALID
+-			AsicPreciseCutDeltaPower(pAd);//adjust channel power after 0x13B4 is changed
++			AsicPreciseCutRateDeltaPower(pAd);	/* Decrease TxPower, Sean@Liteon, 2013-09-25 */
+ 			#endif
+ 			/*<-----daniel@liteon,2013-4-28*/
+ 			return;
+@@ -4790,7 +4790,7 @@ VOID RT6352_AsicAdjustTxPower(
+ 			DBGPRINT(RT_DEBUG_TRACE, ("TotalDeltaPower=%d, Mac 0x13B4 is 0x%08x\n", TotalDeltaPower, MacValue));
+ 			/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/
+ 			#ifdef LITEON_SRC_VALID
+-			AsicPreciseCutDeltaPower(pAd);//adjust channel power after 0x13B4 is changed
++			AsicPreciseCutRateDeltaPower(pAd);	/* Decrease TxPower, Sean@Liteon, 2013-09-25 */
+ 			#endif
+ 			/*<-----daniel@liteon,2013-4-28*/
+ 		}
+--- a/rt2860v2/common/cmm_asic.c
++++ b/rt2860v2/common/cmm_asic.c
+@@ -1678,6 +1678,243 @@ VOID AsicPreciseCutDeltaPower(
+ /*<-----daniel@liteon,2013-4-28*/
+ 
+ 
++/*
++TxPower =   HardwareInitialPower(Hardware)  +  RateDeltaPower + TemperatureCompensationDeltaPower(Sersor) + ChannelDeltaPower
++when cut Txpower when it can change ChannelDeltaPower(power of per channel) and RateDeltaPower(power of per data rate) 
++process temperature compensation and cut  ChannelDeltaPower firtly, if not enough, then cut RateDeltaPower 
++cut RateDeltaPower detail:
++CutRateValue:the value of power to cut from rate power
++MaxTxpower:max Tx Power of data rate
++MinusTxPwerCutLimit:the difference of CutRateValue and MaxTxpower
++
++CutRateValue<MaxTxpower: MinusTxPwerCutLimit=MaxTxpower-CutRateValue
++                                    if the TxPower of data rate > MinusTxPwerCutLimit set it to MinusTxPwerCutLimit,all other remaind unchanged
++CutRateValue>MaxTxpower: set all TxPower of data rate to zero
++                                   set all TxPower of data rate to zero
++                                  
++*/
++VOID AsicPreciseCutRateDeltaPower(
++	IN 		PRTMP_ADAPTER 		pAd) 
++{
++
++	UCHAR    index;
++	CHAR      TxPwer = 0, TxPwer2 = 0;
++	CHAR      TxPwerCutLimit = 0;
++       CHAR      MinusTxPwerCutLimit = 0;
++	UINT32 	Value = 0;
++	CHAR      CutValue = 0;
++	UCHAR    CurrentChannel;
++	CHAR      temp_comp;//the value is affacted by bw_power_delta,temprature,percentage_power
++	UINT32    macValue;
++       UCHAR    TxPowerPerRate[20]={0};
++       CHAR      MaxTxpower=0;
++       CHAR      IndexOfMaxTxpower=0;
++       UINT32    i=0;
++	CHAR      CutRateValue = 0;
++       
++	CurrentChannel = pAd->CommonCfg.Channel;
++	index = CurrentChannel-1;
++	TxPwerCutLimit =((pAd->TxPower[index].Power  < pAd->TxPower[index].Power2) ? pAd->TxPower[index].Power : pAd->TxPower[index].Power2);	
++	RTMP_IO_READ32(pAd, TX_ALG_CFG_1, &macValue);
++	temp_comp = (char)(macValue & 0x0000003F);
++	if ((temp_comp & 0x20) == 0x20)
++				temp_comp -= 64;
++	if (temp_comp<0)
++		TxPwerCutLimit=TxPwerCutLimit+temp_comp;
++	if (TxPwerCutLimit<0)
++	{
++		//will not come to here		
++		return;
++	}	
++	CutValue=(CHAR)(0xff&pAd->CommonCfg.CutTxPower);
++	DBGPRINT(RT_DEBUG_WARN, ("==\n orig power1 is %d  , orig power2 is %d ==\n",pAd->TxPower[index].Power , pAd->TxPower[index].Power2));	
++	
++	if (CutValue <= TxPwerCutLimit)
++	{
++		TxPwer = pAd->TxPower[index].Power-CutValue;
++		TxPwer2 = pAd->TxPower[index].Power2-CutValue;
++		RTMP_IO_READ32(pAd, TX_ALG_CFG_0, &Value);
++		Value = Value & (~0x3F3F);
++		Value |= TxPwer;
++		Value |= (TxPwer2 << 8);
++		Value |= (0x2F << 16);
++		Value |= (0x2F << 24);
++		RTMP_IO_WRITE32(pAd, TX_ALG_CFG_0, Value);
++		DBGPRINT(RT_DEBUG_WARN, ("==(CutValue <= TxPwerCutLimit)==Cut==== Mac 0x13B0 is 0x%08x==\n",  Value));
++
++		CONFIGURATION_OF_TX_POWER_CONTROL_OVER_MAC CfgOfTxPwrCtrlOverMAC = {0};	
++		/* Get TX rate offset table which from EEPROM 0xDEh ~ 0xEFh */
++	        RTMP_CHIP_ASIC_TX_POWER_OFFSET_GET(pAd,(PULONG)&CfgOfTxPwrCtrlOverMAC);
++	       /*get pwr of per Rate*/
++	       for(i=0;i<CfgOfTxPwrCtrlOverMAC.NumOfEntries;i++)
++	       {        
++	         TxPowerPerRate[i*4+0]=CfgOfTxPwrCtrlOverMAC.TxPwrCtrlOverMAC[i].RegisterValue&0xff;
++	         TxPowerPerRate[i*4+1]=(CfgOfTxPwrCtrlOverMAC.TxPwrCtrlOverMAC[i].RegisterValue&0xff00)>>8;
++	         TxPowerPerRate[i*4+2]=(CfgOfTxPwrCtrlOverMAC.TxPwrCtrlOverMAC[i].RegisterValue&0xff0000)>>16;
++	         TxPowerPerRate[i*4+3]=(CfgOfTxPwrCtrlOverMAC.TxPwrCtrlOverMAC[i].RegisterValue&0xff000000)>>24;
++	       }
++		 /*
++		 for(i=0;i<18;i++)  
++		 {
++			DBGPRINT(RT_DEBUG_WARN, ("==TxPowerPerRate[%d] is 0x%08x==\n",  i,TxPowerPerRate[i]));
++		 }*/
++		Value=0;
++	       Value=(TxPowerPerRate[3]<<24)|(TxPowerPerRate[2]<<16)|(TxPowerPerRate[1]<<8)|(TxPowerPerRate[0]);
++	       RTMP_IO_WRITE32(pAd,TX_PWR_CFG_0,Value);
++	       DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x1314 is 0x%08x==\n",  Value));      
++	       Value=0;
++	       Value=(TxPowerPerRate[7]<<24)|(TxPowerPerRate[6]<<16)|(TxPowerPerRate[5]<<8)|(TxPowerPerRate[4]);
++	       RTMP_IO_WRITE32(pAd,TX_PWR_CFG_1,Value);
++	       DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x1318 is 0x%08x==\n",  Value));  
++	       Value=0;
++	       Value=(TxPowerPerRate[11]<<24)|(TxPowerPerRate[10]<<16)|(TxPowerPerRate[9]<<8)|(TxPowerPerRate[8]);
++	       RTMP_IO_WRITE32(pAd,TX_PWR_CFG_2,Value);
++	       DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x131C is 0x%08x==\n",  Value));  
++	       Value=0;
++	       Value=(TxPowerPerRate[15]<<24)|(TxPowerPerRate[14]<<16)|(TxPowerPerRate[13]<<8)|(TxPowerPerRate[12]);
++	       RTMP_IO_WRITE32(pAd,TX_PWR_CFG_3,Value);
++	       DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x1320 is 0x%08x==\n",  Value));  
++	       Value=0;
++	       Value=(TxPowerPerRate[17]<<8)|(TxPowerPerRate[16]);
++	       RTMP_IO_WRITE32(pAd,TX_PWR_CFG_4,Value);
++	       DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x1324 is 0x%08x==\n",  Value));  
++	       Value=0;
++	       Value=(TxPowerPerRate[9]<<16)|(TxPowerPerRate[5]);
++	       RTMP_IO_WRITE32(pAd,TX_PWR_CFG_7,Value);
++	       DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x13D4 is 0x%08x==\n",  Value));  
++	       Value=0;
++	       Value= TxPowerPerRate[13];
++	       RTMP_IO_WRITE32(pAd,TX_PWR_CFG_8,Value);
++	       DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x13D8 is 0x%08x==\n",  Value));  
++	       Value=0;
++	       Value= TxPowerPerRate[17];
++	       RTMP_IO_WRITE32(pAd,TX_PWR_CFG_9,Value);
++	       DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x13DC is 0x%08x==\n",  Value)); 				 
++
++
++	}
++	else
++	{
++		TxPwer = pAd->TxPower[index].Power-TxPwerCutLimit;
++		TxPwer2 = pAd->TxPower[index].Power2-TxPwerCutLimit;
++		RTMP_IO_READ32(pAd, TX_ALG_CFG_0, &Value);
++		Value = Value & (~0x3F3F);
++		Value |= TxPwer;
++		Value |= (TxPwer2 << 8);
++		Value |= (0x2F << 16);
++		Value |= (0x2F << 24);
++		RTMP_IO_WRITE32(pAd, TX_ALG_CFG_0, Value);
++		DBGPRINT(RT_DEBUG_WARN, ("==(CutValue > TxPwerCutLimit)==Cut==== Mac 0x13B0 is 0x%08x==\n",  Value));
++
++		CONFIGURATION_OF_TX_POWER_CONTROL_OVER_MAC CfgOfTxPwrCtrlOverMAC = {0};	
++		/* Get TX rate offset table which from EEPROM 0xDEh ~ 0xEFh */
++	        RTMP_CHIP_ASIC_TX_POWER_OFFSET_GET(pAd,(PULONG)&CfgOfTxPwrCtrlOverMAC);
++	       /*get pwr of per Rate*/
++	       for(i=0;i<CfgOfTxPwrCtrlOverMAC.NumOfEntries;i++)
++	       {        
++	         TxPowerPerRate[i*4+0]=CfgOfTxPwrCtrlOverMAC.TxPwrCtrlOverMAC[i].RegisterValue&0xff;
++	         TxPowerPerRate[i*4+1]=(CfgOfTxPwrCtrlOverMAC.TxPwrCtrlOverMAC[i].RegisterValue&0xff00)>>8;
++	         TxPowerPerRate[i*4+2]=(CfgOfTxPwrCtrlOverMAC.TxPwrCtrlOverMAC[i].RegisterValue&0xff0000)>>16;
++	         TxPowerPerRate[i*4+3]=(CfgOfTxPwrCtrlOverMAC.TxPwrCtrlOverMAC[i].RegisterValue&0xff000000)>>24;
++	       }
++	       /*set 1M/2M rate per to max pwr of rate*/
++	       MaxTxpower=TxPowerPerRate[0];
++	       IndexOfMaxTxpower=0;
++		DBGPRINT(RT_DEBUG_TRACE, ("MaxTxpower:%x  temp_comp:%d#############\n",MaxTxpower,temp_comp));  
++		CutRateValue=CutValue-TxPwerCutLimit;
++		
++		if (CutRateValue > MaxTxpower)
++		{                  	        
++	             for(i=0;i<18;i++)
++	            {	                
++	                    TxPowerPerRate[i]=0;	              
++	            }	          
++	              Value=0;
++	              Value=(TxPowerPerRate[3]<<24)|(TxPowerPerRate[2]<<16)|(TxPowerPerRate[1]<<8)|(TxPowerPerRate[0]);
++	              RTMP_IO_WRITE32(pAd,TX_PWR_CFG_0,Value);
++	              DBGPRINT(RT_DEBUG_TRACE, ("==(CutRateValue > MaxTxpower)==Cut==== Mac 0x1314 is 0x%08x==\n",  Value));      
++	              Value=0;
++	              Value=(TxPowerPerRate[7]<<24)|(TxPowerPerRate[6]<<16)|(TxPowerPerRate[5]<<8)|(TxPowerPerRate[4]);
++	              RTMP_IO_WRITE32(pAd,TX_PWR_CFG_1,Value);
++	              DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x1318 is 0x%08x==\n",  Value));  
++	              Value=0;
++	              Value=(TxPowerPerRate[11]<<24)|(TxPowerPerRate[10]<<16)|(TxPowerPerRate[9]<<8)|(TxPowerPerRate[8]);
++	              RTMP_IO_WRITE32(pAd,TX_PWR_CFG_2,Value);
++	              DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x131C is 0x%08x==\n",  Value));  
++	              Value=0;
++	              Value=(TxPowerPerRate[15]<<24)|(TxPowerPerRate[14]<<16)|(TxPowerPerRate[13]<<8)|(TxPowerPerRate[12]);
++	              RTMP_IO_WRITE32(pAd,TX_PWR_CFG_3,Value);
++	              DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x1320 is 0x%08x==\n",  Value));  
++	              Value=0;
++	              Value=(TxPowerPerRate[17]<<8)|(TxPowerPerRate[16]);
++	              RTMP_IO_WRITE32(pAd,TX_PWR_CFG_4,Value);
++	              DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x1324 is 0x%08x==\n",  Value));  
++	              Value=0;
++	              Value=(TxPowerPerRate[9]<<16)|(TxPowerPerRate[5]);
++	              RTMP_IO_WRITE32(pAd,TX_PWR_CFG_7,Value);
++	              DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x13D4 is 0x%08x==\n",  Value));  
++	              Value=0;
++	              Value= TxPowerPerRate[13];
++	              RTMP_IO_WRITE32(pAd,TX_PWR_CFG_8,Value);
++	              DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x13D8 is 0x%08x==\n",  Value));  
++	              Value=0;
++	              Value= TxPowerPerRate[17];
++	              RTMP_IO_WRITE32(pAd,TX_PWR_CFG_9,Value);
++	              DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x13DC is 0x%08x==\n",  Value)); 		   
++		}
++	       else
++	       {
++	            MinusTxPwerCutLimit =MaxTxpower - CutRateValue;
++	            for(i=0;i<18;i++)
++	            {
++	              if(i==IndexOfMaxTxpower)    
++	              {
++	                TxPowerPerRate[i]=MinusTxPwerCutLimit;
++	              }
++	              else
++	              {
++	                  if(TxPowerPerRate[i]>MinusTxPwerCutLimit)
++	                    TxPowerPerRate[i]=MinusTxPwerCutLimit;
++	              }
++	            }
++	            Value=0;
++	             Value=(TxPowerPerRate[3]<<24)|(TxPowerPerRate[2]<<16)|(TxPowerPerRate[1]<<8)|(TxPowerPerRate[0]);
++	             RTMP_IO_WRITE32(pAd,TX_PWR_CFG_0,Value);
++	             DBGPRINT(RT_DEBUG_TRACE, ("==(CutRateValue <= MaxTxpower)==Cut==== Mac 0x1314 is 0x%08x==\n",  Value));      
++	             Value=0;
++	             Value=(TxPowerPerRate[7]<<24)|(TxPowerPerRate[6]<<16)|(TxPowerPerRate[5]<<8)|(TxPowerPerRate[4]);
++	             RTMP_IO_WRITE32(pAd,TX_PWR_CFG_1,Value);
++	             DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x1318 is 0x%08x==\n",  Value));  
++	             Value=0;
++	             Value=(TxPowerPerRate[11]<<24)|(TxPowerPerRate[10]<<16)|(TxPowerPerRate[9]<<8)|(TxPowerPerRate[8]);
++	             RTMP_IO_WRITE32(pAd,TX_PWR_CFG_2,Value);
++	             DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x131C is 0x%08x==\n",  Value));  
++	             Value=0;
++	             Value=(TxPowerPerRate[15]<<24)|(TxPowerPerRate[14]<<16)|(TxPowerPerRate[13]<<8)|(TxPowerPerRate[12]);
++	             RTMP_IO_WRITE32(pAd,TX_PWR_CFG_3,Value);
++	             DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x1320 is 0x%08x==\n",  Value));  
++	             Value=0;
++	             Value=(TxPowerPerRate[17]<<8)|(TxPowerPerRate[16]);
++	             RTMP_IO_WRITE32(pAd,TX_PWR_CFG_4,Value);
++	             DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x1324 is 0x%08x==\n",  Value));  
++	             Value=0;
++	             Value=(TxPowerPerRate[9]<<16)|(TxPowerPerRate[5]);
++	             RTMP_IO_WRITE32(pAd,TX_PWR_CFG_7,Value);
++	             DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x13D4 is 0x%08x==\n",  Value));  
++	             Value=0;
++	             Value= TxPowerPerRate[13];
++	             RTMP_IO_WRITE32(pAd,TX_PWR_CFG_8,Value);
++	             DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x13D8 is 0x%08x==\n",  Value));  
++	             Value=0;
++	             Value= TxPowerPerRate[17];
++	             RTMP_IO_WRITE32(pAd,TX_PWR_CFG_9,Value);
++	             DBGPRINT(RT_DEBUG_TRACE, ("====Cut==== Mac 0x13DC is 0x%08x==\n",  Value));  
++	       }
++	}	
++}
++/* Sean@Liteon, 2013-09-25 */
++
++
+ VOID AsicCompensatePowerViaBBP(
+ 	IN 		PRTMP_ADAPTER 		pAd,
+ 	INOUT	PCHAR				pTotalDeltaPower) 
+--- a/rt2860v2/include/rtmp.h
++++ b/rt2860v2/include/rtmp.h
+@@ -5634,6 +5634,11 @@ VOID AsicPercentageDeltaPower(
+ 	INOUT	PCHAR				pDeltaPwr,
+ 	INOUT	PCHAR				pDeltaPowerByBbpR1);
+ 
++/* Decrease rate TxPower, Sean@Liteon, 2013-09-25 */
++VOID AsicPreciseCutRateDeltaPower(
++	IN 		PRTMP_ADAPTER 		pAd) ;
++/* Sean@Liteon, 2013-09-25 */
++
+ /*add for cutting txpower function, daniel@liteon,2013-4-28----->*/
+ #ifdef LITEON_SRC_VALID
+ VOID AsicPreciseCutDeltaPower(

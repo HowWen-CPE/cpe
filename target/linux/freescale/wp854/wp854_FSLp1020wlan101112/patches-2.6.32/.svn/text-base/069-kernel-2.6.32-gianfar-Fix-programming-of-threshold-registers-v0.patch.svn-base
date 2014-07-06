@@ -1,0 +1,30 @@
+From 3064f739d164f767c08739e21f9ce2dd4bdd2074 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Fri, 29 Jan 2010 12:42:47 +0530
+Subject: [PATCH] gianfar: Fix programming of threshold registers.
+
+The threshold regoster should never be programmed.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/gianfar.c |    4 ----
+ 1 files changed, 0 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index a3b7430..ae73b08 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -1908,10 +1908,6 @@ int startup_gfar(struct net_device *dev)
+ 
+ 	gfar_write(&regs->attr, attrs);
+ 
+-	gfar_write(&regs->fifo_tx_thr, priv->fifo_threshold);
+-	gfar_write(&regs->fifo_tx_starve, priv->fifo_starve);
+-	gfar_write(&regs->fifo_tx_starve_shutoff, priv->fifo_starve_off);
+-
+ 	/* Start the controller */
+ 	gfar_start(dev);
+ 
+-- 
+1.5.6.3
+

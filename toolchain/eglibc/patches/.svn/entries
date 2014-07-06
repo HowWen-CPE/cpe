@@ -1,0 +1,40 @@
+10
+
+dir
+12
+svn://192.168.1.17/trunk/cpe/toolchain/eglibc/patches
+svn://192.168.1.17
+
+
+
+2014-05-17T07:31:18.579404Z
+4
+peter
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+e6ba6a40-ba65-43fd-b1f0-5c3b951f9f94
+
+2.12
+dir
+
+2.13
+dir
+
+2.14
+dir
+
+2.15
+dir
+

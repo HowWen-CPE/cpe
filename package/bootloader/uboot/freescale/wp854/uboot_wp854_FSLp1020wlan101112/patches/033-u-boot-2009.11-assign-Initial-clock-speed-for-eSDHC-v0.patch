@@ -1,0 +1,32 @@
+From 2fdc818573521d17fdf4a2c23916e6f392b6f702 Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Thu, 18 Mar 2010 17:45:14 +0530
+Subject: [PATCH 5/7] [eSDHC]: Assign Initial clock speed for eSDHC controller
+
+After booting the u-boot, and first using some SD card (such as Sandisk 2G SD
+card), because the field 'clock' of struct mmc is zero, this will cause
+the read transfer is always active and SDHC DATA line is always active,
+therefore, driver can't handle the next command.
+Therefore, the field 'clock' is assigned the initial clock speed 400000Hz.
+
+Signed-off-by: Jerry Huang <Chang-Ming.Huang@freescale.com>
+Signed-off-by: Dipen Dudhat <Dipen.Dudhat@freescale.com>
+---
+ drivers/mmc/fsl_esdhc.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/mmc/fsl_esdhc.c b/drivers/mmc/fsl_esdhc.c
+index d3ffb2f..ed14b2f 100644
+--- a/drivers/mmc/fsl_esdhc.c
++++ b/drivers/mmc/fsl_esdhc.c
+@@ -374,6 +374,7 @@ static int esdhc_init(struct mmc *mmc)
+ 	out_be32(&regs->sysctl, SYSCTL_HCKEN | SYSCTL_IPGEN);
+ 
+ 	/* Set the initial clock speed */
++	mmc->clock = 400000;
+ 	set_sysctl(mmc, 400000);
+ 
+ 	/* Disable the BRR and BWR bits in IRQSTAT */
+-- 
+1.5.6.5
+

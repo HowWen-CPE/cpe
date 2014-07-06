@@ -1,0 +1,14 @@
+--- a/include/image.h
++++ b/include/image.h
+@@ -166,8 +166,9 @@
+ #define IH_COMP_LZMA		3	/* lzma  Compression Used	*/
+ 
+ #define IH_MAGIC	0x27051956	/* Image Magic Number		*/
+-#define IH_NMLEN		32	/* Image Name Length		*/
+-
++/*modify image name length, daniel@liteon,2013-05-24----->*/
++#define IH_NMLEN		128	/* Image Name Length		*/
++/*<-----daniel@liteon,2013-05-24*/
+ /*
+  * Legacy format image header,
+  * all data in network byte order (aka natural aka bigendian).

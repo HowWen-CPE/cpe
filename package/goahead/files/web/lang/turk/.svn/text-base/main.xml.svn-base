@@ -1,0 +1,463 @@
+<po>
+	<message msgid="band title" msgstr="Her ağ uygulamasının bant genişliğini ayarlama için kaydırıcıları sürükleyiniz.."/>
+	<message msgid="band Apply" msgstr="Uygula"/>
+	<message msgid="band Cancel" msgstr="İptal et"/>
+	<message msgid="game title" msgstr="Oyun Motorunu her açtığınızda, daha iyi bir oyun deneyimi sunmak üzere yönlendirici belirlenir. Bant Genişliği Yönetimindeki Oyun Konsolu seçeneği en yüksek seviyeye önceliklendirilecektir ve Oyun Motoru kapatılana kadar yeniden düzenlenemez."/>
+	<message msgid="game ok" msgstr="Tamam"/>
+	<message msgid="g2-1 easy123" msgstr="eaSetup 123"/>
+	<message msgid="g2-1 Internet" msgstr="Internete bağlan"/>
+	<message msgid="g2-1 Password" msgstr="Yönlendirici Şifresi"/>
+	<message msgid="g2-1 Security" msgstr="Kablosuz Güvenliği"/>
+	<message msgid="g2-1 InternetType" msgstr="Internet Bağlantı Türü:"/>
+	<message msgid="g2-1 InternetType1" msgstr="Statik IP"/>
+	<message msgid="g2-1 InternetType2" msgstr="DHCP"/>
+	<message msgid="g2-1 InternetType3" msgstr="PPPoE"/>
+	<message msgid="g2-1 InternetType4" msgstr="PPTP"/>
+	<message msgid="g2-1 InternetType5" msgstr="L2TP"/>
+	<message msgid="g2-1 title" msgstr="Lütfen İnternet Hizmet Sağlayıcınızın (ISP) temin ettiği bilgiye başvurarak aşağıdaki boşlukları doldurun."/>
+	<message msgid="g2-1 Dynamic" msgstr="Dinamik IP"/>
+	<message msgid="g2-1 Static" msgstr="Statik IP"/>
+	<message msgid="g2-1 IP" msgstr="IP Adresi:"/>
+	<message msgid="g2-1 User" msgstr="Kullanıcı Adı:"/>
+	<message msgid="g2-1 Password1" msgstr="Şifre:"/>
+	<message msgid="g2-1 Next" msgstr="İleri"/>
+	<message msgid="g2-1 Back" msgstr="Geri"/>
+	<message msgid="g2-1 Exit" msgstr="Çık"/>
+	<message msgid="g2-1 No" msgstr="Hayır"/>
+	<message msgid="g2-1 Yes" msgstr="Evet"/>
+	<message msgid="g2-1 msg" msgstr="Çıkmak istediğinizden emin misiniz?"/>
+	<message msgid="g2-2 easy123" msgstr="eaSetup 123"/>
+	<message msgid="g2-2 Internet" msgstr="Internete bağlan"/>
+	<message msgid="g2-2 Password" msgstr="Yönlendirici Şifresi"/>
+	<message msgid="g2-2 Security" msgstr="Kablosuz Güvenliği"/>
+	<message msgid="g2-2 InternetType" msgstr="Internet Bağlantı Türü:"/>
+	<message msgid="g2-2 InternetType1" msgstr="Statik IP"/>
+	<message msgid="g2-2 InternetType2" msgstr="DHCP"/>
+	<message msgid="g2-2 InternetType3" msgstr="PPPoE"/>
+	<message msgid="g2-2 InternetType4" msgstr="PPTP"/>
+	<message msgid="g2-2 InternetType5" msgstr="L2TP"/>
+	<message msgid="g2-2 title" msgstr="Lütfen İnternet Hizmet Sağlayıcınızın (ISP) temin ettiği bilgiye başvurarak aşağıdaki boşlukları doldurunuz."/>
+	<message msgid="g2-2 IP" msgstr="IP Adresi:"/>
+	<message msgid="g2-2 Subnet" msgstr="Alt Ağ Maskesi:"/>
+	<message msgid="g2-2 Gateway" msgstr="Varsayılan Ağ Geçidi:"/>
+	<message msgid="g2-2 DNS1" msgstr="Ana DNS:"/>
+	<message msgid="g2-2 DNS2" msgstr="İkincil DNS:"/>
+	<message msgid="g2-2 Gateway1" msgstr="Varsayılan Ağ Geçidi"/>
+	<message msgid="g2-2 Next" msgstr="İleri"/>
+	<message msgid="g2-2 Back" msgstr="Geri"/>
+	<message msgid="g2-2 Exit" msgstr="Çık"/>
+	<message msgid="g2-2 No" msgstr="Hayır"/>
+	<message msgid="g2-2 Yes" msgstr="Evet"/>
+	<message msgid="g2-2 msg" msgstr="Çıkmak istediğinizden emin misiniz?"/>
+	<message msgid="g2-3 title" msgstr="Genelde, bağlantı türünüz DHCP olduğunda, bu bilgisayarınızı açtığınızda İnternet hizmetinin kullanılabilir olduğu anlamına gelir."/>
+	<message msgid="g2-3 title1" msgstr="Lütfen devam etmek için İleri düğmesine basınız."/>
+	<message msgid="g2-4 Dynamic" msgstr="Dinamik IP"/>
+	<message msgid="g2-4 Static" msgstr="Statik IP"/>
+	<message msgid="g2-4 Address" msgstr="PPTP Adresi:"/>
+	<message msgid="g2-4 Subnet" msgstr="PPTP Alt Ağ Maskesi:"/>
+	<message msgid="g2-4 Gateway" msgstr="PPTP Ağ Geçidi IP Adresi:"/>
+	<message msgid="g2-4 Server" msgstr="PPTP Sunucu IP Adresi:"/>
+	<message msgid="g2-4 User" msgstr="Kullanıcı Adı:"/>
+	<message msgid="g2-4 Password" msgstr="Şifre:"/>
+	<message msgid="g2-5 Dynamic" msgstr="Dinamik IP"/>
+	<message msgid="g2-5 Static" msgstr="Statik IP"/>
+	<message msgid="g2-5 Address" msgstr="L2TP Adresi:"/>
+	<message msgid="g2-5 Subnet" msgstr="L2TP Alt Ağ Maskesi:"/>
+	<message msgid="g2-5 Gateway" msgstr="L2TP Ağ Geçidi IP Adresi:"/>
+	<message msgid="g2-5 Server" msgstr="L2TP Sunucu IP Adresi:"/>
+	<message msgid="g2-5 User" msgstr="Kullanıcı Adı:"/>
+	<message msgid="g2-5 Password" msgstr="Şifre:"/>
+	<message msgid="g2-44 easy123" msgstr="eaSetup 123 İnternete bağlanıyor"/>
+	<message msgid="g2-44 Connect" msgstr="Bağlanıyor..."/>
+	<message msgid="g2h easy123" msgstr="eaSetup 123 İnternet bağlantı türünüzü algılıyor."/>
+	<message msgid="g2h Detecting" msgstr="Algılıyor..."/>
+	<message msgid="g2-e2 msg1" msgstr="Yanlış Bilgi"/>
+	<message msgid="g2-e2 msg2" msgstr="Üzgünüz! Yönlendirici verdiğiniz bilgiyle İnternete bağlanamadı.  Lütfen tekrar giriniz."/>
+	<message msgid="g2-e msg1" msgstr="İnternet hizmeti algılanamadı"/>
+	<message msgid="g2-e msg2" msgstr="Lütfen aşağıdaki öğeleri elle kontrol ediniz:"/>
+	<message msgid="g2-e msg3" msgstr="1.Bilgisayar, yönlendirici ve modem birbirine doğru şekilde bağlı."/>
+	<message msgid="g2-e msg4" msgstr="2. İnternet hizmeti geçerli."/>
+	<message msgid="g2-e msg5" msgstr="Algılama işlemini tekrar çalıştırmak için Tekrar Dene düğmesini tıklayabilirsiniz."/>
+	<message msgid="g2-e msg6" msgstr="Tekrar Dene"/>
+	<message msgid="g3 title" msgstr="Yönlendirici şifresini değiştiriniz"/>
+	<message msgid="g3 msg" msgstr="Fabrika değeri (admin) yerine yeni bir yönetici şifresi belirlenmesi şiddetle tavsiye edilir."/>
+	<message msgid="g3 Password" msgstr="Şifre:"/>
+	<message msgid="g3 VPassword" msgstr="Şifreyi Onayla:"/>
+	<message msgid="g41 title" msgstr="Kablosuz Güvenliği"/>
+	<message msgid="g41 msg" msgstr="Korumalı bir kablosuz ağ herhangi bir ağ faaliyetini kablosuz olarak yürütürken veri aktarımını güvenlik altına almanızı sağlar. Kablosuz ağı aşağıdaki güvenlik modları ve bir şifreyle koruma altına alınız."/>
+	<message msgid="g41 SSID" msgstr="Kablosuz Ağ Adı (SSID):"/>
+	<message msgid="g41 Security" msgstr="Güvenlik modu:"/>
+	<message msgid="g41 password" msgstr="Kablosuz şifresi:"/>
+	<message msgid="g41 Vpassword" msgstr="Şifreyi Onayla:"/>
+	<message msgid="g41 Security0" msgstr="Güvenlik Yok"/>
+	<message msgid="g41 Security1" msgstr="WPA-PSK"/>
+	<message msgid="g41 Security2" msgstr="WPA2-PSK"/>
+	<message msgid="g5 title" msgstr="Tebrikler!"/>
+	<message msgid="g5 msg" msgstr="İnternete bağlandınız. Şimdi tüm zamanların en kolay yönlendirici yönetim aracı {GO}'yu denemeye ne dersiniz!"/>
+	<message msgid="g5 GO" msgstr="GİT"/>
+	<message msgid="Welcome" msgstr="Hoş Geldiniz"/>
+	<message msgid="g5 msg" msgstr="İnternete bağlandınız. Şimdi tüm zamanların en kolay yönlendirici yönetim aracı {GO}'yu denemeye ne dersiniz!"/>
+	<message msgid="g5 GO" msgstr="GİT"/>
+	<message msgid="pass title" msgstr="Sihirbaz kurulumu en yaygın yapılandırma ayarlarını gözden geçirmenizi sağlar. Yönlendiricinizi ilk kez kuruyorsanız ya da temel yapılandırma değişiklikleri yapmanız gerekiyorsa, size bu modu öneririz."/>
+	<message msgid="pass title1" msgstr="Sihirbaz modunda bulunmayan daha gelişmiş özelliklere erişmeniz gerekiyorsa, Gelişmiş modunu kullanınız."/>
+	<message msgid="pass Password" msgstr="Yeni Şifre:"/>
+	<message msgid="pass Retype" msgstr="Onaylamak için Yeniden Yazınız:"/>
+	<message msgid="pass Ignore" msgstr="Yoksay"/>
+	<message msgid="pass Apply" msgstr="Uygula"/>
+	<message msgid="ws title" msgstr="Şİfreleme yapmadan kablosuz olarak aktarılan veri güvenli değildir. Kablosuz ağınızı bir güvenlik modu ve ayarladığınız şifreyle koruma altına alınız. Sonra bilgisayarlarınızı kablosuz ağınıza tek bir tıkla bağlamak için WPS kullanabilirsiniz."/>
+	<message msgid="ws SSID" msgstr="Kablosuz Ağ Adı (SSID):"/>
+	<message msgid="ws Security" msgstr="Güvenlik modu:"/>
+	<message msgid="ws Security1" msgstr="Güvenlik Yok"/>
+	<message msgid="ws Security2" msgstr="WPA-PSK"/>
+	<message msgid="ws Security3" msgstr="WPA2-PSK"/>
+	<message msgid="ws password" msgstr="Kablosuz şifresi:"/>
+	<message msgid="ws vpassword" msgstr="Şifreyi onayla:"/>
+	<message msgid="ws WPS" msgstr="WPS"/>
+	<message msgid="ws Cancel" msgstr="İptal et"/>
+	<message msgid="ws Apply" msgstr="Uygula"/>
+	<message msgid="ws title1" msgstr="WiFi Protected Setup (WPS) bilgisayarlarınızı/cihazınızı kablosuz ağınıza daha kolay ve hızlı şekilde bağlamanızı sağlar. Bağlanmak için aşağıdaki yaklaşımlardan birini kullanınız."/>
+	<message msgid="ws title2" msgstr="Kablosuz istemcinizin Wi-Fi Protected Setup düğmesini tıklayın ve sonra alttaki düğmeyi tıklayıızn."/>
+	<message msgid="ws title3" msgstr="Kablosuz istemcinizin PIN numarasını kaydediniz."/>
+	<message msgid="ws title4" msgstr="Kablosuz istemciniz Yönlendiricinin PIN numarasını gerektiriyorsa,"/>
+	<message msgid="ws title5" msgstr="girin."/>
+	<message msgid="ws Confirm" msgstr="Onayla"/>
+	<message msgid="ws OK" msgstr="Tamam"/>
+	<message msgid="ws ws" msgstr="Kablosuz Güvenliği"/>
+	<message msgid="ws Exit" msgstr="Çık"/>
+	<message msgid="ws WPS1" msgstr="WPS"/>
+	<message msgid="ws Register" msgstr="Kaydet"/>
+	<message msgid="ps title" msgstr="Lütfen kablosuz hizmetini aşağıdaki tabloyla programlayınız."/>
+	<message msgid="ps status" msgstr="WLAN durumu"/>
+	<message msgid="ps Day" msgstr="Gün"/>
+	<message msgid="ps times" msgstr="Aşağıdaki saatler hariç   (24 saatlik format)"/>
+	<message msgid="ps Cancel" msgstr="İptal et"/>
+	<message msgid="ps Apply" msgstr="Uygula"/>
+	<message msgid="pc title" msgstr="Aşağıdaki anahtar kelimelerden herhangi birini içeren URL'ler engellenecek ve taranamayacak."/>
+	<message msgid="pc Delete" msgstr="Sil"/>
+	<message msgid="pc Add" msgstr="Ekle"/>
+	<message msgid="pc Cancel" msgstr="İptal et"/>
+	<message msgid="pc Apply" msgstr="Uygula"/>
+	<message msgid="Firewall title" msgstr="Güvenlik Duvarının etkinleştirilmesi bilgisayarlarınızı İnternetten gelen kötü amaçlı saldırılara karşı korur."/>
+	<message msgid="Firewall ok" msgstr="Tamam"/>
+	<message msgid="g Welcome" msgstr="Hoş Geldiniz"/>
+	<message msgid="g title" msgstr="İlerideki adımlar yönlendiricinizin kurulumunda ve İnternete bağlantıda size yol gösterecek. Lütfen devam etmek için aşağıdaki dil simgelerinden birini tıklayınız."/>
+	<message msgid="g Connect" msgstr="Internete bağlan"/>
+	<message msgid="g Language" msgstr="Dil"/>
+	<message msgid="maintain title" msgstr="Sistem Ayarı"/>
+	<message msgid="maintain sys name" msgstr="Sistem Adı"/>
+	<message msgid="maintain dom name" msgstr="Alan Adı"/>
+	<message msgid="maintain adm in timer" msgstr="Yönetici Hareketsizlik Zamanlayıcısı"/>
+	<message msgid="maintain minutes" msgstr="dakika, 0 zaman aşımı yok anlamına gelir"/>
+	<message msgid="maintain apply" msgstr="Uygula"/>
+	<message msgid="maintain reset" msgstr="İptal et"/>
+	<message msgid="pw title" msgstr="Şifre Ayarı"/>
+	<message msgid="pw old pw" msgstr="Eski Şifre"/>
+	<message msgid="pw new pw" msgstr="Yeni Şifre"/>
+	<message msgid="pw confirm" msgstr="Onaylamak için Yeniden Yazınız"/>
+	<message msgid="pw apply" msgstr="Uygula"/>
+	<message msgid="pw reset" msgstr="İptal et"/>
+	<message msgid="dash ezmode" msgstr="Kolay Mod"/>
+	<message msgid="dash about" msgstr="Hakkında"/>
+	<message msgid="dash home" msgstr="Ana sayfa"/>
+	<message msgid="dash logout" msgstr="Çıkış"/>
+	<message msgid="dash welcome" msgstr="Hoş geldiniz: yönetici"/>
+	<message msgid="dash welcome_g" msgstr="Hoş geldiniz: konuk"/>
+	<message msgid="dash title" msgstr="Durum"/>
+	<message msgid="dash ref interval" msgstr="Yenileme Aralığı"/>
+	<message msgid="dash ref none" msgstr="Yok"/>
+	<message msgid="dash ref 5s" msgstr="60 saniye"/>
+	<message msgid="dash ref 10s" msgstr="120 saniye"/>
+	<message msgid="dash ref 15s" msgstr="180 saniye"/>
+	<message msgid="dash ref 20s" msgstr="240 saniye"/>
+	<message msgid="dash ref 25s" msgstr="300 saniye"/>
+	<message msgid="dash ref 30s" msgstr="30 saniye"/>
+	<message msgid="dash ref apply" msgstr="Şimdi Yenile"/>
+	<message msgid="dash logout title" msgstr="Oturumu Kapat"/>
+	<message msgid="dash logout mes" msgstr="Oturumu kapatmak istediğinizden emin misiniz?"/>
+	<message msgid="dash logout no" msgstr="Hayır"/>
+	<message msgid="dash logout yes" msgstr="Evet"/>
+	<message msgid="dash about title" msgstr="Hakkında"/>
+	<message msgid="dash about check1" msgstr="device cihazınızı en yeni donanım yazılımıyla yükseltmek için, lütfen internet sitemizi ziyaret ediniz:"/>
+	<message msgid="dash about check2" msgstr="."/>
+	<message msgid="dash about close" msgstr="Kapat"/>
+	<message msgid="dash_info title" msgstr="Cihaz Bilgisi"/>
+	<message msgid="dash_info item" msgstr="Öğe"/>
+	<message msgid="dash_info data" msgstr="Veri"/>
+	<message msgid="dash_info hostname" msgstr="Ana Makine Adı"/>
+	<message msgid="dash_info fwver" msgstr="Donanım Yazılımı Sürümü"/>
+	<message msgid="dash_info sys opmode" msgstr="Sys OP Modu"/>
+	<message msgid="dash_info sys router" msgstr="Yönlendirici Modu"/>
+	<message msgid="dash_info sys ap" msgstr="Erişim Noktası Modu"/>
+	<message msgid="dash_info sys clinet" msgstr="Wireless Client Mode"/>
+	<message msgid="dash_info sys wds" msgstr="Köprü Modu (WDS)"/>
+	<message msgid="dash_info sys apwds" msgstr="AP + Yineleyici Modu (AP +WDS)"/>
+	<message msgid="dash_info sys apcli" msgstr="Evrensel Yineleyici Modu"/>
+	<message msgid="dash_info sys wisp" msgstr="WISP Modu"/>
+	<message msgid="dash_info wan info" msgstr="WAN Bilgisi"/>
+	<message msgid="dash_info wan mac" msgstr="MAC Adresi"/>
+	<message msgid="dash_info wan ip" msgstr="IP Adresi"/>
+	<message msgid="dash_info wan mask" msgstr="IP Alt Ağ Maskesi"/>
+	<message msgid="dash_info wan contype" msgstr="Bağlantı Türü"/>
+	<message msgid="dash_info lan info" msgstr="LAN Bilgisi"/>
+	<message msgid="dash_info lan mac" msgstr="MAC Adresi"/>
+	<message msgid="dash_info lan ip" msgstr="IP Adresi"/>
+	<message msgid="dash_info lan mask" msgstr="IP Alt Ağ Maskesi"/>
+	<message msgid="dash_info lan dhcp" msgstr="DHCP"/>
+	<message msgid="dash_info lan dhcp srv" msgstr="Sunucu"/>
+	<message msgid="dash_info lan dhcp dis" msgstr="Devre Dışı Bırak"/>
+	<message msgid="dash_info wlan info" msgstr="WLAN2.4G Bilgisi"/>
+	<message msgid="dash_info wlan opmode" msgstr="WLAN2.4G OP Modu"/>
+	<message msgid="dash_info wlan1 info" msgstr="WLAN5G Bilgisi"/>
+	<message msgid="dash_info wlan1 opmode" msgstr="WLAN5G OP Modu"/>
+	<message msgid="dash_info wlan ap0" msgstr="Erişim Noktası Modu"/>
+	<message msgid="dash_info wlan ap1" msgstr="Erişim Noktası Modu"/>
+	<message msgid="dash_info wlan cli" msgstr="İstemci Modu"/>
+	<message msgid="dash_info wlan wds" msgstr="Köprü Modu (WDS)"/>
+	<message msgid="dash_info wlan apwds" msgstr="AP + Yineleyici Modu (AP +WDS)"/>
+	<message msgid="dash_info wlan apcli" msgstr="Evrensel Yineleyici Modu"/>
+	<message msgid="dash_info wlan wisp" msgstr="WISP Modu"/>
+	<message msgid="dash_info wlan mac" msgstr="MAC Adresi"/>
+	<message msgid="dash_info wlan status" msgstr="Durum"/>
+	<message msgid="dash_info wlan status off" msgstr="KAPALI"/>
+	<message msgid="dash_info wlan status on" msgstr="AÇIK"/>
+	<message msgid="dash_info wlan status essid" msgstr="ESSID"/>
+	<message msgid="dash_info wlan status namessid" msgstr="İsim(SSID)"/>
+	<message msgid="dash_info wlan associated namessid" msgstr="ilgili SSID"/>
+	<message msgid="dash_info wlan chanbw" msgstr="Kanal Bant Genişliği"/>
+	<message msgid="dash_info wlan chan" msgstr="Kanal"/>
+	<message msgid="dash_info wlan chan auto" msgstr="Otomatik Kanal"/>
+	<message msgid="dash_info wlan opchan" msgstr="İşletim Kanalı"/>
+	<message msgid="dash_info wlan extchan" msgstr="Uzantı Kanalı"/>
+	<message msgid="dash_info wlan sec" msgstr="Güvenlik Modu"/>
+	<message msgid="dash_info wlan sec nosec" msgstr="Güvenlik Yok"/>
+	<message msgid="dash_info wlan 80211mode" msgstr="802.11 Modu"/>
+	<message msgid="dash_info wlan 80211mode config" msgstr="Yapılandırıldı"/>
+	<message msgid="dash_info ifstat title" msgstr="Arayüz Durumu"/>
+	<message msgid="dash_info ifstat if" msgstr="Arayüz"/>
+	<message msgid="dash_info ifstat stat" msgstr="Durum"/>
+	<message msgid="dash_info ifstat rate" msgstr="Oran"/>
+	<message msgid="dash_info ifstat wan" msgstr="WAN"/>
+	<message msgid="dash_info ifstat wan down" msgstr="Aşağı"/>
+	<message msgid="dash_info ifstat wan up" msgstr="Yukarı"/>
+	<message msgid="dash_info ifstat lan" msgstr="LAN"/>
+	<message msgid="dash_info ifstat lan up" msgstr="Yukarı"/>
+	<message msgid="dash_info ifstat wlan" msgstr="WLAN2.4G"/>
+	<message msgid="dash_info ifstat1 wlan" msgstr="WLAN5G"/>
+	<message msgid="dash_info ifstat wlan down" msgstr="Aşağı"/>
+	<message msgid="dash_info ifstat wlan up" msgstr="Yukarı"/>
+	<message msgid="dash_info systat title" msgstr="Sistem Durumu"/>
+	<message msgid="dash_info systat item" msgstr="Öğe"/>
+	<message msgid="dash_info systat data" msgstr="Veri"/>
+	<message msgid="dash_info systat sysuptime" msgstr="Sistem Çalışma Zamanı"/>
+	<message msgid="dash_info systat currtime" msgstr="Geçerli Tarih/Saat"/>
+	<message msgid="dash_info systat sysres" msgstr="Sistem Kaynağı"/>
+	<message msgid="dash_info systat cpu" msgstr="CPU Kullanımı"/>
+	<message msgid="dash_info systat mem" msgstr="Bellek Kullanımı"/>
+	<message msgid="dash_info systat setting" msgstr="Sistem Ayarı"/>
+	<message msgid="dash_info systat setting fw" msgstr="Güvenlik Duvarı"/>
+	<message msgid="dash_info systat setting en" msgstr="Etkinleştirildi"/>
+	<message msgid="dash_info systat setting dis" msgstr="Devre Dışı Bırakıldı"/>
+	<message msgid="dash_info systat bm" msgstr="Bant Genişliği Yönetimi"/>
+	<message msgid="dash_info systat bm en" msgstr="Etkinleştirildi"/>
+	<message msgid="dash_info systat bm dis" msgstr="Devre Dışı Bırakıldı"/>
+	<message msgid="dash_info systat upnp en" msgstr="Etkinleştirildi"/>
+	<message msgid="dash_info systat upnp dis" msgstr="Devre Dışı Bırakıldı"/>
+	<message msgid="dash_info systat confmode" msgstr="Yapılandırma Modu"/>
+	<message msgid="dash_info systat confmode exp" msgstr="Uzman"/>
+	<message msgid="dash_info sum title" msgstr="Özet"/>
+	<message msgid="dash_info sum bw" msgstr="BW MGMT Monitörü"/>
+	<message msgid="dash_info sum bw det" msgstr="Ayrıntılar"/>
+	<message msgid="dash_info sum dhcp" msgstr="DHCP Tablosu"/>
+	<message msgid="dash_info sum dhcp det" msgstr="Ayrıntılar"/>
+	<message msgid="dash_info sum pktstat" msgstr="Paket İstatistikleri"/>
+	<message msgid="dash_info sum pktstat det" msgstr="Ayrıntılar"/>
+	<message msgid="dash_info sum wlan" msgstr="WLAN İstasyonu Durumu"/>
+	<message msgid="dash1_info sum wlan" msgstr="WLAN İstasyonu Durumu"/>
+	<message msgid="dash_info sum wlan det" msgstr="Ayrıntılar"/>
+	<message msgid="networkmap Home" msgstr="Ana sayfa"/>
+	<message msgid="networkmap ExpertMode" msgstr="Uzman Modu"/>
+	<message msgid="networkmap Logout" msgstr="Çıkış"/>
+	<message msgid="networkmap Modem" msgstr="Modem"/>
+	<message msgid="networkmap Status" msgstr="Durum"/>
+	<message msgid="networkmap Name" msgstr="Sistem Adı:"/>
+	<message msgid="networkmap Time" msgstr="Zaman:"/>
+	<message msgid="networkmap WANIP" msgstr="WAN IP:"/>
+	<message msgid="networkmap MACAddress" msgstr="MAC Adresi:"/>
+	<message msgid="networkmap FirmwareVersion" msgstr="Donanım Yazılımı Sürümü:"/>
+	<message msgid="networkmap WirelessNetworkNameSSID" msgstr="Kablosuz Ağ Adı (SSID):"/>
+	<message msgid="networkmap Security" msgstr="Güvenlik:"/>
+	<message msgid="networkmap NetworkMAP" msgstr="Ağ HARİTASI"/>
+	<message msgid="networkmap GameEngine" msgstr="Oyun Motoru"/>
+	<message msgid="networkmap ParenetalControl" msgstr="İçerik Filtresi"/>
+	<message msgid="networkmap BandwidthMGMT" msgstr="Bant Genişliği YNTM"/>
+	<message msgid="networkmap Firewall" msgstr="Güvenlik Duvarı"/>
+	<message msgid="networkmap WirelessSecurity" msgstr="Kablosuz Güvenliği"/>
+	<message msgid="networkmap PowerSaving" msgstr="Güç Tasarrufu"/>
+	<message msgid="networkmap ScanningyourNetwork" msgstr="Ağınız Taranıyor. . ."/>
+	<message msgid="Logout" msgstr="Çıkış"/>
+	<message msgid="Home" msgstr="Ana sayfa"/>
+	<message msgid="About" msgstr="Hakkında"/>
+	<message msgid="EasyMode" msgstr="Kolay Mod"/>
+	<message msgid="WelcomeAdmin" msgstr="Hoş geldiniz: yönetici"/>
+	<message msgid="Welcomeguest" msgstr="Hoş geldiniz: konuk" />
+	<message msgid="openall" msgstr="tümünü aç"/>
+	<message msgid="closeall" msgstr="tümünü kapat"/>
+	<message msgid="CONFIGURATION" msgstr="Yapılandırma"/>
+	<message msgid="CONFIGURATION_TITLE" msgstr="YAPILANDIRMA"/>
+	<message msgid="Network" msgstr="Ağ"/>
+	<message msgid="Wireless LAN" msgstr="Kablosuz LAN"/>
+	<message msgid="General" msgstr="Genel"/>
+	<message msgid="WAN" msgstr="WAN"/>
+	<message msgid="Internet Connection" msgstr="İnternet Bağlantısı"/>
+	<message msgid="LAN" msgstr="LAN"/>
+	<message msgid="DHCP Server" msgstr="DHCP Sunucusu"/>
+	<message msgid="Static Route" msgstr="Statik Yol"/>
+	<message msgid="IP Static Route" msgstr="IP Statik Yol"/>
+	<message msgid="Security" msgstr="Güvenlik"/>
+	<message msgid="Firewall" msgstr="Güvenlik Duvarı"/>
+	<message msgid="Content Filter" msgstr="İçerik Filtresi"/>
+	<message msgid="Utility" msgstr="Yardımcı Program"/>
+	<message msgid="Bandwidth Management" msgstr="Bant Genişliği Yönetimi"/>
+	<message msgid="IGMP Snooping" msgstr="IGMP Trafik Gözetleme"/>
+	<message msgid="IP Alias" msgstr="Ek IP"/>
+	<message msgid="MAC Filter" msgstr="MAC Filtresi"/>
+	<message msgid="Basic" msgstr="temel" />
+	<message msgid="Advanced" msgstr="Gelişmiş"/>
+	<message msgid="WPS Station" msgstr="WPS İstasyonu"/>
+	<message msgid="Scheduling" msgstr="Programlama"/>
+	<message msgid="AP Client" msgstr="AP İstemcisi"/>
+	<message msgid="WDS" msgstr="WDS"/>
+	<message msgid="Client" msgstr="İstemci"/>
+	<message msgid="Application" msgstr="Uygulama"/>
+	<message msgid="Services" msgstr="Hizmetler"/>
+	<message msgid="SPI" msgstr="SPI"/>
+	<message msgid="RIP" msgstr="RIP"/>
+	<message msgid="Routing" msgstr="Yönlendirme"/>
+	<message msgid="Monitor" msgstr="Monitör"/>
+	<message msgid="Parental Control" msgstr="İçerik Filtresi"/>
+	<message msgid="MAINTENANCE" msgstr="BAKIM"/>
+	<message msgid="Maintenance" msgstr="Bakım"/>
+	<message msgid="Password" msgstr="Şifre"/>
+	<message msgid="Time" msgstr="Zaman"/>
+	<message msgid="Time Setting" msgstr="Zaman Ayarı"/>
+	<message msgid="Remote Management" msgstr="Uzaktan Yönetim"/>
+	<message msgid="Firmware Upgrade" msgstr="Donanım Yazılımı Yükseltmesi"/>
+	<message msgid="Backup Restore" msgstr="Yedekle / Geri Yükle"/>
+	<message msgid="Reset Restart" msgstr="Sıfırla/Yeniden Başlat"/>
+	<message msgid="Sys OP Mode" msgstr="Sys OP Modu"/>
+	<message msgid="Password Setup" msgstr="Şifre Ayarı"/>
+	<message msgid="Restart" msgstr="Yeniden Başlat"/>
+	<message msgid="MONITOR" msgstr="MONİTÖR"/>
+	<message msgid="Monitor" msgstr="Monitör"/>
+	<message msgid="Log" msgstr="Günlük"/>
+	<message msgid="View Log" msgstr="Günlüğü Göster"/>
+	<message msgid="Log Settings" msgstr="Günlük Ayarları"/>
+	<message msgid="BW MGMT Monitor" msgstr="BW MGMT Monitörü"/>
+	<message msgid="DHCP Table" msgstr="DHCP Tablosu"/>
+	<message msgid="Packet Statistics" msgstr="Paket İstatistikleri"/>
+	<message msgid="Port Statistics" msgstr="Liman İstatistikleri"/>
+	<message msgid="Wireless Statistics" msgstr="kablosuz İstatistikleri"/>
+	<message msgid="WLAN Station Status" msgstr="WLAN İstasyonu Durumu"/>
+	<message msgid="Association List" msgstr="İlişkilendirme Listesi"/>
+	<message msgid="Sys OP Mode" msgstr="Sys OP Modu"/>
+	<message msgid="Password Setup" msgstr="Şifre Ayarı"/>
+	<message msgid="Restart" msgstr="Yeniden Başlat"/>
+	<message msgid="message_header" msgstr="Mesaj"/>
+	<message msgid="Unconfigured" msgstr="Yapılandırılmadı"/>
+	<message msgid="Configured" msgstr="Yapılandırıldı"/>
+	<message msgid="System Name cannot be empty." msgstr="Sistem Adı boş olamaz."/>
+	<message msgid="Domain Name cannot be empty." msgstr="Alan Adı boş olamaz."/>
+	<message msgid="Please specify Administrator Inactivity Timer." msgstr="Lütfen Yönetici Hareketsizlik Zamanlayıcısını belirtiniz."/>
+	<message msgid="Invalid Administrator Inactivity Timer" msgstr="Geçersiz Yönetici Hareketsizlik Zamanlayıcısı"/>
+	<message msgid="Error: Confirm password not match!!" msgstr="Hata: Onaylama şifresi uyuşmadı!!"/>
+	<message msgid="proceeding message 1" msgstr="Yapılandırma Güncellemesi devam ediyor.  Lütfen Bekleyiniz..."/>
+	<message msgid="proceeding message 2" msgstr="Cihaz şimdi yeniden başlatılacak. İşlemin ne zaman tamamlandığı gösterilmeyeceğinden, lütfen yönlendiriciye tekrar erişmeyi denemeden önce bir dakika bekleyiniz."/>
+	<message msgid="proceeding Restart" msgstr="Cihaz Şimdi Yeniden Başlıyor."/>
+	<message msgid="proceeding message 3" msgstr="Yazılım Yükseltmesi devam ediyor...  Lütfen Bekleyiniz..."/>
+	<message msgid="proceeding message 4" msgstr="Cihaz Şimdi Yeniden Başlıyor. Lütfen Bekleyiniz..."/>
+	<message msgid="proceeding message 5" msgstr="Cihazınızı KAPATMAYINIZ."/>
+	<message msgid="main Ready" msgstr="Hazır"/>
+	<message msgid="main ConfigurationSuccess" msgstr="Yapılandırma başarıyla güncellendi."/>
+	<message msgid="main ConfigurationProceeding" msgstr="Yapılandırma Güncellemesi devam ediyor. Lütfen Bekleyiniz..."/>
+	<message msgid="main firmware download in progress" msgstr="Donanım yazılımı indiriliyor. Lütfen bekleyiniz. . ."/>
+	<message msgid="main firmware upgrade is proceeding" msgstr="Yazılım yükseltmesi devam ediyor. Lütfen bekleyin ve cihazınızı KAPATMAYINIZ."/>
+	<message msgid="Management" msgstr="Yönetim"/>
+	<message msgid="Key_Word" msgstr="Anahtar Kelime Ekle"/>
+	<message msgid="change_password" msgstr="Şifreyi değiştirmek için bu ekranı kullanınız"/>
+	<message msgid="Disassociated" msgstr="İletişim kesildi"/>
+	<message msgid="Associated" msgstr="İlişkilendirildi"/>
+	<message msgid="Connect Status" msgstr="Bağlantı Durumu"/>
+	<message msgid="g41 msg2" msgstr="Daha iyi kablosuz güvenlik için WPA ya da WPA2 şifrelemesinin ayarlanması şiddetle tavsiye edilir."/>
+	<message msgid="g5 msg2" msgstr="Cihazınızı en yeni donanım yazılımıyla yükseltmek için, lütfen www.HP.com adresindeki internet sitemizi ziyaret ediniz."/>
+	<message msgid="g5 msg3" msgstr="ya da donanım yazılımını online olarak yükseltmek için Uzman modu &gt; Bakım &gt; Donanım Yazılımı Yükseltme sekmesine gidiniz."/>
+	<message msgid="dash_info wlan sec wep" msgstr="Statik WEP"/>
+	<message msgid="dash_info wlan sec wpapsk" msgstr="WPA-PSK"/>
+	<message msgid="dash_info wlan sec wpa2psk" msgstr="WPA2-PSK"/>
+	<message msgid="dash_info wlan sec wpapskwpa2psk" msgstr="WPA-PSK/WPA2-PSK"/>
+	<message msgid="dash_info wlan sec wpawpa2" msgstr="WPA/WPA2"/>
+	<message msgid="dash_info wlan sec wpa"	msgstr="WPA" />
+	<message msgid="dash_info wlan sec wpa2" msgstr="WPA2" />
+	<message msgid="dash_info wlan sec unavailable"	msgstr="Unavailable" />
+	<message msgid="dash_info wlan sec unknown"	msgstr="Unknown" />
+	<message msgid="IPv6" msgstr="IPv6"/>
+	<message msgid="NAT" msgstr="NAT"/>
+	<message msgid="DDNS" msgstr="DDNS"/>
+	<message msgid="UPnP" msgstr="UPnP"/>
+	<message msgid="dash_info wan3G simstatus" msgstr="SIM Kart Durumu"/>
+	<message msgid="dash_info ifstat wan3G" msgstr="3G Modem"/>
+	<message msgid="dash_info ifstat wan3G up" msgstr="Yukarı"/>
+	<message msgid="dash_info ifstat wan3G down" msgstr="Aşağı"/>
+	<message msgid="dash_info sum3G title" msgstr="3G Durumu"/>
+	<message msgid="dash_info systat item" msgstr="Birim"/>
+	<message msgid="dash_info systat data" msgstr="Veri"/>
+	<message msgid="dash_info conn3G status" msgstr="3G Bağlantı Durumu"/>
+	<message msgid="dash_info wan3G ISP" msgstr="Hizmet Sağlayıcı"/>
+	<message msgid="dash_info wan3G SSI" msgstr="Sinyal Kuvveti"/>
+	<message msgid="dash_info wan3G uptime" msgstr="Son Bağlantı Çalışma Süresi"/>
+	<message msgid="dash_info wan3G Manufacturer" msgstr="3G Kart üreticisi"/>
+	<message msgid="dash_info wan3G Model" msgstr="3G Kart Modeli"/>
+	<message msgid="dash_info wan3G firmware" msgstr="3G Kartı Donanım Yazılımı Revizyonu"/>
+	<message msgid="dash_info wan3G IMEI" msgstr="3G Kart IMEI numarası"/>
+	<message msgid="dash_info wan3G SIM_IMEI" msgstr="SIM Kart IMEI numarası"/>
+	<message msgid="dash_info wan3G ready" msgstr="Hazır"/>
+	<message msgid="dash_info wan3G not_ready" msgstr="Hazır Değil"/>
+	<message msgid="dash_info wan3G SSIunit" msgstr="dBm"/>
+	<message msgid="g2-1 ServiceName" msgstr="Hizmet Adı:"/>
+	<message msgid="Site Survey" msgstr="Yerinde İnceleme"/>
+	<message msgid="System do not support specific invalid characters" msgstr="Sistem belirli geçersiz karakterleri desteklemez"/>
+	<message msgid="It is strongly recommended to set WPA or WPA2 encryption for better wireless security." msgstr="Daha iyi kablosuz güvenlik için WPA ya da WPA2 şifrelemesinin ayarlanması şiddetle tavsiye edilir."/>
+	<message msgid="Please enter SSID!" msgstr="Lütfen SSID girin!"/>
+	<message msgid="Please enter Password!" msgstr="Lütfen Şifre girin!"/>
+	<message msgid="Password should be with length 8~64" msgstr="Şifre 8~64 uzunluğunda olmalı"/>
+	<message msgid="Please enter Verify Password correctly!" msgstr="Lütfen Şifreyi Doğrula girişini doğru yapınız!"/>
+	<message msgid="Error. IP address is empty." msgstr="Hata. IP adresi boş."/>
+	<message msgid="It should be a [0-9] number." msgstr="Bir [0-9] sayısı olmalı."/>
+	<message msgid="IP adress format error." msgstr="IP adres formatı hatası."/>
+	<message msgid="PPPoE user name should not be empty!" msgstr="PPPoE kullanıcı adı boş olmamalı!"/>
+	<message msgid="PPPoE password should not be empty!" msgstr="PPPoE şifresi boş olmamalı!"/>
+	<message msgid="First DNS Server should not be empty with User-Defined." msgstr="İlk DNS Sunucusu Kullanıcı Tanımlıysa boş olmamalı."/>
+	<message msgid="First DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="İlk DNS Sunucusu 0.0.0.0 olmamalı, lütfen DNS IP Adresini veriniz."/>
+	<message msgid="Second DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="İkinci DNS Sunucusu 0.0.0.0 olmamalı, lütfen DNS IP Adresini verin."/>
+	<message msgid="PPTP user name should not be empty!" msgstr="PPTP kullanıcı adı boş olmamalı!"/>
+	<message msgid="PPTP password should not be empty!" msgstr="PPTP şifresi boş olmamalı!"/>
+	<message msgid="L2TP user name should not be empty!" msgstr="L2TP kullanıcı adı boş olmamalı!"/>
+	<message msgid="L2TP password should not be empty!" msgstr="L2TP şifresi boş olmamalı!"/>
+	<message msgid="WWW" msgstr="WWW"/>
+	<message msgid="QoS" msgstr="QoS"/>
+	<message msgid="WPS" msgstr="WPS"/>
+	<message msgid="Universal Repeater" msgstr="Evrensel Yineleyici"/>
+	<message msgid="dash_info sys wisp ur" msgstr="WISP + Evrensel Yineleyici Modu"/>
+	<message msgid="dash_info wlan wisp ur" msgstr="WISP + Evrensel Yineleyici Modu"/>
+	<message msgid="dash_info ipv6 title"	msgstr="IPv6 Status" />
+	<message msgid="dash_info ipv6 conn type"	msgstr="IPv6 Connection Type" />
+	<message msgid="dash_info ipv6 wan address"	msgstr="WAN IPv6 Address" />
+	<message msgid="dash_info ipv6 wan gateway"	msgstr="Gateway IP Address" />
+	<message msgid="dash_info ipv6 wan first dns"	msgstr="First DNS Server" />
+	<message msgid="dash_info ipv6 wan second dns"	msgstr="Second DNS Server" />
+	<message msgid="dash_info ipv6 lan address"	msgstr="LAN IPv6 Address" />
+	<message msgid="dash_info ipv6 lan link local"	msgstr="LAN IPv6 Link Local Address" />
+	<message msgid="Routing Table" 	msgstr="Tablo y?nlendirme" />
+    <message msgid="IPv4 Routing Table"   msgstr="IPv4 Tablo y?nlendirme" />
+	<message msgid="STP"  msgstr="STP" />
+	<message msgid="User Rule"  msgstr="kullan?c? Kural" />
+</po>

@@ -1,0 +1,84 @@
+--- boot_atheros/rom-boot-drv/mk2stage	2013-04-03 13:43:14.000000000 +0800
++++ boot_liteon/rom-boot-drv/mk2stage	2013-03-29 18:00:41.000000000 +0800
+@@ -57,7 +57,7 @@
+ 	exit 1
+ }
+ 
+-prep_file()
++prep_file_old()
+ {
+ 	pad=`ls -l $1 | awk '{print $5}'`
+ 	pad=$((pad + hs))
+@@ -102,6 +102,72 @@
+ 	rm $tf
+ }
+ 
++prep_file()
++{
++	pad=`ls -l $1 | awk '{print $5}'`
++	pad=$((pad + hs))
++	sz=$pad
++	pad=$((ps - (pad % ps)))
++	sz=$((sz + pad))
++
++	cat $1 > $tf
++	if [ $? -ne 0 ]; then
++		echo "Cannot create temp file $tf"
++		exit 1
++	fi
++
++	if [ $db -ne 0 ]; then
++		set +x
++	fi
++
++	#while [ $pad -gt 0 ];
++	#do
++	#	printf "\xff"
++	#	pad=$((pad - 1))
++	#done >> $tf
++
++	../utility/bin/imagealign $1 $tf $((sz - 16))
++
++	if [ $db -ne 0 ]; then
++		set -x
++	fi
++
++	#ep=`/bin/echo -n $2 | cut -c1-8 | sed 's/../\\\\x&/g'`
++	#la=`/bin/echo -n $3 | cut -c1-8 | sed 's/../\\\\x&/g'`
++	#sz=`printf "%08x" $sz | cut -c1-8 | sed 's/../\\\\x&/g'`
++	#cs=`../utility/bin/checksum $tf swap | sed 's/../\\\\x&/g'`
++
++	_ep=$2
++	_la=$3
++	_sz=`printf "%08x" $sz`
++	_cs=`../utility/bin/checksum $tf swap`
++
++	#
++	# Remember to update 'hs' if something gets added here...
++	#
++	#printf $ep >> $op
++	#printf $la >> $op
++	#printf $sz >> $op
++	#printf $cs >> $op
++
++    echo _ep=$_ep _la=$_la _sz=$_sz _cs=$_cs
++
++    ../utility/bin/binfile byte.bin 0x${_ep}
++    cat byte.bin >> $op
++
++    ../utility/bin/binfile byte.bin 0x${_la}
++    cat byte.bin >> $op
++
++    ../utility/bin/binfile byte.bin 0x${_sz}
++    cat byte.bin >> $op
++
++    ../utility/bin/binfile byte.bin 0x${_cs}
++    cat byte.bin >> $op
++
++	cat $tf >> $op
++	rm $tf
++}
++
+ #
+ # Parse command line options
+ #

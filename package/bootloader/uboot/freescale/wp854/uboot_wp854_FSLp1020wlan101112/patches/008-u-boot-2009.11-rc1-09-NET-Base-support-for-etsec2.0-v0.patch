@@ -1,0 +1,86 @@
+From 6e2813e0d9d4b44afdca3f5cb60da77b1c3990a7 Mon Sep 17 00:00:00 2001
+From: Sandeep Kumar <Sandeep.Kumar@freescale.com>
+Date: Wed, 28 Oct 2009 09:47:00 +0530
+Subject: [PATCH v0] NET: Base support for etsec2.0
+
+1. Modified the tsec_mdio structure to include the new regs
+2. Modified the MDIO_BASE_ADDR so that it will handle both
+older version and new version of etsec.
+
+Signed-off-by: Sandeep Kumar <Sandeep.Kumar@freescale.com>
+---
+ include/asm-ppc/immap_85xx.h |    7 ++++++-
+ include/configs/P1_P2_RDB.h  |    5 +++++
+ include/tsec.h               |   11 +++++++++++
+ 3 files changed, 22 insertions(+), 1 deletions(-)
+
+diff --git a/include/asm-ppc/immap_85xx.h b/include/asm-ppc/immap_85xx.h
+index c84bb6c..e53685b 100644
+--- a/include/asm-ppc/immap_85xx.h
++++ b/include/asm-ppc/immap_85xx.h
+@@ -1947,10 +1947,15 @@ typedef struct ccsr_gur {
+ 	(CONFIG_SYS_IMMR + CONFIG_SYS_MPC85xx_USB_OFFSET)
+ 
+ /* TSEC and MDIO OFFSETS */
++#ifdef CONFIG_TSECV2
++#define CONFIG_SYS_TSEC1_OFFSET		0xB0000
++#else
+ #define CONFIG_SYS_TSEC1_OFFSET		0x24000
++#endif
++
+ #define TSEC_SIZE			0x01000
+ 
+-#define CONFIG_SYS_MDIO1_OFFSET		0x24520
++#define CONFIG_SYS_MDIO1_OFFSET		0x24000
+ #define MDIO_OFFSET			0x01000
+ 
+ #define TSEC_BASE_ADDR		(CONFIG_SYS_IMMR + CONFIG_SYS_TSEC1_OFFSET)
+diff --git a/include/configs/P1_P2_RDB.h b/include/configs/P1_P2_RDB.h
+index e56cb7f..1ec57e3 100644
+--- a/include/configs/P1_P2_RDB.h
++++ b/include/configs/P1_P2_RDB.h
+@@ -118,6 +118,11 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ #define CONFIG_MP
+ #endif
+ 
++/* TSECV2 */
++#if defined(CONFIG_P1020)
++#define CONFIG_TSECV2
++#endif
++
+ /*
+  * These can be toggled for performance analysis, otherwise use default.
+  */
+diff --git a/include/tsec.h b/include/tsec.h
+index 3b697bc..d9f0e89 100644
+--- a/include/tsec.h
++++ b/include/tsec.h
+@@ -451,14 +451,25 @@ typedef struct tsec_hash_regs
+ 	uint	res2[24];
+ } tsec_hash_t;
+ 
++/* MDIO structure for etsec2.0.
++ * Backward compatible to etsec1.x
++ */
++
+ typedef struct tsec_mdio
+ {
++	uint	res1[4];
++	uint	ieventm;	/* MDIO Interrupt event register */
++	uint	imaskm;		/* MDIO Interrupt mask register */
++	uint	res2;
++	uint	emapm;		/* MDIO Event mapping register */
++	uint	res3[320];
+ 	uint	miimcfg;	/* MII Management: Configuration */
+ 	uint	miimcom;	/* MII Management: Command */
+ 	uint	miimadd;	/* MII Management: Address */
+ 	uint	miimcon;	/* MII Management: Control */
+ 	uint	miimstat;	/* MII Management: Status */
+ 	uint	miimind;	/* MII Management: Indicators */
++	uint	res4[690];
+ } tsec_mdio_t;
+ 
+ typedef struct tsec
+-- 
+1.5.6.5
+

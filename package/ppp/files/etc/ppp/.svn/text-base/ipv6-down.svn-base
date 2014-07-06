@@ -1,0 +1,40 @@
+#!/bin/sh
+# Please refer to ipv6-up for argument description. 
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+. /etc/network.sh
+[ -z "$6" ] || {
+    type="${6%%[0-9]}"
+    num="${6#$type}"
+    PPP_DEMAND_STATE_FILE="/tmp/ppp-${type}${num}-demand.tmp"
+
+    [ "$type" = "wan" ] && {
+    # When ipv6-down in demand mode, it doesn't change gateway and routing
+    # 1. The connection is internally disconnected in pppd
+    # 2. The interface pppX remains, as well as it's ipaddr and gateway
+    # 3. The gateway and routing are remained no change
+    # 4. We only change the display on user interface to 0.0.0.0
+    if [ -f "${PPP_DEMAND_STATE_FILE}" -a \
+         "$(cat ${PPP_DEMAND_STATE_FILE})" = "demand-connected" ]; then
+        nvram fset "${type}${num}_ipaddrv6=0::0"
+        echo -n "demand-start" > ${PPP_DEMAND_STATE_FILE}
+    else
+    	ifacev6_down "$6"
+    fi
+    # For both demand and keep alive mode, when ipv6-down, we turn down
+    # related services.
+    env -i ACTION="ifdownv6" INTERFACE="$6" PROTO=ppp TYPE="$type" \
+    NUM="$num" IFNAME="${2}" /sbin/hotplug-call "ifacev6" &
+    }
+
+    [ "$type" != "wan" ] && {
+    	log_usr "PPTP Server" "client [$6] local [$5] disconnected" OK
+    }
+}
+[ -d /etc/ppp/ipv6-down.d ] && {
+	for SCRIPT in /etc/ppp/ipv6-down.d/*
+	do
+		[ -x "$SCRIPT" ] && "$SCRIPT" $@
+	done
+}
+

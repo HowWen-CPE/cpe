@@ -1,0 +1,44 @@
+#!/bin/sh
+# for rt3883
+
+[ "$#" = "2" ] || {
+    echo "usage : ezp-portstate [1|2|3|4|5=wan] [speed|link]"
+}
+portidx="$1"
+testopt="$2"
+[ "$portidx" = "wan" ] && portidx="5"
+portidx=$(($portidx-1))
+
+PHY_SP_ST_REG="0x$(mii_mgr -g -p $portidx -r 17|awk '{print $4}')"
+let reg_oct_val=$PHY_SP_ST_REG
+linkst=$(($reg_oct_val & 1024))
+rate=$(($reg_oct_val >> 14))
+
+#echo "ethernet rate=$rate"
+#echo "ethernet linkst=$linkst"
+
+[ "$testopt" = "speed" ] && {
+    case "${rate}" in
+    0)
+    echo "10"
+    ;;
+    1)
+    echo "100"
+    ;;
+    2)
+    echo "1000"
+    ;;
+    *)
+    echo "unknown rate=${rate}"
+    ;;
+    esac
+    exit 0
+}
+[ "$testopt" = "link" ] && {
+    if [ "${linkst}" = "1024" ]; then
+        echo "up"
+    else
+        echo "down"
+    fi
+}
+

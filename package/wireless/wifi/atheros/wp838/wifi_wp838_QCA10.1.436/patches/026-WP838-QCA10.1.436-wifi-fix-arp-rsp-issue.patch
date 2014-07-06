@@ -1,0 +1,98 @@
+--- wifi_QCA_10.1.436-orig/./drivers/wlan_modules/umac/extap/ieee80211_extap.c	2014-06-25 02:00:50.365080708 -0700
++++ wifi_QCA_10.1.436/./drivers/wlan_modules/umac/extap/ieee80211_extap.c	2014-06-28 17:39:59.308122620 -0700
+@@ -223,11 +223,11 @@ char *arps[] = { NULL, "req", "rsp", "rr
+ int
+ ieee80211_extap_input(wlan_if_t vap, struct ether_header *eh)
+ {
+-	u_int8_t	*mac;
++	u_int8_t	*mac=NULL;
+ 	u_int8_t	*sip, *dip;
+ 	adf_net_iphdr_t	*iphdr = NULL;
+ 	eth_arphdr_t	*arp = NULL;
+-      
++
+ 	switch (eh->ether_type) {
+ 	case ETHERTYPE_IP:
+ 		iphdr = (adf_net_iphdr_t *)(eh + 1);
+@@ -246,6 +246,50 @@ ieee80211_extap_input(wlan_if_t vap, str
+ 			return 0;
+ 		}
+ 
++        /* BEGIN: Added by Peter, 2014/6/29   PN:98 */
++        /* replace the proxy mac address with the real target address*/
++        if(arp->ar_op == ADF_ARP_RSP)
++        {
++        	//sip = arp->ar_sip;
++        	dip = arp->ar_tip;
++            
++            #if MI_TABLE_AS_TREE 
++        	if (vap->iv_ic->ic_table->busy == 0){
++        		vap->iv_ic->ic_table->busy = 1;
++        	mac = mi_lkup(vap->iv_ic->ic_table, dip, ATH_MITBL_IPV4);
++        		vap->iv_ic->ic_table->busy = 0;
++        	}
++        	#else
++        	mac = mi_lkup(vap->iv_ic->ic_miroot, dip, ATH_MITBL_IPV4);
++        	#endif
++            
++            /*
++            printk( "[%2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x]\n", 
++                arp->ar_tha[0], arp->ar_tha[1], arp->ar_tha[2],
++                arp->ar_tha[3], arp->ar_tha[4], arp->ar_tha[5]);
++            */
++
++
++            if(mac)
++            {
++                /* replace the target mac address in content of arp rsp*/
++                IEEE80211_ADDR_COPY(arp->ar_tha, mac);
++                
++                /*
++                printk("%s: arp rsp from" eamstr " " eaistr " to target " eamstr " " eaistr "\n", 
++                    __func__, eamac(arp->ar_sha), eaip(arp->ar_sip), eamac(mac), eaip(arp->ar_tip));
++                */
++            }else
++            {
++                printk("%s, %d: not found mac in mi table according to arp rsp target ip [%u.%u.%u.%u]\n", 
++                    __func__, __LINE__, dip[0],dip[1],dip[2],dip[3]);
++
++            }
++  
++        }
++        /* END:   Added by Peter, 2014/6/29   PN:98 */
++
++
+ 		/* The followinig code is Useless. For ARP reply package, arp->ar_sip will not be added to
+ 		 *  the MAC-IP table based on current design(ieee80211_extap_out_arp), so the mac is always NULL.
+ 		 *  Felix@liteon, 2014-1-8	-----> 
+@@ -278,16 +322,20 @@ ieee80211_extap_input(wlan_if_t vap, str
+ 			__func__, __LINE__, eh->ether_type);
+ 		return 0;
+ 	}
+-	
+-	#if MI_TABLE_AS_TREE /*Felix@liteon, 2014-1-8 */
+-	if (vap->iv_ic->ic_table->busy == 0){
+-		vap->iv_ic->ic_table->busy = 1;
+-	mac = mi_lkup(vap->iv_ic->ic_table, dip, ATH_MITBL_IPV4);
+-		vap->iv_ic->ic_table->busy = 0;
+-	}
+-	#else
+-	mac = mi_lkup(vap->iv_ic->ic_miroot, dip, ATH_MITBL_IPV4);
+-	#endif
++
++    if(mac == NULL) /* avoid dup search table if already got it*/
++    {
++    	#if MI_TABLE_AS_TREE /*Felix@liteon, 2014-1-8 */
++    	if (vap->iv_ic->ic_table->busy == 0){
++    		vap->iv_ic->ic_table->busy = 1;
++    	mac = mi_lkup(vap->iv_ic->ic_table, dip, ATH_MITBL_IPV4);
++    		vap->iv_ic->ic_table->busy = 0;
++    	}
++    	#else
++    	mac = mi_lkup(vap->iv_ic->ic_miroot, dip, ATH_MITBL_IPV4);
++    	#endif
++    }
++
+ 	/*
+ 	 * XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
+ 	 * XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX

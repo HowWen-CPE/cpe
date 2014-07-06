@@ -1,0 +1,11 @@
+--- u-boot-freescale-p1020-sku/include/tsec.h	2012-07-11 19:41:34.407675144 -0700
++++ u-boot-liteon-wp854-openwrt/include/tsec.h	2011-05-03 18:14:35.000000000 -0700
+@@ -148,6 +148,8 @@
+ #define MIIM_BCM54xx_AUXSTATUS_LINKMODE_MASK	0x0700
+ #define MIIM_BCM54xx_AUXSTATUS_LINKMODE_SHIFT	8
+ 
++#define MIIM_BCM54xx_SKEW_CTRL   0x1c
++
+ /* Cicada Auxiliary Control/Status Register */
+ #define MIIM_CIS8201_AUX_CONSTAT	0x1c
+ #define MIIM_CIS8201_AUXCONSTAT_INIT	0x0004

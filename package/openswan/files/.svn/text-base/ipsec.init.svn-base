@@ -1,0 +1,362 @@
+#!/bin/sh /etc/rc.common
+# hotplug event: $TYPE are required.
+#[ "$TYPE" != "wan" ] && exit 1;
+BIN=/usr/sbin/ipsec
+PID_FILE=/var/run/ipsec.pid
+IPSEC_CONFIG_FILE=/etc/ipsec.conf
+IPSEC_CONFIG_RFILE=/tmp/ipsec.conf
+IPSEC_PSK_SECRETS=/etc/ipsec.secrets
+IPSEC_PSK_RSECRETS=/tmp/ipsec.secrets
+LANTRIGGER=70
+LANTRIGGER_STOP=70
+TRIGGER=70
+TRIGGER_STOP=70
+log_msg="IPSEC-server"
+
+
+local_config () {
+    local i;
+    local limit;
+
+    # ipsec.conf
+
+    # config setup
+    rm -rf $IPSEC_CONFIG_RFILE
+    rm -rf $IPSEC_PSK_RSECRETS
+    touch $IPSEC_PSK_RSECRETS
+    touch $IPSEC_CONFIG_RFILE
+    [ -L $IPSEC_PSK_SECRETS  ] || ln -sf $IPSEC_PSK_RSECRETS $IPSEC_PSK_SECRETS
+
+    echo "version 2.0" >> $IPSEC_CONFIG_FILE
+    echo "" >> $IPSEC_CONFIG_FILE
+    echo "config setup" >> $IPSEC_CONFIG_FILE
+    echo "	nat_traversal=yes" >> $IPSEC_CONFIG_FILE
+    echo "	nhelpers=0" >> $IPSEC_CONFIG_FILE
+    echo "	plutodebug=none" >> $IPSEC_CONFIG_FILE
+    echo "	protostack=klips" >> $IPSEC_CONFIG_FILE
+    echo "	virtual_private=%v4:172.16.0.0/12,%v4:192.168.0.0/16,%v4:!192.168.1.0/24,%v4:10.0.0.0/8" >> $IPSEC_CONFIG_FILE
+
+    i=0
+    limit=$(nvram get wan_num)
+    if_str=""
+    while [ $i -lt $limit ];
+    do
+        [ -n "$(nvram get wan${i}_ipaddr)" ] && \
+            if_str="${if_str}ipsec${i}=$(nvram get wan${i}_ifname) "
+        i=$(($i+1))
+    done
+
+    echo "	interfaces=\"$if_str\"" >> $IPSEC_CONFIG_FILE
+    echo "" >> $IPSEC_CONFIG_FILE
+
+    LAN_IPADDR="$(nvram get lan0_ipaddr)"
+    LAN_MASK="$(nvram get lan0_mask)"
+    eval $(ipcalc $LAN_IPADDR $LAN_MASK)
+    LOCAL_LAN_NETWORK="$NETWORK"
+    LOCAL_LAN_NETMASK="$NETMASK"
+
+    i=0
+    limit=$(nvram get ipsec_rule_num)
+    while [ $i -lt $limit ];
+    do
+        LOCAL_EXT_IF="$(nvram show ipsec_rule $i local_extif)"
+        LOCAL_EXT_IPADDR="$(nvram get ${LOCAL_EXT_IF}_ipaddr)"
+               
+        LOCALID_TYPE="$(nvram show ipsec_rule $i localid_type)"
+        [ "$LOCALID_TYPE" = "ipaddr" ] && {                                                         
+          LOCALID_VALUE="$(nvram get wan0_ipaddr)"                  
+        } || {                                                     
+          LOCALID_VALUE="$(nvram show ipsec_rule $i localid_value)"                 
+        }
+        [  "$(nvram show ipsec_rule $i mode)" = "net2net" ] && {
+           REMOTE_INIPADDR="$(nvram show ipsec_rule $i remote_inipaddr)"
+           REMOTE_NETMASK="$(nvram show ipsec_rule $i remote_netmask)"
+           eval $(ipcalc $REMOTE_INIPADDR $REMOTE_NETMASK)
+           REMOTE_LAN_NETWORK="$NETWORK"
+           [ "$REMOTE_LAN_NETWORK" = "$LOCAL_LAN_NETWORK" ] && {
+              nvram replace attr ipsec_rule $i enable "0"        
+           }
+        }
+        REMOTEID_TYPE="$(nvram show ipsec_rule $i remoteid_type)"
+        REMOTEID_VALUE="$(nvram show ipsec_rule $i remoteid_value)"
+        [ -n "$LOCAL_EXT_IPADDR" -a "$(nvram show ipsec_rule $i enable)" = "1" ] && {
+            # Net-to-Net
+            [  "$(nvram show ipsec_rule $i mode)" = "net2net" ] && {
+                echo "conn $(nvram show ipsec_rule $i name)" >> $IPSEC_CONFIG_FILE
+                [ "$(nvram show ipsec_rule $i ike_keymode)" = "psk" ] && {
+                    echo "	authby=secret" >> $IPSEC_CONFIG_FILE
+                }
+                [ "$(nvram show ipsec_rule $i ike_keymode)" = "rsa" ] && {
+                    echo "	authby=rsasig" >> $IPSEC_CONFIG_FILE
+                }
+
+                LOCAL_GW="$(nvram get ${LOCAL_EXT_IF}_gateway)"
+                #LOCAL_INIPADDR="$(nvram show ipsec_rule $i local_inipaddr)"
+                #LOCAL_NETMASK="$(nvram show ipsec_rule $i local_netmask)"
+                REMOTE_GW="$(nvram show ipsec_rule $i remote_gateway)"
+                REMOTE_INIPADDR="$(nvram show ipsec_rule $i remote_inipaddr)"
+                REMOTE_NETMASK="$(nvram show ipsec_rule $i remote_netmask)"
+
+                echo "	left=$LOCAL_EXT_IPADDR" >> $IPSEC_CONFIG_FILE
+                echo "	leftsubnet=$LAN_IPADDR/$LOCAL_LAN_NETMASK" >> $IPSEC_CONFIG_FILE
+                echo "	leftnexthop=$LOCAL_GW" >> $IPSEC_CONFIG_FILE
+                [ "$LOCALID_TYPE" = "fqdn" ] && {
+                    echo "	leftid=@$LOCALID_VALUE" >> $IPSEC_CONFIG_FILE
+                } || {
+                    echo "	leftid=$LOCALID_VALUE" >> $IPSEC_CONFIG_FILE
+                }
+                echo "	right=$REMOTE_GW" >> $IPSEC_CONFIG_FILE
+                echo "	rightsubnet=$REMOTE_INIPADDR/$REMOTE_NETMASK" >> $IPSEC_CONFIG_FILE
+                echo "	rightnexthop=$LOCAL_GW" >> $IPSEC_CONFIG_FILE
+                [ "$REMOTEID_TYPE" = "fqdn" ] && {
+                    echo "	rightid=@$REMOTEID_VALUE" >> $IPSEC_CONFIG_FILE
+                } || {
+                    echo "	rightid=$REMOTEID_VALUE" >> $IPSEC_CONFIG_FILE
+                }
+                [ "$(nvram show ipsec_rule $i phase1_mode)" = "aggressive" ] && echo "	aggrmode=yes" >> $IPSEC_CONFIG_FILE
+
+                # Secrets
+                [ "$REMOTEID_TYPE" = "fqdn" -a "$LOCALID_TYPE" = "fqdn" ] && {
+                  echo "@$LOCALID_VALUE @$REMOTEID_VALUE : PSK \"$(nvram show ipsec_rule $i psk)\"" >> $IPSEC_PSK_SECRETS
+                } 
+                [ "$REMOTEID_TYPE" = "ipaddr" -a "$LOCALID_TYPE" = "ipaddr" ] && {
+                  echo "$LOCALID_VALUE $REMOTEID_VALUE : PSK \"$(nvram show ipsec_rule $i psk)\"" >> $IPSEC_PSK_SECRETS
+                }
+                [ "$REMOTEID_TYPE" = "ipaddr" -a "$LOCALID_TYPE" = "fqdn" ] && {
+                  echo "@$LOCALID_VALUE $REMOTEID_VALUE : PSK \"$(nvram show ipsec_rule $i psk)\"" >> $IPSEC_PSK_SECRETS
+                }
+                [ "$REMOTEID_TYPE" = "fqdn" -a "$LOCALID_TYPE" = "ipaddr" ] && {
+                  echo "$LOCALID_VALUE @$REMOTEID_VALUE : PSK \"$(nvram show ipsec_rule $i psk)\"" >> $IPSEC_PSK_SECRETS
+                }
+            }
+
+            # Road Warrior Server
+            [ "$(nvram show ipsec_rule $i mode)" = "rw_server" ] && {
+                echo "conn $(nvram show ipsec_rule $i name)" >> $IPSEC_CONFIG_FILE
+                echo "	authby=secret" >> $IPSEC_CONFIG_FILE
+
+                #LOCAL_INIPADDR="$(nvram show ipsec_rule $i local_inipaddr)"
+                #LOCAL_NETMASK="$(nvram show ipsec_rule $i local_netmask)"
+
+                echo "	left=$LOCAL_EXT_IPADDR" >> $IPSEC_CONFIG_FILE
+                [ "$(nvram show ipsec_rule $i l2tp)" = "0" ] && {
+                    echo "	leftsubnet=$LAN_IPADDR/$LOCAL_LAN_NETMASK" >> $IPSEC_CONFIG_FILE
+                }
+                [ "$LOCALID_TYPE" = "fqdn" ] && {
+                    echo "	leftid=@$LOCALID_VALUE" >> $IPSEC_CONFIG_FILE
+                } || {
+                    echo "	leftid=$LOCALID_VALUE" >> $IPSEC_CONFIG_FILE
+                }
+                echo "	right=%any" >> $IPSEC_CONFIG_FILE
+                echo "	rightsubnet=vhost:%no,%priv" >> $IPSEC_CONFIG_FILE
+                [ "$REMOTEID_TYPE" = "fqdn" ] && {
+                    echo "	rightid=@$REMOTEID_VALUE" >> $IPSEC_CONFIG_FILE
+                } || {
+                    echo "	rightid=$REMOTEID_VALUE" >> $IPSEC_CONFIG_FILE
+                }
+                [ "$(nvram show ipsec_rule $i l2tp)" = "1" ] && {
+                    echo "	leftprotoport=17/1701" >> $IPSEC_CONFIG_FILE
+                    echo "	rightprotoport=17/1701" >> $IPSEC_CONFIG_FILE
+
+            	    [ "$(nvram show ipsec_rule $i adv)" = "0" ] && echo "	pfs=no" >> $IPSEC_CONFIG_FILE
+                    echo "	rekey=no" >> $IPSEC_CONFIG_FILE
+                }
+                # XXX
+                echo "	auto=add" >> $IPSEC_CONFIG_FILE
+				#aggressive mode
+                [ "$(nvram show ipsec_rule $i phase1_mode)" = "aggressive" ] && echo "	aggrmode=yes" >> $IPSEC_CONFIG_FILE
+
+                # Secrets
+                [ "$REMOTEID_TYPE" = "fqdn" ] && {
+                  echo "@$REMOTEID_VALUE %any : PSK \"$(nvram show ipsec_rule $i psk)\"" >> $IPSEC_PSK_SECRETS
+                } || {
+                  echo "$REMOTEID_VALUE %any : PSK \"$(nvram show ipsec_rule $i psk)\"" >> $IPSEC_PSK_SECRETS
+                }
+            }
+
+            [ "$(nvram show ipsec_rule $i adv)" = "1" ] && {
+                ENCRY="$(nvram show ipsec_rule $i phase1_encrypt)"
+                AUTH="$(nvram show ipsec_rule $i phase1_auth)"
+                GROUP="$(nvram show ipsec_rule $i phase1_group)"
+
+                [ "$(nvram show ipsec_rule $i phase1_group)" = "dh1" ] && {
+                    GROUP="modp768"
+                }
+                [ "$(nvram show ipsec_rule $i phase1_group)" = "dh2" ] && {
+                    GROUP="modp1024"
+                }
+                [ "$(nvram show ipsec_rule $i phase1_group)" = "dh5" ] && {
+                    GROUP="modp1536"
+                }
+
+                echo "	ike=${ENCRY}-${AUTH}-${GROUP}!" >> $IPSEC_CONFIG_FILE
+
+                ENCRY="$(nvram show ipsec_rule $i phase2_encrypt)"
+                AUTH="$(nvram show ipsec_rule $i phase2_auth)"
+
+                echo -n "	esp=${ENCRY}-${AUTH}!" >> $IPSEC_CONFIG_FILE
+
+                GROUP="$(nvram show ipsec_rule $i phase2_group)"
+
+                [ "$(nvram show ipsec_rule $i phase2_group)" = "none" ] && {
+                    echo ""             >> $IPSEC_CONFIG_FILE
+                    echo "	pfs=no" >> $IPSEC_CONFIG_FILE
+                }
+                [ "$(nvram show ipsec_rule $i phase2_group)" = "dh1" ] && {
+                    echo ";modp768"      >> $IPSEC_CONFIG_FILE
+                    echo "	pfs=yes" >> $IPSEC_CONFIG_FILE
+                }
+                [ "$(nvram show ipsec_rule $i phase2_group)" = "dh2" ] && {
+                    echo ";modp1024"     >> $IPSEC_CONFIG_FILE
+                    echo "	pfs=yes" >> $IPSEC_CONFIG_FILE
+                }
+                [ "$(nvram show ipsec_rule $i phase2_group)" = "dh5" ] && {
+                    echo ";modp1536"     >> $IPSEC_CONFIG_FILE
+                    echo "	pfs=yes" >> $IPSEC_CONFIG_FILE
+                }
+
+                IKELIFETIME=$(nvram show ipsec_rule $i phase1_lifetime)
+                [ -n "$IKELIFETIME" ] && {
+                    echo "	ikelifetime=${IKELIFETIME}s" >> $IPSEC_CONFIG_FILE
+                }
+
+                SALIFETIME=$(nvram show ipsec_rule $i phase2_lifetime)
+                [ -n "$SALIFETIME" ] && {
+                    echo "	keylife=${SALIFETIME}s" >> $IPSEC_CONFIG_FILE
+                }
+            }
+
+            [ "$(nvram show ipsec_rule $i mode)" = "net2net" ] && {
+               [ "$(nvram show ipsec_rule $i conn_init)" = "1" ] && {
+                      echo "	auto=start" >> $IPSEC_CONFIG_FILE
+               }
+               [ "$(nvram show ipsec_rule $i conn_init)" = "0" ] && {
+                      echo "	auto=add" >> $IPSEC_CONFIG_FILE
+               }
+            }
+            DPD_INTERVAL=$(nvram show ipsec_rule $i dpd_interval)
+            DPD_TIMOUT=$(nvram show ipsec_rule $i dpd_timeout)
+            [ "$(nvram show ipsec_rule $i dpd_enable)" = "1" ] && {
+                [ "$(nvram show ipsec_rule $i mode)" = "rw_server" ] && {
+                    echo "	dpdaction=clear" >> $IPSEC_CONFIG_FILE
+                }
+                [  "$(nvram show ipsec_rule $i mode)" = "net2net" ] && {
+                    echo "	dpdaction=restart_by_peer" >> $IPSEC_CONFIG_FILE
+                }
+                    echo "	dpddelay=$DPD_INTERVAL" >> $IPSEC_CONFIG_FILE
+                    echo "	dpdtimeout=$DPD_TIMOUT" >> $IPSEC_CONFIG_FILE
+                    echo "	keyingtries=%forever" >> $IPSEC_CONFIG_FILE
+            }
+
+            echo "" >> $IPSEC_CONFIG_FILE
+        }
+        i=$(($i+1))
+    done
+
+    echo "" >> $IPSEC_CONFIG_FILE
+    echo "include /etc/ipsec.d/examples/no_oe.conf" >> $IPSEC_CONFIG_FILE
+}
+start () {
+	local err; err=0
+	local limit;
+	local i;
+    stop 
+    feature_judge ipsec 
+    [ $? = "0" ] && return 0
+    [ -n "$(pidof pluto)" ] && exit
+    [ "$(nvram get ipsec_enable)" = "1" ] && {
+
+        local_config
+        # ipsec IMQs
+        i=0
+        limit=$(nvram get wan_num)
+        while [ $i -lt $limit ];
+        do
+            $BIN tncfg --create ipsec${i}
+			# add by william for process ipsec packet
+			/usr/sbin/iptables -t filter -A EZP_IPSEC_ACCEPT -i ipsec${i} \
+                -j ACCEPT
+			/usr/sbin/iptables -I FORWARD -t filter -j EZP_IPSEC_ACCEPT
+#			 /usr/sbin/iptables -t mangle -A EZP_INBOUND_IMQ -i ipsec${i} \
+#                -j IMQ --todev 0
+#            /usr/sbin/iptables -t mangle -A EZP_OUTBOUND_IMQ -o ipsec${i} \
+#                -j IMQ --todev 1
+            wan_ipaddr=$(nvram get wan${i}_ipaddr)
+            wan_ifname=$(nvram get wan{i}_ifname)
+            /usr/sbin/iptables -t filter -A EZP_FL_IPSEC -p udp -i "$wan_ifname" -d "$wan_ipaddr" --dport 500 -j ACCEPT
+            i=$(($i+1))
+        done
+        i=0
+        limit=$(nvram get ipsec_rule_num)
+        while [ $i -lt $limit ];
+        do
+            [ "$(nvram show ipsec_rule $i enable)" = "1" -a "$(nvram show ipsec_rule $i mode)" = "net2net" ] && {
+                REMOTE=$(nvram show ipsec_rule $i remote_inipaddr)
+                NETMASK=$(nvram show ipsec_rule $i remote_netmask)
+                [ -n "$REMOTE" -a -n "$NETMASK" ] && {
+                    LOCAL_SUBNET=$(nvram show lan_static_rule 0 ipaddr)/$(nvram show lan_static_rule 0 mask) 
+                    /usr/sbin/iptables -t nat -I EZP_SNAT_IPSEC -s $LOCAL_SUBNET -d $REMOTE/$NETMASK -j ACCEPT
+                }
+            }
+            i=$(($i+1))
+        done
+
+        $BIN setup --start || err=1
+    }
+
+    return $err
+}
+
+stop () {
+
+		local err; err=0
+		local limit;
+		local i;
+
+        $BIN setup --stop || err=1
+        sleep 2
+		#clear EZP-DNAT,modify by wind 2013-09-29
+        #i=0
+        #limit=$(nvram get ipsec_rule_num)
+        #while [ $i -lt $limit ];
+        #do
+        #    [ "$(nvram show ipsec_rule $i enable)" = "1" -a "$(nvram show ipsec_rule $i mode)" = "net2net" ] && {
+        #        REMOTE=$(nvram show ipsec_rule $i remote_inipaddr)
+        #        NETMASK=$(nvram show ipsec_rule $i remote_netmask)
+        #        [ -n "$REMOTE" -a -n "$NETMASK" ] && {
+        #            LOCAL_SUBNET=$(nvram show lan_static_rule 0 ipaddr)/$(nvram show lan_static_rule 0 mask) 
+        #            /usr/sbin/iptables -t nat -D EZP_SNAT -s $LOCAL_SUBNET -d $REMOTE/$NETMASK -j ACCEPT
+        			/usr/sbin/iptables -t nat -F EZP_SNAT_IPSEC
+        #        }
+        #    }
+        #    i=$(($i+1))
+        #done
+
+        # ipsec IMQs
+        i=0
+        limit=$(nvram get wan_num)
+        while [ $i -lt $limit ];
+        do
+            $BIN tncfg --delete ipsec${i}
+			# add by william for process ipsec packet
+			/usr/sbin/iptables -D FORWARD -t filter -j EZP_IPSEC_ACCEPT
+			/usr/sbin/iptables -t filter -D EZP_IPSEC_ACCEPT -i ipsec${i} \
+                -j ACCEPT
+#			/usr/sbin/iptables -t mangle -D EZP_INBOUND_IMQ -i ipsec${i} \
+#                -j IMQ --todev 0
+#            /usr/sbin/iptables -t mangle -D EZP_OUTBOUND_IMQ -o ipsec${i} \
+#                -j IMQ --todev 1
+            ifconfig ipsec${i} down
+            i=$(($i+1))
+        done
+        
+        /usr/sbin/iptables -t filter -F EZP_FL_IPSEC
+
+		return $err
+   
+}
+
+restart () {
+#	echo -e "ipsec restart! \n" > /dev/console
+	start
+}

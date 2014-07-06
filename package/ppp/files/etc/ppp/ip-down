@@ -1,0 +1,65 @@
+#!/bin/sh
+# Please refer to ip-up for argument description. 
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+. /etc/network.sh
+[ -z "$6" ] || {
+    type="${6%%[0-9]}"
+    num="${6#$type}"
+    PPP_DEMAND_STATE_FILE="/tmp/ppp-${type}${num}-demand.tmp"
+
+    [ "$type" = "wan" ] && {
+      # When ip-down in demand mode, it doesn't change gateway and routing
+      # 1. The connection is internally disconnected in pppd
+      # 2. The interface pppX remains, as well as it's ipaddr and gateway
+      # 3. The gateway and routing are remained no change
+      # 4. We only change the display on user interface to 0.0.0.0
+      if [ -f "${PPP_DEMAND_STATE_FILE}" -a \
+           "$(cat ${PPP_DEMAND_STATE_FILE})" = "demand-connected" ]; then
+           nvram fset "${type}${num}_ipaddr=0.0.0.0"
+           nvram fset "${type}${num}_gateway=0.0.0.0"
+           nvram fset "${type}${num}_mask=0"
+           echo -n "demand-start" > ${PPP_DEMAND_STATE_FILE}
+    	   nvram replace attr wan_pptp_l2tp_rule 0 ipaddr "0.0.0.0" 
+           nvram replace attr wan_pptp_l2tp_rule 0 netmask "0.0.0.0"
+           nvram replace attr wan_pptp_l2tp_rule 0 gateway "0.0.0.0"
+           [ "$(nvram show wan0_proto 0 curr)" = "pptp" ] && {
+              [ `nvram show wan_pptpc_rule 0 pppiptype` = "isp" ] && nvram replace attr wan_pptpc_rule 0 custom_ipaddr ""
+           }
+           [ "$(nvram show wan0_proto 0 curr)" = "l2tp" ] && {
+              [ `nvram show wan_l2tpc_rule 0 pppiptype` = "isp" ] && nvram replace attr wan_l2tpc_rule 0 custom_ipaddr ""
+           }
+           [ `nvram show wan_dns_rule 0 dnstype1` = "ispdns" ] && nvram replace attr wan_dns_rule 0 dns1 ""
+           [ `nvram show wan_dns_rule 0 dnstype2` = "ispdns" ] && nvram replace attr wan_dns_rule 0 dns2 ""
+                      
+      else
+    	  iface_down2 "$6"
+    	  nvram replace attr wan_pptp_l2tp_rule 0 ipaddr "0.0.0.0" 
+          nvram replace attr wan_pptp_l2tp_rule 0 netmask "0.0.0.0"
+          nvram replace attr wan_pptp_l2tp_rule 0 gateway "0.0.0.0" 
+          [ "$(nvram show wan0_proto 0 curr)" = "pptp" ] && {
+             [ `nvram show wan_pptpc_rule 0 pppiptype` = "isp" ] && nvram replace attr wan_pptpc_rule 0 custom_ipaddr ""
+          }
+          [ "$(nvram show wan0_proto 0 curr)" = "l2tp" ] && {
+             [ `nvram show wan_l2tpc_rule 0 pppiptype` = "isp" ] && nvram replace attr wan_l2tpc_rule 0 custom_ipaddr ""
+          }
+          [ `nvram show wan_dns_rule 0 dnstype1` = "ispdns" ] && nvram replace attr wan_dns_rule 0 dns1 ""
+          [ `nvram show wan_dns_rule 0 dnstype2` = "ispdns" ] && nvram replace attr wan_dns_rule 0 dns2 ""
+      fi  
+      # For both demand and keep alive mode, when ip-down, we turn down
+      # related services.
+      env -i ACTION="ifdown" INTERFACE="$6" PROTO=ppp TYPE="$type" \
+      NUM="$num" IFNAME="${2}" /sbin/hotplug-call "iface" &
+    }
+
+    [ "$type" != "wan" ] && {
+    	log_usr "PPTP Server" "client [$6] local [$5] disconnected" OK
+    }
+}
+[ -d /etc/ppp/ip-down.d ] && {
+	for SCRIPT in /etc/ppp/ip-down.d/*
+	do
+		[ -x "$SCRIPT" ] && "$SCRIPT" $@
+	done
+}
+

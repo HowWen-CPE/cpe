@@ -1,0 +1,141 @@
+From d1c55acd5db6c3a5d06ab32c7a924dd5f62bd6b7 Mon Sep 17 00:00:00 2001
+From: Poonam Aggrwal <poonam.aggrwal@freescale.com>
+Date: Thu, 8 Oct 2009 19:21:44 +0530
+Subject: [PATCH 04/16] powerpc: Freescale CodeWarrior support on 85xx platform
+
+This patch adds Freescale CodeWarrior support for
+Linux kernel on 85xx platform.
+Ported for 2.6.32-rc3
+
+Signed-off-by: adrian bogdan <adrian.bogdan@freescale.com>
+Signed-off-by: Roy Zang <tie-fei.zang@freescale.com>
+Signed-off-by: Poonam Aggrwal <poonam.aggrwal@freescale.com>
+---
+ arch/powerpc/Kconfig.debug           |    6 ++++++
+ arch/powerpc/Makefile                |    5 +++++
+ arch/powerpc/include/asm/reg_booke.h |    4 ++++
+ arch/powerpc/kernel/head_fsl_booke.S |   15 ++++++++++++++-
+ arch/powerpc/kernel/idle.c           |    5 ++++-
+ 5 files changed, 33 insertions(+), 2 deletions(-)
+
+diff --git a/arch/powerpc/Kconfig.debug b/arch/powerpc/Kconfig.debug
+index 3b10051..aa4ea7b 100644
+--- a/arch/powerpc/Kconfig.debug
++++ b/arch/powerpc/Kconfig.debug
+@@ -148,6 +148,12 @@ config BDI_SWITCH
+ 	  Unless you are intending to debug the kernel with one of these
+ 	  machines, say N here.
+ 
++config DEBUG_CW
++	bool "Include CodeWarrior kernel debugging"
++	depends on DEBUG_KERNEL && PPC32
++	help
++	  Say Y here to enable CodeWarrior kernel debugging.
++
+ config BOOTX_TEXT
+ 	bool "Support for early boot text console (BootX or OpenFirmware only)"
+ 	depends on PPC_OF && PPC_BOOK3S
+diff --git a/arch/powerpc/Makefile b/arch/powerpc/Makefile
+index 1a54a3b..75fd263 100644
+--- a/arch/powerpc/Makefile
++++ b/arch/powerpc/Makefile
+@@ -116,6 +116,11 @@ KBUILD_CFLAGS += $(call cc-option,-funit-at-a-time)
+ # often slow when they are implemented at all
+ KBUILD_CFLAGS		+= -mno-string
+ 
++ifeq ($(CONFIG_DEBUG_CW),y)
++CFLAGS += -g2 -gdwarf-2
++AFLAGS_KERNEL += -Wa,-gdwarf2
++endif
++
+ ifeq ($(CONFIG_6xx),y)
+ KBUILD_CFLAGS		+= -mcpu=powerpc
+ endif
+diff --git a/arch/powerpc/include/asm/reg_booke.h b/arch/powerpc/include/asm/reg_booke.h
+index 3bf7835..b3ede55 100644
+--- a/arch/powerpc/include/asm/reg_booke.h
++++ b/arch/powerpc/include/asm/reg_booke.h
+@@ -29,7 +29,11 @@
+ #define MSR_KERNEL	(MSR_ME|MSR_RI|MSR_IR|MSR_DR|MSR_CE)
+ #define MSR_USER	(MSR_KERNEL|MSR_PR|MSR_EE)
+ #else
++#if defined(CONFIG_DEBUG_CW) && defined(CONFIG_BOOKE)
++#define MSR_KERNEL      (MSR_ME|MSR_RI|MSR_CE|MSR_DE)
++#else
+ #define MSR_KERNEL	(MSR_ME|MSR_RI|MSR_CE)
++#endif
+ #define MSR_USER	(MSR_KERNEL|MSR_PR|MSR_EE)
+ #endif
+ 
+diff --git a/arch/powerpc/kernel/head_fsl_booke.S b/arch/powerpc/kernel/head_fsl_booke.S
+index 975788c..7e1012d 100644
+--- a/arch/powerpc/kernel/head_fsl_booke.S
++++ b/arch/powerpc/kernel/head_fsl_booke.S
+@@ -211,6 +211,9 @@ skpinv:	addi	r6,r6,1				/* Increment */
+ 
+ 	xori	r6,r4,1
+ 	slwi	r6,r6,5		/* setup new context with other address space */
++#if defined(CONFIG_DEBUG_CW)
++	ori	r6, r6, 0x200	/* enable DE bit for MSR */
++#endif
+ 	bl	1f		/* Find our address */
+ 1:	mflr	r9
+ 	rlwimi	r7,r9,0,20,31
+@@ -237,11 +240,14 @@ skpinv:	addi	r6,r6,1				/* Increment */
+ 	lis	r7,0x1000	/* Set MAS0(TLBSEL) = 1 */
+ 	rlwimi	r7,r3,16,4,15	/* Setup MAS0 = TLBSEL | ESEL(r3) */
+ 	mtspr	SPRN_MAS0,r7
++#if !defined(CONFIG_DEBUG_CW)
++/* CW_patch: during debug the IPROT should not be cleared */
+ 	tlbre
+ 	mfspr	r6,SPRN_MAS1
+ 	rlwinm	r6,r6,0,2,0	/* clear IPROT */
+ 	mtspr	SPRN_MAS1,r6
+ 	tlbwe
++#endif
+ 	/* Invalidate TLB1 */
+ 	li	r9,0x0c
+ 	tlbivax 0,r9
+@@ -329,7 +335,7 @@ skpinv:	addi	r6,r6,1				/* Increment */
+ 	mtspr	SPRN_HID0, r2
+ #endif
+ 
+-#if !defined(CONFIG_BDI_SWITCH)
++#if !defined(CONFIG_BDI_SWITCH) && !defined(CONFIG_DEBUG_CW)
+ 	/*
+ 	 * The Abatron BDI JTAG debugger does not tolerate others
+ 	 * mucking with the debug registers.
+@@ -385,6 +391,13 @@ skpinv:	addi	r6,r6,1				/* Increment */
+ /*
+  * Decide what sort of machine this is and initialize the MMU.
+  */
++#if defined(CONFIG_DEBUG_CW)
++	lis	r10, 0x1008 /* clear the V bit from the L2MMU_CAM8 register */
++	mtspr	SPRN_MAS0, r10
++	lis	r10, 0x0
++	mtspr	SPRN_MAS1, r10
++	tlbwe
++#endif
+ 	mr	r3,r31
+ 	mr	r4,r30
+ 	mr	r5,r29
+diff --git a/arch/powerpc/kernel/idle.c b/arch/powerpc/kernel/idle.c
+index 88d9c1d..3438ec0 100644
+--- a/arch/powerpc/kernel/idle.c
++++ b/arch/powerpc/kernel/idle.c
+@@ -73,8 +73,11 @@ void cpu_idle(void)
+ 				stop_critical_timings();
+ 
+ 				/* check again after disabling irqs */
+-				if (!need_resched() && !cpu_should_die())
++				if (!need_resched() && !cpu_should_die()) {
++#if !defined(CONFIG_DEBUG_CW)
+ 					ppc_md.power_save();
++#endif
++				}
+ 
+ 				start_critical_timings();
+ 
+-- 
+1.6.4.2
+

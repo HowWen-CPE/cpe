@@ -1,0 +1,86 @@
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/tools/radartool.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/os/linux/tools/radartool.c	2013-08-27 07:05:25.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/tools/radartool.c	2014-03-10 18:28:14.564449606 +0800
+@@ -333,6 +333,24 @@
+     return(result);
+ }
+ 
++/* check is cac done, Felix@liteon, 2014-3-10 -----> */
++static int
++radarIscacDone(struct radarhandler *radar)
++{	u_int32_t result;
++	struct ifreq ifr;
++	radar->atd.ad_id = DFS_IS_CAC_DONE | ATH_DIAG_DYN;
++	radar->atd.ad_in_data = NULL;
++	radar->atd.ad_in_size = 0;
++	radar->atd.ad_out_data = (void *) &result;
++	radar->atd.ad_out_size = sizeof(u_int32_t);
++	strcpy(ifr.ifr_name, radar->atd.ad_name);
++	ifr.ifr_data = (caddr_t)&radar->atd;
++	if (ioctl(radar->s, SIOCGATHPHYERR, &ifr) < 0)
++		err(1, radar->atd.ad_name);
++	return (result);
++}
++/* <----- Felix@liteon, 2014-3-10 */
++
+ void
+ radarset(struct radarhandler *radar, int op, u_int32_t param)
+ {
+@@ -481,7 +499,6 @@
+ height X            set threshold for pulse height to X dB (u_int32)\n\
+ prssi               set threshold to checkif pulse is gone to X dB (u_int32)\n\
+ inband X            set threshold to check if pulse is inband to X (0.5 dB) (u_int32)\n\
+-dfstime X           set dfs test time to X secs\n\
+ en_relpwr_check X   enable/disable radar relative power check (AR5413 only)\n\
+ relpwr X            set threshold to check the relative power of radar (AR5413 only)\n\
+ usefir128 X         en/dis using in-band pwr measurement over 128 cycles(AR5413 only)\n\
+@@ -490,9 +507,25 @@
+ en_relstep X        en/dis to check pulse relative step (AR5413 only)\n\
+ relstep X           set threshold to check relative step for pulse det(AR5413 only)\n\
+ maxlen X            set max length of radar signal(in 0.8us step) (AR5413 only)\n\
++\
++usenol X            set nol mode to X\n\
++                    ---0:use CSA, new channel is the same as old channel\n\
++                    ---1:use CSA, switch to new channel\n\
++                    ---2:do not use CSA, stay on same channel\n\
++getusenol           get current nol mode\n\
++dfstime X           set dfs test time to X secs\n\
++setnoltimeout X     set nol(no occupancy list) period to X seconds,default 30 minutes\n\
+ numdetects          get number of radar detects\n\
++ignorecac X         set ignore CAC flag\n\
++                    ---0      :enable CAC\n\
++                    ---others :disable CAC\n\
++bangradar           simulate a radar signal to do a CSA(-i wifiX is necessary)\n\
++disable             disable DFS function\n\
++enable              enable DFS function\n\
++shownol             show current nol\n\
+ getnol              get NOL channel information\n\
+ setnol              set NOL channel information\n\
++iscacdone           check if CAC finished, 0:out of CAC, 1:in CAC\n\
+ dfsdebug            set the DFS debug mask\n";
+ 	fprintf(stderr, "%s", msg);
+ }
+@@ -574,6 +607,8 @@
+ 			radarSetMuteTime(&radar, strtoul(argv[2], NULL, 0));
+ 		} else if (streq(argv[1], "usenol")) {
+ 			radarSetUsenol(&radar, atoi(argv[2]));
++		} else if (streq(argv[1], "getusenol")) {
++			printf("Radar: nol = %d\n", radarGetUseNol(&radar));
+ 		} else if (streq(argv[1], "dfsdebug")) {
+ 			radarSetDebugLevel(&radar,
+ 			    (u_int32_t) strtoul(argv[2], NULL, 0));
+@@ -616,7 +651,12 @@
+ 		} else if (streq(argv[1], "rfsat_peak_mag")) {
+ 			radarSetPeakMag(&radar,
+ 			    (u_int32_t) strtoul(argv[2], NULL, 0));
+-		}
++			
++		/* Get cac info. Felix@liteon, 2014-3-10 -----> */
++		} else if (streq(argv[1], "iscacdone"))
++			printf("%d\n", radarIscacDone(&radar));
++		/* <----- Felix@liteon, 2014-3-10 */	
++		
+ 	} else if (argc == 1) {
+ 		struct dfs_ioctl_params pe;
+ 		u_int32_t nol;

@@ -1,0 +1,33 @@
+From 2d97af18743d6ca6730b34c7a55fdc902dbb718b Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Wed, 6 Jan 2010 14:34:03 +0530
+Subject: [PATCH] 85xx/fdt.c: Extend stashing parameter support for "fsl,etsec2" devices
+
+In a manner similar to passing stashing parameters into device tree
+for "gianfar", extend the support to the new "fsl,etsec2" as well.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ cpu/mpc85xx/fdt.c |    6 ++++++
+ 1 files changed, 6 insertions(+), 0 deletions(-)
+
+diff --git a/cpu/mpc85xx/fdt.c b/cpu/mpc85xx/fdt.c
+index cfec359..8e93c79 100644
+--- a/cpu/mpc85xx/fdt.c
++++ b/cpu/mpc85xx/fdt.c
+@@ -277,6 +277,12 @@ void fdt_add_enet_stashing(void *fdt)
+ 	do_fixup_by_compat_u32(fdt, "gianfar", "rx-stash-len", 96, 1);
+ 
+ 	do_fixup_by_compat_u32(fdt, "gianfar", "rx-stash-idx", 0, 1);
++
++	do_fixup_by_compat(fdt, "fsl,etsec2", "bd-stash", NULL, 0, 1);
++
++	do_fixup_by_compat_u32(fdt, "fsl,etsec2", "rx-stash-len", 96, 1);
++
++	do_fixup_by_compat_u32(fdt, "fsl,etsec2", "rx-stash-idx", 0, 1);
+ }
+ 
+ void ft_cpu_setup(void *blob, bd_t *bd)
+-- 
+1.5.6.3
+

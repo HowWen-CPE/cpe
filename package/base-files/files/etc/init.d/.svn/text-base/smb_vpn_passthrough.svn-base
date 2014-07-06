@@ -1,0 +1,82 @@
+#!/bin/sh /etc/rc.common
+
+BIN=/usr/sbin/iptables
+#START=60
+TRIGGER=60
+#TRIGGER_STOP=60
+LANTRIGGER=60
+LANTRIGGER_STOP=60
+log_msg="VPN PASSTHROUGH"
+start() {
+
+#	$BIN -N SMB_VPN_PASSTHROUGH >/dev/null 2>&1
+#	$BIN -I FORWARD -j SMB_VPN_PASSTHROUGH 
+		stop
+		feature_judge vpn
+		value=$?
+		[ $value = "1" ] || return 0
+        local pptp="$(nvram show smb_vpn_passthrough_rule 0 pptp_enable)"
+        local ipsec="$(nvram show smb_vpn_passthrough_rule 0 ipsec_enable)"
+        local l2tp="$(nvram show smb_vpn_passthrough_rule 0 l2tp_enable)"
+        local pppoe="$(nvram show smb_vpn_passthrough_rule 0 pppoe_enable)"
+
+		$BIN -t filter -F SMB_VPN_PASSTHROUGH 2> /dev/null > /dev/null
+
+        if [ "$pptp" = "1" ]
+		then
+        {
+			$BIN -A SMB_VPN_PASSTHROUGH -p tcp --sport 1723 -j DROP
+			$BIN -A SMB_VPN_PASSTHROUGH -p gre -j DROP
+        }
+    	else
+    	{
+    		$BIN -A SMB_VPN_PASSTHROUGH -p tcp --sport 1723 -j ACCEPT
+    		$BIN -A SMB_VPN_PASSTHROUGH -p gre -j ACCEPT
+    	}
+		fi
+        if [ "$ipsec" = "1" ] 
+		then
+        {
+			$BIN -A SMB_VPN_PASSTHROUGH -p udp --dport 500 -j DROP
+			$BIN -A SMB_VPN_PASSTHROUGH -p udp --dport 4500 -j DROP
+			$BIN -A SMB_VPN_PASSTHROUGH -p 50 -j DROP
+			$BIN -A SMB_VPN_PASSTHROUGH -p 51 -j DROP
+        }
+		else
+		{
+			$BIN -A SMB_VPN_PASSTHROUGH -p udp --dport 500 -j ACCEPT
+		    $BIN -A SMB_VPN_PASSTHROUGH -p udp --dport 4500 -j ACCEPT
+		    $BIN -A SMB_VPN_PASSTHROUGH -p 50 -j ACCEPT              
+		    $BIN -A SMB_VPN_PASSTHROUGH -p 51 -j ACCEP
+		}
+		fi
+        if [ "$l2tp" = "1" ] 
+		then		
+        {
+			$BIN -A SMB_VPN_PASSTHROUGH -p udp --dport 1701 -j DROP
+        }
+		else
+		{
+			$BIN -A SMB_VPN_PASSTHROUGH -p udp --dport 1701 -j ACCEPT
+		}
+		fi
+        if [ "$pppoe" = "0" ] 
+		then		
+        {
+			EXTIF=$(nvram get wan0_device)
+			INTIF=$(nvram get lan0_ifname)
+			/usr/sbin/pppoe-relay -S $EXTIF -C $INTIF
+        }
+		else
+		{
+			return 0
+		}
+		fi
+}
+
+stop() {
+
+		$BIN -t filter -F SMB_VPN_PASSTHROUGH 2> /dev/null > /dev/null
+		pidnum=`pidof pppoe-relay`
+		kill -9 $pidnum >/dev/null 2>&1
+}

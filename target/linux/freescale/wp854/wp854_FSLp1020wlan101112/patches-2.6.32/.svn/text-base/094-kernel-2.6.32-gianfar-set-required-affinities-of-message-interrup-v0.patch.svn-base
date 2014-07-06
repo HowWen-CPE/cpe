@@ -1,0 +1,84 @@
+From 215b4b1c7d078a6ee4521be6bf0a8ca464d9ca41 Mon Sep 17 00:00:00 2001
+From: Tarun Garg <b10794@freescale.com>
+Date: Sat, 20 Feb 2010 17:04:17 +0530
+Subject: [PATCH] gianfar: set required affinities of message interrupts
+
+Message interrupts used in packet steering code requires
+interrupt affinities to be set correctly for proper functioning.
+If the interrupt affinities are not correctly set, traffic will
+not flow and also the system can hang. Hence, setting the
+affinities in the code itself.
+
+Also we are clearing the virtual tx interrupt for all cpus
+in case user changes the irq affinity to wrong cpu.
+
+Signed-off-by: Tarun Garg <b10794@freescale.com>
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/gianfar.c |   21 +++++++++++++++++++--
+ 1 files changed, 19 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index b41bb63..f252005 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -920,6 +920,7 @@ void gfar_cpu_dev_init(void)
+ 	int i = 0;
+ 	int j;
+ 	struct gfar_cpu_dev *cpu_dev;
++	struct cpumask cpumask_msg_intrs;
+ 
+ 	for_each_possible_cpu(i) {
+ 		cpu_dev = &per_cpu(gfar_cpu_dev, i);
+@@ -945,6 +946,10 @@ void gfar_cpu_dev_init(void)
+ 				cpu_dev->msg_virtual_rx->irq);
+ 			goto irq_fail;
+ 		}
++		cpumask_clear(&cpumask_msg_intrs);
++		cpumask_set_cpu(i, &cpumask_msg_intrs);
++		irq_set_affinity(cpu_dev->msg_virtual_rx->irq,
++					&cpumask_msg_intrs);
+ 		fsl_enable_msg(cpu_dev->msg_virtual_rx);
+ 
+ 		for (j = 0; j < GFAR_CPU_BUFF_SIZE; j++)
+@@ -1095,9 +1100,16 @@ static irqreturn_t gfar_virtual_transmit(int irq, void *grp_id)
+ 	unsigned long flags;
+ 	int cpu = smp_processor_id();
+ 	struct gfar_priv_grp *grp = (struct gfar_priv_grp *)grp_id;
++	int cpus = num_online_cpus();
++	int i;
+ 
+-	/* clear the interrupt by reading the message */
+-	fsl_clear_msg(grp->msg_virtual_tx[cpu]);
++	for (i = 0; i < cpus; i++)
++		/* clear the interrupt */
++		/* although only one virtual tx intr is enabled at a time,
++		 * we are clearing virtual tx intr of all cpus, to ensure
++		 * this intr is cleared even if user sets wrong affinity
++		 */
++		fsl_clear_msg(grp->msg_virtual_tx[i]);
+ 
+ 	local_irq_save(flags);
+ 	if (napi_schedule_prep(&grp->napi_tx[cpu]))
+@@ -2073,6 +2085,7 @@ static int register_grp_irqs(struct gfar_priv_grp *grp)
+ #ifdef CONFIG_GFAR_SW_PKT_STEERING
+ 	int i, j;
+ 	int cpus = num_online_cpus();
++	struct cpumask cpumask_msg_intrs;
+ #endif
+ 
+ 	/* If the device has multiple interrupts, register for
+@@ -2136,6 +2149,10 @@ static int register_grp_irqs(struct gfar_priv_grp *grp)
+ 				}
+ 				goto vtx_irq_fail;
+ 			}
++			cpumask_clear(&cpumask_msg_intrs);
++			cpumask_set_cpu(i, &cpumask_msg_intrs);
++			irq_set_affinity(grp->msg_virtual_tx[i]->irq,
++						&cpumask_msg_intrs);
+ 			fsl_enable_msg(grp->msg_virtual_tx[i]);
+ 		}
+ 	}
+-- 
+1.5.6.3
+

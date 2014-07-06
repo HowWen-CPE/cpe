@@ -1,0 +1,13 @@
+--- linux-2.6.36_builded_sdk_orig/arch/mips/ralink/Kconfig	2012-12-10 16:32:06.000000000 +0800
++++ linux-2.6.36/arch/mips/ralink/Kconfig	2012-12-10 18:06:35.118911000 +0800
+@@ -240,8 +240,8 @@
+ 	select BLK_DEV_INITRD 
+ 	select BLK_DEV_RAM 
+ 
+-#config  RT2880_ROOTFS_IN_FLASH
+-#        bool "RootFS_in_FLASH"
++config  RT2880_ROOTFS_IN_FLASH
++        bool "RootFS_in_FLASH"
+ endchoice
+ 
+ config BLK_DEV_RAM_SIZE

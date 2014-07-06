@@ -1,0 +1,35 @@
+#!/bin/sh /etc/rc.common
+# hotplug event: $NUM and $TYPE are required. $IFNAME is given by hotplug.
+BIN=/usr/bin/updatedd
+DNSMASQ_PID_F=/var/run/dnsmasq.pid
+. /etc/network.sh
+TRIGGER=60
+log_msg="DDNS-client"
+start () {
+    [ "$TYPE" != "wan" -o -z "$NUM" ] && exit 1;
+ 
+    [ "$err" = "0" -a "$(nvram show wan_ddns_rule $NUM enable)" = "1" ] && {
+            ddns_type=$(nvram show wan_ddns_rule $NUM type)
+            ddns_username=$(nvram show wan_ddns_rule $NUM username)
+            ddns_userpasswd=$(nvram show wan_ddns_rule $NUM passwd)
+            ddns_hostname=$(nvram show wan_ddns_rule $NUM hostname)
+            ddns_server=$(nvram show wan_ddns_rule $NUM server)
+            wan_ip=$(nvram get wan${NUM}_ipaddr)
+            server_arg=""
+            [ ! -z "$ddns_server" -a "$ddns_type" = "dyndns" ] && server_arg="-m $ddns_server"
+            [ "$ddns_type" = "regfish" ] && {
+            	echo "====$ddns_type" > /dev/console
+            	$BIN $ddns_type -- -4 $wan_ip STD=$ddns_username:$ddns_userpasswd $ddns_hostname || err=1
+    		} || {
+            	echo "@@@@@@$ddns_type" > /dev/console
+            	$BIN $ddns_type -- -4 $wan_ip $server_arg "$ddns_username":"$ddns_userpasswd" $ddns_hostname || err=1
+			}
+            [ "$err" = "1" ] && \
+                logger -t "ddnsassign[19]" "$TYPE$NUM update failed" || \
+                logger -t "ddnsassign[19]" "$TYPE$NUM update successed ${ddns_hostname} on ${wan_ip}"
+    }
+}
+stop () {
+    return $err
+}
+

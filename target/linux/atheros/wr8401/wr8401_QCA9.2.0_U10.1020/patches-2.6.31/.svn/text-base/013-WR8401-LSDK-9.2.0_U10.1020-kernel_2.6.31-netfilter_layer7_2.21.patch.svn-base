@@ -1,0 +1,26 @@
+--- linux-2.6.31_atheros/include/net/netfilter/nf_conntrack.h	2013-04-03 13:34:44.000000000 +0800
++++ linux-2.6.31_liteon/include/net/netfilter/nf_conntrack.h	2013-02-07 16:32:25.000000000 +0800
+@@ -118,6 +118,23 @@
+ #ifdef CONFIG_ATHRS_HW_NAT
+         void *hwnat_priv;
+ #endif
++
++#if defined(CONFIG_NETFILTER_XT_MATCH_LAYER7) || \
++    defined(CONFIG_NETFILTER_XT_MATCH_LAYER7_MODULE)
++	struct {
++		/*
++		 * e.g. "http". NULL before decision. "unknown" after decision
++		 * if no match.
++		 */
++		char *app_proto;
++		/*
++		 * application layer data so far. NULL after match decision.
++		 */
++		char *app_data;
++		unsigned int app_data_len;
++	} layer7;
++#endif
++
+ 	/* Storage reserved for other modules: */
+ 	union nf_conntrack_proto proto;
+ 

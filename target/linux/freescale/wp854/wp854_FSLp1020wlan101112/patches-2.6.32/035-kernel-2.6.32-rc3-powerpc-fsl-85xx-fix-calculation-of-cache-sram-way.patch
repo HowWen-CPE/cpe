@@ -1,0 +1,37 @@
+From 035ab2f1bb3d2aa09897bb7f4481efe8ccdab471 Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Tue, 20 Oct 2009 18:27:59 +0530
+Subject: [PATCH 1/1] powerpc/fsl: 85xx: fix calculation of cache-sram-ways
+
+Also fixed the case of two-eight cache-sram-ways
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ arch/powerpc/sysdev/fsl_85xx_l2ctlr.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c b/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c
+index e10e2ba..c851547 100644
+--- a/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c
++++ b/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c
+@@ -80,7 +80,7 @@ static int __devinit mpc85xx_l2ctlr_of_probe(struct of_device *dev,
+ 	}
+ 
+ 	rem = l2cache_size % (unsigned int)rval;
+-	ways = l2cache_size / (unsigned int)rval;
++	ways = LOCK_WAYS_FULL * (unsigned int)rval / l2cache_size;
+ 	if (rem || (ways & (ways - 1))) {
+ 		dev_err(&dev->dev, "Illegal cache-sram-size in command line\n");
+ 		return -EINVAL;
+@@ -116,7 +116,7 @@ static int __devinit mpc85xx_l2ctlr_of_probe(struct of_device *dev,
+ 
+ 	case LOCK_WAYS_TWO_EIGHTH:
+ 		setbits32(&l2ctlr->ctl,
+-			L2CR_L2E | L2CR_L2FI | L2CR_SRAM_TWO_EIGHTH);
++			L2CR_L2E | L2CR_L2FI | L2CR_SRAM_QUART);
+ 		break;
+ 
+ 	case LOCK_WAYS_HALF:
+-- 
+1.5.6.5
+

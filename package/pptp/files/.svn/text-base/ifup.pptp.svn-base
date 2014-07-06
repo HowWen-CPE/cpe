@@ -1,0 +1,184 @@
+#!/bin/sh -x
+. /etc/network.sh
+
+static_link_up()
+{
+    localipaddr="$(nvram show wan_pptpc_rule $3 ipaddr)"
+    localgateway="$(nvram show wan_pptpc_rule $3 gateway)"
+    localnetmask="$(nvram show wan_pptpc_rule $3 netmask)"
+    PREFIX="$(ipcalc $localipaddr $localnetmask | grep 'PREFIX' | sed 's/PREFIX=//g')"
+    $DEBUG ip addr flush dev $4
+    $DEBUG ip addr add $localipaddr/$PREFIX broadcast + dev $4
+    $DEBUG ip link set dev $4 up
+    iface_up "$1" "$localipaddr" "$localnetmask" "$localgateway" "$localgateway"
+}
+
+dhcp_link_up()
+{
+    #pidfile="/var/run/$1.pid"
+    #ip link set dev $4 up
+    #[ ! -f "${pidfile}" ] && {
+    #    udhcpc -i $4 -b -p ${pidfile} &
+    #}
+    pidfile=/var/run/dhcpcd-$1.pid
+    [ -f $pidfile ] && $DEBUG kill -9 $(cat $pidfile) && rm -fr $pidfile
+    vendor_class=$(nvram get brand)
+    dhcp_hostname=$(nvram get hostname)
+    dhcp_args="-Y -N -R $4 "
+    [ -z $vendor_class ] || dhcp_args="$dhcp_args -i $vendor_class"
+    [ -z $dhcp_hostname ] || dhcp_args="$dhcp_args -h $dhcp_hostname"
+    [ -r $pidfile ] && oldpid=$(cat $pidfile 2>&-)
+    [ -n "$oldpid" ] && pidof dhcpcd | grep "$oldpid" >&- 2>&- && {
+    	sleep 1
+        kill -9 $oldpid
+    }
+    mkdir -p /var/lib/dhcpcd
+    rm -fr $pidfile
+    dhcpcdstart $dhcp_args &
+}
+
+pptp_up()
+{
+#sleeptime=0
+#while [ -z "$(nvram get ${1}_ipaddr)" ];
+#do
+#    echo "$(sleep 1)"
+#    sleeptime=$(($sleeptime + 1))
+    # if wait 10 seconds without ipaddress, leave
+#    [ "$sleeptime" -gt "10" ] && {
+#        nvram set ${1}_proto=$proto_orig^$proto_orig
+#        exit 1
+#    }
+#done
+# wait 5 secs to be sure route table updated
+#sleep 5
+# delete intermediate routing rule
+proto_orig="$(nvram show wan0_proto 0 curr)"
+iface_del_route \
+    "$3" "$(nvram get ${1}_ipaddr)" "$(nvram get ${1}_netmask)" \
+    "$(nvram get ${1}_gateway)" "$(nvram get ${1}_ifname)" "$2"
+nvram set ${1}_proto=$proto_orig^$proto_orig
+wan_num="$(nvram get wan_num)"
+unitid="$(($wan_num + $3))"
+nvram set ${1}_ifname="ppp$unitid"
+username="$(nvram show wan_pptpc_rule $3 username)"
+password="$(nvram show wan_pptpc_rule $3 passwd)"
+#transform '\' and '"'
+username=${username//\\/\\\\}
+password=${password//\\/\\\\}
+username=${username//\"/\\\"}
+password=${password//\"/\\\"}
+serverip="$(nvram show wan_pptpc_rule $3 serverip)"
+encmode="$(nvram show wan_pptpc_rule $3 encmode)"
+auth=$(nvram show wan_pptpc_rule $3 auth)
+nvram replace attr wan_pptpc_rule $3 ipaddr $(nvram get wan0_ipaddr)
+nvram replace attr wan_pptpc_rule $3 netmask $(nvram get wan0_mask)
+nvram replace attr wan_pptpc_rule $3 gateway $(nvram get wan0_gateway)
+AUTH_OPT=""
+[ "$auth" = "pap" ] && AUTH_OPT="refuse-chap "
+[ "$auth" = "none" ] && AUTH_OPT="refuse-chap refuse-pap "
+conn_name=conn1
+unitid="1"
+
+#construct /etc/ppp/chap-secrets
+passline="${username} PPTP ${password} *"
+if [ -f "/tmp/chap-secrets" ]; then
+    retline=$(cat /etc/ppp/chap-secrets | grep "$passline")
+    [ -z "${retline}" ] && {
+        echo "$passline" >> /etc/ppp/chap-secrets
+        echo "$passline" >> /etc/ppp/pap-secrets
+    }
+else
+    cat /etc/ppp/chap-secrets.template >> /tmp/chap-secrets
+    echo "$passline" >> /tmp/chap-secrets
+    cp /tmp/chap-secrets /tmp/pap-secrets
+fi
+
+if [ "$encmode" = "1" ]; then
+    encmode="mppe required,no40,no56,stateless"
+else
+    encmode="nomppe"
+fi
+#construct /etc/ppp/peers/connextion-name
+if [ "$(nvram show wan_pptpc_rule $3 pppiptype)" = "custom" -a \
+     -n "$(nvram show wan_pptpc_rule $3 custom_ipaddr)" ]; then
+    PPTP_LOCAL_IPADDR="$(nvram show wan_pptpc_rule $3 custom_ipaddr):"
+else
+    PPTP_LOCAL_IPADDR="ipcp-accept-local"
+fi
+
+if [ "$(nvram show wan_pptpc_rule $3 nailup)" = "1" -o \
+     -z "$(nvram show wan_pptpc_rule $3 timeout)" ]; then
+    PPTP_PERSIST_DEMAND="persist"
+else
+    PPTP_PERSIST_DEMAND="demand idle $(nvram show wan_pptpc_rule $3 timeout)"
+fi
+
+#localip=""
+#[ "${localiptype}" = "static" ] && {
+
+	localip="$(nvram show wan_pptpc_rule $3 ipaddr)"
+#}
+#[ "${localiptype}" = "dhcp" ] && {
+#	counter=1
+#	while [ -z "${localip}" -a ${counter} -lt 5 ] 
+#	do 	
+#	localip="$(ifconfig $4 | sed -rn 's/.*r:([^ ]+) .*/\1/p')"
+#	counter=`expr ${counter} + 1`
+#	sleep 1
+#	done 
+#}
+[ -z "${localip}" ] && {
+	exit 127
+}
+
+cat /etc/ppp/peers/conn.template | sed "s/SERVERIP/${serverip}/g" | \
+    #sed "s/USERNAME/${username}/g" | sed "s/UNITID/$unitid/g"  | \
+    sed "s/UNITID/$unitid/g"  | \
+    sed "s/IFACE/$1/g" | sed "s/ENCMODE/$encmode/g" | \
+    sed "s/LOCALIP/${localip}/g" | sed "s/AUTH_OPT/${AUTH_OPT}/g"> \
+    /tmp/${conn_name}
+
+cat /etc/ppp/options.pptp.template | \
+    sed "s/PPTP_LOCAL_IPADDR/${PPTP_LOCAL_IPADDR}/g" | \
+    sed "s/PPTP_PERSIST_DEMAND/${PPTP_PERSIST_DEMAND}/g" > \
+    /tmp/options.pptp
+ echo "${username:+name \"$username\"}" >> "/tmp/options.pptp"
+ echo "${password:+password \"$password\"}" >> "/tmp/options.pptp"
+ 
+
+pppd call ${conn_name}
+}
+pptp_down()
+{
+	killall pppd
+	# This triggers ip-down which unset NVRAM and generates an ifdown event.
+	[ -r /var/run/${2}.pid ] && {
+		IFACE_PID=$(cat /var/run/${2}.pid 2>&-)
+		if_serialize_lock "$LOCKFILE" "$IFACE_PID"
+		[ -r /var/run/${2}.pid ] && {
+			IFACE_PID=$(cat /var/run/${2}.pid 2>&-)
+			kill $IFACE_PID 2>&-
+		}
+	}
+	nvram replace attr wan_pptp_l2tp_rule 0 ipaddr "0.0.0.0" 
+	nvram replace attr wan_pptp_l2tp_rule 0 netmask "0.0.0.0"    
+	nvram replace attr wan_pptp_l2tp_rule 0 gateway "0.0.0.0" 
+}
+[ -z "$5" ] && {	
+    localiptype="$(nvram show wan_pptpc_rule $3 iptype)"
+	ifnamebak="$(nvram get ${1}_ifname)"
+	proto_orig="$(nvram get ${1}_proto)"
+	#nvram set ${1}_proto=$localiptype
+	 [ "${localiptype}" = "static" ] && {
+	  	nvram set ${1}_ifname=$4
+	  	static_link_up $1 $2 $3 $4 $5
+	  	pptp_up $1 $2 $3 $4 $5
+	 }
+	 [ "${localiptype}" = "dhcp" ] && {
+	 	nvram set ${1}_ifname=$4
+	   	dhcp_link_up $1 $2 $3 $4 $5
+	 }
+}
+[ "$5" = "down" ] && pptp_down $1 $2
+[ "$5" = "up" ] && pptp_up $1 $2 $3 $4

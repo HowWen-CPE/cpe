@@ -1,0 +1,45 @@
+From c1714d88a610110fbc1a6ce502fe13ee54d77aac Mon Sep 17 00:00:00 2001
+From: Maneesh Gupta <maneesh.gupta@freescale.com>
+Date: Wed, 30 Dec 2009 16:02:11 +0530
+Subject: [PATCH 1/1] Revert "net: fix kmemcheck annotations"
+
+This reverts commit 14d18a81b5171d4433e41129619c75748b4f4d26.
+
+Signed-off-by: Maneesh Gupta <maneesh.gupta@freescale.com>
+---
+ include/linux/skbuff.h |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
+index bcdd660..266878f 100644
+--- a/include/linux/skbuff.h
++++ b/include/linux/skbuff.h
+@@ -354,8 +354,8 @@ struct sk_buff {
+ 				ipvs_property:1,
+ 				peeked:1,
+ 				nf_trace:1;
+-	__be16			protocol:16;
+ 	kmemcheck_bitfield_end(flags1);
++	__be16			protocol;
+ 
+ 	void			(*destructor)(struct sk_buff *skb);
+ #if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
+@@ -367,6 +367,7 @@ struct sk_buff {
+ #endif
+ 
+ 	int			iif;
++	__u16			queue_mapping;
+ #ifdef CONFIG_NET_SCHED
+ 	__u16			tc_index;	/* traffic control index */
+ #ifdef CONFIG_NET_CLS_ACT
+@@ -375,7 +376,6 @@ struct sk_buff {
+ #endif
+ 
+ 	kmemcheck_bitfield_begin(flags2);
+-	__u16			queue_mapping:16;
+ #ifdef CONFIG_IPV6_NDISC_NODETYPE
+ 	__u8			ndisc_nodetype:2;
+ #endif
+-- 
+1.5.6.5
+

@@ -1,0 +1,43 @@
+#!/bin/sh
+######################################################################
+## This script controls bridge configuration.  It will configure the
+## bridge as specified by the apcfg file
+##
+## ETH0 is the WAN port
+## ETH1 is the LAN port
+######################################################################
+
+. /etc/ath/apcfg
+
+brctl addbr br0
+
+#add ethernet WAN_IF mac addres.Sirian@Liteon,2013-11-21
+MAC_ETH0=`cfg -v MAC_ETH0`
+if [ $MAC_ETH0 != "" ]; then
+  ifconfig $WAN_IF down
+  ifconfig $WAN_IF hw ether $MAC_ETH0
+  ifconfig $WAN_IF up
+fi
+
+MAC_ETH1=`cfg -v MAC_ETH1`
+if [ $MAC_ETH1 != "" ]; then
+  ifconfig $LAN_IF down
+  ifconfig $LAN_IF hw ether $MAC_ETH1
+  ifconfig $LAN_IF up
+fi
+
+if [ "${WAN_MODE}" = "bridged" ]; then
+    ifconfig $WAN_IF up
+    brctl addif br0 $WAN_IF
+fi
+
+brctl addif br0 $LAN_IF
+brctl setfd br0 0
+
+#Add bridge mac address from wifi0. Bevin@Liteon, 2013-11-18
+#MAC_BRIDGE=`cfg -v MAC_WIFI0`
+#if [ $MAC_BRIDGE != "" ]; then
+#    ifconfig br0 hw ether $MAC_BRIDGE
+#fi
+
+ifconfig br0 $AP_IPADDR netmask $AP_NETMASK up

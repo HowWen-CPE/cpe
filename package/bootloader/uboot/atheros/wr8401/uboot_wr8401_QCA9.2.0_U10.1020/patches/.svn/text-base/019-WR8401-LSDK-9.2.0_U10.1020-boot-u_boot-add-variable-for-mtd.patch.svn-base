@@ -1,0 +1,14 @@
+--- boot_atheros/u-boot/include/linux/mtd/mtd.h	2013-04-03 13:42:50.000000000 +0800
++++ boot_liteon/u-boot/include/linux/mtd/mtd.h	2013-03-29 17:59:03.000000000 +0800
+@@ -142,6 +142,11 @@
+ 
+ 	struct module *owner;
+ 	int usecount;
++
++	u_char rw_oob;
++#if defined(CONFIG_MTD_NAND_YAFFS2)
++	u_char skipfirstblk;
++#endif
+ };
+ 
+ 

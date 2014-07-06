@@ -1,0 +1,1502 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Chinese (P.R.C.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHS)
+#ifdef _WIN32
+LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
+#pragma code_page(936)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_DIALOG_SEL_CONNECT DIALOGEX 0, 0, 445, 124
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Select Adapter"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    CONTROL         "",IDC_LIST_CONNECTION,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,7,7,431,89
+    DEFPUSHBUTTON   "OK",IDOK,7,103,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,388,103,50,14
+END
+
+IDD_HOST_CONFIG DIALOGEX 0, 0, 259, 150
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Pad Server Setting"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "Apply",IDOK,47,111,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,164,112,50,14
+    LTEXT           "Host Name:",IDC_STATIC,37,22,49,20
+    LTEXT           "IP Address:",IDC_STATIC,36,50,55,23
+    LTEXT           "Domain Name:",IDC_STATIC,35,77,55,17
+    EDITTEXT        IDC_EDIT1,96,20,112,20,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT2,96,75,110,19,ES_AUTOHSCROLL
+    CONTROL         "",IDC_IPADDRESS1,"SysIPAddress32",WS_TABSTOP,95,50,112,18
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_DIALOG_SEL_CONNECT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 438
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 117
+    END
+
+    IDD_HOST_CONFIG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 252
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 143
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_TOOLBAR             BITMAP                  "res\\Toolbar.bmp"
+#endif    // Chinese (P.R.C.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Chinese (Taiwan) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHT)
+#ifdef _WIN32
+LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_TRADITIONAL
+#pragma code_page(950)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_UPGRADE_MANUAL DIALOG  0, 0, 182, 111
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Device Assignment"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "IPAddress1",IDC_IPADDRESS,"SysIPAddress32",WS_TABSTOP,57,14,91,12
+    DEFPUSHBUTTON   "OK",IDOK,42,86,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,99,86,50,14
+    EDITTEXT        IDC_MANUAL_PASSWORD,57,35,91,12,ES_PASSWORD | ES_AUTOHSCROLL
+    EDITTEXT        IDC_MANUAL_PATH,57,55,91,12,ES_AUTOHSCROLL
+    LTEXT           "IP Address :",IDC_STATIC,13,15,43,11
+    LTEXT           "Password :",IDC_STATIC,13,36,42,10
+    LTEXT           "File Path :",IDC_STATIC,13,56,42,10
+    PUSHBUTTON      "...",IDC_BROWSE_BUTTON,150,55,18,13
+END
+
+IDD_DEVICE_INFO DIALOGEX 0, 0, 282, 420
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU 
+CAPTION "Device Information"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,102,396,50,14
+    LTEXT           "Device Name :",IDC_STATIC,24,30,60,8
+    LTEXT           "LAN IP Address :",IDC_STATIC,24,72,69,8
+    LTEXT           "Ethernet MAC Address :",IDC_STATIC,24,41,81,8
+    LTEXT           "Firmware Version :",IDC_STATIC,24,55,66,8
+    LTEXT           "Static",IDC_MODEL_STATIC,106,30,154,8
+    LTEXT           "Static",IDC_IPADDR_STATIC,106,72,154,8
+    LTEXT           "Static",IDC_MACADDR_STATIC,106,41,154,8
+    LTEXT           "Static",IDC_FWVER_STATIC,106,55,154,8
+    LTEXT           "Subnet Mask :",IDC_STATIC,24,85,45,8
+    LTEXT           "Static",IDC_MASK_STATIC,106,85,154,8
+    LTEXT           "Default Gateway :",IDC_STATIC,24,97,58,8
+    LTEXT           "Static",IDC_GATEWAY_STATIC,106,97,154,8
+    LTEXT           "DHCP Client :",IDC_STATIC,24,111,47,8
+    LTEXT           "Static",IDC_DHCP_STATIC,106,111,154,8
+    LTEXT           "Operation Mode :",IDC_STATIC,24,124,63,8
+    LTEXT           "Wireless Mode :",IDC_STATIC,24,156,53,8
+    LTEXT           "SSID :",IDC_STATIC,24,180,20,8
+    LTEXT           "Channel / Frequency :",IDC_STATIC,24,228,72,8
+    LTEXT           "Security :",IDC_STATIC,24,239,52,8
+    LTEXT           "Static",IDC_OPMODE_STATIC,106,124,154,8
+    LTEXT           "Static",IDC_WLANMODE_STATIC,106,156,154,8
+    LTEXT           "Static",IDC_SSID_STATIC,106,180,154,8,SS_NOPREFIX
+    LTEXT           "Static",IDC_CHANNEL_STATIC,106,227,154,8
+    LTEXT           "Static",IDC_SECUTRITY_STATIC,106,239,154,8
+    LTEXT           "Wireless MAC Address :",IDC_STATIC,24,168,81,8
+    LTEXT           "Static",IDC_WLAN_MACADDR_STATIC,106,168,154,8
+    LTEXT           "Connect Status:",IDC_STATIC1,24,215,66,8
+    LTEXT           "Static",IDC_CONNECTSTATUS_STATIC,106,215,154,8
+    LTEXT           "Static",IDC_BSSID_STATIC,106,204,154,8
+    LTEXT           "Static",IDC_RSSI_STATIC,106,191,154,8
+    LTEXT           "Associated BSSID:",IDC_STATIC2,24,204,66,8
+    LTEXT           "Associated RSSI:",IDC_STATIC3,24,191,66,8
+    LTEXT           "Wireless Mode :",IDC_STATIC,24,271,53,8
+    LTEXT           "SSID :",IDC_STATIC,24,294,20,8
+    LTEXT           "Channel / Frequency :",IDC_STATIC,24,342,72,8
+    LTEXT           "Connect Status:",IDC_STATIC4,24,329,66,8
+    LTEXT           "Associated BSSID:",IDC_STATIC5,24,318,66,8
+    LTEXT           "Associated RSSI:",IDC_STATIC6,24,305,66,8
+    LTEXT           "Security :",IDC_STATIC,24,353,52,8
+    LTEXT           "Static",IDC_5GWLANMODE_STATIC,106,272,154,8
+    LTEXT           "Static",IDC_5GSSID_STATIC,106,295,154,8,SS_NOPREFIX
+    LTEXT           "Static",IDC_5GRSSI_STATIC,106,306,154,8
+    LTEXT           "Static",IDC_5GBSSID_STATIC,106,319,154,8
+    LTEXT           "Static",IDC_5GCONNECTSTATUS_STATIC,106,329,154,8
+    LTEXT           "Static",IDC_5GCHANNEL_STATIC,106,342,154,8
+    LTEXT           "Static",IDC_5GSECUTRITY_STATIC,106,354,154,8
+    LTEXT           "WLAN2.4G OP Mode :",IDC_2GWLANINFO_STATIC,24,144,81,8
+    LTEXT           "WLAN5G OP Mode :",IDC_5GWLANINFO_STATIC,24,258,65,8
+    LTEXT           "Wireless MAC Address :",IDC_STATIC,24,282,81,8
+    LTEXT           "Static",IDC_5GWLAN_MACADDR_STATIC,106,282,154,8
+    LTEXT           "Static",IDC_WLANOPMODE_STATIC,106,144,154,8
+    LTEXT           "Static",IDC_5GWLANOPMODE_STATIC,106,258,154,8
+END
+
+IDD_IP_CONFIG DIALOGEX 0, 0, 222, 147
+STYLE DS_SETFONT | DS_MODALFRAME | DS_3DLOOK | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "IP Setting"
+FONT 10, "Arial", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "&Apply",IDOK,51,131,46,12
+    PUSHBUTTON      "&Cancel",IDCANCEL,125,131,46,12
+    LTEXT           "IP Address:",IDC_STATIC_IP,28,55,47,8
+    LTEXT           "Subnet Mask:",IDC_STATIC_MASK,28,75,47,8
+    LTEXT           "Default Gateway:",IDC_STATIC_GATEWAY,28,95,58,8
+    CONTROL         "IPAddress1",IDC_IPADDRESS,"SysIPAddress32",WS_TABSTOP,91,53,100,12
+    CONTROL         "IPAddress2",IDC_SUB_MASK,"SysIPAddress32",WS_TABSTOP,91,73,100,12
+    CONTROL         "IPAddress3",IDC_GATEWAY,"SysIPAddress32",WS_TABSTOP,91,93,100,12
+    CONTROL         "Specify an IP address  ",IDC_RADIO_DHCP_ENABLE,"Button",BS_AUTORADIOBUTTON | WS_GROUP,16,27,93,10
+    CONTROL         "Obtain an IP address automatically",IDC_RADIO3,"Button",BS_AUTORADIOBUTTON,16,15,132,10
+END
+
+IDD_LOGIN DIALOGEX 0, 0, 195, 87
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Login"
+FONT 10, "Arial", 0, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_USERNAME,57,10,127,14,ES_MULTILINE | ES_AUTOHSCROLL,WS_EX_TRANSPARENT
+    EDITTEXT        IDC_PASSWORD,57,31,127,14,ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "&Apply",IDOK,44,68,50,14
+    PUSHBUTTON      "&Cancel",IDCANCEL,108,68,50,14
+    LTEXT           "User Name:",IDC_STATIC,13,12,40,8
+    LTEXT           "Password:",IDC_STATIC,13,32,35,8
+    LTEXT           "Default User Name: admin Password:1234",IDC_STATIC_DEFAULT_USER,7,53,180,10,SS_NOTIFY | WS_BORDER
+END
+
+IDD_WAIT_RESET DIALOGEX 0, 0, 187, 38
+STYLE DS_SETFONT | WS_POPUP | WS_THICKFRAME
+FONT 10, "System", 0, 0, 0x0
+BEGIN
+    CONTROL         "Progress1",IDC_PROGRESS_WAITING,"msctls_progress32",WS_BORDER,7,20,173,11
+    LTEXT           "miniAP is setting, please wait...",IDC_STATIC,9,8,103,8
+END
+
+IDD_WLAN_SETTING DIALOG  0, 0, 253, 198
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Wireless Setting"
+FONT 12, "System"
+BEGIN
+    DEFPUSHBUTTON   "&Apply",IDOK,65,178,47,12
+    PUSHBUTTON      "&Cancel",IDCANCEL,141,178,47,12
+    LTEXT           "SSID:",IDC_STATIC,47,38,19,8
+    EDITTEXT        IDC_SSID,67,36,118,12,ES_AUTOHSCROLL
+    LTEXT           "Channel:",IDC_STATIC,37,52,30,8
+    COMBOBOX        IDC_CHANNEL,67,51,119,143,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    RTEXT           "Security:",IDC_STATIC,34,107,30,8
+    COMBOBOX        IDC_SECURITY,67,106,55,66,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_ENCRYPTION,177,106,54,33,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    RTEXT           "Authentiaction:",IDC_STATIC_ENCRYPTION,124,107,51,8
+    EDITTEXT        IDC_KEY,67,139,165,12,ES_AUTOHSCROLL
+    RTEXT           "Key 1:",IDC_STATIC_KEY1,6,140,58,8
+    LTEXT           "(Pelase input )",IDC_STATIC_KEYINPUT,66,154,163,8
+    CONTROL         "Hex",IDC_KEY_HEX,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,67,123,27,10
+    CONTROL         "ASCII",IDC_KEY_ASCII,"Button",BS_AUTORADIOBUTTON | WS_TABSTOP,94,123,33,10
+    LTEXT           "Operation Mode:",IDC_STATIC,11,22,55,8
+    COMBOBOX        IDC_OP_MODE,67,21,119,66,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_KEY2,67,139,165,12,ES_AUTOHSCROLL
+    COMBOBOX        IDC_COMBO_AUTH,177,106,55,39,CBS_DROPDOWNLIST | NOT WS_VISIBLE | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Wireless Mode:",IDC_STATIC,14,68,53,8
+    COMBOBOX        IDC_WIRELESS_MODE,67,67,153,42,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    RTEXT           "Key Type:",IDC_STATIC_KEY_TYPE,5,123,59,8
+    CONTROL         "IPAddress1",IDC_ADIUS_SERVER,"SysIPAddress32",WS_TABSTOP,67,122,100,12
+END
+
+IDD_WIZARD_LOGIN DIALOG  0, 0, 339, 224
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard"
+FONT 10, "System"
+BEGIN
+    EDITTEXT        IDC_WIZARD_USERNAME,121,135,126,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_WIZARD_PASSWORD,121,155,126,12,ES_AUTOHSCROLL
+    LTEXT           "Welcome to use the Setup Wizard. You can easily setup the AP step by step.\nBefore configuring, please login first. Default user name is ""Admin"" and default password is null.",IDC_STATIC,27,65,269,31
+    LTEXT           "User Name:",IDC_STATIC,79,136,40,8
+    LTEXT           "Password:",IDC_STATIC,79,156,35,8
+END
+
+IDD_WIZARD_SYSTEM DIALOG  0, 0, 339, 225
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard"
+FONT 10, "System"
+BEGIN
+    CONTROL         "Access Point",IDC_RADIO_WZAP,"Button",BS_AUTORADIOBUTTON | WS_GROUP,130,140,58,10
+    CONTROL         "Wireless Client",IDC_RADIO_WZCLIENT,"Button",BS_AUTORADIOBUTTON,130,154,66,10
+    CONTROL         "Repeater",IDC_RADIO_WZREPEATER,"Button",BS_AUTORADIOBUTTON,130,168,46,10
+    LTEXT           "The default operation mode is Access Point, this connects your wireless PCs and devices to a wired network. In most cases, no change is necessary. You can switch operation mode to Wireless Client or Repeater mode depends on your application.",IDC_STATIC,62,57,215,34
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,55,59,3,3
+    LTEXT           "Wireless Client mode can allow AP act as a client within its range. Your Ethernet devices behind the AP can connect to remote AP.",IDC_STATIC,62,91,220,41
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,55,93,3,3
+END
+
+IDD_WIZARD_SECURITY DIALOG  0, 0, 339, 224
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard"
+FONT 10, "System"
+BEGIN
+    CONTROL         "Disable",IDC_RADIO_WZAUTH,"Button",BS_AUTORADIOBUTTON | WS_GROUP,136,119,41,10
+    CONTROL         "WEP 64bits",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,136,131,54,10
+    CONTROL         "WEP 128bits",IDC_RADIO3,"Button",BS_AUTORADIOBUTTON,136,143,58,10
+    CONTROL         "WEP 152bits",IDC_RADIO4,"Button",BS_AUTORADIOBUTTON,136,155,58,10
+    CONTROL         "WPA-PSK",IDC_RADIO5,"Button",BS_AUTORADIOBUTTON,136,167,47,10
+    CONTROL         "WPA",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,136,178,32,10
+    LTEXT           "There are three wireless security modes options supported by the Access Point: WEP, WPA-PSK and WPA, and two security wireless modes supported by Wireless client Infrastructure: WEP and WPA-PSK.",IDC_STATIC,42,47,255,24
+    LTEXT           "Select your security method and click ""Next"" button to make detail setting.",IDC_STATIC,42,81,254,8
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,35,49,3,3
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,35,83,3,3
+    LTEXT           "The AP supports WEP keys of 64, 128 and 152bit key length.",IDC_STATIC,42,72,216,8
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,35,74,3,3
+END
+
+IDD_WIZARD_IP_CONFIG DIALOG  0, 0, 339, 225
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard"
+FONT 10, "System"
+BEGIN
+    LTEXT           "IP Address:",IDC_STATIC_IP,97,138,41,8
+    LTEXT           "Subnet Mask:",IDC_STATIC_MASK,97,156,50,8
+    LTEXT           "Default Gateway:",IDC_STATIC_GATEWAY,97,174,57,8
+    CONTROL         "IPAddress1",IDC_WZIPADDRESS,"SysIPAddress32",WS_TABSTOP,156,136,88,12
+    CONTROL         "IPAddress2",IDC_WZSUB_MASK,"SysIPAddress32",WS_TABSTOP,156,154,88,12
+    CONTROL         "IPAddress3",IDC_WZGATEWAY,"SysIPAddress32",WS_TABSTOP,156,172,88,12
+    CONTROL         "Specify an IP address  ",IDC_WZRADIO_DHCP_ENABLE,"Button",BS_AUTORADIOBUTTON | WS_GROUP,85,122,82,10
+    CONTROL         "Obtain an IP address automatically (DHCP)",IDC_WZRADIO,
+                    "Button",BS_AUTORADIOBUTTON,85,109,151,10
+    LTEXT           "Here you can choose to get IP from a DHCP server or specify IP address manually.",IDC_STATIC,35,45,277,8
+    LTEXT           "The IP address need to be unique to your network. We would like to recommend you stay with default IP address 192.168.1.20.",IDC_STATIC,35,54,278,17
+    LTEXT           "The Subnet Mask must be the same as that set on your Ethernet network.",IDC_STATIC,35,71,238,8
+    LTEXT           "Gateway, such as a router, in the Gateway field. If your network does not have a Gateway, then leave this field blank.",IDC_STATIC,35,79,274,24
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,28,47,3,3
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,28,56,3,3
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,28,73,3,3
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,28,81,3,3
+END
+
+IDD_WIZARD_SYSTEM_AP DIALOG  0, 0, 339, 224
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard"
+FONT 10, "System"
+BEGIN
+    LTEXT           "SSID:",IDC_STATIC,52,132,19,8
+    EDITTEXT        IDC_WZSSID_AP,106,130,159,12,ES_AUTOHSCROLL
+    COMBOBOX        IDC_WZCHANNEL_AP,106,158,90,143,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Channel:",IDC_STATIC,52,160,30,8
+    LTEXT           "(1 to 32 characters required)",IDC_STATIC,106,145,92,8
+    LTEXT           "Wireless Mode:",IDC_STATIC,52,176,53,8
+    COMBOBOX        IDC_COMBO_WZWLAN_MODE,106,175,161,45,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "The SSID is the unique name shared among all points in a wireless network. The SSID must be identical for all points in the wireless network.",IDC_STATIC,29,41,275,17
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,21,44,3,3
+    LTEXT           "Select the appropriate channel from the list provided to correspond with your network settings.",IDC_STATIC,29,57,271,16
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,21,59,3,3
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,21,76,3,3
+    LTEXT           "Click ""Next"" button to change the setting of security, or click ""Finish"" button if you don't want to make any change of them.",IDC_STATIC,29,92,272,17
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,21,94,3,3
+    LTEXT           "System supports all 802.11b/g clients connect to the AP and supports high speed 108Mbps SuperG function for Atheros solution. ",IDC_STATIC,29,74,285,17
+END
+
+IDD_WIZARD_SYSTEM_CLIENTINF DIALOG  0, 0, 339, 224
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard"
+FONT 10, "System"
+BEGIN
+    LTEXT           "SSID:",IDC_STATIC,68,155,19,8
+    EDITTEXT        IDC_WZSSID_CLIENT_INF,120,152,154,12,ES_MULTILINE | ES_AUTOHSCROLL
+    CONTROL         "Specify the static SSID:",IDC_RADIO_STATIC_SSID,"Button",BS_AUTORADIOBUTTON | WS_GROUP,56,141,92,10
+    CONTROL         "Attach to any available SSID",IDC_RADIO_ANY_SSID,"Button",BS_AUTORADIOBUTTON,56,129,108,10
+    LTEXT           "(1 to 32 characters required)",IDC_STATIC,121,165,92,8
+    COMBOBOX        IDC_WZWIRELESS_MODE_INF,120,176,156,40,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Wireless Mode:",IDC_STATIC,67,177,53,8
+    LTEXT           "System supports to connect all 802.11b/g APs and supports high speed 108Mbps SuperG function for Atheros solution. ",IDC_STATIC,29,78,268,17
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,21,82,3,3
+    LTEXT           "Attach to any available SSID: System will determine the Access Point currently available and establish connection with that Access Point. ",IDC_STATIC,29,44,276,15
+    LTEXT           "The SSID is the unique name shared among all points in a wireless network. The SSID must be identical for all points in the wireless network.",IDC_STATIC,29,61,275,17
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,21,64,3,3
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,21,46,3,3
+    LTEXT           "Click ""Next"" button to change the setting of security, or click ""Finish"" button if you don't want to make any change of them.",IDC_STATIC,29,95,272,15
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,21,97,3,3
+END
+
+IDD_WIZARD_SYSTEM_REPEATER DIALOG  0, 0, 339, 224
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard"
+FONT 10, "System"
+BEGIN
+    LTEXT           "SSID:",IDC_STATIC,61,138,19,8
+    EDITTEXT        IDC_WZSSID_REPEATER,117,136,156,12,ES_AUTOHSCROLL
+    COMBOBOX        IDC_WZWIRELESS_MODE_REPEATER,117,163,158,143,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Wireless Mode:",IDC_STATIC,61,165,53,8
+    LTEXT           "(1 to 32 characters required)",IDC_STATIC,119,150,92,8
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,42,91,3,3
+    LTEXT           "The SSID is the unique name shared among all points in a wireless network. The SSID must be identical for all points in the wireless network.",IDC_STATIC,48,64,239,16
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,42,67,3,3
+    LTEXT           "System supports all 802.11b/g clinets to connect 802.11b/g AP and supports high speed 108Mbps SuperG function for Atheros solution. ",IDC_STATIC,48,88,248,28
+END
+
+IDD_WIZARD_SECURITY_REPEATER DIALOG  0, 0, 339, 224
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard"
+FONT 10, "System"
+BEGIN
+    CONTROL         "Disable",IDC_RADIO_WZAUTH_REPEATER,"Button",BS_AUTORADIOBUTTON | WS_GROUP,131,139,41,10
+    CONTROL         "WEP 64bits",IDC_RADIO2_REPEATER,"Button",BS_AUTORADIOBUTTON,131,151,54,10
+    CONTROL         "WEP 128bits",IDC_RADIO3_REPEATER,"Button",BS_AUTORADIOBUTTON,131,163,58,10
+    CONTROL         "WEP 152bits",IDC_RADIO4_REPEATER,"Button",BS_AUTORADIOBUTTON,131,175,58,10
+    LTEXT           "There is only one wireless security mode ""WEP"" option supported by the Wireless client AD-HOC and Repeater.",IDC_STATIC,89,54,178,23
+    LTEXT           "Select your security method and click ""Next"" button to make detail setting.",IDC_STATIC,89,96,178,16
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,79,56,3,3
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,79,81,3,3
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,79,98,3,3
+    LTEXT           "The AP supports WEP keys of 64, 128 and 152bit key length.",IDC_STATIC,89,79,178,17
+END
+
+IDD_WIZARD_ENC_WEP DIALOG  0, 0, 339, 226
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard"
+FONT 10, "System"
+BEGIN
+    EDITTEXT        IDC_EDIT_WZKEY_HEX,106,161,155,12,ES_AUTOHSCROLL
+    LTEXT           "(Pelase input )",IDC_STATIC_INPUT,106,177,112,8
+    CONTROL         "HEX",IDC_RADIO_WZKEY_HEX,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,106,144,33,10
+    CONTROL         "ASCII",IDC_RADIO_WZKEY_ASCII,"Button",BS_AUTORADIOBUTTON | WS_TABSTOP,141,144,30,10
+    EDITTEXT        IDC_EDIT_WZKEY_ASCII,106,161,155,12,ES_AUTOHSCROLL
+    LTEXT           "Default Key 1:",IDC_STATIC_KEY1,56,163,47,8
+    LTEXT           "Authentication:",IDC_STATIC_AUTH_WEP,55,128,49,8
+    COMBOBOX        IDC_CIPHER_TYPE,107,127,78,44,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Authentication type - Select ""Open System"" to communicate the key across the network. Select ""Share Key"" to limit communi- cation to only those devices that share the same WEP settings.",IDC_STATIC_AUTH,54,48,206,24
+    LTEXT           "Input type supports HEX or ASCII depends on your preference.",IDC_STATIC,54,72,207,8
+    LTEXT           "WEP supports the most four keys. You can have another three keys on web setting.",IDC_STATIC,54,83,207,17
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,47,50,3,3
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,47,75,3,3
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,47,85,3,3
+END
+
+IDD_WIZARD_ENC_WPAPSK DIALOG  0, 0, 339, 224
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard"
+FONT 10, "System"
+BEGIN
+    EDITTEXT        IDC_EDIT_WZKEY_WPAPSK,99,157,174,12,ES_AUTOHSCROLL
+    LTEXT           "(8-63 character values required)",IDC_STATIC_INPUT,100,172,112,8
+    LTEXT           "Pass Phase:",IDC_STATIC,56,159,42,8
+    LTEXT           "Cipher Type:",IDC_STATIC,56,141,42,8
+    COMBOBOX        IDC_COMBO_WZENCRYPTION,99,139,48,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "WPA gives you two encryption methods, TKIP and AES, with dynamic encryption keys.",IDC_STATIC,56,58,223,16
+    LTEXT           "Enter a WPA Shared Key of 8-63 characters. The Shared Key should be also applying the clients work in the same wireless network.",IDC_STATIC,56,76,225,19
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,48,60,3,3
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,48,78,3,3
+END
+
+IDD_WIZARD_SYSTEM_CLIENT DIALOG  0, 0, 339, 224
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard"
+FONT 10, "System"
+BEGIN
+    CONTROL         "Infrastructure",IDC_RADIO_CLIENT_MODE,"Button",BS_AUTORADIOBUTTON | WS_GROUP,130,152,59,10
+    CONTROL         "AD HOC",IDC_RADIO2_CLIENT_MODE,"Button",BS_AUTORADIOBUTTON,130,167,42,10
+    LTEXT           "You can set the wireless client into 2 different modes by clicking radio button. Wireless Client (Infrastructure) act as an AP client while Ad-hoc can support peer to peer network.",IDC_STATIC,71,67,193,25
+    LTEXT           "Both Infrastructure and Ad-hoc can support up to 108M SuperG transmission.",IDC_STATIC,71,93,194,31
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,64,70,3,3
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,64,96,3,3
+END
+
+IDD_WIZARD_SYSTEM_CLIENTADHOC DIALOG  0, 0, 339, 224
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard"
+FONT 10, "System"
+BEGIN
+    LTEXT           "SSID:",IDC_STATIC,47,132,19,8
+    EDITTEXT        IDC_WZSSID_CLIENT_ADHOC,102,130,154,12,ES_AUTOHSCROLL
+    COMBOBOX        IDC_WZCHANNEL_CLIENT_ADHOC,102,156,96,143,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Channel:",IDC_STATIC,48,157,30,8
+    LTEXT           "(1 to 32 characters required)",IDC_STATIC,102,144,92,8
+    LTEXT           "The SSID is the unique name shared among all points in a wireless network. The SSID must be identical for all points in the wireless network.",IDC_STATIC,34,45,275,17
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,26,48,3,3
+    LTEXT           "Select the appropriate channel from the list provided to correspond with your network settings.",IDC_STATIC,34,63,271,17
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,26,65,3,3
+    LTEXT           "Click ""Next"" button to change the setting of security, or click ""Finish"" button if you don't want to make any change of them.",IDC_STATIC,34,99,272,17
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,26,101,3,3
+    LTEXT           "Wireless Mode:",IDC_STATIC,48,174,53,8
+    COMBOBOX        IDC_COMBO_WZWLAN_MODE_ADHOC,102,173,156,45,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "System supports to connect all 802.11b/g stations and supports high speed 108Mbps SuperG function for Atheros solution. ",IDC_STATIC,34,81,268,17
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,26,83,3,3
+END
+
+IDD_WIZARD_SYSTEM_DECNAME DIALOG  0, 0, 339, 224
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard"
+FONT 10, "System"
+BEGIN
+    LTEXT           "Device Name:",IDC_STATIC,70,157,47,8
+    EDITTEXT        IDC_WZSYS_NAME,121,155,130,12,ES_AUTOHSCROLL
+    LTEXT           "(1 to 32 characters required)",IDC_STATIC,121,170,92,8
+    LTEXT           "You may assign any name to the Access Point. Memorable, Unique names are helpful especially if you are employing multiple access points on the same network. The device name needs to be less than 32 characters.",IDC_STATIC,62,74,208,31
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,55,77,3,3
+END
+
+IDD_WIZARD_SUMMARY DIALOGEX 0, 0, 316, 210
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard Confirmation"
+FONT 10, "System", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,193,193,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,251,193,50,14
+    LTEXT           "Operation Mode:",IDC_STATIC,16,104,55,8
+    LTEXT           "SSID:",IDC_STATIC,16,116,19,8
+    LTEXT           "Wireless Mode:",IDC_STATIC,16,140,53,8
+    LTEXT           "Channel:",IDC_STATIC,16,128,30,8
+    LTEXT           "Security:",IDC_STATIC,17,152,30,8
+    EDITTEXT        IDC_EDIT_IPMASK_OLD,78,67,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_GATEWAY_OLD,78,79,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_IP_OLD,78,55,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_IP_NEW,196,55,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_GATEWAY_NEW,196,79,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_IPMASK_NEW,196,67,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    LTEXT           "IP Address:",IDC_STATIC,16,56,41,8
+    LTEXT           "Subnet Mask:",IDC_STATIC,16,68,50,8
+    LTEXT           "Default Gateway:",IDC_STATIC,16,80,57,8
+    LTEXT           "Device Name:",IDC_STATIC,16,92,47,8
+    EDITTEXT        IDC_EDIT_DEVNAME_OLD,78,91,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_DEVNAME_NEW,196,91,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_OPMODE_NEW,196,103,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_OPMODE_OLD,78,103,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_WMODE_OLD,78,139,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_WMODE_NEW,196,139,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_CHANNEL_NEW,196,127,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_CHANNEL_OLD,78,127,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    LTEXT           "Cipher Type:",IDC_STATIC_TYPE,17,164,56,8,NOT WS_VISIBLE
+    EDITTEXT        IDC_EDIT_ENCRYPT_OLD,78,163,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_ENCRYPT_NEW,196,163,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_VISIBLE | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_AUTH_NEW,196,151,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_AUTH_OLD,78,151,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_SSID_OLD,78,115,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_SSID_NEW,196,115,102,12,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER,WS_EX_STATICEDGE
+END
+
+IDD_INTERFACE_SEL DIALOG  0, 0, 187, 75
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Dialog"
+FONT 10, "System"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,38,54,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,98,54,50,14
+    COMBOBOX        IDC_INTERFACE_SELECT,37,36,111,105,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+END
+
+IDD_WIZARD_ENC_WPA DIALOG  0, 0, 339, 224
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Setup Wizard"
+FONT 10, "System"
+BEGIN
+    EDITTEXT        IDC_EDIT_WZKEY_WPA,105,162,174,12,ES_AUTOHSCROLL
+    LTEXT           "(1 to 64 character values required)",IDC_STATIC_INPUT,105,177,112,8
+    LTEXT           "RADIUS Secret :",IDC_STATIC,50,163,53,8
+    LTEXT           "Cipher Type :",IDC_STATIC,50,149,42,8
+    COMBOBOX        IDC_WZ_WPA_CIPHER,105,148,48,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "IPAddress1",IDC_WZ_ADIUS_SERVER,"SysIPAddress32",WS_TABSTOP,105,133,100,12
+    LTEXT           "RADIUS Server :",IDC_STATIC,50,135,53,8
+END
+
+IDD_WIZARD_ENCWPA DIALOG  0, 0, 339, 224
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Wizard Setup"
+FONT 10, "System"
+BEGIN
+    EDITTEXT        IDC_EDIT_WZKEY_WPA,107,160,174,12,ES_AUTOHSCROLL
+    LTEXT           "(1 to 64 character values required)",IDC_STATIC_INPUT,107,174,112,8
+    LTEXT           "RADIUS Secret :",IDC_STATIC,52,161,53,8
+    LTEXT           "Cipher Type :",IDC_STATIC,52,144,50,8
+    COMBOBOX        IDC_WZ_WPA_CIPHER,107,143,48,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "IPAddress1",IDC_WZ_ADIUS_SERVER,"SysIPAddress32",WS_TABSTOP,107,126,93,12
+    LTEXT           "RADIUS Server :",IDC_STATIC,52,128,55,8
+    LTEXT           "RADIUS secret is the key shared between Access Point and RADIUS server.",IDC_STATIC,46,73,248,8
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,39,75,3,3
+    LTEXT           "WPA gives you two encryption methods, TKIP and AES, with dynamic encryption keys. Select the type of algorithm, TKIP or AES.",IDC_STATIC,46,53,246,17
+    CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,39,55,3,3
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_UPGRADE_MANUAL, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 175
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 104
+    END
+
+    IDD_DEVICE_INFO, DIALOG
+    BEGIN
+        BOTTOMMARGIN, 419
+    END
+
+    IDD_LOGIN, DIALOG
+    BEGIN
+        RIGHTMARGIN, 187
+        BOTTOMMARGIN, 84
+    END
+
+    IDD_WAIT_RESET, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 31
+    END
+
+    IDD_WIZARD_SYSTEM, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 331
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 218
+    END
+
+    IDD_WIZARD_SECURITY, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 332
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 217
+    END
+
+    IDD_WIZARD_IP_CONFIG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 332
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 218
+    END
+
+    IDD_WIZARD_SYSTEM_AP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 332
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 217
+    END
+
+    IDD_WIZARD_SYSTEM_CLIENTINF, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 332
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 217
+    END
+
+    IDD_WIZARD_SYSTEM_REPEATER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 332
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 217
+    END
+
+    IDD_WIZARD_SECURITY_REPEATER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 332
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 217
+    END
+
+    IDD_WIZARD_ENC_WEP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 332
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 219
+    END
+
+    IDD_WIZARD_ENC_WPAPSK, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 332
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 217
+    END
+
+    IDD_WIZARD_SYSTEM_CLIENT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 332
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 217
+    END
+
+    IDD_WIZARD_SYSTEM_CLIENTADHOC, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 332
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 218
+    END
+
+    IDD_WIZARD_SYSTEM_DECNAME, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 332
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 217
+    END
+
+    IDD_INTERFACE_SEL, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 68
+    END
+
+    IDD_WIZARD_ENC_WPA, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 332
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 217
+    END
+
+    IDD_WIZARD_ENCWPA, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 332
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 217
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_ROUTER              BITMAP                  "res\\Router.bmp"
+IDB_SWITCH              BITMAP                  "res\\Switch.bmp"
+IDB_GATEWAY             BITMAP                  "res\\Gateway.bmp"
+IDB_HEADER              BITMAP                  "res\\header.bmp"
+IDB_BG_IP_SETTING       BITMAP                  "res\\WizardIPSetting.bmp"
+IDB_POINT               BITMAP                  "res\\WizardPoint.bmp"
+IDB_BG_LOGIN            BITMAP                  "res\\WizardLogin.bmp"
+IDB_BG_DEVICE_NAME      BITMAP                  "res\\WizardDeviceName.bmp"
+IDB_BG_OP_MODE          BITMAP                  "res\\WizardOpMode.bmp"
+IDB_BG_NETWORK          BITMAP                  "res\\WizardNetwork.bmp"
+IDB_BG_WLAN_AP          BITMAP                  "res\\WizardWirelessAp.bmp"
+IDB_BG_WLAN_REP         BITMAP                  "res\\WizardWirelessRep.bmp"
+IDB_BG_WLAN_ADHOC       BITMAP                  "res\\WizardWirelessAdhoc.bmp"
+IDB_BG_SEC_1            BITMAP                  "res\\WizardSecurity2.bmp"
+IDB_BG_SEC_2            BITMAP                  "res\\WizardSecurity1.bmp"
+IDB_BG_WEP              BITMAP                  "res\\WizardWEP.bmp"
+IDB_BG_WPA_PSK          BITMAP                  "res\\WizardWPAPSK.bmp"
+IDB_LOGIN               BITMAP                  "res\\login.bmp"
+IDB_IP_SETTING          BITMAP                  "res\\IP_Setting.bmp"
+IDB_WIRELESS            BITMAP                  "res\\Wireless.bmp"
+IDB_BG_INFO             BITMAP                  "res\\Information.bmp"
+IDB_BG_CONFIRMATION     BITMAP                  "res\\WizardSummary.bmp"
+IDB_BG_WPA              BITMAP                  "res\\WizardWPA.bmp"
+IDB_BG_ABOUT            BITMAP                  "res\\about.bmp"
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif\r\n"
+    "#include ""res\\upgrader.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AVI
+//
+
+IDR_SEARCH_AVI          AVI                     "res\\Search.avi"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+IDD_WLAN_SETTING DLGINIT
+BEGIN
+    IDC_CHANNEL, 0x403, 13, 0
+0x6d53, 0x7261, 0x2074, 0x6553, 0x656c, 0x7463, "\000" 
+    IDC_CHANNEL, 0x403, 20, 0
+0x3432, 0x3231, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3120, 
+0x0029, 
+    IDC_CHANNEL, 0x403, 20, 0
+0x3432, 0x3731, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3220, 
+0x0029, 
+    IDC_CHANNEL, 0x403, 20, 0
+0x3432, 0x3232, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3320, 
+0x0029, 
+    IDC_CHANNEL, 0x403, 20, 0
+0x3432, 0x3732, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3420, 
+0x0029, 
+    IDC_CHANNEL, 0x403, 20, 0
+0x3432, 0x3233, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3520, 
+0x0029, 
+    IDC_CHANNEL, 0x403, 20, 0
+0x3432, 0x3733, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3620, 
+0x0029, 
+    IDC_CHANNEL, 0x403, 20, 0
+0x3432, 0x3234, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3720, 
+0x0029, 
+    IDC_CHANNEL, 0x403, 20, 0
+0x3432, 0x3734, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3820, 
+0x0029, 
+    IDC_CHANNEL, 0x403, 20, 0
+0x3432, 0x3235, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3920, 
+0x0029, 
+    IDC_CHANNEL, 0x403, 21, 0
+0x3432, 0x3735, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3120, 
+0x2930, "\000" 
+    IDC_CHANNEL, 0x403, 21, 0
+0x3432, 0x3236, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3120, 
+0x2931, "\000" 
+    IDC_SECURITY, 0x403, 9, 0
+0x6944, 0x6173, 0x6c62, 0x6465, "\000" 
+    IDC_SECURITY, 0x403, 11, 0
+0x4557, 0x2050, 0x3436, 0x6962, 0x7374, "\000" 
+    IDC_SECURITY, 0x403, 12, 0
+0x4557, 0x2050, 0x3231, 0x6238, 0x7469, 0x0073, 
+    IDC_SECURITY, 0x403, 12, 0
+0x4557, 0x2050, 0x3531, 0x6232, 0x7469, 0x0073, 
+    IDC_SECURITY, 0x403, 8, 0
+0x5057, 0x2d41, 0x5350, 0x004b, 
+    IDC_ENCRYPTION, 0x403, 5, 0
+0x4b54, 0x5049, "\000" 
+    IDC_ENCRYPTION, 0x403, 4, 0
+0x4541, 0x0053, 
+    IDC_OP_MODE, 0x403, 13, 0
+0x6341, 0x6563, 0x7373, 0x5020, 0x696f, 0x746e, "\000" 
+    IDC_OP_MODE, 0x403, 33, 0
+0x6957, 0x6572, 0x656c, 0x7373, 0x4320, 0x696c, 0x6e65, 0x2074, 0x4928, 
+0x666e, 0x6172, 0x7473, 0x7572, 0x7463, 0x7275, 0x2965, "\000" 
+    IDC_OP_MODE, 0x403, 25, 0
+0x6957, 0x6572, 0x656c, 0x7373, 0x4320, 0x696c, 0x6e65, 0x2074, 0x4128, 
+0x2044, 0x4f48, 0x2943, "\000" 
+    IDC_OP_MODE, 0x403, 8, 0
+0x6552, 0x7061, 0x6574, 0x0072, 
+    IDC_COMBO_AUTH, 0x403, 12, 0
+0x704f, 0x6e65, 0x5320, 0x7379, 0x6574, 0x006d, 
+    IDC_COMBO_AUTH, 0x403, 11, 0
+0x6853, 0x7261, 0x6465, 0x4b20, 0x7965, "\000" 
+    IDC_COMBO_AUTH, 0x403, 5, 0
+0x7541, 0x6f74, "\000" 
+    IDC_WIRELESS_MODE, 0x403, 23, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x4d31, 0x7062, 0x2873, 0x3038, 0x2e32, 
+0x3131, 0x2962, "\000" 
+    IDC_WIRELESS_MODE, 0x403, 23, 0
+0x2e32, 0x4734, 0x7a48, 0x3520, 0x4d34, 0x7062, 0x2873, 0x3038, 0x2e32, 
+0x3131, 0x2967, "\000" 
+    IDC_WIRELESS_MODE, 0x403, 38, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x3830, 0x624d, 0x7370, 0x3828, 0x3230, 
+0x312e, 0x2031, 0x7553, 0x6570, 0x2072, 0x2047, 0x7473, 0x7461, 0x6369, 
+0x0029, 
+    IDC_WIRELESS_MODE, 0x403, 39, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x3830, 0x624d, 0x7370, 0x3828, 0x3230, 
+0x312e, 0x2031, 0x7553, 0x6570, 0x2072, 0x2047, 0x7964, 0x616e, 0x696d, 
+0x2963, "\000" 
+    0
+END
+
+IDD_WIZARD_SYSTEM_AP DLGINIT
+BEGIN
+    IDC_WZCHANNEL_AP, 0x403, 13, 0
+0x6d53, 0x7261, 0x2074, 0x6553, 0x656c, 0x7463, "\000" 
+    IDC_WZCHANNEL_AP, 0x403, 20, 0
+0x3432, 0x3231, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3120, 
+0x0029, 
+    IDC_WZCHANNEL_AP, 0x403, 20, 0
+0x3432, 0x3731, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3220, 
+0x0029, 
+    IDC_WZCHANNEL_AP, 0x403, 20, 0
+0x3432, 0x3232, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3320, 
+0x0029, 
+    IDC_WZCHANNEL_AP, 0x403, 20, 0
+0x3432, 0x3732, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3420, 
+0x0029, 
+    IDC_WZCHANNEL_AP, 0x403, 20, 0
+0x3432, 0x3233, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3520, 
+0x0029, 
+    IDC_WZCHANNEL_AP, 0x403, 20, 0
+0x3432, 0x3733, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3620, 
+0x0029, 
+    IDC_WZCHANNEL_AP, 0x403, 20, 0
+0x3432, 0x3234, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3720, 
+0x0029, 
+    IDC_WZCHANNEL_AP, 0x403, 20, 0
+0x3432, 0x3734, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3820, 
+0x0029, 
+    IDC_WZCHANNEL_AP, 0x403, 20, 0
+0x3432, 0x3235, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3920, 
+0x0029, 
+    IDC_WZCHANNEL_AP, 0x403, 21, 0
+0x3432, 0x3735, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3120, 
+0x2930, "\000" 
+    IDC_WZCHANNEL_AP, 0x403, 21, 0
+0x3432, 0x3236, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3120, 
+0x2931, "\000" 
+    IDC_COMBO_WZWLAN_MODE, 0x403, 23, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x4d31, 0x7062, 0x2873, 0x3038, 0x2e32, 
+0x3131, 0x2962, "\000" 
+    IDC_COMBO_WZWLAN_MODE, 0x403, 23, 0
+0x2e32, 0x4734, 0x7a48, 0x3520, 0x4d34, 0x7062, 0x2873, 0x3038, 0x2e32, 
+0x3131, 0x2967, "\000" 
+    IDC_COMBO_WZWLAN_MODE, 0x403, 38, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x3830, 0x624d, 0x7370, 0x3828, 0x3230, 
+0x312e, 0x2031, 0x7553, 0x6570, 0x2072, 0x2047, 0x7473, 0x7461, 0x6369, 
+0x0029, 
+    IDC_COMBO_WZWLAN_MODE, 0x403, 39, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x3830, 0x624d, 0x7370, 0x3828, 0x3230, 
+0x312e, 0x2031, 0x7553, 0x6570, 0x2072, 0x2047, 0x7964, 0x616e, 0x696d, 
+0x2963, "\000" 
+    0
+END
+
+IDD_WIZARD_SYSTEM_REPEATER DLGINIT
+BEGIN
+    IDC_WZWIRELESS_MODE_REPEATER, 0x403, 23, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x4d31, 0x7062, 0x2873, 0x3038, 0x2e32, 
+0x3131, 0x2962, "\000" 
+    IDC_WZWIRELESS_MODE_REPEATER, 0x403, 23, 0
+0x2e32, 0x4734, 0x7a48, 0x3520, 0x4d34, 0x7062, 0x2873, 0x3038, 0x2e32, 
+0x3131, 0x2967, "\000" 
+    IDC_WZWIRELESS_MODE_REPEATER, 0x403, 38, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x3830, 0x624d, 0x7370, 0x3828, 0x3230, 
+0x312e, 0x2031, 0x7553, 0x6570, 0x2072, 0x2047, 0x7473, 0x7461, 0x6369, 
+0x0029, 
+    IDC_WZWIRELESS_MODE_REPEATER, 0x403, 39, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x3830, 0x624d, 0x7370, 0x3828, 0x3230, 
+0x312e, 0x2031, 0x7553, 0x6570, 0x2072, 0x2047, 0x7964, 0x616e, 0x696d, 
+0x2963, "\000" 
+    0
+END
+
+IDD_WIZARD_ENC_WPAPSK DLGINIT
+BEGIN
+    IDC_COMBO_WZENCRYPTION, 0x403, 5, 0
+0x4b54, 0x5049, "\000" 
+    IDC_COMBO_WZENCRYPTION, 0x403, 4, 0
+0x4541, 0x0053, 
+    0
+END
+
+IDD_WIZARD_SYSTEM_CLIENTADHOC DLGINIT
+BEGIN
+    IDC_WZCHANNEL_CLIENT_ADHOC, 0x403, 13, 0
+0x6d53, 0x7261, 0x2074, 0x6553, 0x656c, 0x7463, "\000" 
+    IDC_WZCHANNEL_CLIENT_ADHOC, 0x403, 20, 0
+0x3432, 0x3231, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3120, 
+0x0029, 
+    IDC_WZCHANNEL_CLIENT_ADHOC, 0x403, 20, 0
+0x3432, 0x3731, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3220, 
+0x0029, 
+    IDC_WZCHANNEL_CLIENT_ADHOC, 0x403, 20, 0
+0x3432, 0x3232, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3320, 
+0x0029, 
+    IDC_WZCHANNEL_CLIENT_ADHOC, 0x403, 20, 0
+0x3432, 0x3732, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3420, 
+0x0029, 
+    IDC_WZCHANNEL_CLIENT_ADHOC, 0x403, 20, 0
+0x3432, 0x3233, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3520, 
+0x0029, 
+    IDC_WZCHANNEL_CLIENT_ADHOC, 0x403, 20, 0
+0x3432, 0x3733, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3620, 
+0x0029, 
+    IDC_WZCHANNEL_CLIENT_ADHOC, 0x403, 20, 0
+0x3432, 0x3234, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3720, 
+0x0029, 
+    IDC_WZCHANNEL_CLIENT_ADHOC, 0x403, 20, 0
+0x3432, 0x3734, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3820, 
+0x0029, 
+    IDC_WZCHANNEL_CLIENT_ADHOC, 0x403, 20, 0
+0x3432, 0x3235, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3920, 
+0x0029, 
+    IDC_WZCHANNEL_CLIENT_ADHOC, 0x403, 21, 0
+0x3432, 0x3735, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3120, 
+0x2930, "\000" 
+    IDC_WZCHANNEL_CLIENT_ADHOC, 0x403, 21, 0
+0x3432, 0x3236, 0x484d, 0x207a, 0x4328, 0x6168, 0x6e6e, 0x6c65, 0x3120, 
+0x2931, "\000" 
+    IDC_COMBO_WZWLAN_MODE_ADHOC, 0x403, 23, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x4d31, 0x7062, 0x2873, 0x3038, 0x2e32, 
+0x3131, 0x2962, "\000" 
+    IDC_COMBO_WZWLAN_MODE_ADHOC, 0x403, 23, 0
+0x2e32, 0x4734, 0x7a48, 0x3520, 0x4d34, 0x7062, 0x2873, 0x3038, 0x2e32, 
+0x3131, 0x2967, "\000" 
+    IDC_COMBO_WZWLAN_MODE_ADHOC, 0x403, 38, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x3830, 0x624d, 0x7370, 0x3828, 0x3230, 
+0x312e, 0x2031, 0x7553, 0x6570, 0x2072, 0x2047, 0x7473, 0x7461, 0x6369, 
+0x0029, 
+    IDC_COMBO_WZWLAN_MODE_ADHOC, 0x403, 39, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x3830, 0x624d, 0x7370, 0x3828, 0x3230, 
+0x312e, 0x2031, 0x7553, 0x6570, 0x2072, 0x2047, 0x7964, 0x616e, 0x696d, 
+0x2963, "\000" 
+    0
+END
+
+IDD_WIZARD_SYSTEM_CLIENTINF DLGINIT
+BEGIN
+    IDC_WZWIRELESS_MODE_INF, 0x403, 23, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x4d31, 0x7062, 0x2873, 0x3038, 0x2e32, 
+0x3131, 0x2962, "\000" 
+    IDC_WZWIRELESS_MODE_INF, 0x403, 23, 0
+0x2e32, 0x4734, 0x7a48, 0x3520, 0x4d34, 0x7062, 0x2873, 0x3038, 0x2e32, 
+0x3131, 0x2967, "\000" 
+    IDC_WZWIRELESS_MODE_INF, 0x403, 38, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x3830, 0x624d, 0x7370, 0x3828, 0x3230, 
+0x312e, 0x2031, 0x7553, 0x6570, 0x2072, 0x2047, 0x7473, 0x7461, 0x6369, 
+0x0029, 
+    IDC_WZWIRELESS_MODE_INF, 0x403, 39, 0
+0x2e32, 0x4734, 0x7a48, 0x3120, 0x3830, 0x624d, 0x7370, 0x3828, 0x3230, 
+0x312e, 0x2031, 0x7553, 0x6570, 0x2072, 0x2047, 0x7964, 0x616e, 0x696d, 
+0x2963, "\000" 
+    0
+END
+
+IDD_WIZARD_ENC_WEP DLGINIT
+BEGIN
+    IDC_CIPHER_TYPE, 0x403, 12, 0
+0x704f, 0x6e65, 0x5320, 0x7379, 0x6574, 0x006d, 
+    IDC_CIPHER_TYPE, 0x403, 11, 0
+0x6853, 0x7261, 0x6465, 0x4b20, 0x7965, "\000" 
+    IDC_CIPHER_TYPE, 0x403, 5, 0
+0x7541, 0x6f74, "\000" 
+    0
+END
+
+IDD_WIZARD_ENC_WPA DLGINIT
+BEGIN
+    IDC_WZ_WPA_CIPHER, 0x403, 5, 0
+0x4b54, 0x5049, "\000" 
+    IDC_WZ_WPA_CIPHER, 0x403, 4, 0
+0x4541, 0x0053, 
+    0
+END
+
+IDD_WIZARD_ENCWPA DLGINIT
+BEGIN
+    IDC_WZ_WPA_CIPHER, 0x403, 5, 0
+0x4b54, 0x5049, "\000" 
+    IDC_WZ_WPA_CIPHER, 0x403, 4, 0
+0x4541, 0x0053, 
+    0
+END
+
+#endif    // Chinese (Taiwan) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOGEX 0, 0, 203, 91
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About Locator"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    LTEXT           "Copyright (C) 2013-2015",IDC_STATIC,62,63,75,8
+    DEFPUSHBUTTON   "OK",IDOK,143,70,40,14,WS_GROUP
+    LTEXT           "Version 1.4.0",IDC_STATIC,69,50,53,8
+END
+
+IDD_TFTP_PROGESS DIALOG  0, 0, 187, 63
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CAPTION
+CAPTION "Firmware upgrade progress"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",WS_BORDER | 0x1,17,21,148,16
+    CTEXT           "0%",IDC_STATIC,17,41,10,8
+    CTEXT           "50%",IDC_STATIC,84,41,14,8
+    CTEXT           "100%",IDC_STATIC,157,41,17,8
+END
+
+IDD_ADMIN_PASSWORD DIALOG  0, 0, 155, 87
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Administraotr Password"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDC_ADMIN_PASSWORD,21,36,113,12,ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,24,63,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,81,63,50,14
+    LTEXT           "Please input this device administrator password :",IDC_STATIC,21,9,121,22
+END
+
+IDD_SEARCH_WAIT DIALOG  0, 0, 158, 56
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_VISIBLE
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Devices searching, please wait a minimute ...",IDC_STATIC,13,13,59,33
+    CONTROL         "Animate1",IDC_SEARCH_ANIMATE,"SysAnimate32",ACS_CENTER | ACS_TRANSPARENT | ACS_AUTOPLAY | WS_TABSTOP,88,9,56,37
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 196
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 84
+    END
+
+    IDD_TFTP_PROGESS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 180
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 56
+    END
+
+    IDD_ADMIN_PASSWORD, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 148
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 80
+    END
+
+    IDD_SEARCH_WAIT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 151
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 49
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\upgrader.ico"
+IDR_UPGRADTYPE          ICON                    "res\\upgraderDoc.ico"
+IDI_ICON_ADAPTER        ICON                    "res\\mynetworkplaces.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MAINFRAME MENU 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "E&xit",                       ID_APP_EXIT
+    END
+    POPUP "&Tools"
+    BEGIN
+        MENUITEM "Setup Wizard",                ID_WIZARD, INACTIVE
+        MENUITEM "Factory default",             ID_UPGRADE_MANUAL
+        MENUITEM "Reboot device(&R)",           ID_REBOOT
+        MENUITEM SEPARATOR
+        MENUITEM "Select Adapter(&A)",          ID_TOOLS_SELECTCONNECTION
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR
+        MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+        MENUITEM SEPARATOR
+        MENUITEM "Search",                      ID_SEARCH
+        MENUITEM "Device Info.",                ID_DEVICE_INFO
+        MENUITEM "Web",                         ID_WEB
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About Locator...",           ID_APP_ABOUT
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_MAINFRAME ACCELERATORS 
+BEGIN
+    "N",            ID_FILE_NEW,            VIRTKEY, CONTROL
+    "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL
+    "S",            ID_FILE_SAVE,           VIRTKEY, CONTROL
+    "Z",            ID_EDIT_UNDO,           VIRTKEY, CONTROL
+    "X",            ID_EDIT_CUT,            VIRTKEY, CONTROL
+    "C",            ID_EDIT_COPY,           VIRTKEY, CONTROL
+    "V",            ID_EDIT_PASTE,          VIRTKEY, CONTROL
+    VK_BACK,        ID_EDIT_UNDO,           VIRTKEY, ALT
+    VK_DELETE,      ID_EDIT_CUT,            VIRTKEY, SHIFT
+    VK_INSERT,      ID_EDIT_COPY,           VIRTKEY, CONTROL
+    VK_INSERT,      ID_EDIT_PASTE,          VIRTKEY, SHIFT
+    VK_F6,          ID_NEXT_PANE,           VIRTKEY 
+    VK_F6,          ID_PREV_PANE,           VIRTKEY, SHIFT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,4,0,0
+ PRODUCTVERSION 4,1,0,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "FileDescription", "Locator MFC Application"
+            VALUE "FileVersion", "1, 4, 0, 0"
+            VALUE "InternalName", "Locator"
+            VALUE "LegalCopyright", "Copyright (C) 2013"
+            VALUE "OriginalFilename", "locator.EXE"
+            VALUE "ProductName", "Locator Application"
+            VALUE "ProductVersion", "1, 4, 0, 0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDR_MAINFRAME           "upgrader\n\nUpgrad\n\n\nUpgrader.Document\nUpgrad Document"
+    IDS_ERR_WINSOCK         "Winsock  error !"
+    IDS_ERR_SOCK_OPENFAIL   "Fail to open a socket !"
+    IDS_ERR_SEND            "Data send error !"
+    IDS_ERR_RECV            "Data receive error !"
+    IDS_ERR_PASSWORD        "Invalid password !"
+    IDS_FIRMWARE_UPGRADE_COMPLETE 
+                            "Firmware upgrade is completed! You must reset it before new firmware active."
+    IDS_ERR_OPENFILE        "Fail to open file %s."
+    IDS_ERR_FILENAME        "The file doesn't contain verify update data, please select corrct file again."
+    IDS_ERR_UPGRADE         "Firmware upgrade fail! Please do it again."
+    IDS_SEARCH              "Search"
+    IDS_UPGRADE_AUTO        "Configuration"
+    IDS_UPGRADE_MANUAL      "Factory Default"
+    IDS_DEVICE_INFO         "Device Info"
+    IDS_CONN_WEB            "Web Setting"
+    IDS_PROPSHT_CAPTION     "Setting Wizard"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "Locator"
+    AFX_IDS_IDLEMESSAGE     "Ready"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_INDICATOR_EXT        "EXT"
+    ID_INDICATOR_CAPS       "CAP"
+    ID_INDICATOR_NUM        "NUM"
+    ID_INDICATOR_SCRL       "SCRL"
+    ID_INDICATOR_OVR        "OVR"
+    ID_INDICATOR_REC        "REC"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_FILE_NEW             "Create a new document\nNew"
+    ID_FILE_OPEN            "Open an existing document\nOpen"
+    ID_FILE_CLOSE           "Close the active document\nClose"
+    ID_FILE_SAVE            "Save the active document\nSave"
+    ID_FILE_SAVE_AS         "Save the active document with a new name\nSave As"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_APP_ABOUT            "Display program information, version number and copyright\nAbout"
+    ID_APP_EXIT             "Quit the application; prompts to save documents\nExit"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_FILE_MRU_FILE1       "Open this document"
+    ID_FILE_MRU_FILE2       "Open this document"
+    ID_FILE_MRU_FILE3       "Open this document"
+    ID_FILE_MRU_FILE4       "Open this document"
+    ID_FILE_MRU_FILE5       "Open this document"
+    ID_FILE_MRU_FILE6       "Open this document"
+    ID_FILE_MRU_FILE7       "Open this document"
+    ID_FILE_MRU_FILE8       "Open this document"
+    ID_FILE_MRU_FILE9       "Open this document"
+    ID_FILE_MRU_FILE10      "Open this document"
+    ID_FILE_MRU_FILE11      "Open this document"
+    ID_FILE_MRU_FILE12      "Open this document"
+    ID_FILE_MRU_FILE13      "Open this document"
+    ID_FILE_MRU_FILE14      "Open this document"
+    ID_FILE_MRU_FILE15      "Open this document"
+    ID_FILE_MRU_FILE16      "Open this document"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_NEXT_PANE            "Switch to the next window pane\nNext Pane"
+    ID_PREV_PANE            "Switch back to the previous window pane\nPrevious Pane"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_WINDOW_SPLIT         "Split the active window into panes\nSplit"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_EDIT_CLEAR           "Erase the selection\nErase"
+    ID_EDIT_CLEAR_ALL       "Erase everything\nErase All"
+    ID_EDIT_COPY            "Copy the selection and put it on the Clipboard\nCopy"
+    ID_EDIT_CUT             "Cut the selection and put it on the Clipboard\nCut"
+    ID_EDIT_FIND            "Find the specified text\nFind"
+    ID_EDIT_PASTE           "Insert Clipboard contents\nPaste"
+    ID_EDIT_REPEAT          "Repeat the last action\nRepeat"
+    ID_EDIT_REPLACE         "Replace specific text with different text\nReplace"
+    ID_EDIT_SELECT_ALL      "Select the entire document\nSelect All"
+    ID_EDIT_UNDO            "Undo the last action\nUndo"
+    ID_EDIT_REDO            "Redo the previously undone action\nRedo"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_VIEW_TOOLBAR         "Show or hide the toolbar\nToggle ToolBar"
+    ID_VIEW_STATUS_BAR      "Show or hide the status bar\nToggle StatusBar"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_SCSIZE          "Change the window size"
+    AFX_IDS_SCMOVE          "Change the window position"
+    AFX_IDS_SCMINIMIZE      "Reduce the window to an icon"
+    AFX_IDS_SCMAXIMIZE      "Enlarge the window to full size"
+    AFX_IDS_SCNEXTWINDOW    "Switch to the next document window"
+    AFX_IDS_SCPREVWINDOW    "Switch to the previous document window"
+    AFX_IDS_SCCLOSE         "Close the active window and prompts to save the documents"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_SCRESTORE       "Restore the window to normal size"
+    AFX_IDS_SCTASKLIST      "Activate Task List"
+    IDS_TEXT_KEY_STRING64   "(5 character values required)"
+    IDS_TEXT_KEY_STRING128  "(13 character values required)"
+    IDS_TEXT_KEY_STRING152  "(16 character values required)"
+    IDS_TEXT_KEY_HEX64      "(10 hexadecimal values required)"
+    IDS_TEXT_KEY_HEX128     "(26 hexadecimal values required)"
+    IDS_TEXT_KEY_HEX152     "(32 hexadecimal values required)"
+    IDS_TEXT_KEY_STR_PRESHARED "(8-63 character values required)"
+    IDS_TEXT_KEY_PSK        "Passphrase:"
+    IDS_TEXT_KEY_WEP        "WEP Key 1:"
+    IDS_DHCP_ENABLE         "DHCP is enabled"
+    IDS_OPMODE_AP           "Access Point"
+    IDS_OPMODE_INF          "Wireless Client (Infrastructure)"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_ENCRYPTION          "Cipher Type:"
+    IDS_AUTHENTIACTION      "Authentication:"
+    IDS_SECURITY_WPA_PSK    "Disabled\nWEP 64bits\nWEP 128bits\nWEP 152bits\nWPA-PSK\n"
+    IDS_SECURITY            "Disabled\nWEP 64bits\nWEP 128bits\nWEP 152bits\n"
+    IDS_SHARED_KEY          "Shared Key"
+    IDS_WIZARD_TITLE        "Wizard"
+    IDS_ERR_IPFIELD1        "%d is not a valid entry. Please specify a value between 1 and 223."
+    IDS_ERR_IPFIELD4_ZERO   "The combination of IP addressand subnet mask is invalid. All of the bits in the host address portion of the IP address are set to 0. Please enter a valid combination of IP address and subnet mask."
+    IDS_ERR_IPFIELD4_FILL   "The combination of IP addressand subnet mask is invalid. All of the bits in the host address portion of the IP address are set to 1. Please enter a valid combination of IP address and subnet mask."
+    IDS_ERROR_MASK          "You entered an invalid subnet mask. the subnet mask has to be contiguous. Please enter a valid mask."
+    IDS_AUTO                "AUTO"
+    IDS_SECURITY_WPA        "Disabled\nWEP 64bits\nWEP 128bits\nWEP 152bits\nWPA-PSK\nWPA\n"
+    IDS_TEXT_KEY_WPA        "RADIUS_Secret:"
+    IDS_TEXT_KEY_WPA_Radius "(1-64 character values required)"
+    IDS_TEXT_KEY_WPA_IP     "RADIUS Server:"
+    IDS_TEXT_KEY_WEP_INPUT  "Key Type:"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_SEARCH               "Search for miniAP devices"
+    ID_UPGRADE_AUTO         "IP Setting"
+    ID_UPGRADE_MANUAL       "Set Factory Default"
+    ID_DEVICE_INFO          "Detail device information"
+    ID_CONFIG               "IP Setting"
+    ID_WEB                  "Web Management"
+    ID_WIRELESS             "Wireless Setting"
+    ID_WIZARD               "Setup Wizard"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_OPMODE_ADHOC        "Wireless Client (AD HOC)"
+    IDS_OPMODE_REP          "Repeater"
+    IDS_WMODE_B             "2.4GHz 11Mbps(802.11b)"
+    IDS_WMODE_G             "2.4GHz 54Mbps(802.11g)"
+    IDS_WMODE_SUPERG        "2.4GHz Super G dynamic"
+    IDS_DISABLED            "Disabled"
+    IDS_AUTH_WEP64          "WEP 64bits"
+    IDS_AUTH_WEP128         "WEP 128bits"
+    IDS_AUTH_WEP152         "WEP 152bits"
+    IDS_AUTH_WPA_PSK        "WPA-PSK"
+    IDS_AUTH_WPA            "WPA"
+    IDS_CHANNEL_AUTO        "<Smart Select>"
+    IDS_ANY_SSID            "<Attach to any available SSID>"
+    IDS_ENCRYPTION_TKIP     "TKIP"
+    IDS_ENCRYPTION_AES      "AES"
+    IDS_OPEN_SYSTEM         "Open System"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_WMODE_STATICG       "2.4GHz Super G static"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_REBOOT              "Reboot Device"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif
+#include "res\upgrader.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

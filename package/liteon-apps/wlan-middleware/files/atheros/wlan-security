@@ -1,0 +1,422 @@
+#!/bin/sh
+########################################################################
+#Functions
+########################################################################
+get_ownbr()
+{
+    local wlan_mode=`echo $1 | cut -f 2- -d '_'`
+    local radio=`echo $2 | cut -f 2- -d '_'`
+    local sys_mode="$(nvram get system_mode)"
+    local bridge=""
+    if [ "$wlan_mode" = "sta" -o "$wlan_mode" = "sta-wds" ]; then
+        if [ "$radio" = "0" -a "$sys_mode" = "wisp0" ]; then
+            bridge="$(nvram get wan0_device)"
+        elif [ "$radio" = "1" -a "$sys_mode" = "wisp1" ]; then
+            bridge="$(nvram get wan0_device)"
+        else
+            bridge="$(nvram get lan0_ifname)"
+        fi
+    else
+        bridge="$(nvram get lan0_ifname)"
+    fi
+
+    echo "$bridge"
+}
+
+set_ap_security()
+{
+    local VAP_NAME=$1
+    local VAP_AUTHMODE=`echo $2 | cut -f 2- -d '_'`
+    local RADIO_ENABLE=`echo $3 | cut -f 2- -d '_'`
+    local VAP_ENABLE=`echo $4 | cut -f 2- -d '_'`
+    local ITER_OWNIP="${AP_OWNIP}"
+    local ITER_OWNBR=`echo $5 | cut -f 2- -d '_'`
+    if [ "${RADIO_ENABLE}" = "1" -a "${VAP_ENABLE}" = "1" ]; then
+        echo "WLAN_SECURITY_PRINT: set_ap_security: VAP_NAME is $VAP_NAME, VAP_AUTHMODE is $VAP_AUTHMODE, ITER_OWNIP is $ITER_OWNIP"
+        #if [ "${IS_WPA}" != "" -o "${IS_WPS}" != "" ]; then
+        if [ "${VAP_AUTHMODE}" = "WPA2PSK" -o "${VAP_AUTHMODE}" = "WPAPSKWPA2PSK" -o "${VAP_AUTHMODE}" = "WPAPSK" ]; then
+            echo "WLAN_SECURITY_PRINT: set_ap_security: Making Topology File . . ."
+            echo -e "interface=${VAP_NAME}" > /tmp/${VAP_NAME}.conf
+            #echo -e "bridge=br-lan0" >> /tmp/${VAP_NAME}.conf
+            echo -e "bridge=${ITER_OWNBR}" >> /tmp/${VAP_NAME}.conf
+            echo -e "ssid=${ITER_SSID}" >> /tmp/${VAP_NAME}.conf
+            echo -e "logger_syslog=1" >> /tmp/${VAP_NAME}.conf
+            echo -e "logger_syslog_level=0" >> /tmp/${VAP_NAME}.conf
+            echo -e "logger_stdout=1" >> /tmp/${VAP_NAME}.conf
+            echo -e "logger_stdout_level=0" >> /tmp/${VAP_NAME}.conf
+            echo -e "macaddr_acl=0" >> /tmp/${VAP_NAME}.conf
+            echo -e "ignore_broadcast_ssid=1" >> /tmp/${VAP_NAME}.conf
+            echo -e "auth_algs=1" >> /tmp/${VAP_NAME}.conf
+            if [ "${VAP_AUTHMODE}" = "WPAPSK" ]; then
+                echo -e "wpa=1" >> /tmp/${VAP_NAME}.conf
+            elif [ "${VAP_AUTHMODE}" = "WPA2PSK" ]; then
+                echo -e "wpa=2" >> /tmp/${VAP_NAME}.conf
+            else
+                echo -e "wpa=3" >> /tmp/${VAP_NAME}.conf
+            fi
+            if [ ${#ITER_PASSPHRASE} -eq 64 ]; then 
+            echo -e "wpa_psk=${ITER_PASSPHRASE}" >> /tmp/${VAP_NAME}.conf 
+            else
+            echo -e "wpa_passphrase=${ITER_PASSPHRASE}" >> /tmp/${VAP_NAME}.conf 
+            fi			
+            echo -e "wpa_key_mgmt=WPA-PSK" >> /tmp/${VAP_NAME}.conf
+            echo -e "wpa_pairwise=${ITER_ENCRYPTYPE}" >> /tmp/${VAP_NAME}.conf
+            echo -e "wpa_group_rekey=3600" >> /tmp/${VAP_NAME}.conf
+            hostapd -B /tmp/${VAP_NAME}.conf -P /var/run/hostapd_${VAP_NAME}.pid &
+        elif [ "${VAP_AUTHMODE}" = "WPA2" -o "${VAP_AUTHMODE}" = "WPA1WPA2" -o "${VAP_AUTHMODE}" = "WPAWPA2" ]; then
+            echo "WLAN_SECURITY_PRINT: set_ap_security: Making Topology File . . ."
+            echo -e "interface=${VAP_NAME}" > /tmp/${VAP_NAME}.conf
+            #echo -e "bridge=br-lan0" >> /tmp/${VAP_NAME}.conf
+            echo -e "bridge=${ITER_OWNBR}" >> /tmp/${VAP_NAME}.conf
+            echo -e "ssid=${ITER_SSID}" >> /tmp/${VAP_NAME}.conf
+            echo -e "logger_syslog=1" >> /tmp/${VAP_NAME}.conf
+            echo -e "logger_syslog_level=0" >> /tmp/${VAP_NAME}.conf
+            echo -e "logger_stdout=1" >> /tmp/${VAP_NAME}.conf
+            echo -e "logger_stdout_level=0" >> /tmp/${VAP_NAME}.conf
+            echo -e "macaddr_acl=0" >> /tmp/${VAP_NAME}.conf
+            echo -e "ignore_broadcast_ssid=1" >> /tmp/${VAP_NAME}.conf
+            echo -e "auth_algs=1" >> /tmp/${VAP_NAME}.conf
+            if [ "${VAP_AUTHMODE}" = "WPA2" ]; then
+            echo -e "wpa=2" >> /tmp/${VAP_NAME}.conf
+            else
+            echo -e "wpa=3" >> /tmp/${VAP_NAME}.conf
+            fi
+ 
+            echo -e "wpa_key_mgmt=WPA-EAP" >> /tmp/${VAP_NAME}.conf
+            echo -e "ieee8021x=1" >> /tmp/${VAP_NAME}.conf
+            echo -e "eapol_version=2" >> /tmp/${VAP_NAME}.conf
+            echo -e "eapol_key_index_workaround=0" >> /tmp/${VAP_NAME}.conf
+            echo -e "own_ip_addr=${ITER_OWNIP}" >> /tmp/${VAP_NAME}.conf
+            echo -e "auth_server_addr=${ITER_RADIUSSERVER}" >> /tmp/${VAP_NAME}.conf
+            echo -e "auth_server_port=${ITER_RADIUSPORT}" >> /tmp/${VAP_NAME}.conf
+            echo -e "auth_server_shared_secret=${ITER_RADIUSSECRET}" >> /tmp/${VAP_NAME}.conf
+            echo -e "rsn_preauth=0" >> /tmp/${VAP_NAME}.conf
+            #echo -e "rsn_preauth_interfaces=br-lan0" >> /tmp/${VAP_NAME}.conf
+            echo -e "rsn_preauth_interfaces=${ITER_OWNBR}" >> /tmp/${VAP_NAME}.conf
+            echo -e "wpa_pairwise=${ITER_ENCRYPTYPE}" >> /tmp/${VAP_NAME}.conf
+            echo -e "wpa_group_rekey=3600" >> /tmp/${VAP_NAME}.conf
+            hostapd -B /tmp/${VAP_NAME}.conf -P /var/run/hostapd_${VAP_NAME}.pid &
+        fi
+    fi
+}
+
+set_sta_security()
+{
+    local VAP_NAME=$1
+    local VAP_AUTHMODE=`echo $2 | cut -f 2- -d '_'`
+    local RADIO_ENABLE=`echo $3 | cut -f 2- -d '_'`
+    local VAP_ENABLE=`echo $4 | cut -f 2- -d '_'`
+    local ITER_OWNIP="${AP_OWNIP}"
+    local ITER_OWNBR=`echo $5 | cut -f 2- -d '_'`
+    if [ "${RADIO_ENABLE}" = "1" -a "${VAP_ENABLE}" = "1" ]; then
+        echo "WLAN_SECURITY_PRINT: set_ap_security: VAP_NAME is $VAP_NAME, VAP_AUTHMODE is $VAP_AUTHMODE, ITER_OWNIP is $ITER_OWNIP"
+        #if [ "${IS_WPA}" != "" -o "${IS_WPS}" != "" ]; then
+        if [ "${VAP_AUTHMODE}" = "WPA2PSK" -o "${VAP_AUTHMODE}" = "WPAPSKWPA2PSK" -o "${VAP_AUTHMODE}" = "WPAPSK" ]; then
+            echo "WLAN_SECURITY_PRINT: set_sta_security: Making Topology File . . ."
+            echo -e "ctrl_interface=/var/run/wpa_supplicant" > /tmp/${VAP_NAME}.conf
+            echo -e "ap_scan=1" >> /tmp/${VAP_NAME}.conf
+            echo -e "network={" >> /tmp/${VAP_NAME}.conf
+            echo -e "ssid=\"${ITER_SSID}\"" >> /tmp/${VAP_NAME}.conf
+            if [ "${ITER_BSSID}" != "" ]; then
+                echo -e "bssid=${ITER_BSSID}" >> /tmp/${VAP_NAME}.conf
+            fi 
+            echo -e "scan_ssid=1" >> /tmp/${VAP_NAME}.conf
+            if [ "${VAP_AUTHMODE}" = "WPAPSK" ]; then
+                echo -e "proto=WPA" >> /tmp/${VAP_NAME}.conf
+            else
+                echo -e "proto=WPA2" >> /tmp/${VAP_NAME}.conf
+            fi
+            echo -e "key_mgmt=WPA-PSK" >> /tmp/${VAP_NAME}.conf
+            #echo -e "pairwise=${ITER_ENCRYPTYPE}" >> /tmp/${VAP_NAME}.conf
+            echo -e "pairwise=CCMP TKIP" >> /tmp/${VAP_NAME}.conf
+			if [ ${#ITER_PASSPHRASE} -eq 64 ];then
+				echo -e "psk=${ITER_PASSPHRASE}" >> /tmp/${VAP_NAME}.conf
+			else
+				echo -e "psk=\"${ITER_PASSPHRASE}\"" >> /tmp/${VAP_NAME}.conf
+			fi
+            echo -e "}" >> /tmp/${VAP_NAME}.conf
+            wpa_supplicant -B -P /var/run/wpa_supplicant_${VAP_NAME}.pid -c/tmp/${VAP_NAME}.conf -i${VAP_NAME} -b${ITER_OWNBR} & 
+        elif [ "${VAP_AUTHMODE}" = "WPA2" -o "${VAP_AUTHMODE}" = "WPA" -o "${VAP_AUTHMODE}" = "WPAWPA2" -o "${VAP_AUTHMODE}" = "WPA1WPA2" ]; then
+            echo "WLAN_SECURITY_PRINT: set_sta_security: Making Topology File . . ."
+            echo -e "ctrl_interface=/var/run/wpa_supplicant" > /tmp/${VAP_NAME}.conf
+            echo -e "ap_scan=1" >> /tmp/${VAP_NAME}.conf
+            echo -e "network={" >> /tmp/${VAP_NAME}.conf
+            echo -e "ssid=\"${ITER_SSID}\"" >> /tmp/${VAP_NAME}.conf
+            if [ "${ITER_BSSID}" != "" ]; then
+                echo -e "bssid=${ITER_BSSID}" >> /tmp/${VAP_NAME}.conf
+            fi
+            echo -e "scan_ssid=1" >> /tmp/${VAP_NAME}.conf
+            echo -e "key_mgmt=WPA-EAP" >> /tmp/${VAP_NAME}.conf
+            echo -e "proto=${ITER_PROTO}" >> /tmp/${VAP_NAME}.conf
+            #echo -e "pairwise=${ITER_ENCRYPTYPE}" >> /tmp/${VAP_NAME}.conf
+            echo -e "pairwise=CCMP TKIP" >> /tmp/${VAP_NAME}.conf
+            echo -e "eap=${ITER_EAP}" >> /tmp/${VAP_NAME}.conf
+            echo -e "identity=\"${ITER_USER}\"" >> /tmp/${VAP_NAME}.conf
+            echo -e "password=\"${ITER_PASSWD}\"" >> /tmp/${VAP_NAME}.conf
+            echo -e "phase2=\"auth=MSCHAPV2\"" >> /tmp/${VAP_NAME}.conf
+            echo -e "}" >> /tmp/${VAP_NAME}.conf
+            wpa_supplicant -B -P /var/run/wpa_supplicant_${VAP_NAME}.pid -c/tmp/${VAP_NAME}.conf -i${VAP_NAME} -b${ITER_OWNBR} &
+        elif [ "${VAP_AUTHMODE}" = "WEP" ]; then
+            iwpriv $VAP_NAME authmode $ITER_ENCMODE
+            #ASCII
+            if [ $ITER_KEY_TYPE = "1" ]; then
+                iwconfig $VAP_NAME key \[$ITER_KEY_ID\] s:"${ITER_WEP_KEY}"
+            #HEX
+            elif [ $ITER_KEY_TYPE = "0" ]; then
+                iwconfig $VAP_NAME key \[$ITER_KEY_ID\] "${ITER_WEP_KEY}" 
+            fi
+            #OPEN
+            if [ $ITER_ENCMODE = "1" ]; then
+                iwconfig $VAP_NAME key open
+            fi
+
+            if [ "${ITER_SSID}" != "" ]; then
+                iwconfig $VAP_NAME essid "$ITER_SSID"
+            fi
+
+            if [ "${ITER_BSSID}" != "" ]; then
+                iwconfig $VAP_NAME ap $ITER_BSSID
+            fi
+        elif [ "${VAP_AUTHMODE}" = "OPEN" ]; then
+            if [ "${ITER_SSID}" != "" ]; then
+                iwconfig $VAP_NAME essid "$ITER_SSID"
+            fi
+
+            if [ "${ITER_BSSID}" != "" ]; then
+                iwconfig $VAP_NAME ap $ITER_BSSID
+            fi
+        fi
+    fi
+}
+
+set_txpower()
+{
+    local VAP_NAME=$1
+    local VAP_ID=`echo $2 | cut -f 2- -d '_'`
+    local MAX_TXPOWER=""
+    local POWER_GET_TIMES=0
+    if [ "$VAP_ID" = "0" -o "$VAP_ID" = "1" ]; then
+    
+        if [ "$VAP_ID" = "0" ]; then
+            R_TXCHAIN=$TX_CHAINMASK
+            R_TXPOWER=$TXPOWER
+            echo "WLAN_SECURITY_PRINT: R_TXPOWER is $R_TXPOWER"
+            MAX_TXPOWER=`iwpriv wifi0 getTxMaxPower2G | awk '{gsub(/getTxMaxPower2G:/,"");print $2}'`
+            while [ "$MAX_TXPOWER" = "0" -a $POWER_GET_TIMES -lt 3 ]
+            do
+                sleep 5
+                MAX_TXPOWER=`iwpriv wifi0 getTxMaxPower2G | awk '{gsub(/getTxMaxPower2G:/,"");print $2}'`
+                POWER_GET_TIMES=$(($POWER_GET_TIMES+1))
+            done
+        elif [ "$VAP_ID" = "1" ]; then
+            R_TXCHAIN=$TX_CHAINMASK_2
+            R_TXPOWER=$TXPOWER_2
+            echo "WLAN_SECURITY_PRINT: R_TXPOWER is $R_TXPOWER"
+            MAX_TXPOWER=`iwpriv wifi1 getTxMaxPower5G | awk '{gsub(/getTxMaxPower5G:/,"");print $2}'`
+            while [ "$MAX_TXPOWER" = "0" -a $POWER_GET_TIMES -lt 3 ]
+            do
+                sleep 5
+                MAX_TXPOWER=`iwpriv wifi1 getTxMaxPower5G | awk '{gsub(/getTxMaxPower5G:/,"");print $2}'`
+                POWER_GET_TIMES=$(($POWER_GET_TIMES+1))
+            done
+            #MAX_TXPOWER="17"
+        fi
+        echo "WLAN_SECURITY_PRINT: MAX_TXPOWER is $MAX_TXPOWER"
+    
+        local POWER_MIN=""
+        if [ "${R_TXCHAIN}"="7" ]; then
+            POWER_MIN=5
+        elif [ "${R_TXCHAIN}"="5" ]; then
+            POWER_MIN=3
+        elif [ "${R_TXCHAIN}"="3" ]; then
+            POWER_MIN=0
+        else
+            POWER_MIN=5
+        fi
+        
+        if [ "$MAX_TXPOWER" = "0" ]; then
+            MAX_TXPOWER=17
+        fi 
+        local ACTRUAL_TXPOWER=""
+        if [ "$R_TXPOWER" = "0" ]; then
+            ACTRUAL_TXPOWER="$MAX_TXPOWER"
+        elif [ "$R_TXPOWER" = "2" ]; then
+            ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 1))"
+        elif [ "$R_TXPOWER" = "4" ]; then
+            ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 2))"
+        elif [ "$R_TXPOWER" = "6" ]; then
+            ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 3))"
+        elif [ "$R_TXPOWER" = "8" ]; then
+            ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 4))"
+        elif [ "$R_TXPOWER" = "10" ]; then
+            ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 5))"
+        elif [ "$R_TXPOWER" = "12" ]; then
+            ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 6))"
+        elif [ "$R_TXPOWER" = "14" ]; then
+            ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 7))"
+        elif [ "$R_TXPOWER" = "16" ]; then
+            ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 8))"
+        elif [ "$R_TXPOWER" = "18" ]; then
+            ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 9))"
+        elif [ "$R_TXPOWER" = "20" ]; then
+            ACTRUAL_TXPOWER=$POWER_MIN
+        else
+            ACTRUAL_TXPOWER="$MAX_TXPOWER"
+        fi
+    
+        echo "WLAN_SECURITY_PRINT: ACTRUAL_TXPOWER is ${ACTRUAL_TXPOWER}" 
+        iwconfig ${VAP_NAME} txpower ${ACTRUAL_TXPOWER}
+    fi
+}
+
+if [ "${AP_STARTMODE}" = "single" ]; then
+my_vaps="'' _3 _5 _7 _9 _11 _13 _15 "
+elif [ "${AP_STARTMODE}" = "dual" ]; then
+my_vaps="'' _2 _3 _4 _5 _6 _7 _8 _9 _10 _11 _12 _13 _14 _15 _16"
+fi
+#WEP_INTERFACE=0
+#if [ "${AP_STARTMODE}" = "multi" -o "${AP_STARTMODE}" = "multi-ind" ]; then
+if [ "${AP_STARTMODE}" = "dual" -o "${AP_STARTMODE}" = "single" ]; then
+    #VAP_NUM=0
+    VAP_ID=0
+    VAP_ID_2G=0
+    VAP_ID_5G=1
+    STA_VAP_COUNT_RADIO_0=0
+    STA_VAP_COUNT_RADIO_1=0
+    for i in $my_vaps;
+    do
+        ITER_SSID="AP_SSID$i"
+        ITER_MODE="AP_MODE$i"
+        ITER_RADIO_ID="AP_RADIO_ID$i"
+        ITER_SECMODE="AP_SECMODE$i"
+        ITER_VAP_ENABLE="AP_ENABLE_SSID$i"
+        ITER_PASSPHRASE="AP_PASSPHRASE$i"
+        ITER_ENCRYPTYPE="AP_ENCRYPTYPE$i"
+        ITER_RADIUSSERVER="AP_RADIUSSERVER$i"
+        ITER_RADIUSPORT="AP_RADIUSPORT$i"
+        ITER_RADIUSSECRET="AP_RADIUSSECRET$i"
+        eval ITER_SSID=\$$ITER_SSID
+        eval ITER_MODE=\$$ITER_MODE
+        eval ITER_RADIO_ID=\$$ITER_RADIO_ID
+        eval ITER_SECMODE=\$$ITER_SECMODE
+        eval ITER_VAP_ENABLE=\$$ITER_VAP_ENABLE
+        eval ITER_PASSPHRASE=\$$ITER_PASSPHRASE
+        eval ITER_ENCRYPTYPE=\$$ITER_ENCRYPTYPE
+        eval ITER_RADIUSSERVER=\$$ITER_RADIUSSERVER
+        eval ITER_RADIUSPORT=\$$ITER_RADIUSPORT
+        eval ITER_RADIUSSECRET=\$$ITER_RADIUSSECRET
+
+        if [ "${ITER_RADIO_ID}" = "0" ]; then
+            ITER_RADIO_ENABLE=$WIFI0_RADIO_ENABLE
+            VAP_ID=$VAP_ID_2G
+        elif [ "${ITER_RADIO_ID}" = "1" ]; then
+            ITER_RADIO_ENABLE=$WIFI1_RADIO_ENABLE
+            VAP_ID=$VAP_ID_5G
+        fi
+
+        if [ "${ITER_MODE}" = "sta-wds" -o "${ITER_MODE}" = "sta" ]; then
+            VAP_NAME="sta$VAP_ID"
+            if [ "${ITER_RADIO_ID}" = "1" ]; then
+                ITER_VAP_ENABLE=$STA1_ENABLE
+                ITER_SSID=$STA1_ASSOC_SSID
+                ITER_BSSID=$STA1_ASSOC_BSSID
+                ITER_SECMODE=$STA1_SECMODE
+                ITER_PASSPHRASE=$STA1_PASSPHRASE
+                ITER_ENCRYPTYPE=$STA1_ENCRYPTYPE
+                #For WEP
+                ITER_ENCMODE=$STA1_ENCMODE
+                ITER_KEY_ID=$STA1_DEFAULT_KEYID
+                ITER_KEY_TYPE="STA1_KEY${ITER_KEY_ID}_TYPE"
+                eval ITER_KEY_TYPE=\$$ITER_KEY_TYPE
+                ITER_WEP_KEY="STA1_KEY${ITER_KEY_ID}"
+                eval ITER_WEP_KEY=\$$ITER_WEP_KEY
+                #For 8021x
+                ITER_PROTO=$STA1_PROTO
+                ITER_EAP=$STA1_EAP
+                ITER_USER=$STA1_USER
+                ITER_PASSWD=$STA1_PASSWD
+            else
+                ITER_VAP_ENABLE=$STA0_ENABLE
+                ITER_SSID=$STA0_ASSOC_SSID
+                ITER_BSSID=$STA0_ASSOC_BSSID
+                ITER_SECMODE=$STA0_SECMODE
+                ITER_PASSPHRASE=$STA0_PASSPHRASE
+                ITER_ENCRYPTYPE=$STA0_ENCRYPTYPE
+                #For WEP
+                ITER_ENCMODE=$STA0_ENCMODE
+                ITER_KEY_ID=$STA0_DEFAULT_KEYID
+                ITER_KEY_TYPE="STA0_KEY${ITER_KEY_ID}_TYPE"
+                eval ITER_KEY_TYPE=\$$ITER_KEY_TYPE
+                ITER_WEP_KEY="STA0_KEY${ITER_KEY_ID}"
+                eval ITER_WEP_KEY=\$$ITER_WEP_KEY
+                #For 8021x
+                ITER_PROTO=$STA0_PROTO
+                ITER_EAP=$STA0_EAP
+                ITER_USER=$STA0_USER
+                ITER_PASSWD=$STA0_PASSWD
+            fi
+        else
+            VAP_NAME="ath$VAP_ID"
+        fi
+
+        if [ "${ITER_MODE}" = "sta-wds" -o "${ITER_MODE}" = "sta" ]; then
+            if [ "${ITER_RADIO_ID}" = 0 ]; then
+                if [ "${STA_VAP_COUNT_RADIO_0}" != 1 ]; then
+                    local VAP_BRIDGE=$(get_ownbr _${ITER_MODE} _${ITER_RADIO_ID})
+                    echo "WLAN_SECURITY_PRINT: set_sta_security Now, ITER_RADIO_ID is $ITER_RADIO_ID,ITER_SECMODE is $ITER_SECMODE,ITER_VAP_ENABLE is $ITER_VAP_ENABLE,VAP_BRIDGE is $VAP_BRIDGE................................."
+                    set_sta_security sta$ITER_RADIO_ID _$ITER_SECMODE _$ITER_RADIO_ENABLE _$ITER_VAP_ENABLE _$VAP_BRIDGE
+                    #STA up
+                    if [ "${ITER_RADIO_ENABLE}" = "1" -a "${ITER_VAP_ENABLE}" = "1" ]; then
+                        ifconfig sta$ITER_RADIO_ID up
+                        if [ "$VAP_ID" = "0" -o "$VAP_ID" = "1" ]; then
+                            set_txpower sta$ITER_RADIO_ID _$ITER_RADIO_ID
+                        fi
+                    fi
+                    if [ "_${ITER_SSID}" != "_" ]; then
+                        #activateVAP ath$VAP_NUM:$ITER_RADIO_ID br-lan0 $ITER_SECMODE $ITER_VAP_ENABLE
+                        #VAP_NUM=$(($VAP_NUM+1))
+                        STA_VAP_COUNT_RADIO_0=1
+                    fi
+                fi
+            else
+                if [ "${STA_VAP_COUNT_RADIO_1}" != 1 ]; then
+                    local VAP_BRIDGE=$(get_ownbr _${ITER_MODE} _${ITER_RADIO_ID})
+                    echo "WLAN_SECURITY_PRINT: set_sta_security Now, ITER_RADIO_ID is $ITER_RADIO_ID,ITER_SECMODE is $ITER_SECMODE,ITER_VAP_ENABLE is $ITER_VAP_ENABLE,VAP_BRIDGE is $VAP_BRIDGE................................."
+                    set_sta_security sta$ITER_RADIO_ID _$ITER_SECMODE _$ITER_RADIO_ENABLE _$ITER_VAP_ENABLE _$VAP_BRIDGE
+                    #STA up
+                    if [ "${ITER_RADIO_ENABLE}" = "1" -a "${ITER_VAP_ENABLE}" = "1" ]; then
+                        ifconfig sta$ITER_RADIO_ID up
+                        if [ "$VAP_ID" = "0" -o "$VAP_ID" = "1" ]; then
+                            set_txpower sta$ITER_RADIO_ID _$ITER_RADIO_ID
+                        fi
+                    fi
+                    if [ "_${ITER_SSID}" != "_" ]; then
+                        #activateVAP ath$VAP_NUM:$ITER_RADIO_ID br-lan0 $ITER_SECMODE $ITER_VAP_ENABLE
+                        #VAP_NUM=$(($VAP_NUM+1))
+                        STA_VAP_COUNT_RADIO_1=1
+                    fi
+                fi
+            fi
+        else
+            if [ "_${ITER_SSID}" != "_" ]; then
+                #activateVAP ath$VAP_NUM:$ITER_RADIO_ID br-lan0 $ITER_SECMODE $ITER_VAP_ENABLE
+                local VAP_BRIDGE=$(get_ownbr _${ITER_MODE} _${ITER_RADIO_ID})
+                echo "WLAN_SECURITY_PRINT: set_ap_security Now, VAP_ID is $VAP_ID,ITER_RADIO_ID is $ITER_RADIO_ID,ITER_SECMODE is $ITER_SECMODE,ITER_VAP_ENABLE is $ITER_VAP_ENABLE,VAP_BRIDGE is $VAP_BRIDGE................................."
+                set_ap_security ath$VAP_ID _$ITER_SECMODE _$ITER_RADIO_ENABLE _$ITER_VAP_ENABLE _$VAP_BRIDGE
+
+                if [ "${ITER_RADIO_ENABLE}" = "1" -a "${ITER_VAP_ENABLE}" = "1" ]; then
+                    ifconfig ath$VAP_ID up
+                    if [ "$VAP_ID" = "0" -o "$VAP_ID" = "1" ]; then
+                        set_txpower ath$VAP_ID _$VAP_ID
+                    fi
+                fi
+        
+                if [ "${ITER_RADIO_ID}" = "0" ]; then
+                    VAP_ID_2G=$(($VAP_ID_2G+2))
+                elif [ "${ITER_RADIO_ID}" = "1" ]; then
+                    VAP_ID_5G=$(($VAP_ID_5G+2))
+                fi
+            fi
+        fi
+    done
+fi

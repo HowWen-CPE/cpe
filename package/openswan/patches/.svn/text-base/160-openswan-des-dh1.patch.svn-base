@@ -1,0 +1,16 @@
+--- penswan.old/Makefile.inc	2013-08-19 17:32:48.000000000 +0800
++++ penswan.new/Makefile.inc	2013-08-19 17:33:14.000000000 +0800
+@@ -387,11 +387,11 @@
+ # should we include all manner of known to be broken/weak?
+ # use this only if you are building some kind of a testing
+ # device. Normal use does not need any of this.
+-USE_WEAKSTUFF?=false
++USE_WEAKSTUFF?=true
+ 
+ # Build algorithms that don't even encrypt (also must set WEAKSTUFF)
+ # unless you are doing negative testing, turning this on is foolish.
+-USE_NOCRYPTO?=false
++USE_NOCRYPTO?=true
+ 
+ # should we include additional (strong) algorithms?  It adds a measureable
+ # amount of code space to pluto, and many of the algorithms have not had

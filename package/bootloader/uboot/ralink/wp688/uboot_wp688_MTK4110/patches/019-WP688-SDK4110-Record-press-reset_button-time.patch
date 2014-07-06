@@ -1,0 +1,149 @@
+Index: uboot_MTK4110/lib_mips/board.c
+===================================================================
+--- uboot_MTK4110.orig/lib_mips/board.c	2013-07-03 14:14:05.615094179 +0800
++++ uboot_MTK4110/lib_mips/board.c	2013-07-04 18:26:00.024988867 +0800
+@@ -591,6 +591,71 @@
+ };
+ #endif
+ 
++/* 
++  *Add software reset Soc or restore configuration, Sean@liteon, 2013-06-20-----> 
++  */
++  
++#ifdef LITEON_SRC_VALID
++
++#define GPIO23_00_DATA 		le32_to_cpu(*(volatile u32 *)(RALINK_PIO_BASE + 0x20))
++#define LISTEN_RESET_BUTTON 	 ((GPIO23_00_DATA  >> 14) & 0x1)
++
++#define RESET_BUTTON_DOWN	0
++
++void listen_reset_button(void)
++{
++	unsigned int rst_button_down_sec = 0, len1, len2;
++        char * bootargs, *tp;
++	char secs[5];
++
++	if (LISTEN_RESET_BUTTON != RESET_BUTTON_DOWN){
++		return;
++	}else{
++	
++		while (LISTEN_RESET_BUTTON == RESET_BUTTON_DOWN) {
++			/*Timer.*/
++			udelay(1000000);
++			rst_button_down_sec++;
++			//printf("\n\nPress reset button %u seconds...\n", rst_button_down_sec);
++		}
++
++		/*Limit time range to 0s ~3600s*/
++		if (rst_button_down_sec > 3600)
++			rst_button_down_sec = 3600;
++
++		/*Print time to buffer secs[5]*/
++		sprintf(secs, "%u", rst_button_down_sec);
++		len1 = strlen(secs);
++
++		/*Get env bootargs value*/
++		tp = getenv ("bootargs");
++		
++		if (tp ==NULL){
++			len2 = 0;
++			bootargs = malloc(len2 + strlen("press_button_sec=") + len1 +1/*'\0'*/);
++			
++		}else{
++			len2 = strlen(tp);
++			bootargs = malloc(len2 + strlen(" press_button_sec=") + len1 +1/*'\0'*/);
++		}
++
++		/*Modify env bootargs value*/
++		if( len2 != 0)
++			sprintf(bootargs, "%s%s%s",tp," press_button_sec=",secs);
++		else
++			sprintf(bootargs, "%s%s","press_button_sec=",secs);
++
++		/*set bootargs to env var*/
++		setenv("bootargs",bootargs);
++		
++		return;
++		
++	}
++
++}
++#endif //LITEON_SRC_VALID
++/* <-----Sean@liteon, 2013-06-20 */
++
+ //  
+ void board_init_f(ulong bootflag)
+ {
+@@ -641,7 +706,6 @@
+ 	console_init_f();
+ 	display_banner();		/* say that we are here */
+ 	checkboard();
+-
+ 	init_func_ram(); 
+ 
+ 	/* reset Frame engine */
+@@ -761,23 +825,6 @@
+ 
+ 	memcpy (id, (void *)gd, sizeof (gd_t));
+ 
+-/* Add software reset Soc, Sean@liteon, 2012-12-27-----> */
+-#ifdef LITEON_SRC_VALID
+-	{
+-		unsigned int gpio23_00_data;
+-		unsigned int gpio14_data;
+-
+-		gpio23_00_data = le32_to_cpu(*(volatile u32 *)(RALINK_PIO_BASE + 0x20));
+-		gpio14_data = ((gpio23_00_data >> 14) & 0x1);
+-
+-		if (gpio14_data == 0) {
+-			/* Set RSTCTRL[0] = 0x1 to reset Soc */
+-			(*(volatile u32 *)(RALINK_SYSCTL_BASE + 0x34)) = cpu_to_le32(0x1);
+-		} 
+-	}
+-#endif //LITEON_SRC_VALID
+-/* <-----Sean@liteon, 2012-12-27 */
+-
+ 	/* On the purple board we copy the code in a special way
+ 	 * in order to solve flash problems
+ 	 */
+@@ -1815,6 +1862,7 @@
+ #ifdef DUAL_IMAGE_SUPPORT
+ 	check_image_validation();
+ #endif
++
+ /*config bootdelay via environment parameter: bootdelay */
+ 	{
+ 	    char * s;
+@@ -1837,24 +1885,17 @@
+ 			}
+ 			udelay (10000);
+ 		}
+-/* Add software reset Soc, Sean@liteon, 2012-12-27-----> */
++		
++		printf ("\b\b\b%2d ", timer1);
++		
++/* Add software reset SoC and restore configuration , Sean@liteon, 2013-06-20-----> */
+ #ifdef LITEON_SRC_VALID
+-	{
+-		unsigned int gpio23_00_data;
+-		unsigned int gpio14_data;
+-
+-		gpio23_00_data = le32_to_cpu(*(volatile u32 *)(RALINK_PIO_BASE + 0x20));
+-		gpio14_data = ((gpio23_00_data >> 14) & 0x1);
+-
+-		if (gpio14_data == 0) {
+-			/* Set RSTCTRL[0] = 0x1 to reset Soc */
+-			(*(volatile u32 *)(RALINK_SYSCTL_BASE + 0x34)) = cpu_to_le32(0x1);
+-		} 
+-	}
++		listen_reset_button();
+ #endif //LITEON_SRC_VALID
+-/* <-----Sean@liteon, 2012-12-27 */
+-		printf ("\b\b\b%2d ", timer1);
++/* <-----Sean@liteon, 2013-06-20 */
++		
+ 	}
++	
+ 	putc ('\n');
+ 	if(BootType == '3') {
+ 		char *argv[2];

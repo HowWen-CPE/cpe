@@ -1,0 +1,20 @@
+#!/bin/sh -x
+. /etc/network.sh
+. /etc/functions.sh
+
+# Iterate br_rule 
+local brnum="$(nvram get br_rule_num)"
+local i=0
+local enable=0
+while [ "$i" -lt "$brnum" ];
+do
+    enable="$(nvram show br_rule $i enable)"
+    [ "$enable" = "1" ] && { 
+	    # set up br
+    	ifbr_valid br-lan${i}
+        for ifdev in $(nvram show br_rule $i ifnames); do 
+          ifconfig $ifdev up
+        done
+    }
+    i="$(($i + 1))"
+done

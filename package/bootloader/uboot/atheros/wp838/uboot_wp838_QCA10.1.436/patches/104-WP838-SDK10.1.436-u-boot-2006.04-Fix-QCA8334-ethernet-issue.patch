@@ -1,0 +1,43 @@
+Index: u-boot-2006-04-06-1725/board/atheros/common/athrs17_phy.c
+===================================================================
+--- u-boot-2006-04-06-1725.orig/board/atheros/common/athrs17_phy.c	2013-12-14 10:29:15.288960427 +0800
++++ u-boot-2006-04-06-1725/board/atheros/common/athrs17_phy.c	2013-12-14 10:31:05.471983576 +0800
+@@ -240,7 +240,10 @@
+            athrs17_reg_read(S17_P6PAD_MODE_REG)|S17_MAC6_SGMII_EN);
+ #endif
+ 	athrs17_reg_write(S17_P6STATUS_REG, S17_PORT_STATUS_AZ_DEFAULT);
+-	athrs17_reg_write(S17_SGMII_CTRL_REG , 0xc74164d0); /* SGMII control */
++//liteon+	
++	//athrs17_reg_write(S17_SGMII_CTRL_REG , 0xc74164d0); /* SGMII control */
++	athrs17_reg_write(S17_SGMII_CTRL_REG , 0xc78164de); /* SGMII control */
++//liteon-	
+          
+         athrs17_vlan_config();
+ 	printf("%s done\n",__func__);
+@@ -258,7 +261,10 @@
+ 		return;
+ 	if (is_drqfn()) {
+ 		athrs17_reg_write(S17_P0PAD_MODE_REG, S17_MAC0_SGMII_EN);
+-		athrs17_reg_write(S17_SGMII_CTRL_REG , 0xc74164d0); /* SGMII control  */
++//liteon+		
++		//athrs17_reg_write(S17_SGMII_CTRL_REG , 0xc74164d0); /* SGMII control  */
++		athrs17_reg_write(S17_SGMII_CTRL_REG , 0xc78164de); /* SGMII control */
++//liteon-		
+         } else {
+ 		athrs17_reg_write(S17_GLOFW_CTRL1_REG,	0x7f7f7f7f);
+ 		/* 
+Index: u-boot-2006-04-06-1725/board/atheros/common/rgmii-cal-955x.c
+===================================================================
+--- u-boot-2006-04-06-1725.orig/board/atheros/common/rgmii-cal-955x.c	2013-12-14 10:32:17.803839413 +0800
++++ u-boot-2006-04-06-1725/board/atheros/common/rgmii-cal-955x.c	2013-12-14 10:32:33.779970746 +0800
+@@ -233,6 +233,10 @@
+ 	//eth_init();
+ 	init_s17_lpbk();
+ 	athrs17_reg_write(0x30, 1);
++//liteon+	
++        //fixed RGMII performance issue.
++	athrs17_reg_write(0x0004,athrs17_reg_read(0x0004)|0x80000000);
++//liteon-	
+ 
+ 	ath_reg_wr(ETH_CFG_ADDRESS,	ETH_CFG_ETH_RXDV_DELAY_SET(0x3) |
+ 					ETH_CFG_ETH_RXD_DELAY_SET(0x3) |

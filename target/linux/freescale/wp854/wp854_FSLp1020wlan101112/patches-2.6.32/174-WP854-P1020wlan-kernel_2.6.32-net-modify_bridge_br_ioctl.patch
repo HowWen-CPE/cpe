@@ -1,0 +1,47 @@
+--- linux-2.6.32-freescale-p1020-sku/net/bridge/br_ioctl.c	2012-07-13 03:19:03.469527394 -0700
++++ linux-liteon-wp854-openwrt/net/bridge/br_ioctl.c	2012-07-13 03:21:12.721567265 -0700
+@@ -397,6 +397,44 @@
+ 	return -EOPNOTSUPP;
+ }
+ 
++
++/*
++ * workaround for ethernet block: re-add the device to bridge after timeout reset route.
++ * call from gfar_reset_task.
++ */
++void br_reset_dev(struct net_device * dev)
++{
++	int ret;
++
++	printk(KERN_ERR "br_reset_dev %s\n", dev->name);
++
++	/* Device should be bridged. re-add device to bridge */
++	if(dev->br_port != NULL && dev->br_port->br != NULL)
++	{
++		struct net_bridge *p = dev->br_port->br;
++
++		/* try to rtnl lock before del and add if*/
++		if (!rtnl_trylock())
++		{
++			ret = br_del_if(p, dev);
++			dev_put(dev);
++
++			ret = br_add_if(p, dev);
++			dev_put(dev);
++		}else
++		{
++			ret = br_del_if(p, dev);
++			dev_put(dev);
++
++			ret = br_add_if(p, dev);
++			dev_put(dev);
++
++			rtnl_unlock();
++		}
++	}
++}
++EXPORT_SYMBOL(br_reset_dev);
++
+ int br_dev_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
+ {
+ 	struct net_bridge *br = netdev_priv(dev);

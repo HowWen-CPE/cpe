@@ -1,0 +1,64 @@
+From 7de97f4c6c3f83207abad5165f3c34d9695db220 Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Fri, 30 Oct 2009 20:47:39 +0800
+Subject: [PATCH] sdhci-of: Set the timeout to the max value
+
+When access the card, the following error is reported:
+
+  mmc0: Got data interrupt 0x00000020 even though no data operation was in progress.
+    mmc0: Got data interrupt 0x00000020 even though no data operation was in progress.
+    
+    so we skip the calculation of timeout and use the max value.
+
+Signed-off-by: Dipen Dudhat <dipen.dudhat@freescale.com>
+---
+ arch/powerpc/boot/dts/p2020rdb.dts |    1 +
+ drivers/mmc/host/sdhci-of.c        |    3 +++
+ drivers/mmc/host/sdhci.c           |    2 ++
+ 3 files changed, 6 insertions(+), 0 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p2020rdb.dts b/arch/powerpc/boot/dts/p2020rdb.dts
+index f7658c7..a064114 100644
+--- a/arch/powerpc/boot/dts/p2020rdb.dts
++++ b/arch/powerpc/boot/dts/p2020rdb.dts
+@@ -489,6 +489,7 @@
+ 			interrupts = <72 0x2>;
+ 			interrupt-parent = <&mpic>;
+ 			fsl,sdhci-dma-broken;
++			fsl,sdhci-adjust-timeout;
+ 			/* Filled in by U-Boot */
+ 			clock-frequency = <0>;
+ 		};
+diff --git a/drivers/mmc/host/sdhci-of.c b/drivers/mmc/host/sdhci-of.c
+index 5c56356..34ce70f 100644
+--- a/drivers/mmc/host/sdhci-of.c
++++ b/drivers/mmc/host/sdhci-of.c
+@@ -273,6 +273,9 @@ static int __devinit sdhci_of_probe(struct of_device *ofdev,
+ 	if (of_get_property(np, "fsl,sdhci-dma-broken", NULL))
+ 		host->quirks |= SDHCI_QUIRK_BROKEN_DMA;
+ 
++	if (of_get_property(np, "fsl,sdhci-adjust-timeout", NULL))
++		host->quirks |= SDHCI_QUIRK_BROKEN_TIMEOUT_VAL;
++
+ 	clk = of_get_property(np, "clock-frequency", &size);
+ 	if (clk && size == sizeof(*clk) && *clk)
+ 		of_host->clock = *clk;
+diff --git a/drivers/mmc/host/sdhci.c b/drivers/mmc/host/sdhci.c
+index 8d9b30f..4e2596e 100644
+--- a/drivers/mmc/host/sdhci.c
++++ b/drivers/mmc/host/sdhci.c
+@@ -1448,9 +1448,11 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
+ 			}
+ 		}
+ 
++		if (!(host->quirks & SDHCI_QUIRK_BROKEN_TIMEOUT_VAL)) {
+ 		printk(KERN_ERR "%s: Got data interrupt 0x%08x even "
+ 			"though no data operation was in progress.\n",
+ 			mmc_hostname(host->mmc), (unsigned)intmask);
++		}
+ 		sdhci_dumpregs(host);
+ 
+ 		return;
+-- 
+1.6.4
+

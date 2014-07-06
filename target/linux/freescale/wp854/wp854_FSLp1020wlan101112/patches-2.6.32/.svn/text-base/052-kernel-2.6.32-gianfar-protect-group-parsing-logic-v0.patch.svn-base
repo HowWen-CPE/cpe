@@ -1,0 +1,32 @@
+From c346b023c63be5bfc6c185d229c3899a87c6889c Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Tue, 1 Dec 2009 16:08:05 +0530
+Subject: [PATCH] gianfar: Added protection to the group parsing logic
+
+so that in case the mdio node is moved inside the enet node,
+it doesn't interpret it as another group.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/gianfar.c |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index 3bd3e7f..c1ba541 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -413,6 +413,11 @@ static int gfar_of_init(struct of_device *ofdev, struct net_device **pdev)
+ 	if (of_device_is_compatible(np, "fsl,etsec2")) {
+ 		priv->mode = MQ_MG_MODE;
+ 		for_each_child_of_node(np, child) {
++			if (of_device_is_compatible
++				(child, "fsl,etsec2-mdio") ||
++				of_device_is_compatible
++				(child, "fsl,etsec2-tbi"))
++				continue;
+ 			err = gfar_parse_group(child, priv, model);
+ 			if (err)
+ 				goto err_grp_init;
+-- 
+1.5.2.2
+

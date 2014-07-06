@@ -1,0 +1,357 @@
+Index: mt7620_wifi2716_all_dpa_20130426/rt2860v2/common/cmm_info.c
+===================================================================
+--- mt7620_wifi2716_all_dpa_20130426.orig/rt2860v2/common/cmm_info.c	2014-01-22 10:50:17.216462531 +0800
++++ mt7620_wifi2716_all_dpa_20130426/rt2860v2/common/cmm_info.c	2014-01-22 18:37:36.505648984 +0800
+@@ -3554,6 +3554,262 @@
+     	return "UNKNOW";
+ }		
+ 
++/*Get sitesurvey result from proc file to avoid not enough space limitation using iwpriv command, sirian@liteon, 2014-01-22----->*/
++#ifdef LITEON_SRC_VALID
++
++#include        <linux/proc_fs.h>
++#include        <linux/seq_file.h>
++
++static struct proc_dir_entry *surveyEntry = NULL;
++static BSS_TABLE* G_ScanTab = NULL;
++
++static void *s_start(struct seq_file *m, loff_t *pos)
++{
++
++        if (*pos >= G_ScanTab->BssNr)
++                return NULL;
++		
++        return G_ScanTab->BssEntry + *pos;
++
++}
++static void s_stop(struct seq_file *m, void *p)
++{
++}
++
++static void *s_next(struct seq_file *m, void *p, loff_t *pos)
++{
++        (*pos)++;
++		
++        if (*pos >= G_ScanTab->BssNr)
++                return NULL;
++        return s_start(m, pos);
++}
++
++static int s_show(struct seq_file *m, void *p)
++{
++        unsigned long *l = p;
++
++        BSS_ENTRY *pBss = (BSS_ENTRY*)p;
++        CHAR        Ssid[MAX_LEN_OF_SSID + 3];
++        INT         idx;
++        INT         Rssi = 0;
++        UINT        Rssi_Quality = 0;
++        NDIS_802_11_NETWORK_TYPE    wireless_mode;
++        STRING          SecurityStr[32] = {0};
++        NDIS_802_11_ENCRYPTION_STATUS   ap_cipher = Ndis802_11EncryptionDisabled;
++        NDIS_802_11_AUTHENTICATION_MODE ap_auth_mode = Ndis802_11AuthModeOpen;
++
++        /*Channel*/
++        seq_printf(m, "%-4d", pBss->Channel);
++
++        /*SSID*/
++        NdisZeroMemory(Ssid, (MAX_LEN_OF_SSID +3));
++        Ssid[0] = '"';
++        if (RTMPCheckStrPrintAble((PCHAR)pBss->Ssid, pBss->SsidLen)) {
++                NdisMoveMemory(Ssid+1, pBss->Ssid, pBss->SsidLen);
++                Ssid[pBss->SsidLen+1]= '"';
++        }
++        else
++        {
++                sprintf(Ssid, "0x");
++                for (idx = 0; (idx < 14) && (idx < pBss->SsidLen); idx++)
++                        sprintf(Ssid + 2 + (idx*2), "%02X", (UCHAR)pBss->Ssid[idx]);
++                Ssid[1 + 2 + (idx*2)] = '"';
++        }
++        seq_printf(m, "%-35s", Ssid);
++
++	/*BSSID*/
++        seq_printf(m,"%02x:%02x:%02x:%02x:%02x:%02x   ",
++                        pBss->Bssid[0],
++                        pBss->Bssid[1],
++                        pBss->Bssid[2],
++                        pBss->Bssid[3],
++                        pBss->Bssid[4],
++                        pBss->Bssid[5]);
++
++        /*Security*/
++        RTMPZeroMemory(SecurityStr, 32);
++        if ((Ndis802_11AuthModeWPA <= pBss->AuthMode) &&
++                (pBss->AuthMode <= Ndis802_11AuthModeWPA1PSKWPA2PSK))
++        {
++                if (pBss->AuthMode == Ndis802_11AuthModeWPANone)
++                {
++                        ap_auth_mode = pBss->AuthMode;
++                                ap_cipher = pBss->WPA.PairCipher;
++                }
++                else if (pBss->AuthModeAux == Ndis802_11AuthModeOpen)
++                {
++                        ap_auth_mode = pBss->AuthMode;
++                        if ((ap_auth_mode == Ndis802_11AuthModeWPA) ||
++                                (ap_auth_mode == Ndis802_11AuthModeWPAPSK))
++                        {
++                                if (pBss->WPA.PairCipherAux == Ndis802_11WEPDisabled)
++                                        ap_cipher = pBss->WPA.PairCipher;
++                                else
++                                        ap_cipher = Ndis802_11Encryption4Enabled;
++                        }
++                        else if ((ap_auth_mode == Ndis802_11AuthModeWPA2) ||
++                                         (ap_auth_mode == Ndis802_11AuthModeWPA2PSK))
++                        {
++                                if (pBss->WPA2.PairCipherAux == Ndis802_11WEPDisabled)
++                                        ap_cipher = pBss->WPA2.PairCipher;
++                                else
++                                        ap_cipher = Ndis802_11Encryption4Enabled;
++			}
++                }
++                else if ((pBss->AuthMode == Ndis802_11AuthModeWPAPSK) ||
++                                 (pBss->AuthMode == Ndis802_11AuthModeWPA2PSK))
++                {
++                        if ((pBss->AuthModeAux == Ndis802_11AuthModeWPAPSK) ||
++                                (pBss->AuthModeAux == Ndis802_11AuthModeWPA2PSK))
++                                ap_auth_mode = Ndis802_11AuthModeWPA1PSKWPA2PSK;
++                        else
++                                ap_auth_mode = pBss->AuthMode;
++
++                        if (pBss->WPA.PairCipher != pBss->WPA2.PairCipher)
++                                ap_cipher = Ndis802_11Encryption4Enabled;
++                        else if ((pBss->WPA.PairCipher == pBss->WPA2.PairCipher) &&
++                                         (pBss->WPA.PairCipherAux != pBss->WPA2.PairCipherAux))
++                                ap_cipher = Ndis802_11Encryption4Enabled;
++                        else if ((pBss->WPA.PairCipher == pBss->WPA2.PairCipher) &&
++                                         (pBss->WPA.PairCipherAux == pBss->WPA2.PairCipherAux) &&
++                                         (pBss->WPA.PairCipherAux != Ndis802_11WEPDisabled))
++                                ap_cipher = Ndis802_11Encryption4Enabled;
++                        else if ((pBss->WPA.PairCipher == pBss->WPA2.PairCipher) &&
++                                         (pBss->WPA.PairCipherAux == pBss->WPA2.PairCipherAux) &&
++                                         (pBss->WPA.PairCipherAux == Ndis802_11WEPDisabled))
++                                ap_cipher = pBss->WPA.PairCipher;
++                }
++		else if ((pBss->AuthMode == Ndis802_11AuthModeWPA) ||
++                                 (pBss->AuthMode == Ndis802_11AuthModeWPA2))
++                {
++                        if ((pBss->AuthModeAux == Ndis802_11AuthModeWPA) ||
++                                (pBss->AuthModeAux == Ndis802_11AuthModeWPA2))
++                                ap_auth_mode = Ndis802_11AuthModeWPA1WPA2;
++                        else
++                                ap_auth_mode = pBss->AuthMode;
++
++                        if (pBss->WPA.PairCipher != pBss->WPA2.PairCipher)
++                                ap_cipher = Ndis802_11Encryption4Enabled;
++                        else if ((pBss->WPA.PairCipher == pBss->WPA2.PairCipher) &&
++                                         (pBss->WPA.PairCipherAux != pBss->WPA2.PairCipherAux))
++                                ap_cipher = Ndis802_11Encryption4Enabled;
++                        else if ((pBss->WPA.PairCipher == pBss->WPA2.PairCipher) &&
++                                         (pBss->WPA.PairCipherAux == pBss->WPA2.PairCipherAux) &&
++                                         (pBss->WPA.PairCipherAux != Ndis802_11WEPDisabled))
++                                ap_cipher = Ndis802_11Encryption4Enabled;
++                        else if ((pBss->WPA.PairCipher == pBss->WPA2.PairCipher) &&
++                                         (pBss->WPA.PairCipherAux == pBss->WPA2.PairCipherAux) &&
++                                         (pBss->WPA.PairCipherAux == Ndis802_11WEPDisabled))
++                                ap_cipher = pBss->WPA.PairCipher;
++                }
++
++                sprintf(SecurityStr, "%s/%s", GetAuthMode((CHAR)ap_auth_mode), GetEncryptType((CHAR)ap_cipher));
++	}
++        else
++        {
++                ap_auth_mode = pBss->AuthMode;
++                ap_cipher = pBss->WepStatus;
++                if (ap_cipher == Ndis802_11WEPDisabled)
++                        sprintf(SecurityStr, "NONE");
++                else if (ap_cipher == Ndis802_11WEPEnabled)
++                        sprintf(SecurityStr, "WEP");
++                else
++                        sprintf(SecurityStr, "%s/%s", GetAuthMode((CHAR)ap_auth_mode), GetEncryptType((CHAR)ap_cipher));             
++        }
++
++        seq_printf(m, "%-23s", SecurityStr);
++
++        /* Rssi*/
++        Rssi = (INT)pBss->Rssi;
++        if (Rssi >= -50)
++                Rssi_Quality = 100;
++        else if (Rssi >= -80)    /* between -50 ~ -80dbm*/
++                Rssi_Quality = (UINT)(24 + ((Rssi + 80) * 26)/10);
++        else if (Rssi >= -90)   /* between -80 ~ -90dbm*/
++                Rssi_Quality = (UINT)(((Rssi + 90) * 26)/10);
++        else    /* < -84 dbm*/
++                Rssi_Quality = 0;
++        seq_printf(m,"%-9d", Rssi_Quality);
++
++	/* Wireless Mode*/
++        wireless_mode = NetworkTypeInUseSanity(pBss);
++        if (wireless_mode == Ndis802_11FH ||
++                wireless_mode == Ndis802_11DS)
++                seq_printf(m,"%-7s", "11b");
++        else if (wireless_mode == Ndis802_11OFDM5)
++                seq_printf(m,"%-7s", "11a");
++        else if (wireless_mode == Ndis802_11OFDM5_N)
++                seq_printf(m,"%-7s", "11a/n");
++        else if (wireless_mode == Ndis802_11OFDM24)
++                seq_printf(m,"%-7s", "11b/g");
++        else if (wireless_mode == Ndis802_11OFDM24_N)
++                seq_printf(m,"%-7s", "11b/g/n");
++        else
++                seq_printf(m,"%-7s", "unknow");
++
++        /* Ext Channel*/
++        if (pBss->AddHtInfoLen > 0)
++        {
++                if (pBss->AddHtInfo.AddHtInfo.ExtChanOffset == EXTCHA_ABOVE)
++                        seq_printf(m,"%-7s", " ABOVE");
++                else if (pBss->AddHtInfo.AddHtInfo.ExtChanOffset == EXTCHA_BELOW)
++                        seq_printf(m,"%-7s", " BELOW");
++                else
++                        seq_printf(m,"%-7s", " NONE");
++        }
++        else
++        {
++                seq_printf(m,"%-7s", " NONE");
++        }
++
++	/*Network Type          */
++        if (pBss->BssType == BSS_ADHOC)
++                seq_printf(m,"%-3s", " Ad");
++        else
++                seq_printf(m,"%-3s", " In");
++
++#ifndef WSC_INCLUDED
++        seq_printf(m,"\n");
++#else
++        /*WPS*/
++        if (pBss->WpsAP & 0x01)
++                seq_printf(m,"%-4s", " YES");
++        else
++                seq_printf(m,"%-4s", "  NO");
++
++        if (pBss->WscDPIDFromWpsAP == DEV_PASS_ID_PIN)
++                seq_printf(m,"%-5s\n", " PIN");
++        else if (pBss->WscDPIDFromWpsAP == DEV_PASS_ID_PBC)
++                seq_printf(m,"%-5s\n", " PBC");
++        else
++                seq_printf(m,"%-5s\n", " ");
++#endif /* WSC_INCLUDED */
++
++        return 0;
++}
++
++static const struct seq_operations survey_op = {
++        .start = s_start,
++        .next = s_next,
++        .stop = s_stop,
++        .show = s_show,
++};
++
++static int survey_open(struct inode *inode, struct file *file)
++{
++
++        return seq_open(file, &survey_op);
++}
++
++static const struct file_operations proc_survey_operations = {
++        .open           = survey_open,
++        .read           = seq_read,
++        .llseek         = seq_lseek,
++        .release        = seq_release,
++};
++#endif //LITEON_SRC_VALID
++/*<-----sirian@liteon, 2014-01-22 */
+ 
+ /* 
+     ==========================================================================
+@@ -3573,7 +3829,7 @@
+         		3.) UI needs to prepare at least 4096bytes to get the results
+     ==========================================================================
+ */
+-#define	LINE_LEN	(4+33+20+23+9+7+7+3)	/* Channel+SSID+Bssid+Security+Signal+WiressMode+ExtCh+NetworkType*/
++#define LINE_LEN        (4+35+20+23+9+7+7+3)    /* Channel+SSID+Bssid+Security+Signal+WiressMode+ExtCh+NetworkType*/
+ 
+ #ifdef CONFIG_STA_SUPPORT
+ #ifdef WSC_STA_SUPPORT
+@@ -3783,6 +4039,11 @@
+ 	PBSS_ENTRY	pBss;
+ 	UINT32 TotalLen, BufLen = IW_SCAN_MAX_DATA;
+ 
++/*Get sitesurvey result from proc file to avoid not enough space limitation using iwpriv command, sirian@liteon, 2014-01-22----->*/
++#ifdef LITEON_SRC_VALID
++
++#else
++
+ #ifdef CONFIG_STA_SUPPORT
+ #ifdef WSC_STA_SUPPORT
+ 	max_len += WPS_LINE_LEN;
+@@ -3799,17 +4060,19 @@
+ 	}
+ 
+ 	memset(msg, 0 , TotalLen);
+-	sprintf(msg,"%s","\n");
++	
+ 
++	sprintf(msg,"%s","\n");
+ 	sprintf(msg+strlen(msg),"%-4s%-35s%-20s%-23s%-9s%-7s%-7s%-3s\n",
+-	    "Ch", "SSID", "BSSID", "Security", "Siganl(%)", "W-Mode", " ExtCH"," NT");	
++	    "Ch", "SSID", "BSSID", "Security", "Siganl(%)", "W-Mode", " ExtCH"," NT");
++
+ 
+ #ifdef WSC_INCLUDED
+ 	sprintf(msg+strlen(msg)-1,"%-4s%-5s\n", " WPS", " DPID");
+ #endif /* WSC_INCLUDED */
+ 
+-#ifdef CONFIG_STA_SUPPORT
+-#endif /* CONFIG_STA_SUPPORT */
++#endif//LITEON_SRC_VALID
++/*<-----sirian@liteon, 2014-01-22 */
+ 
+ 	WaitCnt = 0;
+ #ifdef CONFIG_STA_SUPPORT
+@@ -3818,7 +4081,19 @@
+ 
+ 	while ((ScanRunning(pAdapter) == TRUE) && (WaitCnt++ < 200))
+ 		OS_WAIT(500);	
+-
++	
++/*Get sitesurvey result from proc file to avoid not enough space limitation using iwpriv command, sirian@liteon, 2014-01-22----->*/
++#ifdef LITEON_SRC_VALID
++        if (surveyEntry != NULL) {     
++                DBGPRINT(RT_DEBUG_TRACE,("Already have a proc entry for /proc/sitesurvey!\n")); 
++        }    
++        else {
++                surveyEntry = proc_create("sitesurvey", S_IWUSR|S_IRUGO, NULL, &proc_survey_operations);
++        }    
++        if(G_ScanTab == NULL)
++                os_alloc_mem(NULL, (UCHAR **)&G_ScanTab, sizeof(BSS_TABLE)); 
++        NdisCopyMemory(G_ScanTab, &pAdapter->ScanTab, sizeof(BSS_TABLE));
++#else
+ 	for(i=0; i<pAdapter->ScanTab.BssNr ;i++)
+ 	{
+ 		pBss = &pAdapter->ScanTab.BssEntry[i];
+@@ -3849,16 +4124,22 @@
+ 
+ #ifdef CONFIG_STA_SUPPORT
+ #endif /* CONFIG_STA_SUPPORT */
++
+ 	}
+ 
++
+ #ifdef CONFIG_STA_SUPPORT
+ 	pAdapter->StaCfg.bSkipAutoScanConn = FALSE;
+ #endif /* CONFIG_STA_SUPPORT */
++
+ 	wrq->u.data.length = strlen(msg);
+ 	Status = copy_to_user(wrq->u.data.pointer, msg, wrq->u.data.length);
+ 
+ 	DBGPRINT(RT_DEBUG_TRACE, ("RTMPIoctlGetSiteSurvey - wrq->u.data.length = %d\n", wrq->u.data.length));
+-	os_free_mem(NULL, (PUCHAR)msg);	
++	os_free_mem(NULL, (PUCHAR)msg);
++
++#endif //LITEON_SRC_VALID
++/*<-----sirian@liteon, 2014-01-22 */
+ }
+ #endif
+ 

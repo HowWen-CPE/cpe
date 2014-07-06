@@ -1,0 +1,789 @@
+--- a/drivers/char/ralink_gpio.c
++++ b/drivers/char/ralink_gpio.c
+@@ -39,6 +39,27 @@
+ #include <linux/interrupt.h>
+ #include <linux/fs.h>
+ #include <linux/sched.h>
++
++/*Add header file for software reset, Sean@liteon, 2013-01-07----->*/
++#ifdef LITEON_SRC_VALID
++#if defined(CONFIG_RALINK_MT7620)
++#include <linux/slab.h>
++#include <linux/types.h>
++#include <linux/fcntl.h>
++#include <linux/unistd.h>
++#include <linux/string.h>
++#include <linux/syscalls.h>
++#include <linux/stat.h>
++
++#include "linux/ezp-gpio.h"
++
++#include <linux/proc_fs.h>
++//#include <linux/delay.h>
++
++#endif
++#endif //LITEON_SRC_VALID
++/*<-----Sean@liteon, 2013-01-07*/
++
+ #ifdef CONFIG_RALINK_GPIO_LED
+ #include <linux/timer.h>
+ #endif
+@@ -52,6 +73,48 @@
+ static  devfs_handle_t devfs_handle;
+ #endif
+ 
++/*Add macro definition for software reset, Sean@liteon, 2013-01-07----->*/
++#ifdef LITEON_SRC_VALID
++#if defined(CONFIG_RALINK_MT7620)
++//#define  GPIO_DEBUG
++#ifdef  GPIO_DEBUG
++#define gpio_debug(fmt...) do{printk(fmt);}while(0)
++#else
++#define gpio_debug(fmt...) do{}while(0)
++#endif
++#endif
++#endif //LITEON_SRC_VALID
++/*<-----Sean@liteon, 2013-01-07*/
++
++/*Add  code for led blink when system boot, Sean@liteon, 2013-01-09----->*/
++#ifdef LITEON_SRC_VALID
++#if defined(CONFIG_RALINK_MT7620)
++static struct proc_dir_entry *led_ctrl_entry = NULL;
++static struct proc_dir_entry *red_led_glisten_entry = NULL;
++static struct proc_dir_entry *pwr_led_entry = NULL;
++
++static struct timer_list red_led_timer;
++static unsigned int red_led_glisten_status = 0;
++
++#define TRICOLOR_PWR_LED_RED_PIN  69		/* GPIO 69 */
++#define TRICOLOR_PWR_LED_GREEN_PIN 9			/* GPIO 9*/
++
++#define OFF 1
++#define ON 0
++
++typedef enum {
++        PWR_LED_STATE_OFF   =       0,
++        PWR_LED_STATE_GREEN =       1,
++        PWR_LED_STATE_RED =      2,
++        PWR_LED_STATE_ORANGE =      3,
++        PWR_LED_STATE_MAX =         4
++} pwr_led_state_e;
++
++static pwr_led_state_e tricolor_pwr_led = PWR_LED_STATE_OFF;
++#endif
++#endif //LITEON_SRC_VALID
++/*<-----Sean@liteon, 2013-01-09*/
++
+ #define NAME			"ralink_gpio"
+ #define RALINK_GPIO_DEVNAME	"gpio"
+ int ralink_gpio_major = 252;
+@@ -851,6 +914,301 @@ struct file_operations ralink_gpio_fops 
+ #endif
+ #endif
+ 
++/*Add  code for led blink when system boot, Sean@liteon, 2013-01-09----->*/
++#ifdef LITEON_SRC_VALID
++#if defined(CONFIG_RALINK_MT7620)
++
++void
++mt7620_gpio_config_output(int gpio)
++{
++   unsigned long tmp;
++
++   if (gpio < 0 || gpio > 72){
++   	printk("gpio number is out of range!\n");
++	return;
++   }else if ( gpio <= 23){
++   	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIODIR));
++   	tmp |= cpu_to_le32(1 << gpio);
++   	*(volatile u32 *)(RALINK_REG_PIODIR) = tmp;
++   }else if (gpio <= 39){
++   	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIO3924DIR));
++	tmp |= cpu_to_le32(1 << (gpio - 24));
++	*(volatile u32 *)(RALINK_REG_PIO3924DIR) = tmp;
++   }else if (gpio <= 71){
++   	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIO7140DIR));
++	tmp |= cpu_to_le32(1 << (gpio - 40));
++	*(volatile u32 *)(RALINK_REG_PIO7140DIR) = tmp;
++   }else {
++   	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIO72DIR));
++	tmp |= cpu_to_le32(1 << (gpio - 72));
++	*(volatile u32 *)(RALINK_REG_PIO72DIR) = tmp;
++   }
++
++
++}
++
++void
++mt7620_gpio_config_input(int gpio)
++{
++   unsigned long tmp;
++
++   if (gpio < 0 || gpio > 72){
++   	printk("gpio number is out of range!\n");
++	return;
++   }else if ( gpio <= 23){
++   	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIODIR));
++   	tmp &= ~cpu_to_le32(1 << gpio);
++   	*(volatile u32 *)(RALINK_REG_PIODIR) = tmp;
++   }else if (gpio <= 39){
++   	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIO3924DIR));
++	tmp &= ~cpu_to_le32(1 << (gpio - 24));
++	*(volatile u32 *)(RALINK_REG_PIO3924DIR) = tmp;
++   }else if (gpio <= 71){
++   	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIO7140DIR));
++	tmp &= ~cpu_to_le32(1 << (gpio - 40));
++	*(volatile u32 *)(RALINK_REG_PIO7140DIR) = tmp;
++   }else {
++   	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIO72DIR));
++	tmp &= ~cpu_to_le32(1 << (gpio - 72));
++	*(volatile u32 *)(RALINK_REG_PIO72DIR) = tmp;
++   }
++
++
++}
++
++void
++mt7620_gpio_out_val(int gpio, int val)
++{
++	
++    if (val & 0x1) {
++	   if (gpio < 0 || gpio > 72){
++	   	printk("gpio number is out of range!\n");
++		return;
++	   }else if ( gpio <= 23){
++	   	*(volatile u32 *)(RALINK_REG_PIOSET) = cpu_to_le32(1 << gpio);
++	   }else if (gpio <= 39){
++		*(volatile u32 *)(RALINK_REG_PIO3924SET) = cpu_to_le32(1 << (gpio - 24));
++	   }else if (gpio <= 71){
++		*(volatile u32 *)(RALINK_REG_PIO7140SET) = cpu_to_le32(1 << (gpio - 40));
++	   }else {
++		*(volatile u32 *)(RALINK_REG_PIO72SET) = cpu_to_le32(1 << (gpio - 72));
++	   }
++
++    }else {
++	   if (gpio < 0 || gpio > 72){
++	   	printk("gpio number is out of range!\n");
++		return;
++	   }else if ( gpio <= 23){
++	   	*(volatile u32 *)(RALINK_REG_PIORESET) = cpu_to_le32(1 << gpio);
++	   }else if (gpio <= 39){
++		*(volatile u32 *)(RALINK_REG_PIO3924RESET) = cpu_to_le32(1 << (gpio - 24));
++	   }else if (gpio <= 71){
++		*(volatile u32 *)(RALINK_REG_PIO7140RESET) = cpu_to_le32(1 << (gpio - 40));
++	   }else {
++		*(volatile u32 *)(RALINK_REG_PIO72RESET) = cpu_to_le32(1 << (gpio - 72));
++	   }
++
++    }
++}
++
++void
++mt7620_gpio_out_reverse(int gpio)
++{
++	   unsigned long tmp;
++
++	   if (gpio < 0 || gpio > 72){
++	   	printk("gpio number is out of range!\n");
++		return;
++	   }else if ( gpio <= 23){
++	    	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIODATA));
++		tmp ^= (1 << gpio);
++		*(volatile u32 *)(RALINK_REG_PIODATA) = cpu_to_le32(tmp);
++	   }else if (gpio <= 39){
++	    	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIO3924DATA));
++		tmp ^= (1 << (gpio - 24));
++		*(volatile u32 *)(RALINK_REG_PIO3924DATA) = cpu_to_le32(tmp);
++	   }else if (gpio <= 71){
++	    	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIO7140DATA));
++		tmp ^= (1 << (gpio - 40));
++		*(volatile u32 *)(RALINK_REG_PIO7140DATA) = cpu_to_le32(tmp);
++	   }else {
++	    	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIO72DATA));
++		tmp ^= (1 << (gpio - 72));
++		*(volatile u32 *)(RALINK_REG_PIO72DATA) = cpu_to_le32(tmp);
++	   }
++
++}
++
++int
++mt7620_gpio_in_val(int gpio)
++{
++    ulong tmp;
++
++   if (gpio < 0 || gpio > 72){
++   	printk("gpio number is out of range!\n");
++	return -1;
++   }else if ( gpio <= 23){
++    	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIODATA));
++    	return((1 << gpio) & tmp);
++   }else if (gpio <= 39){
++   	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIO3924DATA));
++    	return ((1 << (gpio - 24)) & tmp);
++   }else if (gpio <= 71){
++   	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIO7140DATA));
++    	return ((1 << (gpio - 40)) & tmp);
++   }else {
++   	tmp = le32_to_cpu(*(volatile u32 *)(RALINK_REG_PIO72DATA));
++    	return ((1 << (gpio - 72)) & tmp);
++   }
++
++}
++
++static int pwr_led_read (char *page, char **start, off_t off,
++               int count, int *eof, void *data)
++{
++    return sprintf (page, "%d\n", tricolor_pwr_led);
++}
++
++static int pwr_led_write (struct file *file, const char *buf,
++                                        unsigned long count, void *data)
++{
++    u_int32_t val, green_led_onoff = 0, red_led_onoff = 0;
++
++    if (sscanf(buf, "%d", &val) != 1)
++        return -EINVAL;
++
++    if (val >= PWR_LED_STATE_MAX)
++        return -EINVAL;
++
++    if (val == tricolor_pwr_led)
++        return count;
++
++
++    switch (val) {
++        case PWR_LED_STATE_OFF :
++                green_led_onoff = OFF;   /* both LEDs OFF */
++                red_led_onoff = OFF;
++                break;
++
++        case PWR_LED_STATE_GREEN:
++                green_led_onoff = ON;    /* green ON, red OFF */
++                red_led_onoff = OFF;
++                break;
++
++        case PWR_LED_STATE_RED:
++                green_led_onoff = OFF;   /* green OFF, red ON */
++                red_led_onoff = ON;
++                break;
++
++        case PWR_LED_STATE_ORANGE:
++                green_led_onoff = ON;    /* both LEDs ON */
++                red_led_onoff = ON;
++                break;
++    }
++	
++    mt7620_gpio_out_val (TRICOLOR_PWR_LED_GREEN_PIN, green_led_onoff);
++    mt7620_gpio_out_val (TRICOLOR_PWR_LED_RED_PIN, red_led_onoff);
++    tricolor_pwr_led = val;
++
++    return count;
++}
++
++static void mt7620_gpio_red_led_reverse(void)
++{
++ 	/* when kernel booting we need the led1 glisten in every half second. */
++   	mt7620_gpio_config_output (TRICOLOR_PWR_LED_RED_PIN); 
++	mt7620_gpio_out_reverse(TRICOLOR_PWR_LED_RED_PIN);
++	mod_timer(&red_led_timer, jiffies + 50);
++}
++
++static void red_led_glisten_start(void)
++{
++	red_led_timer.data = 0;
++	red_led_timer.expires = jiffies + 50;
++	red_led_timer.function = (void *)&mt7620_gpio_red_led_reverse;
++	init_timer(&red_led_timer);
++	add_timer(&red_led_timer);
++	red_led_glisten_status = 1;
++}
++
++static void red_led_glisten_end(void)
++{
++	del_timer(&red_led_timer);
++	red_led_glisten_status = 0;
++}
++
++static int red_led_glisten_read (char *page, char **start, off_t off,
++                               int count, int *eof, void *data)
++{
++    return sprintf (page, "%d\n", red_led_glisten_status);
++}
++
++static int red_led_glisten_write (struct file *file, const char *buf,
++                                        unsigned long count, void *data)
++{
++    u_int32_t val = 0;
++
++    if ((!sscanf(buf, "%d", &val)) || (val > 1)) {
++        return -EINVAL;
++    }
++    
++    if (val == red_led_glisten_status) {
++        return count;
++    }
++
++    if(val == 0) {
++        red_led_glisten_end();
++    } else {
++    	 red_led_glisten_start();
++    }
++    return count;
++}
++
++extern void red_led_booting_glisten(void)
++{
++    mt7620_gpio_config_output (TRICOLOR_PWR_LED_GREEN_PIN); 
++    mt7620_gpio_config_output (TRICOLOR_PWR_LED_RED_PIN); 
++	
++    mt7620_gpio_out_val(TRICOLOR_PWR_LED_GREEN_PIN, OFF);
++    mt7620_gpio_out_val(TRICOLOR_PWR_LED_RED_PIN, ON);
++	
++    red_led_glisten_start();
++}
++
++static int create_led_ctrl_proc_entry(void)
++{
++    if (led_ctrl_entry != NULL) {
++        printk ("Already have a proc entry for /proc/led_ctrl!\n");
++        return -ENOENT;
++    }
++
++    led_ctrl_entry = proc_mkdir("led_ctrl", NULL);
++    if (!led_ctrl_entry)
++        return -ENOENT;
++
++    red_led_glisten_entry = create_proc_entry("red_led_glisten", 0644, led_ctrl_entry);
++	
++    if ( !red_led_glisten_entry)
++        return -ENOENT;
++
++    red_led_glisten_entry->write_proc = red_led_glisten_write;
++    red_led_glisten_entry->read_proc = red_led_glisten_read;
++
++    pwr_led_entry = create_proc_entry ("pwr_led", 0644, led_ctrl_entry);
++    if (!pwr_led_entry)
++        return -ENOENT;
++	
++    pwr_led_entry->write_proc = pwr_led_write;
++    pwr_led_entry->read_proc = pwr_led_read;
++
++    return 0;
++}
++
++#endif
++#endif //LITEON_SRC_VALID
++/*<-----Sean@liteon, 2013-01-09*/
++
++
+ static void ralink_gpio_led_do_timer(unsigned long unused)
+ {
+ 	int i;
+@@ -2031,6 +2389,7 @@ static void ralink_gpio_led_do_timer(uns
+ 	ra_gpio9564_led_set = ra_gpio9564_led_clr = 0;
+ #endif
+ 
++
+ 	init_timer(&ralink_gpio_led_timer);
+ 	ralink_gpio_led_timer.expires = jiffies + RALINK_GPIO_LED_FREQ;
+ 	add_timer(&ralink_gpio_led_timer);
+@@ -2043,7 +2402,17 @@ void ralink_gpio_led_init_timer(void)
+ 	for (i = 0; i < RALINK_GPIO_NUMBER; i++)
+ 		ralink_gpio_led_data[i].gpio = -1; //-1 means unused
+ #if RALINK_GPIO_LED_LOW_ACT
++
++/*Modify LED set, Sean@liteon, 2013-01-08----->*/
++#ifdef LITEON_SRC_VALID
++#if defined (CONFIG_RALINK_MT7620)
++	ra_gpio_led_set = 0x200;
++#endif
++#else
+ 	ra_gpio_led_set = 0xffffff;
++#endif //LITEON_SRC_VALID
++/*<-----Sean@liteon, 2013-01-08*/
++
+ #if defined (RALINK_GPIO_HAS_2722)
+ 	ra_gpio2722_led_set = 0xff;
+ #elif defined (RALINK_GPIO_HAS_4524)
+@@ -2053,8 +2422,19 @@ void ralink_gpio_led_init_timer(void)
+ 	ra_gpio3924_led_set = 0xffff;
+ 	ra_gpio5140_led_set = 0xfff;
+ #elif defined (RALINK_GPIO_HAS_9524) || defined (RALINK_GPIO_HAS_7224)
++
++/*Modify LED set, Sean@liteon, 2013-01-08----->*/
++#ifdef LITEON_SRC_VALID
++#if defined (CONFIG_RALINK_MT7620)
++	ra_gpio3924_led_set = 0x0;
++	ra_gpio7140_led_set = 0x3c000001;
++#endif
++#else
+ 	ra_gpio3924_led_set = 0xffff;
+ 	ra_gpio7140_led_set = 0xffffffff;
++#endif //LITEON_SRC_VALID
++/*<-----Sean@liteon, 2013-01-08*/
++
+ #if defined (RALINK_GPIO_HAS_7224)
+ 	ra_gpio72_led_set = 0xffffff;
+ #else
+@@ -2065,7 +2445,15 @@ void ralink_gpio_led_init_timer(void)
+ 	ra_gpio9564_led_set = 0xffffffff;
+ #endif
+ #else // RALINK_GPIO_LED_LOW_ACT //
++/*Modify LED set, Sean@liteon, 2013-01-08----->*/
++#ifdef LITEON_SRC_VALID
++#if defined (CONFIG_RALINK_MT7620)
++	ra_gpio_led_clr = 0x200;
++#endif
++#else
+ 	ra_gpio_led_clr = 0xffffff;
++#endif //LITEON_SRC_VALID
++/*<-----Sean@liteon, 2013-01-08*/
+ #if defined (RALINK_GPIO_HAS_2722)
+ 	ra_gpio2722_led_clr = 0xff;
+ #elif defined (RALINK_GPIO_HAS_4524)
+@@ -2075,8 +2463,17 @@ void ralink_gpio_led_init_timer(void)
+ 	ra_gpio3924_led_clr = 0xffff;
+ 	ra_gpio5140_led_clr = 0xfff;
+ #elif defined (RALINK_GPIO_HAS_9524) || defined (RALINK_GPIO_HAS_7224)
++/*Modify LED set, Sean@liteon, 2013-01-08----->*/
++#ifdef LITEON_SRC_VALID
++#if defined (CONFIG_RALINK_MT7620)
++	ra_gpio3924_led_clr = 0x0;
++	ra_gpio7140_led_clr = 0x3c000001;
++#endif
++#else
+ 	ra_gpio3924_led_clr = 0xffff;
+ 	ra_gpio7140_led_clr = 0xffffffff;
++#endif //LITEON_SRC_VALID
++/*<-----Sean@liteon, 2013-01-08*/
+ #if defined (RALINK_GPIO_HAS_7224)
+ 	ra_gpio72_led_clr = 0xffffff;
+ #else
+@@ -2099,7 +2496,7 @@ int __init ralink_gpio_init(void)
+ {
+ 	unsigned int i;
+ 	u32 gpiomode;
+-
++	
+ #ifdef  CONFIG_DEVFS_FS
+ 	if (devfs_register_chrdev(ralink_gpio_major, RALINK_GPIO_DEVNAME,
+ 				&ralink_gpio_fops)) {
+@@ -2131,23 +2528,78 @@ int __init ralink_gpio_init(void)
+ #if defined (CONFIG_RALINK_MT7620)
+ 	gpiomode &= ~0x2000;  //clear bit[13] WLAN_LED
+ #endif
+-	gpiomode |= RALINK_GPIOMODE_DFT;
++
++/*Init GPIOMODE register, Sean@liteon, 2013-01-08----->*/
++#ifdef LITEON_SRC_VALID
++#if defined(CONFIG_RALINK_MT7620)
++
++	/*
++	  * GPIOMODE[0] 	= 	1b'1		----->I2C GPIO Mode
++	  * GPIOMODE[4:2] 	= 	3b'111	----->UARTF GPIO Mode
++	  * GPIOMODE[5] 	= 	1b'0		----->UARTL Normal Mode
++	  * GPIOMODE[8:7] 	= 	2b'10	----->MDIO GPIO Mode
++	  * GPIOMODE[9] 	= 	1b'1		----->RGMII1 GPIO Mode
++	  * GPIOMODE[10] 	= 	1b'1		----->RGMII2 GPIO Mode
++	  * GPIOMODE[11] 	= 	1b'0		----->SPI Normal Mode
++	  * GPIOMODE[12]	=	1b'1		----->SPIREFCLK GPIO Mode
++	  * GPIOMODE[13] 	= 	1b'0		----->WLED Normal Mode
++	  * GPIOMODE[15]	=	1b'0		----->EPHY_LED Normal Mode
++	  * GPIOMODE[17:16] = 	2b'10	----->PERST GPIO Mode
++	  * GPIOMODE[19:18] =	2b'10	----->ND_SD GPIO Mode
++	  * GPIOMODE[20]	=	1b'0		----->PA_G Normal Mode
++	  * GPIOMODE[22:21] =   2b'00	----->WDT_RST Normal Mode
++	  * GPIOMODE[31:30] =   2b'00	----->SUTIF_SHARE Not Shared
++	  */
++	gpiomode = 0xa171d;
++
++#endif
++#endif //LITEON_SRC_VALID
++/*<-----Sean@liteon, 2013-01-08*/
++		
+ 	*(volatile u32 *)(RALINK_REG_GPIOMODE) = cpu_to_le32(gpiomode);
+ 
++/*Init GPIO registers, Sean@liteon, 2013-01-08----->*/
++#ifdef LITEON_SRC_VALID
++#if defined(CONFIG_RALINK_MT7620)
++	/* Init GPIODIR registers. */
++	*(volatile u32 *)(RALINK_REG_PIODIR) 	     = 	cpu_to_le32(0xfebfdf);
++	*(volatile u32 *)(RALINK_REG_PIO3924DIR) = 	cpu_to_le32(0xffff);
++	*(volatile u32 *)(RALINK_REG_PIO7140DIR) = 	cpu_to_le32(0xffdfffff);
++	*(volatile u32 *)(RALINK_REG_PIO72DIR)     = 	cpu_to_le32(0x1);
++
++	/* Init GPIODATA registers. */
++	*(volatile u32 *)(RALINK_REG_PIODATA) 	 = 	cpu_to_le32(0xc06f87);
++	*(volatile u32 *)(RALINK_REG_PIO3924DATA) = 	cpu_to_le32(0x1fff);
++	*(volatile u32 *)(RALINK_REG_PIO7140DATA) = 	cpu_to_le32(0xffefffe0);
++	*(volatile u32 *)(RALINK_REG_PIO72DATA) 	 = 	cpu_to_le32(0x1);
++#endif
++#endif //LITEON_SRC_VALID
++/*<-----Sean@liteon, 2013-01-08*/
+ 	//enable gpio interrupt
+ 	*(volatile u32 *)(RALINK_REG_INTENA) = cpu_to_le32(RALINK_INTCTL_PIO);
+ 	for (i = 0; i < RALINK_GPIO_NUMBER; i++) {
+ 		ralink_gpio_info[i].irq = i;
+ 		ralink_gpio_info[i].pid = 0;
+ 	}
+-
+ #ifdef CONFIG_RALINK_GPIO_LED
+ 	ralink_gpio_led_init_timer();
+ #endif
++
++/*Add  code for led blink when system boot, Sean@liteon, 2013-01-09----->*/
++#ifdef LITEON_SRC_VALID
++#if defined(CONFIG_RALINK_MT7620)
++
++	create_led_ctrl_proc_entry();
++       	red_led_booting_glisten();
++
++#endif
++#endif //LITEON_SRC_VALID
++
+ 	printk("Ralink gpio driver initialized\n");
+ 	return 0;
+ }
+ 
++
+ void __exit ralink_gpio_exit(void)
+ {
+ #ifdef  CONFIG_DEVFS_FS
+@@ -2196,13 +2648,15 @@ void ralink_gpio_notify_user(int usr)
+ 	}
+ 
+ 	if (usr == 1) {
+-		printk(KERN_NOTICE NAME ": sending a SIGUSR1 to process %d\n",
+-				ralink_gpio_info[ralink_gpio_irqnum].pid);
++		//printk(KERN_ERR"==========ralink_gpio_notify_user 1============\n");
++		//printk(KERN_NOTICE NAME ": sending a SIGUSR1 to process %d\n",
++		//		ralink_gpio_info[ralink_gpio_irqnum].pid);
+ 		send_sig(SIGUSR1, p, 0);
+ 	}
+ 	else if (usr == 2) {
+-		printk(KERN_NOTICE NAME ": sending a SIGUSR2 to process %d\n",
+-				ralink_gpio_info[ralink_gpio_irqnum].pid);
++		//printk(KERN_ERR"==========ralink_gpio_notify_user 2============\n");
++		//printk(KERN_NOTICE NAME ": sending a SIGUSR2 to process %d\n",
++		//		ralink_gpio_info[ralink_gpio_irqnum].pid);
+ 		send_sig(SIGUSR2, p, 0);
+ 	}
+ }
+@@ -2278,6 +2732,95 @@ void ralink_gpio_save_clear_intp(void)
+ #endif
+ }
+ 
++//#define GPIO_BUT_FILE_PATH	"/tmp/but_gpio"
++#define GPIO_BUT_FILE_PATH	"/tmp/but_gpio/1"
++
++/*
++  * gpio: gpio number
++  * duration: the during of button pressed
++  */
++int create_gpio_int_file(int gpio, long duration)
++//int create_gpio_int_file(int gpio)
++{
++	char filestr[80];
++	//char buf[12]="012345678";
++	int fd, len;
++	const char *file_str_format = "%s/%d";
++	//const char *file_content_format = "%ld";
++	int written;
++
++	len = snprintf(filestr, sizeof(filestr), file_str_format, 
++		GPIO_BUT_FILE_PATH, gpio);
++	gpio_debug("%s: filestr=%s.\n", __func__, filestr);
++	
++	//can't open file with WR operation in interrupt routine
++	fd = sys_open(filestr, O_CREAT, 0777);//| O_TRUNC | O_WRONLY | O_NONBLOCK
++
++	//fd = sys_open("/tmp/but_gpio/1/14", O_CREAT, 0666);
++	if (fd < 0) {
++		gpio_debug("%s: Fail to create filestr=%s.\n", __func__, filestr);
++		return -1;
++	}
++	gpio_debug("%s: Succeed to create filestr=%s.\n", __func__, filestr);
++	////printk(KERN_ERR"==%s: Succeed to create filestr=%s.==\n", __func__, filestr);
++	/*
++	len = snprintf(filestr, sizeof(filestr), file_content_format, duration);
++	gpio_debug("%s: file content=%s.\n", __func__, filestr);
++	
++	//written = sys_write(fd,buf,strlen(buf));
++	//written = sys_write(fd,buf,10);
++	//printk("====%d========\n",written);
++	//if (written != 10)
++	//	printk(KERN_ERR"=======ERROR=========\n");
++	sys_write(fd,  filestr, strlen(filestr));
++	gpio_debug("%s: Succeed to write filestr=%s.\n", __func__, filestr);
++	*/
++	sys_close(fd);
++	return 0;
++}
++
++
++#define GPIO_BUT_FILE_PATH_2	"/tmp/but_gpio/2"
++int create_gpio_int_file_2(int gpio, long duration)
++//int create_gpio_int_file_2(int gpio)
++{
++	char filestr[80];
++	//char buf[12]="012345678";
++	int fd, len;
++	const char *file_str_format = "%s/%d";
++	//const char *file_content_format = "%ld";
++	int written;
++
++	len = snprintf(filestr, sizeof(filestr), file_str_format, 
++		GPIO_BUT_FILE_PATH_2, gpio);
++	gpio_debug("%s: filestr=%s.\n", __func__, filestr);
++	//can't open file with WR operation in interrupt routine
++	fd = sys_open(filestr, O_CREAT, 0777);//| O_TRUNC | O_WRONLY | O_NONBLOCK
++	if (fd < 0) {
++		gpio_debug("%s: Fail to create filestr=%s.\n", __func__, filestr);
++		return -1;
++	}
++	gpio_debug("%s: Succeed to create filestr=%s.\n", __func__, filestr);
++	////printk(KERN_ERR"==%s: Succeed to create filestr=%s.==\n", __func__, filestr);
++	/*
++	len = snprintf(filestr, sizeof(filestr), file_content_format, duration);
++	gpio_debug("%s: file content=%s.\n", __func__, filestr);
++	
++	//written = sys_write(fd,buf,strlen(buf));
++	//written = sys_write(fd,buf,10);
++	//printk("====%d========\n",written);
++	//if (written != 10)
++	//	printk(KERN_ERR"=======ERROR=========\n");
++	sys_write(fd,  filestr, strlen(filestr));
++	gpio_debug("%s: Succeed to write filestr=%s.\n", __func__, filestr);
++	*/
++	sys_close(fd);
++	return 0;
++}
++
++
++
++
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
+ void ralink_gpio_irq_handler(unsigned int irq, struct irqaction *irqaction)
+ #else
+@@ -2291,9 +2834,13 @@ irqreturn_t ralink_gpio_irq_handler(int 
+ 	static struct gpio_time_record record[RALINK_GPIO_NUMBER];
+ 	unsigned long now;
+ 	int i;
+-
++	u32 ralink_gpio_data = 0;
++	static int valid_falling_flag;
++	//int valid_rising_flag;
++	
+ 	ralink_gpio_save_clear_intp();
+ 	now = jiffies;
++	
+ #if defined (RALINK_GPIO_HAS_2722)
+ 	for (i = 0; i < 22; i++) {
+ 		if (! (ralink_gpio_intp & (1 << i)))
+@@ -2428,33 +2975,31 @@ irqreturn_t ralink_gpio_irq_handler(int 
+ 		if (! (ralink_gpio_intp & (1 << i)))
+ 			continue;
+ 		ralink_gpio_irqnum = i;
+-		if (ralink_gpio_edge & (1 << i)) { //rising edge
+-			if (record[i].rising != 0 && time_before_eq(now,
+-						record[i].rising + 40L)) {
+-				/*
+-				 * If the interrupt comes in a short period,
+-				 * it might be floating. We ignore it.
+-				 */
+-			}
+-			else {
+-				record[i].rising = now;
+-				if (time_before(now, record[i].falling + 200L)) {
+-					//one click
+-					printk("i=%d, one click\n", i);
+-					ralink_gpio_notify_user(1);
+-				}
+-				else {
+-					//press for several seconds
+-					printk("i=%d, push several seconds\n", i);
++			if (ralink_gpio_edge & (1 << i)) 
++			{ //rising edge				
++				if (valid_falling_flag==1)
++				{									
++					//printk(KERN_ERR"");				
++					record[i].rising = now;
++					valid_falling_flag=0;
+ 					ralink_gpio_notify_user(2);
+ 				}
+ 			}
+-		}
+-		else { //falling edge
+-			record[i].falling = now;
+-		}
+-		break;
+-	}
++			else 
++			{ //falling edge				
++				if ((record[i].falling != 0) && time_before_eq(now,record[i].falling + 100L))
++				{											
++					valid_falling_flag=0;
++				}
++		   		else
++		   		{
++					ralink_gpio_notify_user(1);				
++					record[i].falling = now;
++					valid_falling_flag=1;																				
++		   		}
++			}		
++		break;			
++	}	
+ #if defined (RALINK_GPIO_HAS_4524)
+ 	for (i = 24; i < 40; i++) {
+ 		if (! (ralink_gpio3924_intp & (1 << (i - 24))))
+@@ -2560,6 +3105,7 @@ irqreturn_t ralink_gpio_irq_handler(int 
+ 			}
+ 			else {
+ 				record[i].rising = now;
++				create_gpio_int_file(i, record[i].rising - record[i].falling);
+ 				if (time_before(now, record[i].falling + 200L)) {
+ 					printk("i=%d, one click\n", i);
+ 					ralink_gpio_notify_user(1);
+@@ -2585,6 +3131,7 @@ irqreturn_t ralink_gpio_irq_handler(int 
+ 			}
+ 			else {
+ 				record[i].rising = now;
++				create_gpio_int_file(i, record[i].rising - record[i].falling);
+ 				if (time_before(now, record[i].falling + 200L)) {
+ 					printk("i=%d, one click\n", i);
+ 					ralink_gpio_notify_user(1);
+@@ -2611,6 +3158,7 @@ irqreturn_t ralink_gpio_irq_handler(int 
+ 			}
+ 			else {
+ 				record[i].rising = now;
++				create_gpio_int_file(i, record[i].rising - record[i].falling);
+ 				if (time_before(now, record[i].falling + 200L)) {
+ 					printk("i=%d, one click\n", i);
+ 					ralink_gpio_notify_user(1);
+@@ -2637,6 +3185,7 @@ irqreturn_t ralink_gpio_irq_handler(int 
+ 			}
+ 			else {
+ 				record[i].rising = now;
++				create_gpio_int_file(i, record[i].rising - record[i].falling);
+ 				if (time_before(now, record[i].falling + 200L)) {
+ 					printk("i=%d, one click\n", i);
+ 					ralink_gpio_notify_user(1);
+@@ -2655,7 +3204,7 @@ irqreturn_t ralink_gpio_irq_handler(int 
+ #endif
+ #endif
+ #endif
+-
++	ralink_gpio_save_clear_intp();
+ 	return IRQ_HANDLED;
+ }
+ 
+@@ -2672,8 +3221,8 @@ struct irqaction ralink_gpio_irqaction =
+ void __init ralink_gpio_init_irq(void)
+ {
+ 	setup_irq(SURFBOARDINT_GPIO, &ralink_gpio_irqaction);
++	//ralink_gpio_save_clear_intp();
+ }
+ 
+ module_init(ralink_gpio_init);
+ module_exit(ralink_gpio_exit);
+-

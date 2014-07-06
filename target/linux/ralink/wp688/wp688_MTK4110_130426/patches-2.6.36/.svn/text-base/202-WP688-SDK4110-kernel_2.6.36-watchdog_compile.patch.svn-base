@@ -1,0 +1,19 @@
+diff -urN a/drivers/Makefile b/drivers/Makefile
+--- a/drivers/Makefile	2013-05-13 17:01:21.437723020 +0800
++++ b/drivers/Makefile	2013-05-13 17:02:34.861722599 +0800
+@@ -115,3 +115,4 @@
+ obj-$(CONFIG_STAGING)		+= staging/
+ obj-y				+= platform/
+ obj-y				+= ieee802154/
++obj-$(CONFIG_WP688_WDT)	+= wp688_watchdog/
+diff -urN a/ralink/Kconfig b/ralink/Kconfig
+--- a/ralink/Kconfig	2013-05-13 17:01:33.653722578 +0800
++++ b/ralink/Kconfig	2013-05-13 17:03:09.961722372 +0800
+@@ -183,6 +183,6 @@
+ 
+ source "net/nat/hw_nat/Kconfig"
+ 
+-
++source "drivers/wp688_watchdog/Kconfig"
+ endmenu
+ 

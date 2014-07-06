@@ -1,0 +1,32 @@
+From 1626101af02d4872fa70c50440a2da9c573c7b51 Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Wed, 23 Sep 2009 15:56:38 +0530
+Subject: [PATCH v2 1/3] powerpc/fsl: 85xx: document cache-sram size as a kernel parametric option
+
+Adds documentation for the size parameter of Freescale's QorIQ
+based cache-sram
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+v2: No change
+
+ Documentation/kernel-parameters.txt |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/Documentation/kernel-parameters.txt b/Documentation/kernel-parameters.txt
+index 6fa7292..8767f36 100644
+--- a/Documentation/kernel-parameters.txt
++++ b/Documentation/kernel-parameters.txt
+@@ -412,6 +412,9 @@ and is between 256 and 4096 characters. It is defined in the file
+ 
+ 	c101=		[NET] Moxa C101 synchronous serial card
+ 
++	cache-sram-size=	[PPC] Size of Freescale's QorIQ Cache SRAM
++			See Documentation/powerpc/fsl_85xx_cache_sram.txt.
++
+ 	cachesize=	[BUGS=X86-32] Override level 2 CPU cache size detection.
+ 			Sometimes CPU hardware bugs make them report the cache
+ 			size incorrectly. The kernel will attempt work arounds
+-- 
+1.5.6.5
+

@@ -1,0 +1,117 @@
+Index: net-snmp-5.7.2/agent/mibgroup/mibII/system_mib.c
+===================================================================
+--- net-snmp-5.7.2.orig/agent/mibgroup/mibII/system_mib.c	2014-03-26 10:21:26.633457572 +0800
++++ net-snmp-5.7.2/agent/mibgroup/mibII/system_mib.c	2014-04-04 09:53:17.620955253 +0800
+@@ -59,6 +59,7 @@
+ #include "updates.h"
+ #include "struct.h"
+ #include "sysORTable.h"
++#include <net-snmp/output_api.h>
+ 
+ 
+ netsnmp_feature_require(watcher_read_only_int_scalar)
+@@ -364,7 +365,7 @@
+     {SYSTEMNAME, ASN_OCTET_STR, RWRITE, var_system, 1, {5}},
+     {SYSLOCATION, ASN_OCTET_STR, RWRITE, var_system, 1, {6}},
+     {SYSSERVICES, ASN_INTEGER, RONLY, var_system, 1, {7}},
+-    {SYSORLASTCHANGE, ASN_TIMETICKS, RONLY, var_system, 1, {8}}
++//  {SYSORLASTCHANGE, ASN_TIMETICKS, RONLY, var_system, 1, {8}}
+ };
+ 
+ struct config_operations system_oper[] = {
+@@ -375,7 +376,7 @@
+     {SYSTEMNAME,set_host_name,get_host_name},
+     {SYSLOCATION,set_config_hdlr,get_config_hdlr},
+     {SYSSERVICES, NULL,get_config_hdlr},
+-    {SYSORLASTCHANGE, NULL,get_config_hdlr}
++//  {SYSORLASTCHANGE, NULL,get_config_hdlr}
+ };
+ 
+ void 
+@@ -744,7 +745,7 @@
+         long_return = sysServices;
+         return (u_char *) & long_return;
+ 
+-#ifdef USING_MIBII_SYSORTABLE_MODULE
++#if 0
+     case SYSORLASTCHANGE:
+  //       ulret = netsnmp_timeval_uptime(&sysOR_lastchange);
+         return ((u_char *) & ulret);
+@@ -769,7 +770,10 @@
+     u_char         *cp;
+     char           *buf = NULL, *oldbuf = NULL;
+     int             count, *setvar = NULL;
+-    
++	char a[128]={0};
++	char b[128]={0};
++	int alen=0,blen=0;
++	
+ 	switch ((char) name[7]) {
+     case VERSION_DESCR:
+     case VERSIONID:
+@@ -780,11 +784,33 @@
+         buf = sysContact;
+         oldbuf = oldsysContact;
+         setvar = &sysContactSet;
++		
++		strcpy(a,var_val);
++		sscanf(a,"%[a-z_0-9A-Z@.]s",b); 
++		alen=strlen(a);
++		blen=strlen(b);
++		if(alen!=blen)
++		{
++		snmp_log(LOG_ERR,"character not supported\n");
++		return SNMP_ERR_WRONGTYPE;
++		}			
++		
+         break;
+     case SYSTEMNAME:
+         buf = sysName;
+         oldbuf = oldsysName;
+         setvar = &sysNameSet;
++		
++		strcpy(a,var_val);
++		sscanf(a,"%[a-z_0-9A-Z_-]s",b); 
++		alen=strlen(a);
++		blen=strlen(b);
++		if(alen!=blen)
++		{
++		snmp_log(LOG_ERR,"character not supported\n");
++		return SNMP_ERR_WRONGTYPE;
++		}
++		
+         break;
+     case SYSLOCATION:
+         buf = sysLocation;
+@@ -792,8 +818,8 @@
+         setvar = &sysLocationSet;
+         break;
+     case SYSSERVICES:
+-    case SYSORLASTCHANGE:
+-        snmp_log(LOG_ERR, "Attempt to write to R/O OID\n");
++//  case SYSORLASTCHANGE:
++//      snmp_log(LOG_ERR, "Attempt to write to R/O OID\n");
+         return SNMP_ERR_NOTWRITABLE;
+     default:
+         return SNMP_ERR_GENERR; /* ??? */
+@@ -809,6 +835,12 @@
+             snmp_log(LOG_ERR, "bad length\n");
+             return SNMP_ERR_WRONGLENGTH;
+         }
++			
++		if(strlen(var_val)>32 ){
++			snmp_log(LOG_ERR, "value bad length\n");
++			return SNMP_ERR_WRONGLENGTH;
++		}
++
+ 
+         for (cp = var_val, count = 0; count < (int) var_val_len;
+              count++, cp++) {
+@@ -817,6 +849,7 @@
+                 return SNMP_ERR_WRONGVALUE;
+             }
+         }
++		
+         if (setvar != NULL && *setvar < 0) {
+             /*
+              * The object is set in a read-only configuration file.  

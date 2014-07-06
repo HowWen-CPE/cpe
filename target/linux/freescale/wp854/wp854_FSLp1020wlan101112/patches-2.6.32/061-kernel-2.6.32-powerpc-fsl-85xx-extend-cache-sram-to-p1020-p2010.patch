@@ -1,0 +1,34 @@
+From 9f901c86c66a4499e22da5800de1f02e3c417807 Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Mon, 14 Dec 2009 11:53:12 +0530
+Subject: [PATCH 1/1] powerpc/fsl: 85xx: extend cache-sram to p1020/p2010
+
+Adds <compatible> entries for single core P2010 and
+dual core P1020 platforms.  Fixes Freescale internal
+BUG #4716
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ arch/powerpc/sysdev/fsl_85xx_l2ctlr.c |    6 ++++++
+ 1 files changed, 6 insertions(+), 0 deletions(-)
+
+diff --git a/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c b/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c
+index c851547..56b0863 100644
+--- a/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c
++++ b/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c
+@@ -157,6 +157,12 @@ static struct of_device_id mpc85xx_l2ctlr_of_match[] = {
+ 	{
+ 		.compatible = "fsl,p2020-l2-cache-controller",
+ 	},
++	{
++		.compatible = "fsl,p2010-l2-cache-controller",
++	},
++	{
++		.compatible = "fsl,p1020-l2-cache-controller",
++	},
+ 	{},
+ };
+ 
+-- 
+1.5.6.5
+

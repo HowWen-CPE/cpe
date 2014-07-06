@@ -1,0 +1,20 @@
+--- a/drivers/wlan_modules/os/linux/tools/wlanconfig.c
++++ b/drivers/wlan_modules/os/linux/tools/wlanconfig.c
+@@ -73,6 +73,8 @@
+ #define IEEE80211_NODE_BOOST	0x0080 
+ #define MACSTR_LEN 18
+ 
++#define ATH_DEFAULT_NOISE_FLOOR     -95
++
+ #define	streq(a,b)	(strncasecmp(a,b,sizeof(b)-1) == 0)
+ 
+ static int get_best_channel(const char *ifname);
+@@ -770,7 +772,7 @@ list_stations(const char *ifname)
+ 			, ieee80211_mhz2ieee(si->isi_freq)
+ 			, txrate 
+ 			, rxrate 
+-			, si->isi_rssi
++			, si->isi_rssi + ATH_DEFAULT_NOISE_FLOOR
+ 			, si->isi_inact
+ 			, si->isi_txseqs[0]
+ 			, si->isi_rxseqs[0]

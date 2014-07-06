@@ -1,0 +1,380 @@
+#get the testing time
+test_date=`date +%Y%m%d%H%M%S`
+
+#umount the possible mounted devices
+#for files in /tmp/sd*
+#do
+#	umount $files > /dev/null 2>1&	--gordon
+#	umount $files
+#done
+
+#variables for record states
+diska_partitions=0
+diskb_partitions=0
+diskc_partitions=0
+diskd_partitions=0
+diske_partitions=0
+diskf_partitions=0
+diskg_partitions=0
+diskh_partitions=0
+
+diska_mount_success=0
+diskb_mount_success=0
+diskc_mount_success=0
+diskd_mount_success=0
+diske_mount_success=0
+diskf_mount_success=0
+diskg_mount_success=0
+diskh_mount_success=0
+
+diska_mount_fail=0
+diskb_mount_fail=0
+diskc_mount_fail=0
+diskd_mount_fail=0
+diske_mount_fail=0
+diskf_mount_fail=0
+diskg_mount_fail=0
+diskh_mount_fail=0
+
+diska_rw_success=0
+diskb_rw_success=0
+diskc_rw_success=0
+diskd_rw_success=0
+diske_rw_success=0
+diskf_rw_success=0
+diskg_rw_success=0
+diskh_rw_success=0
+
+disk_number=0
+disk_ok_number=0
+
+for disk in a b c d e f g h
+do
+	if [ -e /dev/sd${disk}1 ] ; then
+		for partition in 1 2 3 4 5
+		do
+			if [ -e /dev/sd${disk}${partition} ] ; then
+				grep sd${disk}${partition} /proc/partitions > /tmp/$$
+				set $(wc -l /tmp/$$)
+				linesfound=$1
+
+				if [ $linesfound -gt 0 ] ; then
+					case ${disk} in
+						a )
+							diska_partitions=`expr $diska_partitions + 1`;;
+						b )
+							diskb_partitions=`expr $diskb_partitions + 1`;;
+						c )
+							diskc_partitions=`expr $diskc_partitions + 1`;;
+						d )
+							diskd_partitions=`expr $diskd_partitions + 1`;;
+						e )
+							diske_partitions=`expr $diske_partitions + 1`;;
+						f )
+							diskf_partitions=`expr $diskf_partitions + 1`;;
+						g )
+							diskg_partitions=`expr $diskg_partitions + 1`;;
+						h )
+							diskh_partitions=`expr $diskh_partitions + 1`;;
+					esac
+				
+					if [ -e /tmp/sd${disk}${partition} ] && [ -d /tmp/sd${disk}${partition} ] ; then
+						mount /dev/sd${disk}${partition} /tmp/sd${disk}${partition}
+					else
+						rm -rf /tmp/sd${disk}${partition}
+						mkdir -p /tmp/sd${disk}${partition}
+						mount /dev/sd${disk}${partition} /tmp/sd${disk}${partition}
+					fi
+		
+					grep /tmp/sd${disk}${partition} /proc/mounts > /tmp/$$
+					set $(wc -l /tmp/$$)
+					linesfound=$1
+	
+					if [ $linesfound -gt 0 ] ; then
+						case ${disk} in
+							a )
+								diska_mount_success=`expr $diska_mount_success + 1`;;
+							b )
+								diskb_mount_success=`expr $diskb_mount_success + 1`;;
+							c )
+								diskc_mount_success=`expr $diskc_mount_success + 1`;;
+							d )
+								diskd_mount_success=`expr $diskd_mount_success + 1`;;
+							e )
+								diske_mount_success=`expr $diske_mount_success + 1`;;
+							f )
+								diskf_mount_success=`expr $diskf_mount_success + 1`;;
+							g )
+								diskg_mount_success=`expr $diskg_mount_success + 1`;;
+							h )
+								diskh_mount_success=`expr $diskh_mount_success + 1`;;
+						esac
+
+						echo /tmp/sd${disk}${partition} > /tmp/sd${disk}${partition}/$test_date.txt
+						grep /tmp/sd${disk}${partition} /tmp/sd${disk}${partition}/$test_date.txt > /tmp/$$
+						set $(wc -l /tmp/$$)
+						linesfound=$1
+
+						if [ $linesfound -gt 0 ] ; then
+							case ${disk} in
+								a )
+									diska_rw_success=`expr $diska_rw_success + 1`;;
+								b )
+									diskb_rw_success=`expr $diskb_rw_success + 1`;;
+								c )
+									diskc_rw_success=`expr $diskc_rw_success + 1`;;
+								d )
+									diskd_rw_success=`expr $diskd_rw_success + 1`;;
+								e )
+									diske_rw_success=`expr $diske_rw_success + 1`;;
+								f )
+									diskf_rw_success=`expr $diskf_rw_success + 1`;;
+								g )
+									diskg_rw_success=`expr $diskg_rw_success + 1`;;
+								h )
+									diskh_rw_success=`expr $diskh_rw_success + 1`;;
+							esac
+						fi
+					else
+						case ${disk} in
+							a )
+								diska_mount_fail=`expr $diska_mount_fail + 1`;;
+							b )
+								diskb_mount_fail=`expr $diskb_mount_fail + 1`;;
+							c )
+								diskc_mount_fail=`expr $diskc_mount_fail + 1`;;
+							d )
+								diskd_mount_fail=`expr $diskd_mount_fail + 1`;;
+							e )
+								diske_mount_fail=`expr $diske_mount_fail + 1`;;
+							f )
+								diskf_mount_fail=`expr $diskf_mount_fail + 1`;;
+							g )
+								diskg_mount_fail=`expr $diskg_mount_fail + 1`;;
+							h )
+								diskh_mount_fail=`expr $diskh_mount_fail + 1`;;
+						esac
+					fi
+				fi
+			fi
+		done
+	else
+		if [ -e /dev/sd${disk} ] ;  then
+			grep sd${disk} /proc/partitions > /tmp/$$
+			set $(wc -l /tmp/$$)
+			linesfound=$1
+
+			if [ $linesfound -gt 0 ] ; then
+				case ${disk} in
+					a )
+						diska_partitions=`expr $diska_partitions + 1`;;
+					b )
+						diskb_partitions=`expr $diskb_partitions + 1`;;
+					c )
+						diskc_partitions=`expr $diskc_partitions + 1`;;
+					d )
+						diskd_partitions=`expr $diskd_partitions + 1`;;
+					e )
+						diske_partitions=`expr $diske_partitions + 1`;;
+					f )
+						diskf_partitions=`expr $diskf_partitions + 1`;;
+					g )
+						diskg_partitions=`expr $diskg_partitions + 1`;;
+					h )
+						diskh_partitions=`expr $diskh_partitions + 1`;;
+				esac
+
+				if [ -d /tmp/sd${disk} ] ; then
+					mount /dev/sd${disk} /tmp/sd${disk}
+				else
+					rm -rf /tmp/sd${disk}
+					mkdir -p /tmp/sd${disk}
+					mount /dev/sd${disk} /tmp/sd${disk}
+				fi
+
+				grep /tmp/sd${disk} /proc/mounts > /tmp/$$
+				set $(wc -l /tmp/$$)
+				linesfound=$1
+
+				if [ $linesfound -gt 0 ] ; then
+					case ${disk} in
+						a )
+							diska_mount_success=`expr $diska_mount_success + 1`;;
+						b )
+							diskb_mount_success=`expr $diskb_mount_success + 1`;;
+						c )
+							diskc_mount_success=`expr $diskc_mount_success + 1`;;
+						d )
+							diskd_mount_success=`expr $diskd_mount_success + 1`;;
+						e )
+							diske_mount_success=`expr $diske_mount_success + 1`;;
+						f )
+							diskf_mount_success=`expr $diskf_mount_success + 1`;;
+						g )
+							diskg_mount_success=`expr $diskg_mount_success + 1`;;
+						h )
+							diskh_mount_success=`expr $diskh_mount_success + 1`;;
+					esac
+
+					echo /tmp/sd${disk} > /tmp/sd${disk}/$test_date.txt
+					grep /tmp/sd${disk} /tmp/sd${disk}/$test_date.txt > /tmp/$$
+					set $(wc -l /tmp/$$)
+					linesfound=$1
+	
+					if [ $linesfound -gt 0 ] ; then
+						case ${disk} in
+							a )
+								diska_rw_success=`expr $diska_rw_success + 1`;;
+							b )
+								diskb_rw_success=`expr $diskb_rw_success + 1`;;
+							c )
+								diskc_rw_success=`expr $diskc_rw_success + 1`;;
+							d )
+								diskd_rw_success=`expr $diskd_rw_success + 1`;;
+							e )
+								diske_rw_success=`expr $diske_rw_success + 1`;;
+							f )
+								diskf_rw_success=`expr $diskf_rw_success + 1`;;
+							g )
+								diskg_rw_success=`expr $diskg_rw_success + 1`;;
+							h )
+								diskh_rw_success=`expr $diskh_rw_success + 1`;;
+						esac
+					fi
+				else
+					case ${disk} in
+							a )
+								diska_mount_fail=`expr $diska_mount_fail + 1`;;
+							b )
+								diskb_mount_fail=`expr $diskb_mount_fail + 1`;;
+							c )
+								diskc_mount_fail=`expr $diskc_mount_fail + 1`;;
+							d )
+								diskd_mount_fail=`expr $diskd_mount_fail + 1`;;
+							e )
+								diske_mount_fail=`expr $diske_mount_fail + 1`;;
+							f )
+								diskf_mount_fail=`expr $diskf_mount_fail + 1`;;
+							g )
+								diskg_mount_fail=`expr $diskg_mount_fail + 1`;;
+							h )
+								diskh_mount_fail=`expr $diskh_mount_fail + 1`;;
+					esac
+				fi
+			fi
+		fi
+	fi
+done
+
+
+rm -rf /tmp/$$
+
+#umount the possible mounted devices
+for files in /tmp/sd*
+do
+	umount $files
+done
+
+for disk in a b c d e f g h
+do
+	case $disk in
+		a )
+			if [ $diska_partitions -gt 0 ] ; then
+				disk_number=`expr $disk_number + 1`
+				if [ $diska_rw_success -eq $diska_partitions ] ; then
+					disk_ok_number=`expr $disk_ok_number + 1`
+					echo sd${disk}.........................................Read/Write OK
+				else
+					echo sd${disk}.........................................Read/Write FAIL
+				fi
+			fi;;
+
+		b )
+			if [ $diskb_partitions -gt 0 ] ; then
+				disk_number=`expr $disk_number + 1`
+				if [ $diskb_rw_success -eq $diskb_partitions ] ; then
+					disk_ok_number=`expr $disk_ok_number + 1`
+					echo sd${disk}.........................................Read/Write OK
+				else
+					echo sd${disk}.........................................Read/Write FAIL
+				fi
+			fi;;	
+
+		c )
+			if [ $diskc_partitions -gt 0 ] ; then
+				disk_number=`expr $disk_number + 1`
+				if [ $diskc_rw_success -eq $diskc_partitions ] ; then
+					disk_ok_number=`expr $disk_ok_number + 1`
+					echo sd${disk}.........................................Read/Write OK
+				else
+					echo sd${disk}.........................................Read/Write FAIL
+				fi
+			fi;;
+
+		d )
+			if [ $diskd_partitions -gt 0 ] ; then
+				disk_number=`expr $disk_number + 1`
+				if [ $diskd_rw_success -eq $diskd_partitions ] ; then
+					disk_ok_number=`expr $disk_ok_number + 1`
+					echo sd${disk}.........................................Read/Write OK
+				else
+					echo sd${disk}.........................................Read/Write FAIL
+				fi
+			fi;;
+
+		e )
+			if [ $diske_partitions -gt 0 ] ; then
+				disk_number=`expr $disk_number + 1`
+				if [ $diske_rw_success -eq $diske_partitions ] ; then
+					disk_ok_number=`expr $disk_ok_number + 1`
+					echo sd${disk}.........................................Read/Write OK
+				else
+					echo sd${disk}.........................................Read/Write FAIL
+				fi
+			fi;;
+
+		f )
+			if [ $diskf_partitions -gt 0 ] ; then
+				disk_number=`expr $disk_number + 1`
+				if [ $diskf_rw_success -eq $diskf_partitions ] ; then
+					disk_ok_number=`expr $disk_ok_number + 1`
+					echo sd${disk}.........................................Read/Write OK
+				else
+					echo sd${disk}.........................................Read/Write FAIL
+				fi
+			fi;;
+
+		g )
+			if [ $diskg_partitions -gt 0 ] ; then
+				disk_number=`expr $disk_number + 1`
+				if [ $diskg_rw_success -eq $diskg_partitions ] ; then
+					disk_ok_number=`expr $disk_ok_number + 1`
+					echo sd${disk}.........................................Read/Write OK
+				else
+					echo sd${disk}.........................................Read/Write FAIL
+				fi
+			fi;;
+
+		h )
+			if [ $diskh_partitions -gt 0 ] ; then
+				disk_number=`expr $disk_number + 1`
+				if [ $diskh_rw_success -eq $diskh_partitions ] ; then
+					disk_ok_number=`expr $disk_ok_number + 1`
+					echo sd${disk}.........................................Read/Write OK
+				else
+					echo sd${disk}.........................................Read/Write FAIL
+				fi
+			fi;;
+	esac
+done
+
+#echo there are $disk_number disk\(s\) detected, $disk_ok_number tested OK
+
+if [ $disk_number -eq $disk_ok_number ] && [ $disk_number -gt 0 ]; then
+	echo there are $disk_number disk\(s\) detected, $disk_ok_number tested OK
+	echo USB port check test result : PASS
+else
+	echo Nothing detected, USB port check test result : FAIL
+fi
+
+exit 0

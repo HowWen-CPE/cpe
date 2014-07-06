@@ -1,0 +1,14 @@
+#!/bin/sh
+echo "~~wifi_config begin~~"
+if [ "$(nvram get wifi_mode)" = "ap" ]; then
+		ap_config 
+elif [ "$(nvram get wifi_mode)" = "bridge" ]; then
+		bridge_config
+elif [ "$(nvram get wifi_mode)" = "repeater" ]; then
+		repeater_config	
+fi
+echo "~~wifi_config end~~"
+
+
+
+

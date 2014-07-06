@@ -1,0 +1,26 @@
+#!/bin/sh
+action="insmod"
+[ "$2" = "stop" ] && action="rmmod"
+case "$1" in
+ipv6)
+$action ipv6
+$action tunnel6
+$action ip6_tunnel
+;;
+3g)
+$action nls_base    #20 file system
+$action scsi_mod    #20 block device
+$action nls_cp437   #25 file system
+$action nls_cp850   #25 file system
+$action nls_iso8859-1   #25 file system
+$action nls_utf8    #25 file system
+$action fat         #30 file system
+$action vfat        #30 file system
+$action sd_mod      #40 block device
+$action cdc-acm     #60 usb
+$action usbserial   #60 usb
+$action usb-storage #60 usb
+$action option      #65 usb
+$action sg          #65 block device
+;;
+esac

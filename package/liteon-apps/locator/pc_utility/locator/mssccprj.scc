@@ -1,0 +1,9 @@
+SCC = This is a Source Code Control file
+
+[upgrader.sln]
+SCC_Aux_Path = "F:\vss2005"
+SCC_Project_Name = "$/work/project/upgrader.root/upgrader", EAAAAAAA
+
+[upgrader.vcproj]
+SCC_Aux_Path = "F:\vss2005"
+SCC_Project_Name = "$/work/project/upgrader.root/upgrader", EAAAAAAA

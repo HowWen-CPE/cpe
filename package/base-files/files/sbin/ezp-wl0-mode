@@ -1,0 +1,307 @@
+#!/bin/sh
+
+# change wan interface device, mainly used in wifiwan or wisp
+# parameters
+# 1: wan num
+# 2: new device
+change_wan_device_ifname()
+{
+    local num="${1}"
+    local newdev="${2}"
+    local wandev="$(nvram get wan${num}_device)"
+    local wanifname="$(nvram get wan${num}_ifname)"
+    # when wan uses ifname same as device, change device
+    # means we have to change ifname too.
+    [ "${wanifname}" = "${wandev}" ] && {
+        nvram set "wan${num}_ifname=$newdev"
+    }
+    nvram set "wan${num}_device=$newdev"
+}
+
+# revert device from backup to original
+# parameters
+# 1: wan num
+revert_wan_device_ifname()
+{
+    local num="${1}"
+    local wandev="$(nvram get wan${num}_device)"
+    local wanifname="$(nvram get wan${num}_ifname)"
+    # when wan uses ifname same as device, change device
+    # means we have to change ifname too.
+    revertdev="$(nvram get wan${num}_device_backup)"
+    [ "${wanifname}" = "${wandev}" ] && {
+        nvram set "wan${num}_ifname=$revertdev"
+    }
+    nvram set "wan${num}_device=$revertdev"
+}
+
+# Modify br_rule member
+# $1 : add/del
+# $2 : ifname
+mod_lan_member()
+{
+    case "$1" in
+    add)
+        ifname="$2"
+        brifnames="$(nvram show br_lan_rule 0 ifnames)"
+        [ -z "$(echo \"$brifnames\" | grep $ifname)" ] && {
+            brifnames="$brifnames $ifname"
+            nvram replace attr br_lan_rule 0 ifnames "$brifnames"
+        }
+    ;;
+    del)
+        ifname="$2"
+        brifnames="$(nvram show br_lan_rule 0 ifnames)"
+        [ -n "$(echo \"$brifnames\" | grep $ifname)" ] && {
+            brifnames="$(nvram show br_lan_rule 0 ifnames | sed s/$ifname//g | sed 's/  / /g' )"
+            nvram replace attr br_lan_rule 0 ifnames "$brifnames"
+        }
+    ;;
+    *)
+    esac
+}
+
+
+new_wl_mode="$1"
+post_action="$2"
+orig_wl_mode="$(nvram show system_mode 0 name)"
+# backup original lanside ip address and netmask
+[ "${orig_wl_mode}" = "normal" ] && {
+    ipaddr_normal="$(nvram show lan_static_rule 0 ipaddr)"
+    mask_normal="$(nvram show lan_static_rule 0 mask)"
+    nvram replace attr lan_static_rule 0 ipaddr_normal "$ipaddr_normal"
+    nvram replace attr lan_static_rule 0 mask_normal "$mask_normal"
+}
+# set auto bridge don't work
+#nvram replace attr wl_mode_rule 0 ab_status 0
+local tmp_mode="$new_wl_mode"
+[ "$new_wl_mode" = "wisp_ap" ] && new_wl_mode="ap"
+
+case ${new_wl_mode} in
+normal)
+    # switch to normal mode
+    [ "${orig_wl_mode}" = "wisp" -o "${orig_wl_mode}" = "ur" -o \
+      "${orig_wl_mode}" = "wisp_ur" ] && {
+        revert_wan_device_ifname "0" 
+        # disable apcli function
+        nvram replace attr wl0_apcli_rule 0 enable 0
+    }
+#    [ `nvram show board_model_rule 0 bd_model` = "WP838" ] && {
+#    	/sbin/wp838_hack_eth0 disable
+#	}
+    
+    lanifnames="$(nvram show lan_wan_mode_rule 0 lan_ifnames)"
+    wanifnames="$(nvram show lan_wan_mode_rule 0 wan_ifnames)"
+    nvram replace attr br_lan_rule 0 ifnames "$lanifnames"
+    nvram replace attr br_wan_rule 0 ifnames "$wanifnames"
+    
+    # enable wan
+    nvram replace attr wan_main_rule 0 enable "1"
+    nvram set "wan0_device=br-wan0"
+
+    # set lan ip/netmask address
+    ipaddr_normal="$(nvram show lan_static_rule 0 ipaddr_normal)"
+    mask_normal="$(nvram show lan_static_rule 0 mask_normal)"
+    nvram replace attr lan_static_rule 0 ipaddr "$ipaddr_normal"
+    nvram replace attr lan_static_rule 0 mask "$mask_normal"
+    nvram set "lan0_ipaddr=$ipaddr_normal"
+    nvram set "lan0_mask=$mask_normal"
+
+    #set lan0_proto to static
+    pre_curr="$(nvram show lan0_proto 0 curr)"
+    nvram replace attr lan0_proto 0 prev "$pre_curr"
+    nvram replace attr lan0_proto 0 curr "static"
+
+	#update wl_mode_rule/wl1_mode_rule
+    nvram replace attr wl_mode_rule 0 mode ap
+    nvram replace attr wl1_mode_rule 0 mode ap
+
+    #update system_mode & commit
+    nvram replace attr system_mode 0 name "normal"
+    nvram commit
+;;
+ap)
+    # switch to normal mode
+    [ "${orig_wl_mode}" = "wisp" -o "${orig_wl_mode}" = "ur" -o \
+      "${orig_wl_mode}" = "wisp_ur" ] && {
+        revert_wan_device_ifname "0" 
+        # disable apcli function
+        nvram replace attr wl0_apcli_rule 0 enable 0
+    }
+#    [ `nvram show board_model_rule 0 bd_model` = "WP838" ] && {
+#    	/sbin/wp838_hack_eth0 enable
+#	}
+
+    lanifnames="$(nvram show lan_wan_mode_rule 1 lan_ifnames)"
+    wanifnames="$(nvram show lan_wan_mode_rule 1 wan_ifnames)"
+    nvram replace attr br_lan_rule 0 ifnames "$lanifnames"
+    nvram replace attr br_wan_rule 0 ifnames "$wanifnames"
+
+    # disable wan
+    nvram replace attr wan_main_rule 0 enable "0"
+
+    # set lan ip/netmask address
+    ipaddr_ap="$(nvram show lan_static_rule 0 ipaddr_ap)"
+    mask_ap="$(nvram show lan_static_rule 0 mask_ap)"
+    nvram replace attr lan_static_rule 0 ipaddr "$ipaddr_ap"
+    nvram replace attr lan_static_rule 0 mask "$mask_ap"
+    nvram set "lan0_ipaddr=$ipaddr_ap"
+    nvram set "lan0_mask=$mask_ap"
+
+    #set lan0_proto to static
+    pre_curr="$(nvram show lan0_proto 0 curr)"
+    nvram replace attr lan0_proto 0 prev "$pre_curr"
+    nvram replace attr lan0_proto 0 curr "static"
+
+	# update wl_mode_rule/wl1_mode_rule
+    nvram replace attr wl_mode_rule 0 mode ap
+    nvram replace attr wl1_mode_rule 0 mode ap
+
+    #update system_mode & commit
+    nvram replace attr system_mode 0 name "ap"
+    nvram commit
+;;
+sta0)
+    lanifnames="$(nvram show lan_wan_mode_rule 4 lan_ifnames)"
+    nvram replace attr br_lan_rule 0 ifnames "$lanifnames"
+
+    # disable wan
+    nvram replace attr wan_main_rule 0 enable "0"
+
+    # set lan ip/netmask address 
+    ipaddr_ap="$(nvram show lan_static_rule 0 ipaddr_ap)"
+    mask_ap="$(nvram show lan_static_rule 0 mask_ap)"
+    nvram replace attr lan_static_rule 0 ipaddr "$ipaddr_ap"
+    nvram replace attr lan_static_rule 0 mask "$mask_ap"
+    nvram set "lan0_ipaddr=$ipaddr_ap"
+    nvram set "lan0_mask=$mask_ap"
+
+    #set lan0_proto to static
+    pre_curr="$(nvram show lan0_proto 0 curr)"
+    nvram replace attr lan0_proto 0 prev "$pre_curr"
+    nvram replace attr lan0_proto 0 curr "static"
+
+	#update wl_mode_rule/wl1_mode_rule
+    nvram replace attr wl_mode_rule 0 mode client
+    nvram replace attr wl1_mode_rule 0 mode ap
+
+    #update system_mode & commit
+    nvram replace attr system_mode 0 name "sta0"
+    nvram commit
+;;
+sta1)
+    lanifnames="$(nvram show lan_wan_mode_rule 5 lan_ifnames)"
+    nvram replace attr br_lan_rule 0 ifnames "$lanifnames"
+
+    # disable wan
+    nvram replace attr wan_main_rule 0 enable "0"
+
+    # set lan ip/netmask address to ap
+    ipaddr_ap="$(nvram show lan_static_rule 0 ipaddr_ap)"
+    mask_ap="$(nvram show lan_static_rule 0 mask_ap)"
+    nvram replace attr lan_static_rule 0 ipaddr "$ipaddr_ap"
+    nvram replace attr lan_static_rule 0 mask "$mask_ap"
+    nvram set "lan0_ipaddr=$ipaddr_ap"
+    nvram set "lan0_mask=$mask_ap"
+
+    #set lan0_proto to static
+    pre_curr="$(nvram show lan0_proto 0 curr)"
+    nvram replace attr lan0_proto 0 prev "$pre_curr"
+    nvram replace attr lan0_proto 0 curr "static"
+
+	#update wl_mode_rule/wl1_mode_rule
+    nvram replace attr wl_mode_rule 0 mode ap
+    nvram replace attr wl1_mode_rule 0 mode client
+
+    #update system_mode & commit
+    nvram replace attr system_mode 0 name "sta1"
+    nvram commit
+;;
+wisp0)
+    lanifnames="$(nvram show lan_wan_mode_rule 2 lan_ifnames)"
+    wanifnames="$(nvram show lan_wan_mode_rule 2 wan_ifnames)"
+    nvram replace attr br_lan_rule 0 ifnames "$lanifnames"
+    nvram replace attr br_wan_rule 0 ifnames "$wanifnames"
+
+    # enable wan
+    nvram replace attr wan_main_rule 0 enable "1"
+
+    # set lan ip/netmask address 
+    ipaddr_normal="$(nvram show lan_static_rule 0 ipaddr_normal)"
+    mask_normal="$(nvram show lan_static_rule 0 mask_normal)"
+    nvram replace attr lan_static_rule 0 ipaddr "$ipaddr_normal"
+    nvram replace attr lan_static_rule 0 mask "$mask_normal"
+    nvram set "lan0_ipaddr=$ipaddr_normal"
+    nvram set "lan0_mask=$mask_normal"
+
+    #set lan0_proto to static
+    pre_curr="$(nvram show lan0_proto 0 curr)"
+    nvram replace attr lan0_proto 0 prev "$pre_curr"
+    nvram replace attr lan0_proto 0 curr "static"
+
+	#update wl_mode_rule/wl1_mode_rule
+    nvram replace attr wl_mode_rule 0 mode client
+    nvram replace attr wl1_mode_rule 0 mode ap
+
+    #update system_mode & commit
+    nvram replace attr system_mode 0 name "wisp0"
+    nvram commit
+;;
+wisp1)
+    lanifnames="$(nvram show lan_wan_mode_rule 3 lan_ifnames)"
+    wanifnames="$(nvram show lan_wan_mode_rule 3 wan_ifnames)"
+    nvram replace attr br_lan_rule 0 ifnames "$lanifnames"
+    nvram replace attr br_wan_rule 0 ifnames "$wanifnames"
+
+    # enable wan
+    nvram replace attr wan_main_rule 0 enable "1"
+
+    # set lan ip/netmask address
+    ipaddr_normal="$(nvram show lan_static_rule 0 ipaddr_normal)"
+    mask_normal="$(nvram show lan_static_rule 0 mask_normal)"
+    nvram replace attr lan_static_rule 0 ipaddr "$ipaddr_normal"
+    nvram replace attr lan_static_rule 0 mask "$mask_normal"
+    nvram set "lan0_ipaddr=$ipaddr_normal"
+    nvram set "lan0_mask=$mask_normal"
+
+    #set lan0_proto to static
+    pre_curr="$(nvram show lan0_proto 0 curr)"
+    nvram replace attr lan0_proto 0 prev "$pre_curr"
+    nvram replace attr lan0_proto 0 curr "static"
+
+	#update wl_mode_rule/wl1_mode_rule
+    nvram replace attr wl_mode_rule 0 mode ap 
+    nvram replace attr wl1_mode_rule 0 mode client
+
+    #update system_mode & commit
+    nvram replace attr system_mode 0 name "wisp1"
+    nvram commit
+;;
+ur)
+    [ "${orig_wl_mode}" = "wisp" -o  "${orig_wl_mode}" = "wisp_ur" ] && revert_wan_device_ifname "0" 
+    # set all port group together
+    nvram replace attr vlanport_rule 0 gmemb "111101"
+    nvram replace attr vlanport_rule 1 gmemb "111011"
+    nvram replace attr vlanport_rule 2 gmemb "110111"
+    nvram replace attr vlanport_rule 3 gmemb "101111"
+    nvram replace attr vlanport_rule 4 gmemb "011111"
+    nvram replace attr vlanport_rule 4 pvid "1"
+    mod_lan_member add apclii0
+    #nvram replace attr br_rule 0 ifnames "vlan1 vlan2 rai0 rai1 wds0 wds1 wds2 wds3 apclii0"
+    # disable wan
+    nvram replace attr wan_main_rule 0 enable "0"
+    # set lan ip/netmask address to ap
+    ipaddr_ap="$(nvram show lan_static_rule 0 ipaddr_ap)"
+    mask_ap="$(nvram show lan_static_rule 0 mask_ap)"
+    nvram replace attr lan_static_rule 0 ipaddr "$ipaddr_ap"
+    nvram replace attr lan_static_rule 0 mask "$mask_ap"
+    nvram replace attr wl_mode_rule 0 mode "${new_wl_mode}"
+    nvram replace attr wl0_apcli_rule 0 enable 1
+    nvram commit
+;;
+
+esac
+#/sbin/ezp-chk-wl-enable
+#/sbin/ezp-setup-vlan
+#reboot
+[ "${post_action}" = "reboot" ] && /sbin/reboot

@@ -1,0 +1,66 @@
+#!/bin/sh
+
+wp838_hack_enable_vlan()
+{
+#	nvram replace attr port_device_rule 0 port_device eth0.1
+#	nvram replace attr port_device_rule 1 port_device eth0.2
+#	nvram replace attr port_device_rule 0 portid 2
+#	nvram replace attr port_device_rule 1 portid 3
+	which ethreg > /dev/null
+	if [ $? -eq 0 ];then
+		#Recognize tag packet from CPU
+		ethreg -i eth0 0x0660=0x0014020D
+		ethreg -i eth0 0x0678=0x00140209
+		ethreg -i eth0 0x0684=0x00140205
+		#Insert PVID 1 to port0,port2
+		ethreg -i eth0 0x0420=0x00010001
+		ethreg -i eth0 0x0430=0x00010001
+		#Insert PVID 1 to port3
+		ethreg -i eth0 0x0438=0x00020001
+		#Group port - 0 and 2 to VID 1
+		ethreg -i eth0 0x0610=0x001BFDE0
+		ethreg -i eth0 0x0614=0x80010002
+		#Group port - 0 and 3 to VID 2
+		ethreg -i eth0 0x0610=0x001BF7E0
+		ethreg -i eth0 0x0614=0x80020002
+	fi
+	vconfig add eth0 1
+	vconfig add eth0 2
+	ifconfig eth0.1 up
+	ifconfig eth0.2 up
+}
+
+wp838_hack_disable_vlan()
+{
+#	nvram replace attr port_device_rule 0 port_device eth0
+#	nvram replace attr port_device_rule 1 port_device eth0
+#	nvram replace attr port_device_rule 0 portid 2
+#	nvram replace attr port_device_rule 1 portid 3
+	which ethreg > /dev/null
+	if [ $? -eq 0 ];then
+		#Recognize tag packet from CPU
+		ethreg -i eth0 0x0660=0x0014000D
+		ethreg -i eth0 0x0678=0x00140009
+		ethreg -i eth0 0x0684=0x00140005
+		#Insert PVID 1 to port0,port2, port3
+		ethreg -i eth0 0x0420=0x00010001
+		ethreg -i eth0 0x0430=0x00010001
+		ethreg -i eth0 0x0438=0x00010001
+		#Flush all vlan table
+		ethreg -i eth0 0x0614=0x80010001
+	fi
+	ifconfig eth0.1 down
+	ifconfig eth0.2 down
+	vconfig rem eth0.1
+	vconfig rem eth0.2
+}
+
+action="$1"
+case ${action} in
+enable)
+	wp838_hack_enable_vlan
+	;;
+disable)
+	wp838_hack_disable_vlan
+	;;
+esac

@@ -1,0 +1,13 @@
+--- old/include/net.h	2012-11-28 15:36:33.000000000 +0800
++++ new/include/net.h	2012-11-28 16:35:58.000000000 +0800
+@@ -350,6 +350,10 @@
+ extern ushort CDPApplianceVLAN;
+ #endif
+ 
++#ifdef LITEON_SRC_VALID
++/*added by sean for liteon command. Nov 2012, 28*/
++IPaddr_t	NetLiteonServerIP; /* liteon tmp serverip*/
++#endif //LITEON_SRC_VALID
+ /* Initialize the network adapter */
+ extern int	NetLoop(proto_t);
+ 

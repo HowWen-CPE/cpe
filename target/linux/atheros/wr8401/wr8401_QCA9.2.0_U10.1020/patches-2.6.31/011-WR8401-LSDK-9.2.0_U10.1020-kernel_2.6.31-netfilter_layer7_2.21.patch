@@ -1,0 +1,11 @@
+--- linux-2.6.31_atheros/include/linux/netfilter_ipv4/ip_tables.h	2013-04-03 13:34:53.000000000 +0800
++++ linux-2.6.31_liteon/include/linux/netfilter_ipv4/ip_tables.h	2013-02-07 16:50:03.000000000 +0800
+@@ -70,7 +70,7 @@
+ #define IPT_F_FRAG		0x01	/* Set if rule is a fragment rule */
+ #define IPT_F_GOTO		0x02	/* Set if jump is a goto */
+ #define IPT_F_MASK		0x03	/* All possible flag bits mask. */
+-#define IPT_F_NO_DEF_MATCH      0x80    /* Internal: no default match rules present */
++#define IPT_F_NO_DEF_MATCH	0x80	/* Internal: no default match rules present */
+ 
+ /* Values for "inv" field in struct ipt_ip. */
+ #define IPT_INV_VIA_IN		0x01	/* Invert the sense of IN IFACE. */

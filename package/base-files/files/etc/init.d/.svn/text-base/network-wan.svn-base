@@ -1,0 +1,67 @@
+#!/bin/sh /etc/rc.common
+# $NUM is optional.
+
+. /etc/network.sh
+
+START=94
+STOP=90
+
+log_msg="network-wan"
+no_log=1
+
+start () {
+    local num;
+    local limit;
+
+    [ -z "$NUM" ] && {
+        num=0
+        limit=$(nvram get wan_num)
+        while [ $num -lt $limit ];
+        do 
+            [ "$(nvram show wan_main_rule $num enable)" = "1" ] && { 
+                ifup wan$num
+                #ifupv6 wan$num
+            }
+            num=$(($num + 1))
+        done
+    }
+    [ -n "$NUM" ] && {
+        [ "$(nvram show wan_main_rule $NUM enable)" = "1" ] && {
+            ifup wan$NUM
+            #ifupv6 wan$NUM
+        }
+    }
+    return $err
+}
+
+stop () {
+    local num;
+    local limit;
+    [ -z "$NUM" ] && {
+        num=0
+        limit=$(nvram get wan_num)
+        while [ $num -lt $limit ];
+        do 
+            [ "$(nvram show wan_main_rule $num enable)" = "1" ] && {
+                echo "ifdown wan$num" >> /tmp/networkwan.log
+                ifdown wan$num
+                #echo "ifdownv6 wan$num" >> /tmp/networkwan.log
+                #ifdownv6 wan$num
+            }
+            num=$(($num + 1))
+        done
+    }
+    [ -n "$NUM" ] && {
+            [ "$(nvram show wan_main_rule $NUM enable)" = "1" ] && {
+                ifdown wan$NUM
+                #ifdownv6 wan$NUM
+            }
+    }
+    return $err
+}
+
+restart() {
+    stop
+    start
+    return $err
+}

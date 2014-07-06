@@ -1,0 +1,617 @@
+#!/bin/sh
+led_no="0 11 12"
+TMP_FILE="/tmp/operation_tmp"
+PFD_Test_usage(){
+   echo "please read usage"
+}
+
+LED_Test_Usage()
+{
+	echo ""
+        echo "LED Test Usage:"
+        echo "  PFD_Test LED on/off <test seconds>"
+        echo ""
+}
+
+# future
+wifidevctrl ()
+{
+    local act=$1
+    local widx="0"
+    [ "$act" = "down" ] && {
+        while [ "$widx" -lt "4" ]; do
+            brctl delif br0 ra$widx
+            brctl delif br0 wds$widx
+            ifconfig ra$widx down
+            ifconfig wds$widx down
+            widx=$(($widx + 1))
+        done
+        brctl delif br0 apcli0
+        ifconfig apcli0 down
+    } || {
+        while [ "$widx" -lt "4" ]; do
+            ifconfig ra$widx up
+            ifconfig wds$widx up
+            brctl addif br0 ra$widx
+            brctl addif br0 wds$widx
+            widx=$(($widx + 1))
+        done
+        ifconfig apcli0 up
+        brctl addif br0 apcli0
+    }
+}
+
+wifidevctrl24G()
+{
+    local act=$1
+    local widx="0"
+    [ "$act" = "down" ] && {
+        while [ "$widx" -lt "4" ]; do
+            brctl delif br0 rai$widx
+            brctl delif br0 wdsi$widx
+            ifconfig rai$widx down
+            ifconfig wdsi$widx down
+            widx=$(($widx + 1))
+        done
+        brctl delif br0 apclii0
+        ifconfig apclii0 down
+    } || {
+        while [ "$widx" -lt "4" ]; do
+            ifconfig rai$widx up
+            ifconfig wdsi$widx up
+            brctl addif br0 rai$widx
+            brctl addif br0 wdsi$widx
+            widx=$(($widx + 1))
+        done
+        ifconfig apclii0 up
+        brctl addif br0 apclii0
+    }
+}
+
+
+
+#100 full
+net_100_full(){
+  if [ $1 == "lan" ];then
+  for i in 0 1 2 3
+    do
+      value=`mii_mgr -g -p ${i} -r 0|awk -F '=' '{print $2}'`
+	operator $value "|" 2100 $TMP_FILE
+      value=`cat $TMP_FILE` 
+      cmd="mii_mgr -s -p ${i} -r 0 -v ${value}"
+      eval $cmd
+    done
+  elif [ $1 == "wan" ];then
+      value=`mii_mgr -g -p 4 -r 0|awk -F '=' '{print $2}'`
+      operator $value "|" 2100 $TMP_FILE
+      value=`cat $TMP_FILE` 
+      cmd="mii_mgr -s -p 4 -r 0 -v ${value}"
+      eval $cmd
+  
+  fi
+}
+
+#100 half
+net_100_half(){
+  if [ $1 == "lan" ];then  
+  for i in 0 1 2 3
+    do
+	 #echo "========net_100_half==lan==${i}============"
+	  value=`mii_mgr -g -p ${i} -r 0|awk -F '=' '{print $2}'`
+	  operator $value "|" 2000 $TMP_FILE
+	  value=`cat $TMP_FILE` 
+	  operator $value "&" EEFF $TMP_FILE
+	  value=`cat $TMP_FILE`
+
+	  cmd="mii_mgr -s -p ${i} -r 0 -v ${value}"
+	  eval $cmd
+    done
+    
+  elif [ $1 == "wan" ];then
+	  value=`mii_mgr -g -p 4 -r 0|awk -F '=' '{print $2}'`
+	  operator $value "|" 2000 $TMP_FILE
+	  value=`cat $TMP_FILE` 
+	  operator $value "&" EEFF $TMP_FILE
+	  value=`cat $TMP_FILE`
+	  cmd="mii_mgr -s -p 4 -r 0 -v ${value}"
+	  eval $cmd
+   fi  
+}
+
+#10 full
+net_10_full(){
+if [ $1 == "lan" ];then
+    for i in 0 1 2 3
+    do
+      value=`mii_mgr -g -p $i -r 0|awk -F '=' '{print $2}'`
+      operator $value "|" 0100 $TMP_FILE	
+      value=`cat $TMP_FILE` 
+      operator $value "&" CFFF $TMP_FILE
+      value=`cat $TMP_FILE`      
+      cmd="mii_mgr -s -p $i -r 0 -v ${value}"
+      eval $cmd
+    done
+else
+      value=`mii_mgr -g -p 4 -r 0|awk -F '=' '{print $2}'`
+	operator $value "|" 0100 $TMP_FILE
+      value=`cat $TMP_FILE` 
+	operator $value "&" CFFF $TMP_FILE
+      value=`cat $TMP_FILE`      
+      cmd="mii_mgr -s -p 4 -r 0 -v ${value}"
+      eval $cmd
+fi
+}
+
+#10 half
+net_10_half(){
+if [ $1 == "lan" ];then
+    for i in 0 1 2 3
+    do
+    	#echo "========net_10_half==lan==${i}============"
+	  value=`mii_mgr -g -p ${i} -r 0|awk -F '=' '{print $2}'`
+	  operator $value "|" 0000 $TMP_FILE
+	  value=`cat $TMP_FILE` 
+	  operator $value "&" CEFF $TMP_FILE
+	  value=`cat $TMP_FILE`
+	  cmd="mii_mgr -s -p $i -r 0 -v ${value}"
+	  eval $cmd
+    done
+elif [ $1 == "wan" ];then
+	  value=`mii_mgr -g -p 4 -r 0|awk -F '=' '{print $2}'`
+	  operator $value "|" 0000 $TMP_FILE
+	  value=`cat $TMP_FILE` 
+	  operator $value "&" CEFF $TMP_FILE
+	  value=`cat $TMP_FILE`
+	  cmd="mii_mgr -s -p 4 -r 0 -v ${value}"
+	  eval $cmd
+fi	  
+}
+
+#Ethernet test
+if [ $# -eq 3 ]&&[ $1 == "lan" ]&&[ $3 == "full" ];then
+	#echo "===========1============"
+   if [ $2 -eq 100 ];then 
+   	#echo "===========1.100============"
+      net_100_full lan
+   elif [ $2 -eq 10 ];then 
+   	#echo "===========1.10============"
+      net_10_full lan  
+   fi
+   echo "WP777 Pre-Function Test ->"
+elif [ $# -eq 3 ]&&[ $1 == "wan" ]&&[ $3 == "full" ];then
+	#echo "===========2============"
+   if [ $2 -eq 100 ];then
+      #echo "===========2.100============"
+      net_100_full wan
+   elif [ $2 -eq 10 ];then
+       #echo "===========2.10============"
+      net_10_full wan   
+   fi
+   echo "WP777 Pre-Function Test ->"
+elif [ $# -eq 3 ]&&[ $1 == "lan" ]&&[ $3 == "half" ];then
+	#echo "===========3============"
+    if [ $2 -eq 100 ];then
+     #echo "=============3.100==========="
+      net_100_half lan
+   elif [ $2 -eq 10 ];then
+     #echo "=============3.10===========" 
+      net_10_half lan
+   fi
+   echo "WP777 Pre-Function Test ->"
+elif [ $# -eq 3 ]&&[ $1 == "wan" ]&&[ $3 == "half" ];then
+	#echo "===========4============"
+    if [ $2 -eq 100 ];then
+      #echo "===========4.100============"
+      net_100_half wan
+   elif [ $2 -eq 10 ];then
+       #echo "===========4.10============"
+      net_10_half wan
+    fi 
+fi
+
+
+if [ $# -eq 2 ]&&[ $1 == "speed" ];then
+   if [ $2 -eq 100 ];then
+    for i in 0 1 2 3 4
+    do
+        mii_mgr -s -p ${i} -r 0 -v 9300
+        mii_mgr -s -p ${i} -r 4 -v 101
+    done
+   elif [ $2 -eq 10 ];then
+    for i in 0 1 2 3 4
+    do
+        mii_mgr -s -p ${i} -r 0 -v 9300
+        mii_mgr -s -p ${i} -r 4 -v 41
+    done
+   fi
+fi
+
+
+
+
+#test led
+if [ $# -eq 3 ]&&[ $1 == "LED" ]; then
+
+#mknod for reg cmd.
+if [ -r /dev/rdm0 ]; then
+	echo ""
+else
+	mknod /dev/rdm0 c 253 0
+fi
+
+#Print prompt message.
+if [ $2 == "on" ]; then
+	echo "All LED light on "
+	echo ""
+else 
+	echo "All LED light off"
+	echo ""
+fi
+
+#Backup gpio data and gpio mode.
+reg s 0xb0000600
+gpio23_00_data=`reg p 0x20`
+gpio71_40_data=`reg p 0x70`
+gpio72_data=`reg p 0x98`
+
+reg s 0
+gpiomode=`reg p 0x60`
+
+#Set WLED and EPHY pins to GPIO Mode.
+reg w 0x60 0xab71d
+
+#Set gpio#40 to output mode.
+reg s 0xb0000600
+reg w 0x74 0xffd01401
+
+#Set gpio#72 to output mode.
+reg w 0x9c 0x1
+
+
+if [ $1 == "LED" -a $2 == "on" ]; then
+	
+	#Light on all LED.
+        reg w 0x30 0x200
+        reg w 0x80 0x3c000001
+        reg w 0xa8 0x1
+        sleep $3
+	
+elif [ $1 == "LED" -a $2 == "off" ]; then
+	
+	#Light off all LED.
+        reg w 0x2c 0x200
+        reg w 0x7c 0x3c000001
+        reg w 0xa4 0x1
+	sleep $3
+	
+else
+	LED_Test_Usage
+fi
+
+	#Recover gpio data.
+	reg w 0x20 $gpio23_00_data
+	reg w 0x70 $gpio71_40_data
+	reg w 0x98 $gpio72_data
+	
+	#Set gpio#40 back to input mode.
+        reg s 0xb0000600
+    	reg w 0x74 0xffd01400
+
+	#Set gpio#72 back to input mode.
+    	reg w 0x9c 0x0
+
+	#Set WLED and EPHY pins back to normal Mode.
+	reg s 0
+	reg w 0x60 $gpiomode
+
+	echo ""
+	echo "Test successful!"
+	echo ""
+
+elif [ $1 == "LED" ]; then
+	LED_Test_Usage
+
+fi
+
+#reset to default factory
+if [ $# -eq 1 ]&&[ $1 == "reset" ];then
+   nvram default
+   default_value=`nvram show lan_static_rule_default 0 ipaddr_normal`
+   default_cmd="nvram set lan0_ipaddr=${default_value}"
+   eval ${default_cmd}
+   nvram commit
+   reboot  
+fi
+
+#set 5g mac
+set5gmac(){
+  if [ $# -eq 1 ];then
+     mac1=`echo $1|grep ":"|awk -F ':' '{print $2$1}'`
+     mac2=`echo $1|grep ":"|awk -F ':' '{print $4$3}'`
+     mac3=`echo $1|grep ":"|awk -F ':' '{print $6$5}'`
+     iwpriv ra0 e2p 04=$mac1
+     iwpriv ra0 e2p 06=$mac2
+     iwpriv ra0 e2p 08=$mac3
+  else
+     echo "please input right MAC address!"
+  fi
+}
+
+#get 5g mac
+get5gmac(){
+   mac1=`iwpriv ra0 e2p 04|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   mac2=`iwpriv ra0 e2p 06|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   mac3=`iwpriv ra0 e2p 08|grep "[0x002C]"|awk -F ':' '{print $2}'`
+
+   echo "5G MAC Address: ${mac1:5:2}:${mac1:3:2}:${mac2:5:2}:${mac2:3:2}:${mac3:5:2}:${mac3:3:2}"
+}
+
+#set 2.4g mac
+set2gmac(){
+  if [ $# -eq 1 ];then
+     mac1=`echo $1|grep ":"|awk -F ':' '{print $2$1}'`
+     mac2=`echo $1|grep ":"|awk -F ':' '{print $4$3}'`
+     mac3=`echo $1|grep ":"|awk -F ':' '{print $6$5}'`
+     iwpriv rai0 e2p 04=$mac1
+     iwpriv rai0 e2p 06=$mac2
+     iwpriv rai0 e2p 08=$mac3
+  else
+     echo "please input right MAC address!"
+  fi
+  #echo "=====mac1 $mac1 mac2 $mac2 mac3 $mac3 $#"
+}
+
+#get 2.4g mac
+get2gmac(){
+   mac1=`iwpriv rai0 e2p 04|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   mac2=`iwpriv rai0 e2p 06|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   mac3=`iwpriv rai0 e2p 08|grep "[0x002C]"|awk -F ':' '{print $2}'`
+
+   echo "2.4G MAC Address: ${mac1:5:2}:${mac1:3:2}:${mac2:5:2}:${mac2:3:2}:${mac3:5:2}:${mac3:3:2}"
+}
+#set mac
+setmac(){
+   if [ $# -eq 1 ];then
+      mac1=`echo $1|grep ":"|awk -F ':' '{print $2$1}'`
+      mac2=`echo $1|grep ":"|awk -F ':' '{print $4$3}'`
+      mac3=`echo $1|grep ":"|awk -F ':' '{print $6$5}'`
+      iwpriv rai0 e2p 28=$mac1
+      iwpriv rai0 e2p 2A=$mac2
+      iwpriv rai0 e2p 2C=$mac3
+   else
+      echo "please input right MAC address!"
+   fi
+}
+
+#get mac
+getmac(){
+   mac1=`iwpriv rai0 e2p 28|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   mac2=`iwpriv rai0 e2p 2A|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   mac3=`iwpriv rai0 e2p 2C|grep "[0x002C]"|awk -F ':' '{print $2}'`
+
+   echo "Ethernet MAC Address: ${mac1:5:2}:${mac1:3:2}:${mac2:5:2}:${mac2:3:2}:${mac3:5:2}:${mac3:3:2}"
+}
+#set mac address
+if [ $# -eq 3 ]&&[ $1 == "set" ]&&[ $2 == "mac" ];then
+    regex='[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]'
+         if [ `expr length $3` -eq 17 ]&&[ `echo $3|grep -Eqi $regex\
+            && echo YES || echo NO` == "YES" ]; then
+                orgmac=0x`echo $3|grep ":"|awk -F ':' '{print $1$2$3$4$5$6}'` 
+	        if [ "${orgmac:13:1}" != "0" ]; then
+		    echo "the last half Byte must be 0"
+		    exit 1
+	        fi
+		if [ "${orgmac:2:2}" = "00" ] && [ "${orgmac:4:2}" = "00" ] && [ "${orgmac:6:2}" = "00" ]\
+			&& [ "${orgmac:8:2}" = "00" ] && [ "${orgmac:10:2}" = "00" ] && [ "${orgmac:12:2}" = "00" ];then
+		    echo "please input right MAC address!"
+		    exit 1
+		fi
+		reg='[0-9]'
+		if [ `echo ${orgmac:3:1} | grep -Eqi ${reg} && echo Y || echo N` == "Y" ];then
+		    if [ `expr ${orgmac:3:1} % 2` -ne 0 ];then
+			echo "multicast address"
+			exit 1
+		    fi
+		else
+		    if [ "${orgmac:3:1}" = "b" ] || [ "${orgmac:3:1}" = "d" ] || [ "${orgmac:3:1}" = "f" ]\
+				|| [ "${orgmac:3:1}" = "B" ] || [ "${orgmac:3:1}" = "D" ] || [ "${orgmac:3:1}" = "F" ];then
+			echo "multicast address"
+			exit 1
+		    fi
+		fi
+			 basemac=0x`echo $3|grep ":"|awk -F ':' '{print $3$4$5 substr($6,1,1)}'`0
+             setmac $3
+             echo "Ethernet MAC Address: ${3}"
+
+                base2gmac=`printf "%x\n" $(($basemac+0))`
+             length2g=`expr length $base2gmac`
+             if [ $length2g -le 7 ];then
+                add2g=$((8-length2g))
+                for i in `seq ${add2g}`
+                do
+                  base2gmac=0$base2gmac
+                done
+             fi
+             
+             base2gmac=`echo $3|grep ":"|awk -F ':' '{print $1$2}'`$base2gmac
+             base2gmac=${base2gmac:0:2}:${base2gmac:2:2}:${base2gmac:4:2}:${base2gmac:6:2}:${base2gmac:8:2}:${base2gmac:10:2}
+             set2gmac $base2gmac
+             echo "2.4G MAC Address:${base2gmac}"
+             #echo "MAC Address: ${3}"
+         else
+             echo "please input right MAC address!"
+             exit 1
+         fi
+
+fi
+
+#get mac address
+if [ $# -eq 2 ]&&[ $1 == "get" ]&&[ $2 == "mac" ];then
+    getmac
+    get2gmac
+fi
+
+#set5g mac address
+if [ $# -eq 3 ]&&[ $1 == "set" ]&&[ $2 == "5gmac" ];then
+    regex='[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]'
+         if [ `expr length $3` -eq 17 ]&&[ `echo $3|grep -Eqi $regex\
+            && echo YES || echo NO` == "YES" ]; then
+
+             mac1=`echo $3|grep ":"|awk -F ':' '{print $2$1}'`
+             mac2=`echo $3|grep ":"|awk -F ':' '{print $4$3}'`
+             mac3=`echo $3|grep ":"|awk -F ':' '{print $6$5}'`
+             iwpriv ra0 e2p 04=$mac1
+             iwpriv ra0 e2p 06=$mac2
+             iwpriv ra0 e2p 08=$mac3
+             #reboot
+             #echo "5GMAC Address: ${3}"
+         else
+             echo "please input right MAC address!"
+             exit 1
+         fi
+
+fi
+
+#get 5gmac address
+if [ $# -eq 2 ]&&[ $1 == "get" ]&&[ $2 == "5gmac" ];then
+   mac1=`iwpriv ra0 e2p 04|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   mac2=`iwpriv ra0 e2p 06|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   mac3=`iwpriv ra0 e2p 08|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   #mac_addr=`ifconfig eth2|grep 'HWaddr'|awk -F ' ' '{print $5}'`
+
+   echo "MAC Address: ${mac1:5:2}:${mac1:3:2}:${mac2:5:2}:${mac2:3:2}:${mac3:5:2}:${mac3:3:2}"
+fi
+
+#set2.4g mac address
+if [ $# -eq 3 ]&&[ $1 == "set" ]&&[ $2 == "2gmac" ];then
+    regex='[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]'
+         if [ `expr length $3` -eq 17 ]&&[ `echo $3|grep -Eqi $regex\
+            && echo YES || echo NO` == "YES" ]; then
+
+             mac1=`echo $3|grep ":"|awk -F ':' '{print $2$1}'`
+             mac2=`echo $3|grep ":"|awk -F ':' '{print $4$3}'`
+             mac3=`echo $3|grep ":"|awk -F ':' '{print $6$5}'`
+             iwpriv rai0 e2p 04=$mac1
+             iwpriv rai0 e2p 06=$mac2
+             iwpriv rai0 e2p 08=$mac3
+             #reboot
+             #echo "2.4GMAC Address: ${3}"
+         else
+             echo "please input right MAC address!"
+             exit 1
+         fi
+
+fi
+
+#get 2.4gmac address
+if [ $# -eq 2 ]&&[ $1 == "get" ]&&[ $2 == "2gmac" ];then
+   mac1=`iwpriv rai0 e2p 04|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   mac2=`iwpriv rai0 e2p 06|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   mac3=`iwpriv rai0 e2p 08|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   #mac_addr=`ifconfig eth2|grep 'HWaddr'|awk -F ' ' '{print $5}'` 
+  
+   echo "MAC Address: ${mac1:5:2}:${mac1:3:2}:${mac2:5:2}:${mac2:3:2}:${mac3:5:2}:${mac3:3:2}"
+fi
+
+#set mac address
+if [ $# -eq 3 ]&&[ $1 == "set" ]&&[ $2 == "ethmac" ];then
+    regex='[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]:[a-f0-9][a-f0-9]'
+         if [ `expr length $3` -eq 17 ]&&[ `echo $3|grep -Eqi $regex\
+            && echo YES || echo NO` == "YES" ]; then
+             
+             mac1=`echo $3|grep ":"|awk -F ':' '{print $2$1}'`
+             mac2=`echo $3|grep ":"|awk -F ':' '{print $4$3}'`
+             mac3=`echo $3|grep ":"|awk -F ':' '{print $6$5}'`
+             iwpriv ra0 e2p 28=$mac1
+             iwpriv ra0 e2p 2A=$mac2
+             iwpriv ra0 e2p 2C=$mac3
+             echo "Ethernet MAC Address: ${3}"
+         else
+             echo "please input right MAC address!"
+             exit 1
+         fi
+
+fi
+
+#get mac address
+if [ $# -eq 2 ]&&[ $1 == "get" ]&&[ $2 == "ethmac" ];then
+   mac1=`iwpriv rai0 e2p 28|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   mac2=`iwpriv rai0 e2p 2A|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   mac3=`iwpriv rai0 e2p 2C|grep "[0x002C]"|awk -F ':' '{print $2}'`
+   #mac_addr=`ifconfig eth2|grep 'HWaddr'|awk -F ' ' '{print $5}'`
+
+   echo "${mac1:5:2}:${mac1:3:2}:${mac2:5:2}:${mac2:3:2}:${mac3:5:2}:${mac3:3:2}"
+fi
+
+#set SN.
+if [ $# -eq 3 ]&&[ $1 == "set" ]&&[ $2 == "sn" ];then
+  set_bd sn $3
+  echo Serial Number: $3
+fi
+
+#get SN.
+if [ $# -eq 2 ]&&[ $1 == "get" ]&&[ $2 == "sn" ];then
+  sn=`print_bd sn|awk -F '=' '{print $2}'`
+  echo Serial Number: $sn
+fi
+
+read_write_test(){
+   #arg1 file
+   content="mfgtest"
+   echo ${content}>$1
+   if [ `cat $1` == ${content} ];then
+      rm $1
+      echo 0
+   else
+      rm $1
+      echo 1
+   fi
+   
+}
+
+#usb read/write test
+if [ $# -eq 1 ]&&[ $1 == "usb" ];then
+	usbtestmfg
+fi
+
+#check version
+if [ $# -eq 1 ]&&[ $1 == "version" ];then
+   echo firmware version :  `cat /version`
+fi
+
+
+#check flash
+if [ $# -eq 1 ]&&[ $1 == "flash" ];then
+    #flashsize=`cat /proc/mtd |grep "ALL"|awk -F ' ' '{print $2}'`
+    tmp_file="/tmp/flashtest_wp838.txt"
+    
+    #if [ $flashsize == "00800000" ];then
+    #    echo "Flash size: 8M"
+    #fi   
+     flashtest_wp838 $tmp_file   
+     cat $tmp_file
+     rm -rf $tmp_file
+fi
+
+#check memory
+if [ $# -eq 1 ]&&[ $1 == "mem" ];then
+    memsize=`cat /proc/meminfo |grep "MemTotal:"|awk -F ' ' '{print $2}'`
+    if [ `expr ${memsize} / 1024` -ge 120 ];then
+       echo Memory size: 128 M
+    fi
+    memtester 10000KB 1
+fi
+
+#ping ethernet
+if [ $# -eq 1 ]&&[ $1 == "ping" ];then
+    count=2
+    #for ipaddr in 192.168.1.251 192.168.1.252 192.168.1.253 192.168.1.254 192.168.2.254
+    for ipaddr in   192.168.1.50   
+    do
+        if [ `ping $ipaddr -c ${count}|grep "received, 0% packet loss"|wc -l` -eq 1 ];then
+            echo "${ipaddr}...................0% packet loss"
+        else
+            echo "${ipaddr}...................FAIL"
+        fi
+    done
+fi

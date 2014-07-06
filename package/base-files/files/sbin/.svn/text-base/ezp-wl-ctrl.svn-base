@@ -1,0 +1,7 @@
+#!/bin/sh
+
+board_type="$(nvram show board_model_rule 0 bd_model)"
+ezp-wl0-ctrl $@
+if [ "$board_type" = "0A22" -o "$board_type" = "0A52" ]; then
+    ezp-wl1-ctrl $@
+fi

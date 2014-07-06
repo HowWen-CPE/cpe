@@ -1,0 +1,250 @@
+From 59bbd18c31a35ac5f6515d519300221381066e32 Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Wed, 28 Oct 2009 09:30:49 +0530
+Subject: [PATCH v0] DDR support for eSDHC/NAND/eSPI booting
+
+DDR support to boot from NAND/eSDHC/eSPI on P1 & P2 RDB platforms.
+Specifically, this support is needed when
+L2 Cache size is less than 512K.
+
+Signed-off-by: Dipen Dudhat <dipen.dudhat@freescale.com>
+---
+ board/freescale/p1_p2_rdb/config.mk            |    8 +++
+ board/freescale/p1_p2_rdb/ddr.c                |    3 +
+ board/freescale/p1_p2_rdb/tlb.c                |    9 +++-
+ include/configs/P1_P2_RDB.h                    |   31 ++++++++++++
+ nand_spl/board/freescale/p1_p2_rdb/nand_boot.c |   59 ++++++++++++++++++++++++
+ 5 files changed, 109 insertions(+), 1 deletions(-)
+
+diff --git a/board/freescale/p1_p2_rdb/config.mk b/board/freescale/p1_p2_rdb/config.mk
+index 0f7a048..e782928 100644
+--- a/board/freescale/p1_p2_rdb/config.mk
++++ b/board/freescale/p1_p2_rdb/config.mk
+@@ -33,13 +33,21 @@ endif
+ 
+ ifeq ($(CONFIG_MK_SDCARD), y)
+ TEXT_BASE = $(CONFIG_RAMBOOT_TEXT_BASE)
++ifdef CONFIG_SYS_FSL_BOOT_DDR
++RESET_VECTOR_ADDRESS = 0x1107fffc
++else
+ RESET_VECTOR_ADDRESS = 0xf8fffffc
+ endif
++endif
+ 
+ ifeq ($(CONFIG_MK_SPIFLASH), y)
+ TEXT_BASE = $(CONFIG_RAMBOOT_TEXT_BASE)
++ifdef CONFIG_SYS_FSL_BOOT_DDR
++RESET_VECTOR_ADDRESS = 0x1107fffc
++else
+ RESET_VECTOR_ADDRESS = 0xf8fffffc
+ endif
++endif
+ 
+ ifndef TEXT_BASE
+ TEXT_BASE = 0xeff80000
+diff --git a/board/freescale/p1_p2_rdb/ddr.c b/board/freescale/p1_p2_rdb/ddr.c
+index fccc4f8..cc09046 100644
+--- a/board/freescale/p1_p2_rdb/ddr.c
++++ b/board/freescale/p1_p2_rdb/ddr.c
+@@ -246,6 +246,9 @@ phys_size_t initdram(int board_type)
+ {
+ 	phys_size_t dram_size = 0;
+ 
++#if defined(CONFIG_SYS_RAMBOOT) && defined(CONFIG_SYS_FSL_BOOT_DDR)
++	return CONFIG_SYS_SDRAM_SIZE * 1024 * 1024;
++#endif
+ 	dram_size = fixed_sdram();
+ 	set_ddr_laws(0, dram_size, LAW_TRGT_IF_DDR_1);
+ 
+diff --git a/board/freescale/p1_p2_rdb/tlb.c b/board/freescale/p1_p2_rdb/tlb.c
+index 0009913..c250e3e 100644
+--- a/board/freescale/p1_p2_rdb/tlb.c
++++ b/board/freescale/p1_p2_rdb/tlb.c
+@@ -78,7 +78,8 @@ struct fsl_e_tlb_entry tlb_table[] = {
+ 			MAS3_SX|MAS3_SW|MAS3_SR, MAS2_I|MAS2_G,
+ 			0, 6, BOOKE_PAGESZ_1M, 1),
+ 
+-#if defined(CONFIG_SYS_RAMBOOT) && defined(CONFIG_SYS_INIT_L2_ADDR)
++#if defined(CONFIG_SYS_RAMBOOT)
++#if defined(CONFIG_SYS_INIT_L2_ADDR)
+ 	/* *I*G - L2SRAM */
+ 	SET_TLB_ENTRY(1, CONFIG_SYS_INIT_L2_ADDR, CONFIG_SYS_INIT_L2_ADDR_PHYS,
+ 			MAS3_SX|MAS3_SW|MAS3_SR, MAS2_I|MAS2_G,
+@@ -87,6 +88,12 @@ struct fsl_e_tlb_entry tlb_table[] = {
+ 			CONFIG_SYS_INIT_L2_ADDR_PHYS + 0x40000,
+ 			MAS3_SX|MAS3_SW|MAS3_SR, MAS2_I|MAS2_G,
+ 			0, 8, BOOKE_PAGESZ_256K, 1),
++#else
++	/* *I*G - DDR */
++	SET_TLB_ENTRY(1, CONFIG_SYS_DDR_SDRAM_BASE, CONFIG_SYS_DDR_SDRAM_BASE,
++			MAS3_SX|MAS3_SW|MAS3_SR, MAS2_I|MAS2_G,
++			0, 7, BOOKE_PAGESZ_1G, 1)
++#endif
+ #endif
+ };
+ 
+diff --git a/include/configs/P1_P2_RDB.h b/include/configs/P1_P2_RDB.h
+index 078bf15..52c06d6 100644
+--- a/include/configs/P1_P2_RDB.h
++++ b/include/configs/P1_P2_RDB.h
+@@ -43,21 +43,40 @@
+ #define CONFIG_P2020
+ #endif
+ 
++/* Boot using DDR for eSDHC/eSPI/NAND boot because L2 Cache size
++ * on these platforms is 256K.
++ */
++#if defined(CONFIG_P1011) || defined(CONFIG_P1020)
++#define CONFIG_SYS_FSL_BOOT_DDR
++#endif
++
+ #ifdef CONFIG_MK_NAND
+ #define CONFIG_NAND_U_BOOT		1
+ #define CONFIG_RAMBOOT_NAND		1
++#ifdef CONFIG_SYS_FSL_BOOT_DDR
++#define CONFIG_RAMBOOT_TEXT_BASE	0x01001000
++#else
+ #define CONFIG_RAMBOOT_TEXT_BASE	0xf8f82000
+ #endif
++#endif
+ 
+ #ifdef CONFIG_MK_SDCARD
+ #define CONFIG_RAMBOOT_SDCARD		1
++#ifdef CONFIG_SYS_FSL_BOOT_DDR
++#define CONFIG_RAMBOOT_TEXT_BASE	0x11000000
++#else
+ #define CONFIG_RAMBOOT_TEXT_BASE	0xf8f80000
+ #endif
++#endif
+ 
+ #ifdef CONFIG_MK_SPIFLASH
+ #define CONFIG_RAMBOOT_SPIFLASH		1
++#ifdef CONFIG_SYS_FSL_BOOT_DDR
++#define CONFIG_RAMBOOT_TEXT_BASE	0x11000000
++#else
+ #define CONFIG_RAMBOOT_TEXT_BASE	0xf8f80000
+ #endif
++#endif
+ 
+ /* High Level Configuration Options */
+ #define CONFIG_BOOKE		1	/* BOOKE */
+@@ -101,6 +120,7 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+  /*
+   * Config the L2 Cache as L2 SRAM
+   */
++#ifndef CONFIG_SYS_FSL_BOOT_DDR
+ #define CONFIG_SYS_INIT_L2_ADDR		0xf8f80000
+ #ifdef CONFIG_PHYS_64BIT
+ #define CONFIG_SYS_INIT_L2_ADDR_PHYS	0xff8f80000ull
+@@ -109,6 +129,7 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ #endif
+ #define CONFIG_SYS_L2_SIZE		(512 << 10)
+ #define CONFIG_SYS_INIT_L2_END		(CONFIG_SYS_INIT_L2_ADDR + CONFIG_SYS_L2_SIZE)
++#endif
+ 
+ /*
+  * Base addresses -- Note these are effective addresses where the
+@@ -233,6 +254,15 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(16 * 1024)
+ 
+ /* NAND boot: 4K NAND loader config */
++#ifdef CONFIG_SYS_FSL_BOOT_DDR
++#define CONFIG_SYS_NAND_SPL_SIZE	0x1000
++#define CONFIG_SYS_NAND_U_BOOT_SIZE	((512 << 10) + CONFIG_SYS_NAND_SPL_SIZE)
++#define CONFIG_SYS_NAND_U_BOOT_DST	(0x01000000 - CONFIG_SYS_NAND_SPL_SIZE)
++#define CONFIG_SYS_NAND_U_BOOT_START	0x01000000
++#define CONFIG_SYS_NAND_U_BOOT_OFFS	(0)
++#define CONFIG_SYS_NAND_U_BOOT_RELOC	0x00010000
++#define CONFIG_SYS_NAND_U_BOOT_RELOC_SP	(CONFIG_SYS_NAND_U_BOOT_RELOC + 0x10000)
++#else
+ #define CONFIG_SYS_NAND_SPL_SIZE	0x1000
+ #define CONFIG_SYS_NAND_U_BOOT_SIZE	((512 << 10) - 0x2000)
+ #define CONFIG_SYS_NAND_U_BOOT_DST	(CONFIG_SYS_INIT_L2_ADDR)
+@@ -240,6 +270,7 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ #define CONFIG_SYS_NAND_U_BOOT_OFFS	(0)
+ #define CONFIG_SYS_NAND_U_BOOT_RELOC	(CONFIG_SYS_INIT_L2_END - 0x2000)
+ #define CONFIG_SYS_NAND_U_BOOT_RELOC_SP		((CONFIG_SYS_INIT_L2_END - 1) & ~0xF)
++#endif
+ 
+ /* NAND flash config */
+ #define CONFIG_NAND_BR_PRELIM	(CONFIG_SYS_NAND_BASE_PHYS \
+diff --git a/nand_spl/board/freescale/p1_p2_rdb/nand_boot.c b/nand_spl/board/freescale/p1_p2_rdb/nand_boot.c
+index af442ea..1dabb3c 100644
+--- a/nand_spl/board/freescale/p1_p2_rdb/nand_boot.c
++++ b/nand_spl/board/freescale/p1_p2_rdb/nand_boot.c
+@@ -39,6 +39,60 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
++#if defined(CONFIG_SYS_FSL_BOOT_DDR)
++#define CONFIG_SYS_DDR_CS0_BNDS		0x0000003F
++#define CONFIG_SYS_DDR_CS0_CONFIG	0x80014202
++#define CONFIG_SYS_DDR_CS0_CONFIG_2	0x00000000
++#define CONFIG_SYS_DDR_CONTROL          0x43000000      /* Type = DDR2*/
++#define CONFIG_SYS_DDR_CONTROL_2        0x24401000
++
++#define CONFIG_SYS_DDR_TIMING_3_667	0x00030000
++#define CONFIG_SYS_DDR_TIMING_0_667	0x55770802
++#define CONFIG_SYS_DDR_TIMING_1_667	0x5f599543
++#define CONFIG_SYS_DDR_TIMING_2_667	0x0fa074d1
++#define CONFIG_SYS_DDR_CLK_CTRL_667	0x02800000
++#define CONFIG_SYS_DDR_MODE_1_667	0x00040852
++#define CONFIG_SYS_DDR_MODE_2_667	0x00000000
++#define CONFIG_SYS_DDR_INTERVAL_667	0x0a280100
++
++#define udelay(x) {int i, j; for (i = 0; i < x; i++) for (j = 0; j < 10000; j++); }
++
++void initsdram(void)
++{
++
++	volatile ccsr_ddr_t *ddr= (ccsr_ddr_t *)CONFIG_SYS_MPC85xx_DDR_ADDR;
++	int d_init, dbw;
++	volatile ccsr_gpio_t *pgpio = (void *)(CONFIG_SYS_MPC85xx_GPIO_ADDR);
++	unsigned int ddr_size;
++	sys_info_t sysinfo;
++	phys_size_t dram_size = 0;
++
++	set_next_law(0,LAW_SIZE_1G , LAW_TRGT_IF_DDR_1);
++
++	out_be32(&ddr->cs0_bnds, CONFIG_SYS_DDR_CS0_BNDS);
++	out_be32(&ddr->cs0_config, CONFIG_SYS_DDR_CS0_CONFIG);
++	out_be32(&ddr->cs0_config_2, CONFIG_SYS_DDR_CS0_CONFIG_2);
++
++	out_be32(&ddr->timing_cfg_3, CONFIG_SYS_DDR_TIMING_3_667);
++	out_be32(&ddr->timing_cfg_0, CONFIG_SYS_DDR_TIMING_0_667);
++	out_be32(&ddr->timing_cfg_1, CONFIG_SYS_DDR_TIMING_1_667);
++	out_be32(&ddr->timing_cfg_2, CONFIG_SYS_DDR_TIMING_2_667);
++	out_be32(&ddr->sdram_mode, CONFIG_SYS_DDR_MODE_1_667);
++	out_be32(&ddr->sdram_mode_2, CONFIG_SYS_DDR_MODE_2_667);
++	out_be32(&ddr->sdram_interval, CONFIG_SYS_DDR_INTERVAL_667);
++	out_be32(&ddr->sdram_clk_cntl, CONFIG_SYS_DDR_CLK_CTRL_667);
++	out_be32(&ddr->sdram_cfg, CONFIG_SYS_DDR_CONTROL);
++	out_be32(&ddr->sdram_cfg_2, CONFIG_SYS_DDR_CONTROL_2);
++
++	asm("sync;isync");
++
++	udelay(500);
++
++	ddr->sdram_cfg |= 0x80000000;
++
++}
++#endif
++
+ void board_init_f(ulong bootflag)
+ {
+ 	uint plat_ratio, bus_clk, sys_clk = 0;
+@@ -69,6 +123,11 @@ void board_init_f(ulong bootflag)
+ 
+ 	puts("\nNAND boot... ");
+ 
++#ifdef CONFIG_SYS_FSL_BOOT_DDR
++	/* board specific DDR initialization */
++	initsdram();
++#endif
++
+ 	/* copy code to DDR and jump to it - this should not return */
+ 	/* NOTE - code has to be copied out of NAND buffer before
+ 	 * other blocks can be read.
+-- 
+1.5.6.5
+

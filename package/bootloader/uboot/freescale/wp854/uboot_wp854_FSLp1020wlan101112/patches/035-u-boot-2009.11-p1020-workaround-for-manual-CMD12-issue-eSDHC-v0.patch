@@ -1,0 +1,62 @@
+From af2c5d80b1b47a02166e5c941a417ca6e2ed9060 Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Thu, 18 Mar 2010 22:21:22 +0530
+Subject: [PATCH 7/7] [eSDHC]: Workaround for manual CMD12 issue on P1020/P1022 Platforms
+
+Manual CMD12 command can cause the protocol violations and cause read to hang,
+therefore, the Auto CMD12 is used to avoid it.
+
+Signed-off-by: Jerry Huang <Chang-Ming.Huang@freescale.com>
+Signed-off-by: Dipen Dudhat <Dipen.Dudhat@freescale.com>
+---
+ drivers/mmc/fsl_esdhc.c     |    9 +++++++++
+ include/configs/P1_P2_RDB.h |    6 ++++++
+ 2 files changed, 15 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/mmc/fsl_esdhc.c b/drivers/mmc/fsl_esdhc.c
+index 6623591..0dff226 100644
+--- a/drivers/mmc/fsl_esdhc.c
++++ b/drivers/mmc/fsl_esdhc.c
+@@ -80,6 +80,10 @@ uint esdhc_xfertyp(struct mmc_cmd *cmd, struct mmc_data *data)
+ 		if (data->blocks > 1) {
+ 			xfertyp |= XFERTYP_MSBSEL;
+ 			xfertyp |= XFERTYP_BCEN;
++#ifdef CONFIG_FSL_ESDHC_MULTIBLK_WORKAROUND
++			/* For P1022/P1020 errata */
++			xfertyp |= XFERTYP_AC12EN;
++#endif
+ 		}
+ 
+ 		if (data->flags & MMC_DATA_READ)
+@@ -238,6 +242,11 @@ esdhc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
+ 	uint	irqstat;
+ 	volatile struct fsl_esdhc *regs = mmc->priv;
+ 
++#ifdef CONFIG_FSL_ESDHC_MULTIBLK_WORKAROUND
++	/* For P1022/P1020 errata */
++	if (cmd->cmdidx == MMC_CMD_STOP_TRANSMISSION)
++	return 0;
++#endif
+ 	out_be32(&regs->irqstat, -1);
+ 
+ 	sync();
+diff --git a/include/configs/P1_P2_RDB.h b/include/configs/P1_P2_RDB.h
+index d10be6f..5c839b5 100644
+--- a/include/configs/P1_P2_RDB.h
++++ b/include/configs/P1_P2_RDB.h
+@@ -558,6 +558,12 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ #define CONFIG_GENERIC_MMC
+ #define CONFIG_SYS_FSL_ESDHC_ADDR	CONFIG_SYS_MPC85xx_ESDHC_ADDR
+ #define CONFIG_SYS_FSL_ESDHC_BROKEN_TIMEOUT
++#if defined(CONFIG_P1020)
++#define CONFIG_FSL_ESDHC_MULTIBLK_WORKAROUND	/* Multiblk transfer read
++						   command, CMD12 cause
++						   protocol violations on P1020
++						   so AUTOCMD12 used */
++#endif
+ #endif
+ 
+ #define CONFIG_USB_EHCI
+-- 
+1.5.6.5
+

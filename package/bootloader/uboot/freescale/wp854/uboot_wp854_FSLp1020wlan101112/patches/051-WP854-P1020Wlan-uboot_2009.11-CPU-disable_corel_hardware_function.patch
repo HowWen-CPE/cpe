@@ -1,0 +1,37 @@
+--- u-boot-freescale-p1020-sku/cpu/mpc8xxx/cpu.c	2009-12-15 14:20:54.000000000 -0800
++++ u-boot-liteon-wp854-openwrt/cpu/mpc8xxx/cpu.c	2011-07-28 20:50:07.040459000 -0700
+@@ -95,8 +95,21 @@
+ 	return &cpu_type_unknown;
+ }
+ 
++
+ int cpu_numcores() {
+ 	struct cpu_type *cpu;
++
++/*Added by sirian, 2011-07-26, for disable core1 hardware function*/	
++#if defined(CONFIG_P1011) ||defined(CONFIG_P1020) || defined(CONFIG_P2020)
++{
++	char * disablecore1_env = getenv ("disablecore1");
++	if (disablecore1_env && (strncmp(disablecore1_env,"1", 1)==0))
++	{
++	       		return (1);
++	}
++}
++#endif
++
+ 	cpu = gd->cpu;
+ 	return cpu->num_cores;
+ }
+@@ -105,10 +118,10 @@
+ {
+ 	uint svr;
+ 	uint ver;
+-
++	
+ 	svr = get_svr();
+ 	ver = SVR_SOC_VER(svr);
+-
++	
+ 	gd->cpu = identify_cpu(ver);
+ 
+ 	return 0;

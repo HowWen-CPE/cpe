@@ -1,0 +1,48 @@
+--- mt7620_wifidriver_20121217/rt2860v2/include/rtmp_def.h	2012-12-17 16:27:01.000000000 +0800
++++ mt7620_wifidriver_20121217_modified_for_wp777/rt2860v2/include/rtmp_def.h	2012-12-19 13:45:03.013520531 +0800
+@@ -32,6 +32,9 @@
+ 
+ #include "oid.h"
+ 
++//add for get LITEON_SRC_VALID 
++#include <linux/autoconf.h>
++
+ #undef AP_WSC_INCLUDED
+ #undef STA_WSC_INCLUDED
+ #undef WSC_INCLUDED
+@@ -1655,6 +1658,21 @@
+ #define IS_OPMODE_AP(_x)		((_x)->OpMode == OPMODE_AP)
+ #define IS_OPMODE_STA(_x)		((_x)->OpMode == OPMODE_STA)
+ 
++#ifdef LITEON_SRC_VALID
++#ifdef ANDROID_SUPPORT
++#define INF_MAIN_DEV_NAME		"wlan"
++#define INF_MBSSID_DEV_NAME		"wlan"
++#else
++#define INF_MAIN_DEV_NAME		"rai"
++#define INF_MBSSID_DEV_NAME		"rai"
++#endif /* ANDROID_SUPPORT */
++#define INF_WDS_DEV_NAME		"wdsi"
++#define INF_APCLI_DEV_NAME		"apclii"
++#define INF_MESH_DEV_NAME		"meshi"
++#define INF_P2P_DEV_NAME		"p2pi"
++
++#else
++
+ #ifdef ANDROID_SUPPORT
+ #define INF_MAIN_DEV_NAME		"wlan"
+ #define INF_MBSSID_DEV_NAME		"wlan"
+@@ -1667,6 +1685,13 @@
+ #define INF_MESH_DEV_NAME		"mesh"
+ #define INF_P2P_DEV_NAME		"p2p"
+ 
++#endif
++
++
++
++
++
++
+ #ifdef RALINK_ATE
+ /* 
+ 	Use bitmap to allow coexist of ATE_TXFRAME 

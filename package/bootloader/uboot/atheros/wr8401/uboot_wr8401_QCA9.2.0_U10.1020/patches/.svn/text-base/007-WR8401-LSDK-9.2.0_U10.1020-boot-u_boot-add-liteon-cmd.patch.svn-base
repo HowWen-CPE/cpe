@@ -1,0 +1,63 @@
+--- boot_atheros/u-boot/common/cmd_liteon.c	1970-01-01 07:00:00.000000000 +0700
++++ boot_liteon/u-boot/common/cmd_liteon.c	2013-03-29 18:00:31.000000000 +0800
+@@ -0,0 +1,60 @@
++/*
++ * Filename: cmd_liteon.c
++ * Description: set_mac, set_sn,set_boarddata.
++ * Copyright (C) 2009 LITE-ON TECHNOLOGY CORP.          
++ * Author: Sirian Su, LITEON. <sirian.su@liteon.com>
++ * Version: 1.0
++ *
++ * Revision: 
++ */
++
++#include <common.h>
++#include <command.h>
++#include <net.h>
++#include <environment.h>
++#include <../include/linux/ctype.h>
++
++
++
++
++
++int do_dump(cmd_tbl_t * cmdtp, int flag, int argc, char *argv[])
++{
++     int liteon_net_common (proto_t, cmd_tbl_t *, int, char **);
++    
++     char tmp[22];
++
++    /*check arguments*/ 
++   
++    if (strncmp(argv[1],"-b",2) || strncmp(argv[3],"-l",2))
++    {
++         printf("Usage:\ndump -b <base_addr> -l <length> <tftp_server ip_address> <file_name>\n");
++         return 0;
++     }
++     else if (argc < 7)
++     {
++         printf("Usage:\ndump -b <base_addr> -l <length> <tftp_server ip_address> <file_name>\n");
++         return 0;
++     }
++
++     /*Temporarily store server ip addr*/
++     NetLiteonServerIP= getenv_IPaddr ("serverip");
++    
++     /*run command*/
++     setenv ("serverip", argv[5]);
++     liteon_net_common (TFTP, cmdtp, argc, argv);
++
++     /*Restore server ip addr*/
++     ip_to_string (NetLiteonServerIP, tmp);
++     setenv ("serverip", tmp);
++    
++   return 0;
++}
++
++
++U_BOOT_CMD(
++ 	dump,	7,	1,	do_dump,
++ 	"dump -dump board context to our server\n",
++ 	" -b <base_addr> -l <length> <tftp_server ip_address> <file_name>\n"
++);
++/***********end liteon command**************/

@@ -1,0 +1,238 @@
+Index: u-boot-2006-04-06-1725/board/atheros/common/qca-eth-955x.c
+===================================================================
+--- u-boot-2006-04-06-1725.orig/board/atheros/common/qca-eth-955x.c	2013-12-09 14:59:37.545744087 +0800
++++ u-boot-2006-04-06-1725/board/atheros/common/qca-eth-955x.c	2013-12-09 15:11:09.270571328 +0800
+@@ -701,6 +701,76 @@
+ {
+ 	unsigned char *eeprom;
+ 	unsigned char *mac = dev->enetaddr;
++
++ /*Enable gettting MAC address from environment, environment priority is more than calibration,
++    Sirian@liteon, 2013-12-09----->*/
++    
++	char * s, *e;
++	unsigned char enetaddr[6];	
++	int i;
++	
++	/* get MAC address from */
++	if (strcmp(dev->name, "eth0") == 0) {
++		s = getenv ("eth0addr");
++	}else if(strcmp(dev->name, "eth1") == 0) {
++		s = getenv ("eth1addr");	
++	} else {
++		printf("%s: unknown ethernet device %s\n", __func__, dev->name);
++		return;
++	}
++
++	for (i = 0; i < 6; ++i) {
++		enetaddr[i] = s ? simple_strtoul (s, &e, 16) : 0;
++		if (s)
++			s = (*e) ? e + 1 : e;
++	}
++
++	/*Filter mac address is null or all 0 case*/
++	if( 0 == enetaddr[5] &&  0 == enetaddr[4] &&  0 == enetaddr[3] \
++	&&  0 == enetaddr[2] && 0 == enetaddr[1] && 0 == enetaddr[0]){
++	
++		printf("%s: %02x:%02x:%02x:%02x:%02x:%02x, invalid mac address\n", dev->name,
++					enetaddr[0] & 0xff,enetaddr[1] & 0xff, enetaddr[2] & 0xff,
++					enetaddr[3] & 0xff, enetaddr[4] & 0xff, enetaddr[5] & 0xff);
++		
++		goto GET_MAC_FROM_FLASH;
++		
++	}
++
++	/*Filter broadcast mac address case*/
++	if( 0xff == enetaddr[5] &&  0xff  == enetaddr[4] &&  0xff  == enetaddr[3] \
++	&&  0xff  == enetaddr[2] && 0xff  == enetaddr[1] && 0xff  == enetaddr[0]){
++	
++		printf("%s: %02x:%02x:%02x:%02x:%02x:%02x, invalid mac address\n", dev->name,
++					enetaddr[0] & 0xff,enetaddr[1] & 0xff, enetaddr[2] & 0xff,
++					enetaddr[3] & 0xff, enetaddr[4] & 0xff, enetaddr[5] & 0xff);
++		
++		goto GET_MAC_FROM_FLASH;
++		
++	}
++
++	
++	/*Filter multicast mac address case*/
++	if ( 0x01 == (enetaddr[0] & 0x01) ){
++		
++		printf("%s: %02x:%02x:%02x:%02x:%02x:%02x, invalid mac address\n", dev->name,
++					enetaddr[0] & 0xff,enetaddr[1] & 0xff, enetaddr[2] & 0xff,
++					enetaddr[3] & 0xff, enetaddr[4] & 0xff, enetaddr[5] & 0xff);
++		
++		goto GET_MAC_FROM_FLASH;
++	}
++
++	if (strcmp(dev->name, "eth0") == 0) {
++			memcpy(mac, enetaddr, 6);
++			return;
++	} else if(strcmp(dev->name, "eth1") == 0) {
++			memcpy(mac, enetaddr, 6);
++			return;
++	} 
++
++GET_MAC_FROM_FLASH:
++
++/*<-----Sirian@liteon, 2013-12-09*/
+ #ifndef CONFIG_ATH_EMULATION
+ 
+ #ifdef CONFIG_ATH_NAND_BR
+@@ -743,6 +813,10 @@
+ 			mac[3] = 0x09;
+ 			mac[4] = 0x0b;
+ 			mac[5] = 0xad;
++			
++			if (strcmp(dev->name, "eth1") == 0) 
++				mac[5] = 0xae;
++			
+ 			printf("No valid address in Flash. Using fixed address\n");
+ 		} else {
+ 			printf("Fetching MAC Address from 0x%p\n", __func__, eeprom);
+Index: u-boot-2006-04-06-1725/common/cmd_nvedit.c
+===================================================================
+--- u-boot-2006-04-06-1725.orig/common/cmd_nvedit.c	2013-12-09 15:02:34.385568867 +0800
++++ u-boot-2006-04-06-1725/common/cmd_nvedit.c	2013-12-09 15:04:26.226623087 +0800
+@@ -198,7 +198,7 @@
+ 			return 1;
+ 		}
+ #endif
+-
++		
+ 		/* Check for console redirection */
+ 		if (strcmp(name,"stdin") == 0) {
+ 			console = stdin;
+@@ -278,6 +278,10 @@
+ 		int   num = simple_strtoul(name+3, &end, 10);
+ 
+ 		if (strcmp(end, "addr") == 0) {
++			
++			if (!eth_mac_is_valid(num, argv[2]))
++				return 0;
++				
+ 			eth_set_enetaddr(num, argv[2]);
+ 		}
+ 	}
+@@ -339,6 +343,8 @@
+ 			if (s) s = (*e) ? e+1 : e;
+ 		}
+ #ifdef CONFIG_NET_MULTI
++		if (!eth_mac_is_valid(0,argv[2]))
++				return 0;
+ 		eth_set_enetaddr(0, argv[2]);
+ #endif
+ 		return 0;
+Index: u-boot-2006-04-06-1725/include/net.h
+===================================================================
+--- u-boot-2006-04-06-1725.orig/include/net.h	2013-12-09 15:02:45.729626807 +0800
++++ u-boot-2006-04-06-1725/include/net.h	2013-12-09 15:04:04.755749597 +0800
+@@ -119,6 +119,8 @@
+ extern int eth_get_dev_index (void);		/* get the device index         */
+ extern void eth_set_enetaddr(int num, char* a);	/* Set new MAC address		*/
+ 
++extern int eth_mac_is_valid(int num, char *addr); /* check MAC address ,Sirian@liteon, 2013-12-09*/
++
+ extern int eth_init(bd_t *bis);			/* Initialize the device	*/
+ extern int eth_send(volatile void *packet, int length);	   /* Send a packet	*/
+ extern int eth_rx(void);			/* Check for received packets	*/
+Index: u-boot-2006-04-06-1725/net/eth.c
+===================================================================
+--- u-boot-2006-04-06-1725.orig/net/eth.c	2013-12-09 15:01:59.557779054 +0800
++++ u-boot-2006-04-06-1725/net/eth.c	2013-12-09 15:03:28.243149541 +0800
+@@ -328,8 +328,11 @@
+ 		if (addr)
+ 			addr = (*end) ? end+1 : end;
+ 	}
+-
++	
+ 	dev = eth_devices;
++	
++	
++	
+ 	while(num-- > 0) {
+ 		dev = dev->next;
+ 
+@@ -345,7 +348,82 @@
+ 		enetaddr[4], enetaddr[5]);
+ 
+ 	memcpy(dev->enetaddr, enetaddr, 6);
++
++}
++
++/*Check mac address, Sirian@liteon, 2013-12-09 ----->*/
++int eth_mac_is_valid(int num, char *addr)
++{
++	struct eth_device *dev;
++	unsigned char enetaddr[6];
++	char *end;
++	int i = 0, valid = 0;
++
++	debug ("eth_mac_check(mac addr=%s)\n",addr);
++
++	if (!eth_devices)
++		goto INVALID_MAC_ADDRESS;
++
++	dev = eth_devices;
++
++	while(num-- > 0) {
++		dev = dev->next;
++
++		if (dev == eth_devices)
++			return;
++	}
++
++	if (addr == NULL)
++		goto INVALID_MAC_ADDRESS;
++
++	for (i=0; i<6; i++) {
++		enetaddr[i] = addr ? simple_strtoul(addr, &end, 16) : 0;
++		if (addr)
++			addr = (*end) ? end+1 : end;
++	}
++	
++	/*Filter mac address is null or all 0 case*/
++	if( 0 == enetaddr[5] &&  0 == enetaddr[4] &&  0 == enetaddr[3] \
++	&&  0 == enetaddr[2] && 0 == enetaddr[1] && 0 == enetaddr[0]){
++	
++		printf("%s: %02x:%02x:%02x:%02x:%02x:%02x, invalid mac address\n", dev->name,
++					enetaddr[0] & 0xff,enetaddr[1] & 0xff, enetaddr[2] & 0xff,
++					enetaddr[3] & 0xff, enetaddr[4] & 0xff, enetaddr[5] & 0xff);
++		
++		goto INVALID_MAC_ADDRESS;
++		
++	}
++
++	/*Filter broadcast mac address case*/
++	if( 0xff == enetaddr[5] &&  0xff  == enetaddr[4] &&  0xff  == enetaddr[3] \
++	&&  0xff  == enetaddr[2] && 0xff  == enetaddr[1] && 0xff  == enetaddr[0]){
++	
++		printf("%s: %02x:%02x:%02x:%02x:%02x:%02x, invalid mac address\n", dev->name,
++					enetaddr[0] & 0xff,enetaddr[1] & 0xff, enetaddr[2] & 0xff,
++					enetaddr[3] & 0xff, enetaddr[4] & 0xff, enetaddr[5] & 0xff);
++		
++		goto INVALID_MAC_ADDRESS;
++		
++	}
++
++	
++	/*Filter multicast mac address case*/
++	if ( 0x01 == (enetaddr[0] & 0x01) ){
++		
++		printf("%s: %02x:%02x:%02x:%02x:%02x:%02x, invalid mac address\n", dev->name,
++					enetaddr[0] & 0xff,enetaddr[1] & 0xff, enetaddr[2] & 0xff,
++					enetaddr[3] & 0xff, enetaddr[4] & 0xff, enetaddr[5] & 0xff);
++		
++		goto INVALID_MAC_ADDRESS;
++	}
++
++	valid = 1;
++
++INVALID_MAC_ADDRESS:
++	return valid;
++	
+ }
++/*<-----sirian@liteon, 2013-12-09*/
+ 
+ int eth_init(bd_t *bis)
+ {

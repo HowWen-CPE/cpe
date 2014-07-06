@@ -1,0 +1,13 @@
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/umac/crypto/ieee80211_crypto.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/umac/crypto/ieee80211_crypto.c	2013-08-27 07:05:29.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/crypto/ieee80211_crypto.c	2014-03-04 15:20:33.308047303 +0800
+@@ -394,7 +394,7 @@
+                       key->wk_keytsc, key->wk_keylen);
+ 
+     keyix = key->wk_keyix;
+-    if (key->wk_valid && !IEEE80211_IS_KEY_PERSTA_SW(key)) {
++    if ((key->wk_valid || (keyix != IEEE80211_KEYIX_NONE)) && !IEEE80211_IS_KEY_PERSTA_SW(key)) {
+         /*
+          * Remove hardware entry.
+          * invalidate the key first to avoid the race.

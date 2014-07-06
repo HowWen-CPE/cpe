@@ -1,0 +1,67 @@
+From e3653ff86cd99db622651247ada7419fdaf39e9a Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Thu, 3 Dec 2009 16:33:58 +0530
+Subject: [PATCH] gianfar: Some minor bug fixes with filer programming
+
+1. Filer should be enabled when num_rx_queues > 1 or when
+ptimer (PTPD) is enabled.
+
+2. Program the RIR0 register with NON ZERO value which is used
+for packet distribution to multiple RX queues.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/gianfar.c |    8 ++++++++
+ drivers/net/gianfar.h |    3 +++
+ 2 files changed, 11 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index 355df65..3919eb3 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -644,6 +644,9 @@ static void gfar_init_filer_table(struct gfar_private *priv)
+ 		ftp_rqfpr[i] = rqfpr;
+ 		gfar_write_filer(priv, i, rqfcr, rqfpr);
+ 	}
++
++	/* Program the RIR0 reg with the required distribution */
++	priv->gfargrp[0].regs->rir0 = DEFAULT_RIR0;
+ }
+ 
+ /* Set up the ethernet device structure, private data,
+@@ -678,6 +681,7 @@ static int gfar_probe(struct of_device *ofdev,
+ 			priv->ptimer_present = 0;
+ 			printk(KERN_ERR "IEEE1588: ptp-timer init failed\n");
+ 		}
++		priv->filer_en = 1;
+ 		pmuxcr_guts_write();
+ 		printk(KERN_INFO "IEEE1588: ptp-timer initialized\n");
+ 	}
+@@ -847,6 +851,10 @@ static int gfar_probe(struct of_device *ofdev,
+ 		priv->tx_queue[i]->txic = DEFAULT_TXIC;
+ 	}
+ 
++	/* enable filer if we are using multiple rx queues */
++	if(priv->num_rx_queues > 1)
++		priv->filer_en = 1;
++
+ 	for (i = 0; i < priv->num_rx_queues; i++) {
+ 		priv->rx_queue[i]->rx_ring_size = DEFAULT_RX_RING_SIZE;
+ 		priv->rx_queue[i]->rxcoalescing = DEFAULT_RX_COALESCE;
+diff --git a/drivers/net/gianfar.h b/drivers/net/gianfar.h
+index 0243698..49cfa7e 100644
+--- a/drivers/net/gianfar.h
++++ b/drivers/net/gianfar.h
+@@ -461,6 +461,9 @@ extern const char gfar_driver_version[];
+ 
+ #define FPR_FILER_MASK	0xFFFFFFFF
+ #define MAX_FILER_IDX	0xFF
++/* This default RIR value directly corresponds
++ * to the 3-bit hash value generated */
++#define DEFAULT_RIR0	0x05397700
+ 
+ /* RQFCR register bits */
+ #define RQFCR_GPI		0x80000000
+-- 
+1.5.2.2
+

@@ -1,0 +1,12 @@
+--- a/rt2860v2/common/rtmp_init.c
++++ b/rt2860v2/common/rtmp_init.c
+@@ -135,7 +135,8 @@ RTMP_REG_PAIR	MACRegTable[] =	{
+ 	{TX_RTS_CFG,			0x00092b20},	
+ 
+ 	{EXP_ACK_TIME,			0x002400ca},	/* default value */
+-	{TXOP_HLDR_ET, 			0x00000002},
++	// {TXOP_HLDR_ET, 			0x00000002}    
++	{TXOP_HLDR_ET, 			0x00000000},    /* Disable Tx 40Mz block when CCA is busy, Sean@Liteon, 2013-09-26 */
+ 
+ 	/* Jerry comments 2008/01/16: we use SIFS = 10us in CCK defaultly, but it seems that 10us
+ 		is too small for INTEL 2200bg card, so in MBSS mode, the delta time between beacon0

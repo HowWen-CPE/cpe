@@ -1,0 +1,28 @@
+diff -urN a/rt2860v2/ap/ap_data.c b/rt2860v2/ap/ap_data.c
+--- a/rt2860v2/ap/ap_data.c	2013-07-17 13:30:33.093636267 +0800
++++ b/rt2860v2/ap/ap_data.c	2013-07-17 13:32:33.105553937 +0800
+@@ -1444,15 +1444,14 @@
+ 		pHeaderBufPtr +=2;
+ 		pTxBlk->MpduHeaderLen += 2;
+ 
++#ifdef TXBF_SUPPORT 
+ 		/*
+ 			build HTC+
+ 			HTC control filed following QoS field
+ 		*/
+ 		if ((pAd->CommonCfg.bRdg == TRUE) 
+ 			&& (CLIENT_STATUS_TEST_FLAG(pTxBlk->pMacEntry, fCLIENT_STATUS_RDG_CAPABLE))
+-#ifdef TXBF_SUPPORT 
+ 			&& (pMacEntry->TxSndgType != SNDG_TYPE_NDP)
+-#endif /* TXBF_SUPPORT */
+ 		)
+ 		{
+ 			NdisZeroMemory(pHeaderBufPtr, sizeof(HT_CONTROL));
+@@ -1460,7 +1459,6 @@
+ 			bHTCPlus = TRUE;
+ 		}
+ 
+-#ifdef TXBF_SUPPORT
+ 		if (pAd->chipCap.FlgHwTxBfCap)
+ 		{
+ 			pTxBlk->TxSndgPkt = SNDG_TYPE_DISABLE;

@@ -1,0 +1,345 @@
+--- wifi_QCA_10.1.436-orig/drivers/wlan_modules/include/ieee80211_api.h	2014-06-25 02:00:41.921080355 -0700
++++ wifi_QCA_10.1.436/drivers/wlan_modules/include/ieee80211_api.h	2014-06-25 02:03:34.177851996 -0700
+@@ -3018,6 +3018,8 @@ int wlan_aplist_get_desired_bssid(wlan_i
+  */
+ int wlan_aplist_set_max_age(wlan_if_t vaphandle, u_int32_t max_age);
+ 
++
++/* BEGIN: Added by Peter, 2014/6/26   PN:98 */
+ /**
+  * @gets the max age for entries in the scan list to be considered for association.
+  *
+@@ -3026,6 +3028,42 @@ int wlan_aplist_set_max_age(wlan_if_t va
+  */
+ u_int32_t wlan_aplist_get_max_age(wlan_if_t vaphandle);
+ 
++/**
++ * @set connect rssi threshold for station mode
++ *
++ * @param vaphandle     : handle to the vap.
++ * @return rssi, in dB.
++ */
++int wlan_aplist_set_connect_rssi_threshold(wlan_if_t vaphandle, u_int32_t conn_rssi_thr);
++
++
++/**
++ * @gets the connect rssi threshold for station mode
++ *
++ * @param vaphandle     : handle to the vap.
++ * @return rssi, in dB.
++ */
++u_int32_t wlan_aplist_get_connect_rssi_threshold(wlan_if_t vaphandle);
++
++
++/**
++ * @set disconnect rssi threshold for station mode
++ *
++ * @param vaphandle     : handle to the vap.
++ * @return rssi, in dB.
++ */
++int wlan_aplist_set_disconnect_rssi_threshold(wlan_if_t vaphandle, u_int32_t disconn_rssi_threshold);
++
++
++/**
++ * @gets the disconnect rssi threshold for station mode
++ *
++ * @param vaphandle     : handle to the vap.
++ * @return rssi, in dB.
++ */
++u_int32_t wlan_aplist_get_disconnect_rssi_threshold(wlan_if_t vaphandle);
++/* END:   Added by Peter, 2014/6/26   PN:98 */
++
+ 
+ /**
+  * sets the desired ssid list  .
+--- wifi_QCA_10.1.436-orig/drivers/wlan_modules/include/ieee80211.h	2014-06-25 02:00:41.801080349 -0700
++++ wifi_QCA_10.1.436/drivers/wlan_modules/include/ieee80211.h	2014-06-25 02:01:39.251061737 -0700
+@@ -1950,6 +1950,14 @@ A length of 3839 bytes is chosen here to
+ #define IEEE80211_RX_CHAINMASK_MIN  1
+ #define IEEE80211_RX_CHAINMASK_MAX  7
+ 
++/* BEGIN: Added by Peter, 2014/6/17   PN:98 */
++#define IEEE80211_STA_CONN_RSSI_THRESHOLD_MIN  0
++#define IEEE80211_STA_CONN_RSSI_THRESHOLD_MAX  80
++#define IEEE80211_STA_DISCONN_RSSI_THRESHOLD_MIN  0
++#define IEEE80211_STA_DISCONN_RSSI_THRESHOLD_MAX  80
++/* END:   Added by Peter, 2014/6/17   PN:98 */
++
++
+ /*
+  * The 802.11 spec says at most 2007 stations may be
+  * associated at once.  For most AP's this is way more
+--- wifi_QCA_10.1.436-orig/drivers/wlan_modules/os/linux/include/ieee80211_ioctl.h	2014-06-25 02:00:58.529081036 -0700
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/include/ieee80211_ioctl.h	2014-06-25 02:04:11.853474951 -0700
+@@ -951,6 +951,12 @@ enum {
+     /*add for vap isolation function, daniel@liteon,2013-12-26----->*/
+     IEEE80211_PARAM_APISOLATION = 312, 
+     /*<-----daniel@liteon,2013-12-26*/
++
++    /* BEGIN: Added by Peter, 2014/6/17   PN:98 */
++    IEEE80211_PARAM_STA_CONNECT_RSSI_THRESHOLD = 400,
++    IEEE80211_PARAM_STA_DISCONNECT_RSSI_THRESHOLD = 401,
++    /* END:   Added by Peter, 2014/6/17   PN:98 */
++    
+ };
+ /*
+  * New get/set params for p2p.
+--- wifi_QCA_10.1.436-orig/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c	2014-06-25 02:00:57.837081007 -0700
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c	2014-06-25 02:05:17.406413693 -0700
+@@ -6893,6 +6893,24 @@ ieee80211_ioctl_setparam(struct net_devi
+     case IEEE80211_PARAM_RC_NUM_RETRIES:
+         retv = wlan_set_param(vap, IEEE80211_RC_NUM_RETRIES, value);
+         break;
++        
++    /* BEGIN: Added by Peter, 2014/6/17   PN:98 */
++    case IEEE80211_PARAM_STA_CONNECT_RSSI_THRESHOLD:
++        if (value >= IEEE80211_STA_CONN_RSSI_THRESHOLD_MIN && 
++            value <= IEEE80211_STA_CONN_RSSI_THRESHOLD_MAX)
++            wlan_aplist_set_connect_rssi_threshold(vap, value);
++        else
++            retv = EINVAL;
++        break;
++    case IEEE80211_PARAM_STA_DISCONNECT_RSSI_THRESHOLD:
++        if (value >= IEEE80211_STA_DISCONN_RSSI_THRESHOLD_MIN && 
++            value <= IEEE80211_STA_DISCONN_RSSI_THRESHOLD_MAX)
++            wlan_aplist_set_disconnect_rssi_threshold(vap, value);
++        else
++            retv = EINVAL;
++        break;
++    /* END:   Added by Peter, 2014/6/17   PN:98 */
++ 
+     }
+     if (retv == ENETRESET)
+     {
+@@ -9679,6 +9697,14 @@ ieee80211_ioctl_getparam(struct net_devi
+        param[0] = wlan_get_param(vap, IEEE80211_RC_NUM_RETRIES);
+        break;
+ 
++   /* BEGIN: Added by Peter, 2014/6/17   PN:98 */
++   case IEEE80211_PARAM_STA_CONNECT_RSSI_THRESHOLD:
++       param[0] = wlan_aplist_get_connect_rssi_threshold(vap);
++       break; 
++   case IEEE80211_PARAM_STA_DISCONNECT_RSSI_THRESHOLD:
++       param[0] = wlan_aplist_get_disconnect_rssi_threshold(vap);
++       break; 
++   /* END:   Added by Peter, 2014/6/17   PN:98 */
+     }
+ 
+     if (retv) {
+@@ -12676,6 +12702,18 @@ ieee80211_ioctl_getapinfo(struct net_dev
+     sprintf(p + strlen(p), "Signal level:%ddBm\n", rssi);
+     /* END:   Added by Peter, 2014/6/26   PN:98 */
+ 
++    /* BEGIN: Added by Peter, 2014/6/17   PN:98 */
++    /* display Connect RSSI threshold*/
++    {
++       
++        u_int32_t connect_rssi_thr= wlan_aplist_get_connect_rssi_threshold(vap);
++        u_int32_t disconnect_rssi_thr= wlan_aplist_get_disconnect_rssi_threshold(vap);
++
++        sprintf(p + strlen(p), "Connect RSSI threshold:%ddBm\n", connect_rssi_thr - 95);
++        sprintf(p + strlen(p), "Disconnect RSSI threshold:%ddBm\n", disconnect_rssi_thr - 95);
++
++    }
++    /* END:   Added by Peter, 2014/6/17   PN:98 */
+     iwr->u.data.length = strlen(p);
+     error = _copy_to_user(iwr->u.data.pointer, p, iwr->u.data.length);
+ 
+@@ -14964,6 +15002,18 @@ static const struct iw_priv_args ieee802
+     { IEEE80211_PARAM_APISOLATION,
+       0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_apisolation" },
+     /*<-----daniel@liteon,2013-12-26*/
++
++    /* BEGIN: Added by Peter, 2014/6/17   PN:98 */
++    /* set/get connect/disconnect rssi treshold*/
++    { IEEE80211_PARAM_STA_CONNECT_RSSI_THRESHOLD,
++      IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "connrssi" },
++    { IEEE80211_PARAM_STA_CONNECT_RSSI_THRESHOLD,
++    0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_connrssi" },  
++    { IEEE80211_PARAM_STA_DISCONNECT_RSSI_THRESHOLD,
++      IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "disconnrssi" },
++    { IEEE80211_PARAM_STA_DISCONNECT_RSSI_THRESHOLD,
++    0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_disconnrssi" }, 
++
+ };
+ 
+ 
+--- wifi_QCA_10.1.436-orig/drivers/wlan_modules/umac/scan/ieee80211_aplist.c	2014-06-25 02:00:52.109080773 -0700
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/scan/ieee80211_aplist.c	2014-06-25 02:06:06.906291357 -0700
+@@ -25,6 +25,10 @@
+ /** Typical tx power delta (in dB) between AP and STA */
+ #define IEEE80211_DEFAULT_TX_POWER_DELTA               6
+ 
++/* Default RSSI threshold*/
++#define IEEE80211_DEFAULT_CONN_RSSI_THRESHOLD           0
++#define IEEE80211_DEFAULT_DISCONN_RSSI_THRESHOLD        0
++
+ 
+ struct ieee80211_aplist_config {
+     /** Desired BSSID list */
+@@ -60,6 +64,13 @@ struct ieee80211_aplist_config {
+      * expiration of bad ap timeout specified in this field
+      */
+     u_int32_t                 bad_ap_timeout;
++
++    /* BEGIN: Added by Peter, 2014/6/17   PN:98 */
++    /* the rssi bellow threshold can't be connected*/
++    u_int32_t                 connect_rssi_threshold; 
++    u_int32_t                 disconnect_rssi_threshold;    
++    /* END:   Added by Peter, 2014/6/17   PN:98 */
++    
+ };
+ 
+ 
+@@ -88,6 +99,11 @@ void ieee80211_aplist_config_init(struct
+     pconfig->des_nbssid           = 1;
+     pconfig->accept_any_bssid     = true;
+     pconfig->bad_ap_timeout       = BAD_AP_TIMEOUT;
++
++    ///* add default min rssi threshold*/
++    //pconfig->connect_rssi_threshold   = IEEE80211_DEFAULT_CONN_RSSI_THRESHOLD;
++    //pconfig->disconnect_rssi_threshold   = IEEE80211_DEFAULT_DISCONN_RSSI_THRESHOLD;
++
+ }
+ 
+ int ieee80211_aplist_set_desired_bssidlist(
+@@ -287,6 +303,7 @@ int ieee80211_aplist_get_tx_power_delta(
+ {
+     return (pconfig->tx_power_delta);
+ }
++
+ void ieee80211_aplist_register_match_security_func(
+     struct ieee80211_aplist_config    *pconfig,
+     ieee80211_aplist_match_security_func match_security_func,
+@@ -308,6 +325,42 @@ int ieee80211_aplist_set_bad_ap_timeout(
+     return EOK;
+ }
+ 
++/* BEGIN: Added by Peter, 2014/6/20   PN:98 */
++u_int32_t ieee80211_aplist_get_connect_rssi_threshold(
++    struct ieee80211_aplist_config    *pconfig
++    )
++{
++    return (pconfig->connect_rssi_threshold);
++}
++
++int ieee80211_aplist_set_connect_rssi_threshold(
++    struct ieee80211_aplist_config    *pconfig, 
++    int                               connect_rssi_threshold
++    )
++{
++    pconfig->connect_rssi_threshold = connect_rssi_threshold;
++
++    return EOK;
++}
++
++u_int32_t ieee80211_aplist_get_disconnect_rssi_threshold(
++    struct ieee80211_aplist_config    *pconfig
++    )
++{
++    return (pconfig->disconnect_rssi_threshold);
++}
++
++int ieee80211_aplist_set_disconnect_rssi_threshold(
++    struct ieee80211_aplist_config    *pconfig, 
++    int                               disconnect_rssi_threshold
++    )
++{
++    pconfig->disconnect_rssi_threshold = disconnect_rssi_threshold;
++
++    return EOK;
++}
++/* END:   Added by Peter, 2014/6/20   PN:98 */
++
+ int ieee80211_aplist_config_vattach(
+     ieee80211_aplist_config_t    *pconfig, 
+     osdev_t                      osdev
+@@ -480,6 +533,36 @@ int wlan_aplist_set_bad_ap_timeout(
+     return ieee80211_aplist_set_bad_ap_timeout(ieee80211_vap_get_aplist_config(vaphandle), bad_ap_timeout);
+ }
+ 
++int wlan_aplist_set_connect_rssi_threshold(
++    wlan_if_t    vaphandle, 
++    u_int32_t    connect_rssi_threshold
++    )
++{
++    return ieee80211_aplist_set_connect_rssi_threshold(ieee80211_vap_get_aplist_config(vaphandle), connect_rssi_threshold);
++}
++
++u_int32_t wlan_aplist_get_connect_rssi_threshold(
++    wlan_if_t    vaphandle 
++    )
++{
++    return ieee80211_aplist_get_connect_rssi_threshold(ieee80211_vap_get_aplist_config(vaphandle));
++}
++
++int wlan_aplist_set_disconnect_rssi_threshold(
++    wlan_if_t    vaphandle, 
++    u_int32_t    disconnect_rssi_threshold
++    )
++{
++    return ieee80211_aplist_set_disconnect_rssi_threshold(ieee80211_vap_get_aplist_config(vaphandle), disconnect_rssi_threshold);
++}
++
++u_int32_t wlan_aplist_get_disconnect_rssi_threshold(
++    wlan_if_t    vaphandle 
++    )
++{
++    return ieee80211_aplist_get_disconnect_rssi_threshold(ieee80211_vap_get_aplist_config(vaphandle));
++}
++
+ void wlan_aplist_init(
+     wlan_if_t    vaphandle
+     )
+@@ -1622,6 +1705,17 @@ ieee80211_candidate_aplist_match_entry(
+         return false;
+     }
+ 
++    /* BEGIN: Added by Peter, 2014/6/8 */
++    /* Check RSSI threshold, bellow threshold can't be connected*/
++    if(ieee80211_scan_entry_rssi(scan_entry) <= pconfig->connect_rssi_threshold){
++
++        IEEE80211_DPRINTF(vaphandle, IEEE80211_MSG_SCANENTRY, " - Reject, RSSI %ddBm < Connect Threshold %ddBm\n", 
++                ieee80211_scan_entry_rssi(scan_entry) - 95, pconfig->connect_rssi_threshold - 95);
++
++        return false;
++    }
++    /* END:   Added by Peter, 2014/6/8 */
++
+     if (calculate_rank) {
+         /* Increase the rank for each passed test */
+         rank++;
+--- wifi_QCA_10.1.436-orig/drivers/wlan_modules/umac/sme/ieee80211_connection_sm.c	2014-06-25 02:00:43.201080430 -0700
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/sme/ieee80211_connection_sm.c	2014-06-25 02:06:55.063505506 -0700
+@@ -1285,6 +1285,31 @@ static OS_TIMER_FUNC(connection_sm_roam_
+     else {
+         ignore_thresholds = 0;
+     }
++
++    /* BEGIN: Added by Peter, 2014/6/20   PN:98 */
++    /* Check if satisfy disconnect RSSI threshold*/
++    {
++        u_int8_t i; 
++        u_int8_t beacon_info_count = sm->vap_handle->iv_beacon_info_count;
++
++
++        //printk("sm->bgscan_policy=%d, cur_rssi=%d\n", sm->bgscan_policy, cur_rssi); //peter debug
++        
++        for(i=0; i < beacon_info_count; i++)
++        {
++            if(!OS_MEMCMP(sm->vap_handle->iv_beacon_info[i].bssid,sm->vap_handle->iv_bss->ni_bssid,6)){
++                if(sm->vap_handle->iv_beacon_info[i].rssi < wlan_aplist_get_disconnect_rssi_threshold(sm->vap_handle)){
++                    //ieee80211_sm_transition_to(sm->hsm_handle,IEEE80211_CONNECTION_STATE_ROAM);
++                    printk("Disconnect due to RSSI %d < %d\n", sm->vap_handle->iv_beacon_info[i].rssi,
++                        wlan_aplist_get_disconnect_rssi_threshold(sm->vap_handle));
++                    ieee80211_sm_transition_to(sm->hsm_handle,IEEE80211_CONNECTION_STATE_DISCONNECTING);
++                    return;
++                }else{
++                    break;
++                }
++            }
++        }
++    }
+     
+     /*
+      * no BG Scan policy in place.

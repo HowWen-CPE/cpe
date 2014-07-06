@@ -1,0 +1,26 @@
+--- boot_atheros/u-boot/cpu/mips/start.S	2013-04-03 13:42:49.000000000 +0800
++++ boot_liteon/u-boot/cpu/mips/start.S	2013-03-29 17:58:51.000000000 +0800
+@@ -328,6 +328,10 @@
+ 
+ /**************************************************************************/
+ 
++#ifdef UBOOT_ROM_VERSION
++/* UBOOT_ROM_VERSION branch-----> */
++
++
+ 	/* Initialize any external memory.
+ 	 */
+ #if defined(CONFIG_AR7100) || defined(CONFIG_AR7240)
+@@ -375,6 +379,12 @@
+ 
+ #endif
+ 
++
++#else
++/* UBOOT_RAM_VERSION branch-----> */
++
++#endif //UBOOT_ROM_VERSION
++
+ 	/* Initialize caches...
+ 	 */
+ 	la      t9, simple_mips_cache_reset

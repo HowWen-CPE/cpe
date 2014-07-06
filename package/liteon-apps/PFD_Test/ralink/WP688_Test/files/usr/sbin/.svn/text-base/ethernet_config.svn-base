@@ -1,0 +1,30 @@
+#!/bin/sh
+ifconfig eth2 down
+#echo "=ifconfig eth2 down=" > /tmp/33
+#value=`PFD_Test get ethmac`
+#ifconfig eth2 hw ether "$(`PFD_Test get ethmac`)"
+#ifconfig eth2 hw ether $(sh /usr/sbin/PFD_Test get ethmac)
+ifconfig eth2 hw ether "$(nvram get board_ethmac)"
+#echo "=ifconfig eth2 hw ether $(sh /usr/sbin/PFD_Test get ethmac)" >> /tmp/33
+ifconfig eth2 up
+#echo "=ifconfig eth2 up="  >> /tmp/33
+brctl addbr br0
+brctl addif br0 eth2
+ifconfig br0 up
+ifconfig br0 192.168.1.2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

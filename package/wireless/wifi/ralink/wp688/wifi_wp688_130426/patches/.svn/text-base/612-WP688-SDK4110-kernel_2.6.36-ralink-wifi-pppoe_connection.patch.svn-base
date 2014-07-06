@@ -1,0 +1,154 @@
+diff -urN a/rt2860v2/common/cmm_mat_pppoe.c b/rt2860v2/common/cmm_mat_pppoe.c
+--- a/rt2860v2/common/cmm_mat_pppoe.c	2013-05-13 18:07:31.674226545 +0800
++++ b/rt2860v2/common/cmm_mat_pppoe.c	2013-05-13 15:10:42.105973385 +0800
+@@ -340,6 +340,9 @@
+ 	UCHAR 				hashVal = 0;
+ 	PUCHAR				pUIDStr= NULL;
+ 	ULONG				now;
++#ifndef WIFI_DRIVER_PRE_PORTING
++	UCHAR tmpTag[] = {0x00,0x55,0x44,0x33,0x22,0x11};
++#endif
+ 
+ 
+ 	pUidMacTable = (UidMacMappingTable *)pMatCfg->MatTableSet.UidMacTable;
+@@ -359,7 +362,11 @@
+ 			For a packet send by server, we use the destination MAC as our uIDStr
+ 			For a packet send by client, we use the source MAC as our uIDStr.
+ 		*/
++#ifndef WIFI_DRIVER_PRE_PORTING
++		pUIDStr = tmpTag;
++#else
+ 		pUIDStr = isServer ? pOutMac: pInMac;
++#endif
+ 		tagLen = MAC_ADDR_LEN;
+ 		uIDAddByUs = 1;
+ 	}
+@@ -655,6 +662,9 @@
+ 	UINT16 needUpdateSesTb= 0, sesID=0, isPADT = 0;
+ 	UINT16 findTag=0;
+ 	PUidMacMappingEntry pEntry = NULL; 
++#ifndef WIFI_DRIVER_PRE_PORTING
++	UCHAR tmpTag[] = {0x00,0x55,0x44,0x33,0x22,0x11};
++#endif
+ 
+ 	pData = pLayerHdr;
+ 	if (*(pData) != 0x11)
+@@ -729,7 +739,13 @@
+ 			leftLen -= (tagLen + 4);		
+ 		}
+ 	}
+-	
++#ifndef WIFI_DRIVER_PRE_PORTING
++	if(pTagContent == NULL)
++	{
++		pTagContent = tmpTag;
++		tagLen = PPPOE_DIS_UID_LEN;
++	}
++#endif
+ 
+ 	/* Now update our pppoe discovery table "UidMacTable" */
+ 	if (pTagContent)
+@@ -739,6 +755,8 @@
+ 		/* Remove the AC-Cookie or host-uniq if we ever add the field for this session. */
+ 		if (pEntry)
+ 		{
++#ifndef WIFI_DRIVER_PRE_PORTING
++#if 0
+ 			if (pEntry->uIDAddByUs)
+ 			{
+ 				PUCHAR tagHead, nextTagHead;
+@@ -758,6 +776,28 @@
+ 
+ 				*((UINT16 *)pPayloadLen) = OS_HTONS(payloadLen - removedTagLen);
+ 			}
++#endif
++#else
++			if (pEntry->uIDAddByUs)
++			{
++				PUCHAR tagHead, nextTagHead;
++				UINT removedTagLen, tailLen;
++
++				removedTagLen = 4 + tagLen;  	/*The total length tag ID/info we want to remove. */
++				tagHead = pTagContent - 4;	/*The start address of the tag we want to remove in sk bufffer */
++				tailLen = GET_OS_PKT_LEN(pSkb) - (pTagContent - (PUCHAR)(GET_OS_PKT_DATAPTR(pSkb))) - removedTagLen; /*Total left bytes we want to move. */
++				if (tailLen)
++				{
++					nextTagHead = pTagContent + tagLen;	/*The start address of next tag ID/info in sk buffer. */
++					memmove(tagHead, nextTagHead, tailLen);
++				}
++/*				SET_OS_PKT_DATATAIL(pSkb, GET_OS_PKT_DATATAIL(pSkb), (-removedTagLen)); */
++/*				GET_OS_PKT_LEN(pSkb) -= removedTagLen; */
++				OS_PKT_TAIL_ADJUST(pSkb, removedTagLen);
++
++				*((UINT16 *)pPayloadLen) = OS_HTONS(payloadLen - removedTagLen);
++			}
++#endif
+ 
+ 			if (needUpdateSesTb) {
+ 				
+@@ -885,6 +925,57 @@
+ 	/* Now update our pppoe discovery table "UidMacTable" */
+ 	pEntry  = UidMacTableUpdate(pMatStruct, pSrcMac, pDstMac, pTagContent, tagLen, isServer);
+ 	
++#ifndef WIFI_DRIVER_PRE_PORTING
++#if 0	
++	if (pEntry && (pTagContent == NULL))
++	{
++		PUCHAR tailHead;
++		
++		if(OS_PKT_CLONED(pSkb))
++		{
++/*			pModSkb = (PNDIS_PACKET)skb_copy(RTPKT_TO_OSPKT(pSkb), MEM_ALLOC_FLAG); */
++			pModSkb = (PNDIS_PACKET)OS_PKT_COPY(RTPKT_TO_OSPKT(pSkb));
++		}
++		else
++			pModSkb = (PNDIS_PACKET)RTPKT_TO_OSPKT(pSkb);
++
++		if(!pModSkb)
++			return NULL;
++		
++/*		tailHead = skb_put(RTPKT_TO_OSPKT(pModSkb), (PPPOE_DIS_UID_LEN + 4)); */
++		tailHead = OS_PKT_TAIL_BUF_EXTEND(pModSkb, (PPPOE_DIS_UID_LEN + 4));
++		if (tailHead)
++		{
++			pPayloadLen = GET_OS_PKT_DATAPTR(pModSkb) + offset;
++			//modify for PPPOE
++			//Situation:when Server is located in CPE end
++			pPPPPoETail = pPayloadLen + payloadLen + 2;
++			if(tailHead > pPPPPoETail)
++				tailHead = pPPPPoETail;
++				
++			if (pEntry->isServer)
++			{	/*Append the AC-Cookie tag info in the tail of the pppoe packet. */
++				tailHead[0] = 0x01;
++				tailHead[1] = 0x04;
++				tailHead[2] = 0x00;
++				tailHead[3] = PPPOE_DIS_UID_LEN;
++				tailHead += 4;
++				NdisMoveMemory(tailHead, pEntry->uIDStr, PPPOE_DIS_UID_LEN);
++			} 
++			else 
++			{	/*Append the host-uniq tag info in the tail of the pppoe packet. */
++				tailHead[0] = 0x01;
++				tailHead[1] = 0x03;
++				tailHead[2] = 0x00;
++				tailHead[3] = PPPOE_DIS_UID_LEN;
++				tailHead += 4;
++				NdisMoveMemory(tailHead, pEntry->uIDStr, PPPOE_DIS_UID_LEN);
++			}
++			*(UINT16 *)pPayloadLen = OS_HTONS(payloadLen + 4 + PPPOE_DIS_UID_LEN);
++		}
++	}
++#endif
++#else
+ 	if (pEntry && (pTagContent == NULL))
+ 	{
+ 		PUCHAR tailHead;
+@@ -930,6 +1021,7 @@
+ 			*(UINT16 *)pPayloadLen = OS_HTONS(payloadLen + 4 + PPPOE_DIS_UID_LEN);
+ 		}
+ 	}
++#endif
+ 
+ 	if (needUpdateSesTb)
+ 		SesMacTableUpdate(pMatStruct, pSrcMac, sesID, pDstMac);

@@ -1,0 +1,2526 @@
+// upgraderView.cpp : implementation of the CUpgraderView class
+//
+
+#include "stdafx.h"
+#include "upgrader.h"
+#include <Iphlpapi.h>
+#include "IpConfig.h"
+#include <time.h>
+
+#include "upgraderView.h"
+#include "TftpProgress.h"
+#include "PasswordDlg.h"
+#include "ManualDlg.h"
+#include "DeviceInfoDlg.h"
+#include "Waiting.h"
+#include "Login.h"
+#include "WaitReset.h"
+#include "Wireless.h"
+#include "WizardSheet.h"//********
+#include "NGWizard.h"
+#include "SelectConectionDlg.h"
+//#include "ListVwEx.h"	// base class for CRowListView
+//#include "MyListCtrl.h"
+/*Scoutlee begin 2004/9/2 04:58と*/
+#define APCFG_AUTH_OPEN_SYSTEM          0
+#define APCFG_AUTH_SHARED_KEY           1
+#define APCFG_AUTH_WPA                  2
+#define APCFG_AUTH_WPAPSK               3
+#define APCFG_AUTH_AUTO                 4
+
+/*Scoutlee end 2004/9/2 04:58と*/
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+#define LIST_MAX_ITEMLEN	    255
+#define MAX_HOSTNAME_LAN		255
+
+oid BootStatus[] = {1,3,6,1,4,1,3093,3,1,4,0};
+oid sysDescr[] = {1,3,6,1,2,1,1,1,0};
+oid FWVersion[] = {1,3,6,1,4,1,3093,1,3,0};
+oid ifPhysAddr[] = {1,3,6,1,2,1,2,2,1,6,1};
+oid Password[] = {1,3,6,1,4,1,3093,3,1,3,0};
+
+static BOOL ext_bRun = FALSE;
+
+/////////////////////////////////////////////////////////////////////////////
+// CUpgraderView
+
+IMPLEMENT_DYNCREATE(CUpgraderView, CListViewEx)
+
+BEGIN_MESSAGE_MAP(CUpgraderView, CListViewEx)
+	//{{AFX_MSG_MAP(CUpgraderView)
+	ON_WM_CREATE()
+	ON_COMMAND(ID_SEARCH, OnSearch)
+	ON_UPDATE_COMMAND_UI(ID_SEARCH, OnUpdateSearch)
+	ON_COMMAND(ID_UPGRADE_MANUAL, OnUpgradeManual)
+	ON_UPDATE_COMMAND_UI(ID_UPGRADE_MANUAL, OnUpdateUpgradeManual)
+	ON_COMMAND(ID_DEVICE_INFO, OnDeviceInfo)
+	ON_UPDATE_COMMAND_UI(ID_DEVICE_INFO, OnUpdateDeviceInfo)
+	ON_WM_RBUTTONDOWN()
+	ON_WM_LBUTTONDBLCLK()
+	ON_WM_SIZE()
+	ON_UPDATE_COMMAND_UI(ID_CONFIG, OnUpdateConfig)
+	ON_COMMAND(ID_CONFIG, OnConfig)
+	ON_COMMAND(ID_WEB, OnWeb)
+	ON_UPDATE_COMMAND_UI(ID_WEB, OnUpdateWeb)
+	ON_WM_TIMER()
+	ON_COMMAND(ID_WIRELESS, OnWireless)
+	ON_UPDATE_COMMAND_UI(ID_WIRELESS, OnUpdateWireless)
+	ON_COMMAND(ID_WIZARD, OnWizard)
+	ON_UPDATE_COMMAND_UI(ID_WIZARD, OnUpdateWizard)
+	ON_COMMAND(ID_TOOLS_SELECTCONNECTION, OnToolsSelectconnection)
+	//}}AFX_MSG_MAP	
+	ON_UPDATE_COMMAND_UI(ID_TOOLS_SELECTCONNECTION, &CUpgraderView::OnUpdateToolsSelectconnection)
+	ON_MESSAGE(WM_CHANGE_SOCKET, &CUpgraderView::OnChangeSocket)
+	ON_COMMAND(ID_REBOOT, &CUpgraderView::OnReboot)
+	ON_UPDATE_COMMAND_UI(ID_REBOOT, &CUpgraderView::OnUpdateReboot)
+END_MESSAGE_MAP()
+
+/////////////////////////////////////////////////////////////////////////////
+// CUpgraderView construction/destruction
+
+CUpgraderView::CUpgraderView()
+{
+	// TODO: add construction code here
+	m_bAuthRecvFlag = FALSE;
+}
+
+CUpgraderView::~CUpgraderView()
+{
+}
+
+BOOL CUpgraderView::PreCreateWindow(CREATESTRUCT& cs)
+{
+	// TODO: Modify the Window class or styles here by modifying
+	//  the CREATESTRUCT cs
+//	cs.style &= ~LVS_TYPEMASK;
+	cs.style |= LVS_SHOWSELALWAYS;
+	cs.style |= LVS_REPORT;
+//	cs.style |= LVS_OWNERDRAWFIXED;
+//	cs.style |= LVS_EDITLABELS;
+	return CListViewEx::PreCreateWindow(cs);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// CUpgraderView drawing
+
+void CUpgraderView::OnDraw(CDC* pDC)
+{
+	CUpgraderDoc* pDoc = GetDocument();
+	ASSERT_VALID(pDoc);
+
+	// TODO: add draw code for native data here
+}
+
+void CUpgraderView::OnInitialUpdate()
+{
+	CListViewEx::OnInitialUpdate();
+	CRect rect;
+	GetClientRect(&rect);
+	m_sendDiscoverCount = 0;
+	
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+
+	ctlList.InsertColumn(0,"Device Name", LVCFMT_LEFT, (rect.right*9)/40 , -1 );
+	ctlList.InsertColumn(1,"Device Type", LVCFMT_LEFT, (rect.right*8)/40 , -1 );
+	ctlList.InsertColumn(2,"IP Address", LVCFMT_LEFT, (rect.right*7)/40 , -1 );
+	ctlList.InsertColumn(3,"Ethernet MAC Address", LVCFMT_LEFT, (rect.right*8)/40 , -1 );	
+	ctlList.InsertColumn(4,"Firmware Version", LVCFMT_LEFT, (rect.right*8)/40 , -1 );	
+
+	m_npBufferIndex = 0;
+
+	memset(m_szDeviceTypeList,0,sizeof(m_szDeviceTypeList));
+	memset(m_szDeviceNameList,0,sizeof(m_szDeviceNameList));
+	memset(m_szMacAddressList,0,sizeof(m_szMacAddressList));
+	memset(m_szIPAddressList,0,sizeof(m_szIPAddressList));
+	memset(iIPAddr, 0, sizeof(iIPAddr));
+	memset(iCfgMACAddr,0,sizeof(iCfgMACAddr));
+	memset(iMACAddr,0,sizeof(iMACAddr));
+
+	CUpgraderDoc* pDoc = GetDocument();
+	ASSERT(NULL != pDoc);
+
+	// 取得网卡个数
+	int nAdapterCount = 0;
+	PIP_ADAPTER_INFO pAdapter = pDoc->m_pAdapterInfo;
+	while (NULL != pAdapter)
+	{
+		nAdapterCount++;
+		pAdapter = pAdapter->Next;
+	}
+	
+	// 根据网卡的数量让用户选择一个默认网卡
+	switch (nAdapterCount)
+	{
+	case 1:
+		pDoc->m_pDefaultAdapter = pDoc->m_pAdapterInfo;
+		break;
+	case 0:
+		MessageBox("There is not any adapter!", "Error", MB_OK|MB_ICONERROR);
+		break;
+	default:
+		CSelectConectionDlg dlg;
+		if (dlg.DoModal() != IDOK)
+		{
+			// 默认选择第一个
+			pDoc->m_pDefaultAdapter = pDoc->m_pAdapterInfo;			
+			//MessageBox("Please select a default adapter", "warning", MB_OK|MB_ICONWARNING);
+		}
+		break;
+	}
+	ASSERT(NULL != pDoc->m_pDefaultAdapter);
+	
+	InterfaceSelect();
+	CreateWinSocket();
+	StartDiscovery();
+	// TODO: You may populate your ListView with items by directly accessing
+	//  its list control through a call to GetListCtrl().
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// CUpgraderView diagnostics
+
+#ifdef _DEBUG
+void CUpgraderView::AssertValid() const
+{
+	CListViewEx::AssertValid();
+}
+
+void CUpgraderView::Dump(CDumpContext& dc) const
+{
+	CListViewEx::Dump(dc);
+}
+
+CUpgraderDoc* CUpgraderView::GetDocument() // non-debug version is inline
+{
+	ASSERT(m_pDocument->IsKindOf(RUNTIME_CLASS(CUpgraderDoc)));
+	return (CUpgraderDoc*)m_pDocument;
+}
+#endif //_DEBUG
+
+/////////////////////////////////////////////////////////////////////////////
+// CUpgraderView message handlers
+
+int CUpgraderView::OnCreate(LPCREATESTRUCT lpCreateStruct) 
+{
+	lpCreateStruct->style |= LVS_ICON |LVS_NOLABELWRAP|LVS_AUTOARRANGE|LVS_SINGLESEL|LVS_REPORT;
+
+	if (CListViewEx::OnCreate(lpCreateStruct) == -1)
+		return -1;
+//	CMyListCtrl& ListCtrl = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ListCtrl = (CListCtrl&) GetListCtrl();
+
+	m_ImageList.Create(47,47,
+			       ILC_COLORDDB|ILC_MASK, // list does include masks
+			       1,
+			       0);// list won't grow
+	CBitmap Bitmap;
+	Bitmap.LoadBitmap (IDB_ROUTER); 
+	m_nRouter = m_ImageList.Add(&Bitmap,(COLORREF)RGB(0,255,0)); // Add to Image List
+	Bitmap.DeleteObject(); // Unload the bitmap from CBitmap
+
+	Bitmap.LoadBitmap (IDB_SWITCH); 
+	m_nSwitch = m_ImageList.Add(&Bitmap,(COLORREF)RGB(0,255,0)); // Add to Image List
+	Bitmap.DeleteObject(); // Unload the bitmap from CBitmap
+
+	Bitmap.LoadBitmap (IDB_GATEWAY); // Load multiple Page Bitmap
+	m_nGateway = m_ImageList.Add(&Bitmap,(COLORREF)RGB(0,255,0)); // Add to Image List
+	Bitmap.DeleteObject(); // Unload the bitmap from CBitmap
+		
+	ListCtrl.SetImageList(&m_ImageList,LVSIL_NORMAL);
+
+	return 0;
+}
+
+void CUpgraderView::OnSearch() 
+{
+	HCURSOR hOldCur = BeginWait();
+	pWaiting = new CWaiting;
+	// 查找2000 ms
+	SetTimer(TIMER4,2000,NULL);
+	StartDiscovery();
+}
+
+void CUpgraderView::OnUpdateSearch(CCmdUI* pCmdUI) 
+{
+	pCmdUI->Enable(TRUE);	
+}
+
+void CUpgraderView::LV_AddItem(int nIndex, CDeviceInfo *pItem)
+{
+	LV_ITEM			lvI;  //list view item structure
+
+	lvI.mask = LVIF_TEXT | LVIF_IMAGE | LVIF_PARAM | LVIF_STATE;
+    lvI.state = INDEXTOOVERLAYMASK(1)|ILD_IMAGE;
+    lvI.stateMask = LVIS_OVERLAYMASK;
+	lvI.iItem = nIndex;	
+	lvI.iSubItem = 0;
+	lvI.lParam = (LPARAM)pItem;
+	lvI.iImage = m_nGateway;
+	struct in_addr  in;
+	in.s_addr = pItem->IpAddr.sin_addr.s_addr;
+	CString strIpAddr = inet_ntoa(in);
+	lvI.pszText = (LPTSTR)(LPCTSTR)strIpAddr;
+	lvI.cchTextMax = LIST_MAX_ITEMLEN;
+
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	ctlList.InsertItem(&lvI);
+}
+
+// Factory default Davidgong 2010.5.27
+void CUpgraderView::OnUpgradeManual() 
+{	
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.GetSelectionMark();
+	if (index != -1)
+	{
+		CLogin	dlg;				
+		if (dlg.DoModal() == IDOK)
+		{
+			m_strUserName = dlg.m_sUserName;
+			m_strPassword = dlg.m_sPassword;
+			SendAuthentication(UCP_METHOD_RESET);
+		}
+	}
+
+//	SetFactoryDefault(LocalIP);
+}
+
+void CUpgraderView::OnUpdateUpgradeManual(CCmdUI* pCmdUI) 
+{
+	//pCmdUI->Enable(TRUE);
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	if (ctlList.GetNextItem(-1, LVNI_SELECTED) != -1)
+		pCmdUI->Enable(TRUE);
+	else
+		pCmdUI->Enable(FALSE);
+	
+}
+
+void CUpgraderView::OnUpdateWireless(CCmdUI* pCmdUI) 
+{
+	//pCmdUI->Enable(TRUE);
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	if (ctlList.GetNextItem(-1, LVNI_SELECTED) != -1)
+		pCmdUI->Enable(TRUE);
+	else
+		pCmdUI->Enable(FALSE);
+}
+
+void CUpgraderView::OnUpdateWizard(CCmdUI* pCmdUI) 
+{
+	//pCmdUI->Enable(TRUE);
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	//if (ctlList.GetNextItem(-1, LVNI_SELECTED) != -1)
+	//	pCmdUI->Enable(TRUE);
+	//else
+		pCmdUI->Enable(FALSE);
+}
+
+void CUpgraderView::OnDeviceInfo() 
+{
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.GetNextItem(-1, LVNI_SELECTED);
+	//CDeviceInfo *pItem = (CDeviceInfo *)ctlList.GetItemData(index);
+//	CDeviceInfoDlg  InfoDlg;
+//	InfoDlg.m_strModelName = DeviceNameList[index];
+//	InfoDlg.m_strIpAddr =  IPAddressList[index];
+//	InfoDlg.m_strMacAddr = MacAddressList[index];
+//	InfoDlg.m_strFwVer = FirmwareVerList[index];
+//	InfoDlg.DoModal();
+	GetMiniApInfo();
+}
+
+void CUpgraderView::OnUpdateDeviceInfo(CCmdUI* pCmdUI) 
+{
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	if (ctlList.GetNextItem(-1, LVNI_SELECTED) != -1)
+		pCmdUI->Enable(TRUE);
+	else
+		pCmdUI->Enable(FALSE);	
+}
+
+void CUpgraderView::OnRButtonDown(UINT nFlags, CPoint point) 
+{
+/*
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.HitTest(point);
+	if (index != -1)
+	{
+		//int pos = ctlList.GetSelectionMark();
+		//CDeviceInfo *pItem = (CDeviceInfo *)ctlList.GetItemData(index);
+		CDeviceInfoDlg  InfoDlg;
+		InfoDlg.m_strModelName = m_szDeviceNameList[index];
+		InfoDlg.m_strIpAddr =  m_szIPAddressList[index];
+		InfoDlg.m_strMacAddr = m_szMacAddressList[index];
+		InfoDlg.m_strFwVer = m_szFirmwareVerList[index];
+		InfoDlg.DoModal();
+		//GetMiniApInfo();
+	}
+*/
+	CListViewEx::OnRButtonDown(nFlags, point);
+}
+
+void CUpgraderView::OnLButtonDblClk(UINT nFlags, CPoint point) 
+{
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.HitTest(point);
+	if (index != -1)
+		PostMessage(WM_COMMAND, ID_UPGRADE_AUTO, 0);
+
+	GetMiniApInfo();
+
+	CListViewEx::OnLButtonDblClk(nFlags, point);
+}
+
+void CUpgraderView::OnSize(UINT nType, int cx, int cy) 
+{
+	CListViewEx::OnSize(nType, cx, cy);
+	if ( GetListCtrl().GetSafeHwnd() )
+	{
+//		GetListCtrl().SetColumnWidth(0,cx/5);
+//		GetListCtrl().SetColumnWidth(1,(cx/5)*2);
+//		GetListCtrl().SetColumnWidth(2,cx/5);
+//		GetListCtrl().SetColumnWidth(3,cx/5);
+	}	
+}
+
+void CUpgraderView::StartDiscovery()
+{
+	// 清空内存
+	memset(m_szDeviceTypeList,0,sizeof(m_szDeviceTypeList));
+	memset(m_szDeviceNameList,0,sizeof(m_szDeviceNameList));
+	memset(m_szMacAddressList,0,sizeof(m_szMacAddressList));
+	memset(m_szIPAddressList,0,sizeof(m_szIPAddressList));
+	memset(m_szSendDataBuf,0,sizeof(m_szSendDataBuf));
+	memset(iMACAddr,0,sizeof(iMACAddr));
+	m_nDeviceCount = 0;
+
+	// 清空界面
+	GetListCtrl().DeleteAllItems();
+
+	// 探测包为0x0100，目标MAC为全零
+	int i;
+	for (i = 0; i < 8; i++ )// Broadcast packet.
+	{
+		if ( i == 0 )
+			m_szSendDataBuf[i] = 0x01;
+		else
+			m_szSendDataBuf[i] = 0x00;
+	}
+	
+	//客户端选项0x0002
+	m_szSendDataBuf[i++] = (UAP_CLIENT_OPTION >> 8 ) & 0xff;
+	m_szSendDataBuf[i++] = (UAP_CLIENT_OPTION >> 0 ) & 0xff;
+
+	// 源IP
+	CString strHostIP = m_szLocalHostIP;
+	for (i; i < 14; i++)
+	{
+		CString StrTemp;
+
+		int pos = strHostIP.Find('.',0);
+		if ( pos != -1 )
+			StrTemp = strHostIP.Left(pos);
+		else
+			StrTemp = strHostIP;
+
+		int tt = atoi(StrTemp);
+		m_szSendDataBuf[i] = (char)tt;
+		strHostIP.Delete(0,pos+1);
+	}
+
+	//UDP Port Number
+	m_szSendDataBuf[i++] = (UDP_UDAP_PORT >> 8)&0xff;
+	m_szSendDataBuf[i++] = (UDP_UDAP_PORT >> 0)&0xff;
+
+	//SequenceNum 序列号
+	m_szSendDataBuf[i++] = 0x01;
+	m_szSendDataBuf[i++] = 0x00;
+
+	//UDAP_TYPE_IPCONFIGURE //设备类型
+	m_szSendDataBuf[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 8)&0xff);
+	m_szSendDataBuf[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 0)&0xff);
+
+	//UAP_FLAG_REQUEST
+	m_szSendDataBuf[i++] = UAP_FLAG_REQUEST;
+
+	//UAP_CLASS_UCP
+	m_szSendDataBuf[i++] = (UAP_CLASS_UCP >> 24)&0xff;
+	m_szSendDataBuf[i++] = (UAP_CLASS_UCP >> 16)&0xff;
+	m_szSendDataBuf[i++] = (UAP_CLASS_UCP >> 8)&0xff;
+	m_szSendDataBuf[i++] = (UAP_CLASS_UCP >> 0)&0xff;
+
+	//UCP_METHOD_DISCOVER
+	m_szSendDataBuf[i++] = (UCP_METHOD_DISCOVER >> 8)&0xff;
+	m_szSendDataBuf[i++] = (UCP_METHOD_DISCOVER >> 0)&0xff;
+
+	//Send Data
+	m_packetLength = i;
+
+	//Re-send
+	SetTimer(TIMER1,500,NULL);
+}	
+
+// 接收设备端数据包 David 2010.6.3
+void CUpgraderView::GetDevicesInfo()
+{
+	CWireless	dlgWirelessConfig;		// 无线设置对话框
+	CDeviceInfoDlg	dlgInfo;			// 设备信息对话框
+
+	char		GetLen;
+	char		szDeviceType[33];
+	char		szFirmwareVer[20];
+	char		szcSSID[33];
+	char		szDeviceName[33];
+	
+	int			iOpMode;
+	int			iChannel, iChannelDisplay;
+	int			iWirelessMode;
+	int			iSuperG;
+	int			iSecurity;
+	int			iEncryption;
+	int			iWepKeyType;
+	int			iEncryptionOnOff;
+	int        iWepInputType;
+	int			iMACAddrTemp[6];
+	
+	bool		ErrorBreak = false;
+	char		szcharWlanMACAddress[18];
+	
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+
+	if (m_Socket == INVALID_SOCKET)
+		return;
+
+	// 接收设备端数据包
+	const int	MSG_CHUNK = 512;
+	char		buffer[MSG_CHUNK] = "\0";
+	sockaddr_in soctFrom;	// 设备端的IP地址
+	memset(&soctFrom, NULL, sizeof(sockaddr));
+	int	nFromLen = sizeof(sockaddr_in);	// 数据包长度	
+	int status = recvfrom(m_Socket, buffer, MSG_CHUNK, 0, (sockaddr*)&soctFrom, &nFromLen);
+	CString strServIP = inet_ntoa(soctFrom.sin_addr);
+	char szIP[20];
+	int index, n;
+	memset(szIP,0,sizeof(szIP));
+	m_npBufferIndex = 0;
+	char szBufferBin[512] = "\0";
+	
+	// 接收失败返回
+	if (status <= 0)
+		return;	
+	
+	// 接收成功，将转换到本地内存
+	CUpgraderDoc* pDoc = GetDocument();
+	ASSERT(NULL != pDoc);
+	int nRes = pDoc->GetDataFromSocket(buffer);
+	switch (nRes)
+	{
+	case 0:		// 缓冲区指针为空
+	case -1:	// 不是来自设备端的数据包
+	case -2:	// 与客户端的IP不同
+		return;
+	case -3:	// 转换分段数据错误
+		MessageBox("Data To Doc Error");
+		return;
+	case -4:	// 用户名和密码错误
+		AfxMessageBox( "User Name or Password Fail!" );
+		return;
+	}
+	
+	// socket数据转换到本地内存后，继续后续的任务
+	LaterAction();
+
+	// 接收成功
+	/*ULONG uClientOper;
+	HexToULONG(buffer, 2, m_npBufferIndex, &uClientOper);
+
+	// 如果不是来自设备端的数据包返回
+	if (uClientOper != UAP_CLIENT_OPTION)	
+		return;
+
+	// 正常接收设备端的数据包
+	memset(m_szLocalHostIP, NULL, sizeof(m_szLocalHostIP));
+	GetLocalIPs(m_szLocalHostIP, sizeof(m_szLocalHostIP));
+	int len = strlen(m_szLocalHostIP);
+	if (!IsHexDigit(m_szLocalHostIP[len-1]))
+		m_szLocalHostIP[len-1] = 0;
+	char szIPEnd[2]= {13, 0};
+	len = strcspn(m_szLocalHostIP, szIPEnd);
+	m_szLocalHostIP[len] = 0;
+
+	// 客户端IP
+	HexToChar(buffer, 4 , m_npBufferIndex , szIP);
+	Ip2String(szIP, szIP);
+	if (strcmp(m_szLocalHostIP, szIP) != 0)
+		return;
+
+	// UDP 端口号
+	ULONG		uPort;
+	HexToULONG(buffer, 2 , m_npBufferIndex , &uPort);
+	
+	// 服务（设备）端类型
+	ULONG Distype;
+	HexToULONG(buffer, 2 , m_npBufferIndex , &Distype);								
+
+	// 服务（设备）端MAC地址
+	for (int j=0; j<6; j++)
+	{
+		HexToint(buffer, 1 , m_npBufferIndex , &iMACAddrTemp[j]);
+	}
+	char chrMacAddrTemp[18];
+	memset(chrMacAddrTemp, 0 , sizeof(chrMacAddrTemp));
+	_stprintf(chrMacAddrTemp,"%02X:%02X:%02X:%02X:%02X:%02X", 
+			iMACAddrTemp[0], iMACAddrTemp[1], iMACAddrTemp[2], 
+			iMACAddrTemp[3], iMACAddrTemp[4], iMACAddrTemp[5]);							
+	CString	strMACAddress = chrMacAddrTemp;
+
+	// 序列号
+	ULONG		uFlagRequest;
+	HexToULONG(buffer, 2 , m_npBufferIndex , &uFlagRequest);
+
+	// 设备类型
+	ULONG		uIPConfig;
+	HexToULONG(buffer, 2 , m_npBufferIndex , &uIPConfig);
+
+	// Flag
+	ULONG		uType;
+	HexToULONG(buffer, 1 , m_npBufferIndex , &uType);
+
+	// 设备类别
+	ULONG		uUCPClass;
+	HexToULONG(buffer, 4 , m_npBufferIndex , &uUCPClass);
+
+	// method
+	ULONG		uMethod;
+	HexToULONG(buffer, 2 , m_npBufferIndex , &uMethod);
+	*/
+	// 根据回应包的方法获取数据
+/*	switch(uMethod)
+	{
+	case UCP_METHOD_DISCOVER:
+		for (n = 0; n < 3; n++)
+		{
+			ULONG		Flag;
+			HexToULONG(buffer, 1 , m_npBufferIndex , &Flag);					
+			int StrLen = (int)buffer[m_npBufferIndex++];
+			switch(Flag)
+			{
+			case UCP_CODE_DEVICE_NAME:
+				memset(szDeviceName, 0, sizeof(szDeviceName));
+				HexToChar(buffer, StrLen , m_npBufferIndex , szDeviceName);
+				break;
+			case UCP_CODE_DEVICE_TYPE:
+				memset(szDeviceType, 0, sizeof(szDeviceType));
+				HexToChar(buffer, StrLen , m_npBufferIndex , szDeviceType);
+				break;
+			case UCP_CODE_SOFTWARE_VER:
+				memset(szFirmwareVer, 0, sizeof(szFirmwareVer));
+				HexToChar(buffer, StrLen , m_npBufferIndex , szFirmwareVer);
+				break;
+			}
+		}
+		for(index=0; index<m_nDeviceCount; index++)
+		{
+			if (strcmp(m_szMacAddressList[index], chrMacAddrTemp) == 0)
+				break;
+		}
+
+		// 探测到新设备
+		if (index == m_nDeviceCount)
+		{
+			// 添加到内存
+			memcpy( iMACAddr[index], iMACAddrTemp, sizeof(iMACAddrTemp));
+			strcpy(m_szDeviceNameList[index], szDeviceName);
+			strcpy(m_szDeviceTypeList[index], szDeviceType);
+			strcpy(m_szFirmwareVerList[index], szFirmwareVer);
+			strcpy(m_szMacAddressList[index], chrMacAddrTemp);
+			strcpy(m_szIPAddressList[index], strServIP);
+
+			// 添加到界面list中
+			LV_ITEM		lvitem;
+			lvitem.mask = LVIF_TEXT;
+			lvitem.iSubItem = 0;
+			lvitem.pszText = _T("");
+			lvitem.iItem = index;
+			ctlList.InsertItem(&lvitem);
+
+			ctlList.SetItemText(m_nDeviceCount, 0, m_szDeviceNameList[index] );
+			ctlList.SetItemText(m_nDeviceCount, 1, m_szDeviceTypeList[index] );
+			ctlList.SetItemText(m_nDeviceCount, 2, strServIP);
+			ctlList.SetItemText(m_nDeviceCount, 3, strMACAddress);
+			ctlList.SetItemText(m_nDeviceCount, 4, szFirmwareVer);
+
+			if (m_nDeviceCount < MAXIMUM_LIST)
+				m_nDeviceCount++;
+		}
+		break;
+	case UCP_METHOD_GET_INFO:
+	case UCP_METHOD_GET_WIZARD: 
+	case UCP_METHOD_GET_WLAN:
+	case UCP_METHOD_GET_IP:
+		KillTimer(TIMER_OVERTIME);
+		ErrorBreak = false;
+		char GetTemp;
+		for( HexToChar(buffer, 1 , m_npBufferIndex , &GetTemp);
+		     GetTemp != (char)UCP_CODE_END;
+		     HexToChar(buffer, 1 , m_npBufferIndex , &GetTemp) )
+		{						
+			HexToChar(buffer, 1 , m_npBufferIndex , &GetLen);
+			switch(GetTemp)
+			{
+			//----------
+			case UCP_CODE_DEVICE_NAME:
+				memset(szDeviceName, 0, sizeof(szDeviceName));
+				HexToChar(buffer, GetLen , m_npBufferIndex , szDeviceName);
+				break;
+			case UCP_CODE_DEVICE_TYPE:
+				memset(szDeviceType, 0, sizeof(szDeviceType));
+				HexToChar(buffer, GetLen , m_npBufferIndex , szDeviceType);
+				break;
+			case UCP_CODE_SOFTWARE_VER:
+				memset(szFirmwareVer, 0, sizeof(szFirmwareVer));
+				HexToChar(buffer, GetLen , m_npBufferIndex , szFirmwareVer);
+				break;						
+			//----------
+			case UCP_CODE_USE_DHCP:
+				HexToint(buffer, 1 , m_npBufferIndex , &iDHCPEnable);
+				break;
+			case UCP_CODE_GATEWAY_ADDR:
+				HexToint(buffer, 1 , m_npBufferIndex , &iGateway[0]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iGateway[1]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iGateway[2]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iGateway[3]);
+				break;
+			case UCP_CODE_SUBNET_MASK:
+				HexToint(buffer, 1 , m_npBufferIndex , &iSubMask[0]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iSubMask[1]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iSubMask[2]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iSubMask[3]);
+				break;
+			case UCP_CODE_IP_ADDR:
+				HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[0]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[1]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[2]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[3]);
+				break;
+			case UCP_CODE_SSID:
+				memset(szcSSID, 0, sizeof(szcSSID));
+				HexToChar(buffer, GetLen , m_npBufferIndex , szcSSID);
+				break;
+			case UCP_CODE_CHANNEL:
+				if (GetLen == 0)
+				{
+					iChannel = 0;
+					HexToint(buffer, 1 , m_npBufferIndex , &iChannelDisplay);
+				}
+				else
+				{
+					HexToint(buffer, 1 , m_npBufferIndex , &iChannel);
+					iChannelDisplay = iChannel;
+				}
+				break;
+			case UCP_CODE_OPMODE:
+				HexToint(buffer, 1 , m_npBufferIndex , &iOpMode);
+				break;
+			case UCP_CODE_WIRELESS_MODE:
+				HexToint(buffer, 1 , m_npBufferIndex , &iWirelessMode);
+				break;
+			case UCP_CODE_SUPER_G:
+				HexToint(buffer, 1 , m_npBufferIndex , &iSuperG);
+				break;
+			case UCP_CODE_SEC_METHOD:
+				HexToint(buffer, 1 , m_npBufferIndex , &iSecurity);
+				break;
+			case UCP_CODE_WLAN_MACADDR:
+				memset(szcharWlanMACAddress, 0, sizeof(szcharWlanMACAddress));
+				HexToChar(buffer, GetLen , m_npBufferIndex , szcharWlanMACAddress);
+				break;
+			case UCP_CODE_ENCRYPTION:
+				HexToint(buffer, 1 , m_npBufferIndex , &iEncryption);
+				break;
+			case UCP_CODE_RADIUS_SERVER:
+				{
+					char		szRadiusServer[16];
+					memset(szRadiusServer, 0, sizeof(szRadiusServer));
+					HexToChar(buffer, GetLen , m_npBufferIndex , szRadiusServer);
+					strcpy(dlgWirelessConfig.RadiusServerinwireless, szRadiusServer);
+					break;
+				}						
+			case UCP_CODE_WEP_KEY_TYPE:
+				HexToint(buffer, 1 , m_npBufferIndex , &iWepKeyType);
+				break;
+			case UCP_CODE_ENCRYPT_ONOFF:
+				HexToint(buffer, 1 , m_npBufferIndex , &iEncryptionOnOff);
+				break;
+			case UCP_CODE_WEP_InputType:
+				HexToint(buffer, 1 , m_npBufferIndex , &iWepInputType);
+				break;
+			default:
+				ErrorBreak = true;
+				break;
+			}
+			if (ErrorBreak)
+				break;
+		}
+*/		
+	// 控制端的界面显示
+/*	switch(uMethod)
+	{
+	case UCP_METHOD_GET_IP:	
+		{
+			ShowIPConfigDlg();			
+			break;
+		}					
+	case UCP_METHOD_GET_WLAN:
+		break;
+	case UCP_METHOD_GET_INFO:
+		ShowDeviceInfoDlg();
+		/*char charTemp[33];
+
+		// Device Name
+		dlgInfo.m_strModelName = szDeviceName;
+
+		// Ethernet MAC Address
+		dlgInfo.m_strMacAddr = chrMacAddrTemp;
+
+		// Wireless MAC Address
+		dlgInfo.m_strWlanMacAddr = szcharWlanMACAddress;
+
+		// Firmware Version
+		dlgInfo.m_strFwVer = szFirmwareVer;
+
+		// IP Address
+		sprintf(charTemp,"%d.%d.%d.%d", 
+			iIPAddr[0], iIPAddr[1], iIPAddr[2], iIPAddr[3]);
+		dlgInfo.m_strIpAddr = charTemp;
+
+		// Subnet Mask
+		sprintf(charTemp,"%d.%d.%d.%d", 
+						iSubMask[0], iSubMask[1], iSubMask[2], iSubMask[3]);
+		dlgInfo.m_strSubnetMask = charTemp;
+
+		// Default Gateway 如果设置为空，则界面全部显示为空
+		if ((iGateway[0]==0) && (iGateway[1]==0) && (iGateway[2]==0) && (iGateway[3]==0))
+			sprintf(charTemp,"");
+		else
+			sprintf(charTemp,"%d.%d.%d.%d", 
+							iGateway[0], iGateway[1], iGateway[2], iGateway[3]);
+		dlgInfo.m_strGateway = charTemp;
+
+		// DHCP Client
+		if (iDHCPEnable == 1)
+			sprintf(charTemp,"Enabled");
+		else
+			sprintf(charTemp,"Disabled");
+		dlgInfo.m_strDhcp = charTemp;
+
+		// Operation Mode
+		switch(iOpMode)
+		{
+		case CFG_OP_MODE_AP:
+			sprintf(charTemp,"Access Point ");
+			break;
+		case CFG_OP_MODE_STA:
+			sprintf(charTemp,"Infrastructure");
+			break;
+		case CFG_OP_MODE_ADHOC:
+			sprintf(charTemp,"AD-HOC");
+			break;
+		case CFG_OP_MODE_REPEATER:
+			sprintf(charTemp,"Repeater");
+			break;
+		default:
+			ASSERT(FALSE);
+			break;
+		}
+		dlgInfo.m_strOpMode = charTemp;
+
+		// Wireless Mode
+		if ((iSuperG & ABOLT_TURBO_G) && (iSuperG & ABOLT_TURBO_PRIME))
+			sprintf(charTemp,"2.4GHz 802.11 Super G dynamic");
+		else
+		{
+			switch(iWirelessMode)
+			{
+			case MODE_SELECT_11B:
+				sprintf(charTemp,"2.4GHz 802.11b");
+				break;
+			case MODE_SELECT_11G:
+				sprintf(charTemp,"2.4GHz 802.11g");
+				break;
+			case MODE_SELECT_108G:
+				sprintf(charTemp,"2.4GHz 802.11 Super G static");
+				break;
+			default:
+				ASSERT(FALSE);
+				break;
+			}
+		}
+		dlgInfo.m_strWlanMode = charTemp;
+
+		// SSID
+		dlgInfo.m_strSsid = szcSSID;
+
+		// Channel / Frequency
+		sprintf(charTemp, "Channel %d/ %dMHz",iChannelDisplay, 2407+(iChannelDisplay*5));
+		dlgInfo.m_strChannel = charTemp;
+
+		// Security
+		switch(iSecurity)
+		{
+		case AUTH_OPEN_SYSTEM:
+			//scoutlee for detemine whether wep open system or no security
+			if(iEncryptionOnOff)
+				sprintf(charTemp, "WEP Open System");
+			else 
+				sprintf(charTemp, "NO Security");
+			break;
+		case AUTH_SHARED_KEY:
+			sprintf(charTemp, "WEP Shared Key");
+			break;
+		case AUTH_WPA:
+			sprintf(charTemp, "WPA-802.1x");
+			break;
+		case AUTH_WPAPSK:
+			sprintf(charTemp, "WPA-PSK");
+			break;
+		case AUTH_AUTO:
+			sprintf(charTemp, "WEP Auto");
+			break;
+		default:
+			ASSERT(FALSE);
+			break;
+		}
+		dlgInfo.m_strSecurity = charTemp;
+		dlgInfo.DoModal();
+		break;
+	}
+		break;
+	case UCP_METHOD_SET_WIZARD:
+	case UCP_METHOD_SET_WLAN:
+	case UCP_METHOD_SET_IP:			
+	case UCP_METHOD_RESET:
+		{
+			KillTimer(TIMER_OVERTIME);
+			BeginWaitCursor();	// Display the hourglass cursor.
+			CWaitReset	dlgw(40000);
+			dlgw.DoModal();
+			EndWaitCursor();	// Remove the hourglass cursor.
+			StartDiscovery();
+			break;
+		}				
+	case UCP_METHOD_REBOOT:
+		{
+			KillTimer(TIMER_OVERTIME);
+			BeginWaitCursor();	// Display the hourglass cursor.
+			CWaitReset	dlgw(50000);
+			dlgw.DoModal();
+			EndWaitCursor();	// Remove the hourglass cursor.
+			StartDiscovery();
+			break;
+		}
+	case UCP_METHOD_AUTH:		//登录认证回应包
+		KillTimer(TIMER_OVERTIME);
+		ULONG		uAuthFail;
+		HexToULONG(buffer, 1 , m_npBufferIndex , &uAuthFail);
+		if (uAuthFail)
+		{
+			m_bAuthPass = FALSE;
+			m_bAuthRecvFlag = TRUE;
+			AfxMessageBox( "User Name or Password Fail!" );
+			return;
+		}
+		else
+		{
+			ULONG uCfgMode;
+			HexToULONG(buffer, 2 , m_npBufferIndex , &uCfgMode);
+			switch(uCfgMode)
+			{
+			case UCP_METHOD_RESET:
+				SetFactoryDefault();
+				SetTimer(TIMER_OVERTIME, 2000, NULL);
+				break;
+			case UCP_METHOD_GET_IP:
+				SendConfig();
+				SetTimer(TIMER_OVERTIME, 2000, NULL);
+				break;
+			case UCP_METHOD_GET_WLAN:
+				GetWirelessInfo();
+				SetTimer(TIMER_OVERTIME, 2000, NULL);
+				break;
+			case UCP_METHOD_REBOOT:
+				SendReboot();
+				SetTimer(TIMER_OVERTIME, 2000, NULL);
+				break;
+			default:
+				break;
+			}
+		}
+		break;
+	}
+*/
+}
+
+int CUpgraderView::HexStrToBin(char *pInStr, char *pOutBinData, int ConvLen)
+{
+	bool	exitFlag = 0;					// Exit parsing
+	bool	stateTrigger = 0;				// Find data to convert
+	bool	lastHex = 0;					// Last input character is Hex?
+	int		bytesCount = 0;					// How many Hex character have been find
+	int		HexCoupleCount = 0;				// How many hex already convert
+	char	TempStr[3];						// TempStr for convert Hex to byte
+	char	*pch1;							// pointer
+	char	*pch2;							// pointer
+	int		i;
+
+	// Set all output buffer to 0.
+	pch1 = pOutBinData;
+	for(i=0; i<ConvLen; i++) {
+		*pch1++ = 0;						// Clear pOutBinData
+	}
+
+	pch1 = pInStr;
+	pch2 = pOutBinData;
+
+	// Generate the output binary string.
+	while(1)								// Parsing input string
+	{
+		switch(*pch1) {
+		  case NULL:						// Termainal string
+			exitFlag = 1;
+			if(bytesCount > 0)
+				stateTrigger = 1;			// *** Need parsing the number.
+			break;
+
+		  case 0x20:						// SPACE
+		  case 0x09:						// TAB
+ 			if(lastHex)
+				stateTrigger = 1;			// *** Need parsing the number.
+			break;
+
+		  default:
+			if(!IsHexDigit(*pch1)) {		// Not hexdecimal character
+				exitFlag = 1;
+				break;
+			}
+			if(HexCoupleCount >= ConvLen){	// Too much input.
+				exitFlag = 1;
+				break;
+			}
+			lastHex = 1;
+			bytesCount++;
+			if(bytesCount == 2)
+				stateTrigger = 1;			// *** Need parsing the number.
+			break;
+		} // End of switch(*pch1)
+
+		pch1++;
+		// Generate binary output
+		if(stateTrigger) {
+			pch1 = pch1 - 2;
+			strncpy(TempStr,pch1,bytesCount);
+			TempStr[bytesCount] = NULL;		// Set the NULL Terminated.
+
+			*pch2++ = (char)HexToUINT(TempStr);
+			HexCoupleCount++;
+			pch1 = pch1 + 2;
+			stateTrigger = 0;
+			bytesCount = 0;
+			lastHex = 0;
+		} // End of if(stateTrigger)
+
+		if(exitFlag)
+			break;
+
+	} // End of while(*pch != NULL)
+
+	return 1;								// Convert OK!!
+}
+
+UINT CUpgraderView::HexToUINT(char *pstr)
+{
+	UINT uResult = 0;
+	
+	while(*pstr)
+	{
+		if(!IsHexDigit(*pstr)) {
+			return 0xFFFFFFFF;
+		}
+
+		uResult = uResult * 16;
+		if(*pstr > '9')
+			uResult = uResult + (char)(*pstr & 0xF) + 9;
+		else
+			uResult = uResult + (char)(*pstr & 0xF);
+		pstr++;
+	}
+	return uResult;
+}
+
+// 取得主机名称 david 2010.6.1
+BOOL CUpgraderView::GetLocalName(char *localname, int len)
+{
+	// 1.初始化结果
+	memset(localname, 0, len);
+
+	// 2.取得主机名
+	char locname[512] = "\0";
+	int status = gethostname (locname, 512);
+	if (status != 0)
+		return FALSE;
+
+	// 3.为结果赋值
+	int uselen = strlen (locname) + 1;
+	if (uselen > len) 
+		uselen = len;
+	memcpy (localname, locname, uselen);
+
+	return TRUE;
+}
+
+BOOL CUpgraderView::ResolveIPs(char *hostname, char *hostips, int len)
+{
+	hostent *phe = gethostbyname (hostname);
+	ASSERT(NULL != phe);
+	if (phe == NULL || phe->h_addr_list[0] == NULL)
+		return FALSE;
+
+	char allips[256] = "\0";
+	char null_ip[256] = "\0";
+	int i=0;
+	for (i=0; i<256; i++)
+	{
+		allips[i] = 0;
+		null_ip[i] = 0;
+	}
+
+	int count = 0;
+	while (phe->h_addr_list[count] != NULL && count * 15 < 240)
+	{
+		char oneip[15] = "";
+		for (i = 0; i < 15; i++)
+			oneip[i] = 0;
+
+		sprintf(oneip, "%u.%u.%u.%u", 
+			(unsigned char) phe->h_addr_list[count][0],
+			(unsigned char) phe->h_addr_list[count][1],
+			(unsigned char) phe->h_addr_list[count][2],
+			(unsigned char) phe->h_addr_list[count][3]);
+
+		for (i = (count * 15); i < (count * 15 + 15); i++)
+			null_ip[i] = oneip[i % 15];
+
+		count++;
+	}
+
+	int lEnd = 0;
+	for (i=0; i<15; i++)
+	{
+		if (null_ip[i*15] == 0)
+			break;
+		for (int j=0; j<15; j++)
+			allips[lEnd+j] = null_ip[i*15 + j];
+
+		lEnd = strlen(allips);
+		allips[lEnd] = 13;
+		lEnd ++;
+	}
+
+	for (i=0; i<len; i++)
+		hostips[i] = 0;
+
+	int uselen = strlen(allips);
+	if (uselen > len)
+		uselen = len;
+
+	for (i = 0; i < uselen; i++)
+		hostips[i] = allips[i];
+	hostips[uselen] = 0;
+
+	return TRUE;
+}
+
+void CUpgraderView::OnUpdateConfig(CCmdUI* pCmdUI) 
+{
+	// TODO: Add your command update UI handler code here
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	if (ctlList.GetNextItem(-1, LVNI_SELECTED) != -1)
+		pCmdUI->Enable(TRUE);
+	else
+		pCmdUI->Enable(FALSE);
+}
+
+// ipsetting Davidgong 2010.5.27
+void CUpgraderView::OnConfig() 
+{	
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.GetSelectionMark();
+	if (index != -1)
+	{
+		CLogin	dlg;
+		if (dlg.DoModal() == IDOK)
+		{
+			m_strUserName = dlg.m_sUserName;
+			m_strPassword = dlg.m_sPassword;
+			SendAuthentication(UCP_METHOD_GET_IP);
+		}
+	}
+}
+
+// 发包取得IP
+void CUpgraderView::SendConfig()
+{
+	char	chrSendBuffer[128];
+	memset(chrSendBuffer, 0, sizeof(chrSendBuffer));
+	int		i = 0;
+
+	//UCP_METHOD_DISCOVER
+	m_szRequest[i++] = (UCP_METHOD_DISCOVER >> 8 ) & 0xff;
+	m_szRequest[i++] = (UCP_METHOD_DISCOVER >> 0 ) & 0xff;
+
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.GetSelectionMark();//.GetSelectedCount();//.HitTest(point);
+	if (index != -1)
+	{
+		for ( int j = 0; j < 6; j++ )	
+			m_szRequest[i++] = (char)iMACAddr[index][j];
+	}
+
+	// 客户端选项0x0002
+	m_szRequest[i++] = (UAP_CLIENT_OPTION >> 8 ) & 0xff;
+	m_szRequest[i++] = (UAP_CLIENT_OPTION >> 0 ) & 0xff;
+
+	// 源IP
+	CString HostIP = m_szLocalHostIP;
+	for (i; i < 14; i++)
+	{
+		CString StrTemp;
+
+		int pos = HostIP.Find('.',0);
+		if ( pos != -1 )
+			StrTemp = HostIP.Left(pos);
+		else
+			StrTemp = HostIP;
+
+		int tt;
+		tt = atoi(StrTemp);
+		m_szRequest[i] = (char)tt;
+		HostIP.Delete(0,pos+1);
+	}
+
+	//UDP Port Number
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 8)&0xff;
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 0)&0xff;
+
+	//SequenceNum
+	m_szRequest[i++] = 0x01;
+	m_szRequest[i++] = 0x00;
+
+	//UDAP_TYPE_IPCONFIGURE
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 8)&0xff);
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 0)&0xff);
+
+	//UAP_FLAG_REQUEST
+	m_szRequest[i++] = UAP_FLAG_REQUEST;
+
+	//UAP_CLASS_UCP
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 24)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 16)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 8)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 0)&0xff;
+
+	// Method 这里为获得IP
+	m_szRequest[i++] = (UCP_METHOD_GET_IP >> 8 ) & 0xff;
+	m_szRequest[i++] = (UCP_METHOD_GET_IP >> 0 ) & 0xff;
+
+	int nResult = sendto(m_Socket, m_szRequest, i, 0, (SOCKADDR *) &m_saUdpServ,sizeof (SOCKADDR_IN));
+	if( nResult == SOCKET_ERROR ) 
+	{
+		sprintf( chrSendBuffer, "sendto() fail! Error Code: %05d", nResult );
+		AfxMessageBox( chrSendBuffer );
+		return;
+	}
+}
+
+void CUpgraderView::RecvConfigData()
+{
+	int			iErrorCount = 0;
+	char		buffer[512];
+	int			len = sizeof( struct sockaddr_in);
+	ULONG		uGetIP;
+	ULONG		uPort;
+	ULONG		uGetTemp;
+	ULONG		uUCPClass;
+	int			DeviceCount = 0;
+	char		chrIPaddr[20];
+
+	memset (buffer, 0, sizeof(buffer));
+	m_npBufferIndex = 0;
+	
+	HexToULONG(buffer, 2 , m_npBufferIndex , &uGetIP);
+	if ( uGetIP == UCP_METHOD_GET_IP)
+	{						
+		memset(chrIPaddr,NULL,sizeof(chrIPaddr));			
+		memset(iGateway,0,sizeof(iGateway));
+		memset(iSubMask,0,sizeof(iSubMask));
+
+		HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[0]);
+		HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[1]);
+		HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[2]);
+		HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[3]);
+
+		_stprintf(chrIPaddr,"%i.%i.%i.%i", 
+					iIPAddr[0], iIPAddr[1], 
+					iIPAddr[2], iIPAddr[3]);
+
+		if ( strcmp(m_szLocalHostIP, chrIPaddr) == 0 )
+		{
+			HexToULONG(buffer, 2 , m_npBufferIndex , &uPort);
+
+			//UCP_METHOD_DISCOVER
+			HexToULONG(buffer, 2 , m_npBufferIndex , &uGetTemp);
+			
+			HexToint(buffer, 1 , m_npBufferIndex , &iCfgMACAddr[0]);
+			HexToint(buffer, 1 , m_npBufferIndex , &iCfgMACAddr[1]);
+			HexToint(buffer, 1 , m_npBufferIndex , &iCfgMACAddr[2]);
+			HexToint(buffer, 1 , m_npBufferIndex , &iCfgMACAddr[3]);
+			HexToint(buffer, 1 , m_npBufferIndex , &iCfgMACAddr[4]);
+			HexToint(buffer, 1 , m_npBufferIndex , &iCfgMACAddr[5]);
+
+			//FlagRequest
+			HexToULONG(buffer, 2 , m_npBufferIndex , &uGetTemp);
+
+			HexToULONG(buffer, 2 , m_npBufferIndex , &uGetTemp);
+
+			HexToULONG(buffer, 1 , m_npBufferIndex , &uGetTemp);
+
+			HexToULONG(buffer, 4 , m_npBufferIndex , &uUCPClass);
+
+			HexToULONG(buffer, 2 , m_npBufferIndex , &uGetTemp);
+
+			HexToULONG(buffer, 1 , m_npBufferIndex , &uGetTemp);
+
+			HexToULONG(buffer, 2 , m_npBufferIndex , &uGetTemp);
+
+			HexToULONG(buffer, 1 , m_npBufferIndex , &uGetTemp);
+
+			//UCP_CODE_GATEWAY_ADDR
+			if ( uGetTemp == UCP_CODE_GATEWAY_ADDR)
+			{
+				HexToULONG(buffer, 1 , m_npBufferIndex , &uGetTemp);
+
+				HexToint(buffer, 1 , m_npBufferIndex , &iGateway[0]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iGateway[1]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iGateway[2]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iGateway[3]);					
+			}
+
+			//UCP_CODE_SUBNET_MASK
+			HexToULONG(buffer, 1 , m_npBufferIndex , &uGetTemp);
+			if ( uGetTemp == UCP_CODE_SUBNET_MASK)
+			{
+				HexToULONG(buffer, 1 , m_npBufferIndex , &uGetTemp);
+
+				HexToint(buffer, 1 , m_npBufferIndex , &iSubMask[0]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iSubMask[1]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iSubMask[2]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iSubMask[3]);
+			}
+			
+			//UCP_CODE_IP_ADDR
+			HexToULONG(buffer, 1 , m_npBufferIndex , &uGetTemp);
+			if ( uGetTemp == UCP_CODE_IP_ADDR)
+			{
+				HexToULONG(buffer, 1 , m_npBufferIndex , &uGetTemp);
+
+				HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[0]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[1]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[2]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[3]);
+			}
+			iErrorCount = 0;
+			DeviceCount++;
+
+			closesocket(m_Socket);
+			WSACleanup();
+			return;
+		}
+	}
+}
+
+// link to iexplore Davidgong 2010.5.28
+void CUpgraderView::OnWeb() 
+{
+	//UINT uTst = WinExec("D:\\Program Files\\Mozilla Firefox\\firefox.exe http://192.168.1.35",SW_SHOW);
+	// ASSERT(uTst > 32);
+//	ShellExecute(NULL,"open", "www.baidu.com", NULL, NULL, SW_SHOWNORMAL);
+	// 1.定义命令行参数和IP地址
+	TCHAR szkey[MAX_PATH*2];
+	CString strIpaddress;
+
+	// 2.根据注册表查找浏览器的路径，合成命令行
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();	
+	if (ctlList.GetNextItem(-1, LVNI_SELECTED) != -1)
+	{
+		int pos = ctlList.GetSelectionMark();
+		strIpaddress = m_szIPAddressList[pos];
+		if (GetRegKey(HKEY_CLASSES_ROOT, _T(".htm"), szkey) == ERROR_SUCCESS)
+		{
+			lstrcat(szkey, _T("\\shell\\open\\command"));
+			if (ERROR_SUCCESS == GetRegKey(HKEY_CLASSES_ROOT,szkey, szkey)) 
+			{
+				TCHAR *pos;
+				pos = _tcsstr(szkey, _T("\"%1\""));
+				// No quotes found
+				if (pos == NULL)
+				{                     
+					pos = _tcsstr(szkey, _T("%1"));      // Check for %1, without quotes 
+					if (pos == NULL)                   // No parameter at all...
+						pos = szkey+lstrlen(szkey)-1;
+					else
+						*pos = '\0';                   // Remove the parameter
+				}
+				else
+					*pos = '\0';                       // Remove the parameter
+
+				lstrcat(pos, _T(" "));
+				lstrcat(pos, strIpaddress);
+			}
+		}
+	}
+
+	// 3.启动浏览器
+	// method 1
+	//USES_CONVERSION;
+	//UINT uResult =  WinExec(szkey,SW_SHOW);
+	//if (uResult <= 31)
+	//	MessageBox("web start failed","error",MB_OK);
+
+	// method 2
+	//CString strIP;
+	//strIP.Format("http:\\\\%s", strIpaddress);
+	//ShellExecute(NULL, NULL, strIP, NULL, NULL, SW_SHOW);
+
+	// method 3
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
+
+	ZeroMemory( &si, sizeof(si) );
+	si.cb = sizeof(si);
+	ZeroMemory( &pi, sizeof(pi) );
+
+	// Start the child process. 
+	if( !CreateProcess( NULL,   // No module name (use command line). 
+			szkey,				// Command line. 
+			NULL,             // Process handle not inheritable. 
+			NULL,             // Thread handle not inheritable. 
+			FALSE,            // Set handle inheritance to FALSE. 
+			0,                // No creation flags. 
+			NULL,             // Use parent's environment block. 
+			NULL,             // Use parent's starting directory. 
+			&si,              // Pointer to STARTUPINFO structure.
+			&pi )             // Pointer to PROCESS_INFORMATION structure.
+		) 
+	{
+		TCHAR szBuf[80]; 
+		LPVOID lpMsgBuf;
+		DWORD dw = GetLastError(); 
+
+		FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+			FORMAT_MESSAGE_FROM_SYSTEM,
+			NULL,
+			dw,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPTSTR) &lpMsgBuf,
+			0, NULL );
+		
+		wsprintf(szBuf, 
+			"%s failed with error %d: %s", 
+			"Web browser access failed！Please check if you are the administrator", dw, lpMsgBuf);
+		// 由于没有权限不能访问
+		if (dw == ERROR_ACCESS_DENIED)
+		{
+			wsprintf(szBuf, 
+				"%s failed with error %d: %s,Please check if you have the administrator rights", 
+				"Web browser access failed！", dw, lpMsgBuf); 
+		}
+
+		MessageBox(szBuf, "Error", MB_OK); 
+
+		//LocalFree(lpMsgBuf);
+		//ExitProcess(dw); 
+	}
+
+}
+
+void CUpgraderView::OnUpdateWeb(CCmdUI* pCmdUI) 
+{
+	// TODO: Add your command update UI handler code here
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	if (ctlList.GetNextItem(-1, LVNI_SELECTED) != -1)
+		pCmdUI->Enable(TRUE);
+	else
+		pCmdUI->Enable(FALSE);
+}
+
+LONG CUpgraderView::GetRegKey(HKEY key, LPCTSTR subkey, LPTSTR retdata)
+{
+	HKEY hkey;
+    LONG retval = RegOpenKeyEx(key, subkey, 0, KEY_QUERY_VALUE, &hkey);
+
+    if (retval == ERROR_SUCCESS)
+	{
+        long datasize = MAX_PATH;
+        TCHAR data[MAX_PATH];
+        RegQueryValue(hkey, NULL, data, &datasize);
+        lstrcpy(retdata,data);
+        RegCloseKey(hkey);
+    }
+
+    return retval;
+}
+
+// 发送恢复出厂设置包
+void CUpgraderView::SetFactoryDefault()
+{
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int MacPos = ctlList.GetSelectionMark();
+	if ( MacPos == -1 )
+	{
+		MessageBox("You have to select one device to set default","Select warning",MB_ICONWARNING | MB_OK);
+		return;
+	}
+
+	memset(m_szRequest, 0, sizeof(m_szRequest));
+	int	i = 0;
+	//Reset packet 设置包0x0001
+	m_szRequest[i++] = 0x00;
+	m_szRequest[i++] = 0x01;
+
+	//Server MAC
+	int		j = 0;
+	CString SerMac = m_szMacAddressList[MacPos];
+	for (i, j; i < 8; i++,j++)
+	{
+		char chrTemp,chrTemp1;
+		ULONG Mac,MacHi,MacLo;
+		chrTemp  = m_szMacAddressList[MacPos][j];
+		chrTemp1 = m_szMacAddressList[MacPos][j + 1];
+		MacHi = HexDigitConvert(chrTemp);
+		MacLo = HexDigitConvert(chrTemp1);
+		Mac = ( MacHi << 4 ) | MacLo;
+		m_szRequest[i] = (char)Mac;
+		j+=2;
+	}
+
+	// 客户端选项 0x0002
+	m_szRequest[i++] = (UAP_CLIENT_OPTION >> 8 ) & 0xff;
+	m_szRequest[i++] = (UAP_CLIENT_OPTION >> 0 ) & 0xff;
+
+	// 控制端IP
+	CString HostIP = m_szLocalHostIP;
+	for (i; i < 14; i++)
+	{
+		CString StrTemp;
+
+		int pos = HostIP.Find('.',0);
+		if ( pos != -1 )
+			StrTemp = HostIP.Left(pos);
+		else
+			StrTemp = HostIP;
+
+		int tt;
+		tt = atoi(StrTemp);
+		m_szRequest[i] = (char)tt;
+		HostIP.Delete(0,pos+1);
+	}
+
+	//UDP Port Number
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 8)&0xff;
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 0)&0xff;
+
+	//SequenceNum
+	m_szRequest[i++] = 0x01;
+	m_szRequest[i++] = 0x00;
+
+	// 设备类型 0xC001
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 8)&0xff);
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 0)&0xff);
+
+	//UAP_FLAG_REQUEST
+	m_szRequest[i++] = UAP_FLAG_REQUEST;
+
+	//UAP_CLASS_UCP 设备类别
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 24)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 16)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 8)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 0)&0xff;
+
+	//UCP_METHOD_RESET
+	m_szRequest[i++] = (UCP_METHOD_RESET >> 8)&0xff;
+	m_szRequest[i++] = (UCP_METHOD_RESET >> 0)&0xff;
+
+	//Send Data
+	int nResult = sendto(	m_Socket, m_szRequest, i, 0, (SOCKADDR *) &m_saUdpServ,sizeof ( SOCKADDR_IN ));
+	if( nResult == SOCKET_ERROR ) 
+	{
+		char	szErrMsgBuffer[64];
+		sprintf( szErrMsgBuffer, "sendto() fail! Error Code: %05d", nResult );
+		AfxMessageBox( szErrMsgBuffer );
+		return;
+	}
+}
+
+int CUpgraderView::HexDigitConvert(char cChar)
+{
+	int value;
+
+	if(cChar >= '0' && cChar <= '9')
+	{
+		value = cChar;
+		value = value - 48;
+	}
+	else if(cChar >= 'A' && cChar <= 'F')
+	{
+		value = cChar;
+		value = value - 65 + 10;
+	}
+	else if (cChar >= 'a' && cChar <= 'f')
+	{
+		value = cChar;
+		value = value - 97 + 10;
+	}
+	return value;
+}
+
+void CUpgraderView::OnTimer(UINT nIDEvent) 
+{	
+	// TODO: Add your message handler code here and/or call default
+	int			nResult;
+	char errBuf[40];
+
+	memset(errBuf, 0, sizeof(errBuf));
+
+	switch(nIDEvent)
+	{
+		case TIMER1:
+		case TIMER2:
+			nResult = sendto( m_Socket, m_szSendDataBuf, m_packetLength, 0, (SOCKADDR *) &m_saUdpServ,sizeof ( SOCKADDR_IN ));
+
+			if( nResult == SOCKET_ERROR ) 
+			{
+				KillTimer(TIMER1);
+				m_sendDiscoverCount = 0;
+				sprintf( errBuf, "sendto() fail! Error Code: %05d", nResult );
+				AfxMessageBox( errBuf );
+				return;
+			}
+			if (m_sendDiscoverCount < 3)
+			{
+				if (nIDEvent == TIMER1)
+				{
+					SetTimer(TIMER2,500,NULL);
+					KillTimer(TIMER1);
+				}
+				else
+				{
+					SetTimer(TIMER1,500,NULL);
+					KillTimer(TIMER2);
+				}
+				m_sendDiscoverCount++;
+			}
+			else
+			{
+				m_sendDiscoverCount = 0;
+				if (nIDEvent == TIMER1)
+					KillTimer(TIMER1);
+				else if (nIDEvent == TIMER2)
+					KillTimer(TIMER2);
+			}
+			break;
+		case TIMER_OVERTIME:
+			if(!ext_bRun)
+			{
+				ext_bRun = TRUE;
+				if (MessageBox( "No response error.\nPlease rescan or reconfig again","error",MB_OK ) == IDOK)
+				{
+					ext_bRun = FALSE;
+				}
+			}
+			break;
+		case TIMER4:
+			pWaiting->Close();
+			break;
+	}
+	
+	CListViewEx::OnTimer(nIDEvent);
+}
+
+BOOL CUpgraderView::PreTranslateMessage(MSG* pMsg) 
+{
+	// TODO: Add your specialized code here and/or call the base class
+	
+	return CListViewEx::PreTranslateMessage(pMsg);
+}
+
+LRESULT CUpgraderView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam) 
+{
+	// TODO: Add your specialized code here and/or call the base class
+	switch(message)
+	{
+	case WM_ACTIVATEAPP:
+		WSAGETSELECTEVENT(lParam);
+		GetDevicesInfo();
+		break;
+	default:
+		break;
+	}
+	return CListViewEx::WindowProc(message, wParam, lParam);
+}
+
+// 创建套接字 David 2010.6.1
+void CUpgraderView::CreateWinSocket()
+{
+ 	WSADATA		wsaData;
+	char		szErrMsgBuffer[64];
+
+	int nResult = WSAStartup( MAKEWORD(1,1), &wsaData );
+	if (nResult != 0) 
+	{
+		sprintf( szErrMsgBuffer, "WSAStartup() fail! Error Code: %05d", nResult );
+		AfxMessageBox( szErrMsgBuffer );
+		return;
+	}
+
+	m_Socket = socket( AF_INET, SOCK_DGRAM, 0 );
+
+	// set a socket option
+	BOOL bBroadcast = TRUE;
+	nResult = setsockopt(	m_Socket, 
+							SOL_SOCKET,
+							SO_BROADCAST,
+							(char*)&bBroadcast,
+							sizeof( BOOL )
+						);
+
+	if( nResult == SOCKET_ERROR )
+	{
+		nResult = WSAGetLastError();
+		sprintf( szErrMsgBuffer, "setsockopt() fail! Error Code: %05d", nResult );
+		AfxMessageBox( szErrMsgBuffer );
+		return;
+    }
+
+	// bind to a local socket and an interface.
+	memset(m_szLocalHostIP, NULL, sizeof(m_szLocalHostIP));
+	GetLocalIPs(m_szLocalHostIP, sizeof(m_szLocalHostIP));
+	int len = strlen(m_szLocalHostIP);
+	if ( !IsHexDigit(m_szLocalHostIP[len-1]))
+		m_szLocalHostIP[len-1] = 0;
+
+    m_saUdpCli.sin_family		= AF_INET;
+    m_saUdpCli.sin_addr.s_addr	= inet_addr(m_szLocalHostIP);//htonl( INADDR_ANY );
+    m_saUdpCli.sin_port			= htons( UDP_UDAP_PORT );
+
+	// Fill an IP address structure, to send an IP broadcast. The 
+    // packet will be broadcasted to the specified port.
+    m_saUdpServ.sin_family		= AF_INET;
+    m_saUdpServ.sin_addr.s_addr	= htonl( INADDR_BROADCAST );
+    m_saUdpServ.sin_port		= htons( UDP_UDAP_PORT );
+
+	nResult = bind( m_Socket, (SOCKADDR *)&m_saUdpCli, sizeof(SOCKADDR_IN) );
+    if( nResult == SOCKET_ERROR ) 
+	{
+		nResult = WSAGetLastError();
+		sprintf( szErrMsgBuffer, "bind() fail! Error Code: %05d", nResult );
+		AfxMessageBox( szErrMsgBuffer );
+		return;
+    }
+
+	if (WSAAsyncSelect(m_Socket, this->GetSafeHwnd(), WM_ACTIVATEAPP, FD_READ) != 0)
+		return;
+}
+
+void CUpgraderView::SendAuthentication(UINT configType)
+{
+	char	chrSendBuffer[128];
+	int		nResult;
+	int		i = 0;
+
+	m_bAuthRecvFlag = FALSE;
+
+	memset(chrSendBuffer, 0, sizeof(chrSendBuffer));
+
+	//UCP_METHOD_DISCOVER 设置包为0x0001
+	m_szRequest[i++] = (UCP_METHOD_DISCOVER >> 8 ) & 0xff;
+	m_szRequest[i++] = (UCP_METHOD_DISCOVER >> 0 ) & 0xff;
+
+	// 目标端MAC
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.GetSelectionMark();
+	if (index != -1)
+	{
+		for ( int j = 0; j < 6; j++ )	
+			m_szRequest[i++] = (char)iMACAddr[index][j];
+	}
+
+	//UAP_CLIENT_OPTION 客户端选项0x0002
+	m_szRequest[i++] = (UAP_CLIENT_OPTION >> 8 ) & 0xff;
+	m_szRequest[i++] = (UAP_CLIENT_OPTION >> 0 ) & 0xff;
+
+	// 控制端IP
+	CString HostIP = m_szLocalHostIP;
+	for (i; i < 14; i++)
+	{
+		CString StrTemp;
+
+		int pos = HostIP.Find('.',0);
+		if ( pos != -1 )
+			StrTemp = HostIP.Left(pos);
+		else
+			StrTemp = HostIP;
+
+		int tt;
+		tt = atoi(StrTemp);
+		m_szRequest[i] = (char)tt;
+		HostIP.Delete(0,pos+1);
+	}
+
+	//UDP Port Number
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 8)&0xff;
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 0)&0xff;
+
+	//SequenceNum
+	m_szRequest[i++] = 0x01;
+	m_szRequest[i++] = 0x00;
+
+	// 设备类型 0xC001
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 8)&0xff);
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 0)&0xff);
+
+	//UAP_FLAG_REQUEST 0x01
+	m_szRequest[i++] = UAP_FLAG_REQUEST;
+
+	//UAP_CLASS_UCP 设备类别 00010001
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 24)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 16)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 8)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 0)&0xff;
+
+	// METHOD 这里是认证包 UCP_METHOD_AUTH
+	m_szRequest[i++] = 0x00;
+	m_szRequest[i++] = 0x05;
+
+	// OperatorType 登录后进行何种操作
+	m_szRequest[i++] = 0x00;
+	m_szRequest[i++] = (char)configType;
+
+	//Auth User Name
+	m_szRequest[i++] = UCP_CODE_AUTH_NAME;
+	m_szRequest[i++] = (char)m_strUserName.GetLength();
+	sprintf(&m_szRequest[i++],(LPCTSTR) m_strUserName);
+	i = i + m_strUserName.GetLength() - 1;
+
+	//Auth Password
+	m_szRequest[i++] = UCP_CODE_AUTH_PASSWORD;
+	m_szRequest[i++] = (char)m_strPassword.GetLength();
+	sprintf(&m_szRequest[i++],(LPCTSTR) m_strPassword);
+	i = i + m_strPassword.GetLength() - 1;
+	
+	nResult = sendto(	m_Socket, m_szRequest, i, 0, (SOCKADDR *) &m_saUdpServ,sizeof ( SOCKADDR_IN ));
+
+	if( nResult == SOCKET_ERROR ) 
+	{
+		sprintf( chrSendBuffer, "sendto() fail! Error Code: %05d", nResult );
+		AfxMessageBox( chrSendBuffer );
+		return;
+	}
+	SetTimer(TIMER_OVERTIME, 2000, NULL);
+}
+
+// wireless setting Davidgong 2010.5.27
+void CUpgraderView::OnWireless() 
+{	
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.GetSelectionMark();
+	if (index != -1)
+	{
+		CLogin	dlg;				
+		if (dlg.DoModal() == IDOK)
+		{
+			m_strUserName = dlg.m_sUserName;
+			m_strPassword = dlg.m_sPassword;
+			SendAuthentication(UCP_METHOD_GET_WLAN);
+		}
+	}
+}
+
+void CUpgraderView::OnWizard() 
+{
+	CBitmap bmpheader;
+	bmpheader.LoadBitmap(IDB_HEADER);
+	CNGWizard dlg(IDS_WIZARD_TITLE,this,0);
+	
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.GetSelectionMark();
+	if (index != -1)
+	{
+		for ( int i = 0; i < 6; i++ )
+			dlg.SerMacAdde[i] = (char)iMACAddr[index][i];
+
+		int nResponse = dlg.DoModal();
+		if (nResponse == IDOK)
+		{
+			SetTimer(TIMER_OVERTIME,2000,NULL);
+		}
+	}
+}
+
+void CUpgraderView::GetWirelessInfo()
+{
+	char	chrSendBuffer[128];
+//	BOOL	bBroadcast;
+	int		nResult;
+	int		i = 0;
+
+	memset(chrSendBuffer, 0, sizeof(chrSendBuffer));
+
+	//UCP_METHOD_DISCOVER
+	m_szRequest[i++] = (UCP_METHOD_DISCOVER >> 8 ) & 0xff;
+	m_szRequest[i++] = (UCP_METHOD_DISCOVER >> 0 ) & 0xff;
+
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.GetSelectionMark();
+	if (index != -1)
+	{
+		for ( int j = 0; j < 6; j++ )	
+			m_szRequest[i++] = (char)iMACAddr[index][j];
+	}
+
+	//UCP_METHOD_GET_IP
+	m_szRequest[i++] = (UCP_METHOD_GET_IP >> 8 ) & 0xff;
+	m_szRequest[i++] = (UCP_METHOD_GET_IP >> 0 ) & 0xff;
+
+	CString HostIP = m_szLocalHostIP;
+	for (i; i < 14; i++)
+	{
+		CString StrTemp;
+
+		int pos = HostIP.Find('.',0);
+		if ( pos != -1 )
+			StrTemp = HostIP.Left(pos);
+		else
+			StrTemp = HostIP;
+
+		int tt;
+		tt = atoi(StrTemp);
+		m_szRequest[i] = (char)tt;
+		HostIP.Delete(0,pos+1);
+	}
+
+	//UDP Port Number
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 8)&0xff;
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 0)&0xff;
+
+	//SequenceNum
+	m_szRequest[i++] = 0x01;
+	m_szRequest[i++] = 0x00;
+
+	//UDAP_TYPE_IPCONFIGURE
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 8)&0xff);
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 0)&0xff);
+
+	//UAP_FLAG_REQUEST
+	m_szRequest[i++] = UAP_FLAG_REQUEST;
+
+	//UAP_CLASS_UCP
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 24)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 16)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 8)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 0)&0xff;
+
+	//UCP_METHOD_GET_WLAN
+	m_szRequest[i++] = 0x00;
+	m_szRequest[i++] = 0x06;
+
+	nResult = sendto( m_Socket, m_szRequest, i, 0, (SOCKADDR *) &m_saUdpServ,sizeof ( SOCKADDR_IN ));
+
+	if( nResult == SOCKET_ERROR ) 
+	{
+		sprintf( chrSendBuffer, "sendto() fail! Error Code: %05d", nResult );
+		AfxMessageBox( chrSendBuffer );
+		return;
+	}
+}
+
+void CUpgraderView::GetWizardInfo()
+{
+	char	chrSendBuffer[128];
+	int		nResult;
+	int		i = 0;
+
+	memset(chrSendBuffer, 0, sizeof(chrSendBuffer));
+	memset(m_szRequest, 0, sizeof(m_szRequest));
+
+	//UCP_METHOD_DISCOVER
+	m_szRequest[i++] = (UCP_METHOD_DISCOVER >> 8 ) & 0xff;
+	m_szRequest[i++] = (UCP_METHOD_DISCOVER >> 0 ) & 0xff;
+
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.GetSelectionMark();
+	if (index != -1)
+	{
+		for ( int j = 0; j < 6; j++ )	
+			m_szRequest[i++] = (char)iMACAddr[index][j];
+	}
+
+	//UCP_METHOD_GET_IP
+	m_szRequest[i++] = (UCP_METHOD_GET_IP >> 8 ) & 0xff;
+	m_szRequest[i++] = (UCP_METHOD_GET_IP >> 0 ) & 0xff;
+
+	CString HostIP = m_szLocalHostIP;
+	for (i; i < 14; i++)
+	{
+		CString StrTemp;
+
+		int pos = HostIP.Find('.',0);
+		if ( pos != -1 )
+			StrTemp = HostIP.Left(pos);
+		else
+			StrTemp = HostIP;
+
+		int tt = atoi(StrTemp);
+		m_szRequest[i] = (char)tt;
+		HostIP.Delete(0,pos+1);
+	}
+
+	//UDP Port Number
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 8)&0xff;
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 0)&0xff;
+
+	//SequenceNum
+	m_szRequest[i++] = 0x01;
+	m_szRequest[i++] = 0x00;
+
+	//UDAP_TYPE_IPCONFIGURE
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 8)&0xff);
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 0)&0xff);
+
+	//UAP_FLAG_REQUEST
+	m_szRequest[i++] = UAP_FLAG_REQUEST;
+
+	//UAP_CLASS_UCP
+	m_szRequest[i++] = (char)(UAP_CLASS_UCP >> 24);
+	m_szRequest[i++] = (char)(UAP_CLASS_UCP >> 16);
+	m_szRequest[i++] = (char)(UAP_CLASS_UCP >> 8);
+	m_szRequest[i++] = (char)(UAP_CLASS_UCP >> 0);
+
+	//UCP_METHOD_GET_WIZARD
+	m_szRequest[i++] = (char)UCP_METHOD_GET_WIZARD >> 8;
+	m_szRequest[i++] = (char)UCP_METHOD_GET_WIZARD;
+
+	nResult = sendto( m_Socket, m_szRequest, i, 0, (SOCKADDR *) &m_saUdpServ,sizeof ( SOCKADDR_IN ));
+	if( nResult == SOCKET_ERROR ) 
+	{
+		sprintf( chrSendBuffer, "sendto() fail! Error Code: %05d", nResult );
+		AfxMessageBox( chrSendBuffer );
+		return;
+	}
+}
+
+void CUpgraderView::GetMiniApInfo()
+{
+	char	chrSendBuffer[128];
+	int		nResult;
+	int		i = 0;
+
+	memset(chrSendBuffer, 0, sizeof(chrSendBuffer));
+
+	//UCP_METHOD_DISCOVER
+	m_szRequest[i++] = (UCP_METHOD_DISCOVER >> 8 ) & 0xff;
+	m_szRequest[i++] = (UCP_METHOD_DISCOVER >> 0 ) & 0xff;
+
+//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.GetSelectionMark();
+	if (index != -1)
+	{
+		for ( int j = 0; j < 6; j++ )	
+			m_szRequest[i++] = (char)iMACAddr[index][j];
+	}
+
+	//UCP_METHOD_GET_IP
+	m_szRequest[i++] = (UCP_METHOD_GET_IP >> 8 ) & 0xff;
+	m_szRequest[i++] = (UCP_METHOD_GET_IP >> 0 ) & 0xff;
+
+	CString strHostIP = m_szLocalHostIP;
+	for (i; i < 14; i++)
+	{
+		CString StrTemp;
+		int pos = strHostIP.Find('.',0);
+		if ( pos != -1 )
+			StrTemp = strHostIP.Left(pos);
+		else
+			StrTemp = m_szLocalHostIP;
+
+		int tt = atoi(StrTemp);
+		m_szRequest[i] = (char)tt;
+		strHostIP.Delete(0,pos+1);
+	}
+
+	//UDP Port Number
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 8)&0xff;
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 0)&0xff;
+
+	//SequenceNum
+	m_szRequest[i++] = 0x01;
+	m_szRequest[i++] = 0x00;
+
+	//UDAP_TYPE_IPCONFIGURE
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 8)&0xff);
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 0)&0xff);
+
+	//UAP_FLAG_REQUEST
+	m_szRequest[i++] = UAP_FLAG_REQUEST;
+
+	//UAP_CLASS_UCP
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 24)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 16)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 8)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 0)&0xff;
+
+	//UCP_METHOD_GET_INFO
+	m_szRequest[i++] = (UCP_METHOD_GET_INFO >> 8 ) & 0xff;
+	m_szRequest[i++] = UCP_METHOD_GET_INFO & 0xff;
+
+	nResult = sendto( m_Socket, m_szRequest, i, 0, (SOCKADDR *) &m_saUdpServ,sizeof ( SOCKADDR_IN ));
+
+	if( nResult == SOCKET_ERROR ) 
+	{
+			sprintf( chrSendBuffer, "sendto() fail! Error Code: %05d", nResult );
+			AfxMessageBox( chrSendBuffer );
+			return;
+	}
+	SetTimer(TIMER_OVERTIME, 2000, NULL);
+}
+
+/*
+void CUpgraderView::DrawItem( LPDRAWITEMSTRUCT lpDrawItemStruct )
+{
+	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	ctlList.DrawItem(lpDrawItemStruct);
+}
+*/
+
+void CUpgraderView::InterfaceSelect()
+{
+	//memset(m_szLocalHostIP,NULL,sizeof(m_szLocalHostIP));
+	//GetLocalIPs (m_szLocalHostIP, sizeof(m_szLocalHostIP));
+	//int len = strlen(m_szLocalHostIP);
+	//if ( IsHexDigit(m_szLocalHostIP[len-1]) != 1 )
+	//	m_szLocalHostIP[len-1]
+	//
+	//len = strcspn(m_szLocalHostIP, szIPEnd);
+	//m_szLocalHostIP[len] = 0;
+	//
+	//HexToChar(buffer, 4 , m_npBufferIndex , ip);
+	//Ip2String(ip, ip);
+}
+
+// 选择网卡连接 david 2010.6.1
+void CUpgraderView::OnToolsSelectconnection()
+{
+	CSelectConectionDlg dlg;
+
+	// 选择后重新建立socket
+	if (IDOK == dlg.DoModal())
+	{
+		closesocket(m_Socket);
+		WSACleanup();
+		CreateWinSocket();
+		StartDiscovery();
+	}
+}
+
+void CUpgraderView::OnUpdateToolsSelectconnection(CCmdUI *pCmdUI)
+{
+	//CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	//if (ctlList.GetNextItem(-1, LVNI_SELECTED) != -1)
+	//	pCmdUI->Enable(TRUE);
+	//else
+	//	pCmdUI->Enable(FALSE);
+}
+
+LRESULT CUpgraderView::OnChangeSocket(WPARAM, LPARAM)
+{
+	return 0;
+}
+
+// 重启设备
+void CUpgraderView::OnReboot()
+{
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.GetSelectionMark();
+	if (index != -1)
+	{
+		CLogin	dlg;
+		if (dlg.DoModal() == IDOK)
+		{
+			m_strUserName = dlg.m_sUserName;
+			m_strPassword = dlg.m_sPassword;
+			SendAuthentication(UCP_METHOD_REBOOT);
+		}
+	}
+}
+
+void CUpgraderView::OnUpdateReboot(CCmdUI *pCmdUI)
+{
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	if (ctlList.GetNextItem(-1, LVNI_SELECTED) != -1)
+		pCmdUI->Enable(TRUE);
+	else
+		pCmdUI->Enable(FALSE);
+}
+
+// 发送重启命令包 David 2010.6.7
+void CUpgraderView::SendReboot()
+{
+	char	chrSendBuffer[128];
+	int		nResult;
+	int		i = 0;
+
+	memset(chrSendBuffer, 0, sizeof(chrSendBuffer));
+
+	// 设置包
+	m_szRequest[i++] = (UCP_METHOD_DISCOVER >> 8 ) & 0xff;
+	m_szRequest[i++] = (UCP_METHOD_DISCOVER >> 0 ) & 0xff;
+
+	//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.GetSelectionMark();//.GetSelectedCount();//.HitTest(point);
+	if (index != -1)
+	{
+		for ( int j = 0; j < 6; j++ )	
+			m_szRequest[i++] = (char)iMACAddr[index][j];
+	}
+
+	//UCP_METHOD_GET_IP
+	m_szRequest[i++] = (UCP_METHOD_GET_IP >> 8 ) & 0xff;
+	m_szRequest[i++] = (UCP_METHOD_GET_IP >> 0 ) & 0xff;
+
+	CString HostIP = m_szLocalHostIP;
+	for (i; i < 14; i++)
+	{
+		CString StrTemp;
+
+		int pos = HostIP.Find('.',0);
+		if ( pos != -1 )
+			StrTemp = HostIP.Left(pos);
+		else
+			StrTemp = HostIP;
+
+		int tt;
+		tt = atoi(StrTemp);
+		m_szRequest[i] = (char)tt;
+		HostIP.Delete(0,pos+1);
+	}
+
+	//UDP Port Number
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 8)&0xff;
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 0)&0xff;
+
+	//SequenceNum
+	m_szRequest[i++] = 0x01;
+	m_szRequest[i++] = 0x00;
+
+	//UDAP_TYPE_IPCONFIGURE
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 8)&0xff);
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 0)&0xff);
+
+	//UAP_FLAG_REQUEST
+	m_szRequest[i++] = UAP_FLAG_REQUEST;
+
+	//UAP_CLASS_UCP
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 24)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 16)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 8)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 0)&0xff;
+
+	// Method 这里为重启
+	m_szRequest[i++] = (UCP_METHOD_REBOOT >> 8 ) & 0xff;
+	m_szRequest[i++] = (UCP_METHOD_REBOOT >> 0 ) & 0xff;
+
+	nResult = sendto(m_Socket, m_szRequest, i, 0, (SOCKADDR *) &m_saUdpServ,sizeof (SOCKADDR_IN));
+
+	if( nResult == SOCKET_ERROR ) 
+	{
+		sprintf( chrSendBuffer, "sendto() fail! Error Code: %05d", nResult );
+		AfxMessageBox( chrSendBuffer );
+		return;
+	}
+}
+
+// 显示IP配置的界面 David 2010.6.12 Add
+void CUpgraderView::ShowIPConfigDlg()
+{
+	CIpConfig	dlgIPConfig(this);		// IP配置对话框
+	memset(dlgIPConfig.m_chrGetIP,NULL,4);
+	memset(dlgIPConfig.m_chrGetSubMask,NULL,4);
+	memset(dlgIPConfig.m_chrGateway,NULL,4);
+	CUpgraderDoc* pDoc = GetDocument();
+	ASSERT(NULL != pDoc);
+	for (int n = 0; n < 4; n++ )
+	{
+		dlgIPConfig.m_chrGetIP[n] = (char)pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrIPAddr[n];
+		dlgIPConfig.m_chrGetSubMask[n] = (char)pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrSubmask[n];
+		dlgIPConfig.m_chrGateway[n] = (char)pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrGateway[n];
+	}
+
+	for ( int j = 0; j < 6; j++ )
+		dlgIPConfig.SerMacAdde[j] = (char)pDoc->m_RecieveData.m_arrMacAddr[j];
+
+	dlgIPConfig.m_Socket = m_Socket;
+	dlgIPConfig.saUdpServ = m_saUdpServ;
+	dlgIPConfig.m_iDhcpEnable = pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nDHCP;
+	dlgIPConfig.DoModal();
+}
+
+// 显示设备信息的界面 David 2010.6.12 Add
+void CUpgraderView::ShowDeviceInfoDlg()
+{
+	CDeviceInfoDlg	dlgInfo;			// 设备信息对话框
+	char charTemp[33];
+	CUpgraderDoc* pDoc = GetDocument();
+	ASSERT(NULL != pDoc);
+	// Device Name
+	dlgInfo.m_strModelName = pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_strDeviceName;
+
+	// Ethernet MAC Address
+	dlgInfo.m_strMacAddr.Format("%d.%d.%d.%d.%d.%d", 
+								pDoc->m_RecieveData.m_arrMacAddr[0],
+								pDoc->m_RecieveData.m_arrMacAddr[1],
+								pDoc->m_RecieveData.m_arrMacAddr[2],
+								pDoc->m_RecieveData.m_arrMacAddr[3],
+								pDoc->m_RecieveData.m_arrMacAddr[4],
+								pDoc->m_RecieveData.m_arrMacAddr[5]);
+
+	// Wireless MAC Address
+	dlgInfo.m_strWlanMacAddr = pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_szcharWlanMACAddress;
+
+	// Firmware Version
+	dlgInfo.m_strFwVer = pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_strFirmware;
+
+	// IP Address
+	sprintf(charTemp,"%d.%d.%d.%d", 
+		pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrIPAddr[0], 
+		pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrIPAddr[1],
+		pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrIPAddr[2], 
+		pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrIPAddr[3]);
+	dlgInfo.m_strIpAddr = charTemp;
+
+	// Subnet Mask
+	sprintf(charTemp,"%d.%d.%d.%d", 
+		pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrSubmask[0],
+		pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrSubmask[1],
+		pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrSubmask[2], 
+		pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrSubmask[3]);
+	dlgInfo.m_strSubnetMask = charTemp;
+
+	// Default Gateway 如果设置为空，则界面全部显示为空
+	if ((pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrGateway[0]==0) 
+		&& (pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrGateway[1]==0) 
+		&& (pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrGateway[2]==0) 
+		&& (pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrGateway[3]==0))
+		sprintf(charTemp,"");
+	else
+		sprintf(charTemp,"%d.%d.%d.%d", 
+		pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrGateway[0],
+		pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrGateway[1],
+		pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrGateway[2],
+		pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_arrGateway[3]);
+	dlgInfo.m_strGateway = charTemp;
+
+	// DHCP Client
+	if (pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nDHCP == 1)
+		sprintf(charTemp,"Enabled");
+	else
+		sprintf(charTemp,"Disabled");
+	dlgInfo.m_strDhcp = charTemp;
+
+	// Operation Mode
+	switch(pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nOper)
+	{
+	case CFG_OP_MODE_AP:
+		sprintf(charTemp,"Access Point ");
+		break;
+	case CFG_OP_MODE_STA:
+		sprintf(charTemp,"Infrastructure");
+		break;
+	case CFG_OP_MODE_ADHOC:
+		sprintf(charTemp,"AD-HOC");
+		break;
+	case CFG_OP_MODE_REPEATER:
+		sprintf(charTemp,"Repeater");
+		break;
+	default:
+		ASSERT(FALSE);
+		break;
+	}
+	dlgInfo.m_strOpMode = charTemp;
+
+	// Wireless Mode
+	if ((pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nSuperG & ABOLT_TURBO_G) 
+		&& (pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nSuperG & ABOLT_TURBO_PRIME))
+		sprintf(charTemp,"2.4GHz 802.11 Super G dynamic");
+	else
+	{
+		switch(pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nWirelessMode)
+		{
+		case MODE_SELECT_11B:
+			sprintf(charTemp,"2.4GHz 802.11b");
+			break;
+		case MODE_SELECT_11G:
+			sprintf(charTemp,"2.4GHz 802.11g");
+			break;
+		case MODE_SELECT_108G:
+			sprintf(charTemp,"2.4GHz 802.11 Super G static");
+			break;
+		default:
+			ASSERT(FALSE);
+			break;
+		}
+	}
+	dlgInfo.m_strWlanMode = charTemp;
+
+	// SSID
+	dlgInfo.m_strSsid = pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_strSSID;
+
+	// Channel / Frequency
+	sprintf(charTemp, "Channel %d/ %dMHz",pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nChannel, 2407+(pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nChannel*5));
+	dlgInfo.m_strChannel = charTemp;
+
+	// Security
+	switch(pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nSecurity)
+	{
+	case AUTH_OPEN_SYSTEM:
+		if(pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nEncryptionOnOff)
+			sprintf(charTemp, "WEP Open System");
+		else 
+			sprintf(charTemp, "NO Security");
+		break;
+	case AUTH_SHARED_KEY:
+		sprintf(charTemp, "WEP Shared Key");
+		break;
+	case AUTH_WPA:
+		sprintf(charTemp, "WPA-802.1x");
+		break;
+	case AUTH_WPAPSK:
+		sprintf(charTemp, "WPA-PSK");
+		break;
+	case AUTH_AUTO:
+		sprintf(charTemp, "WEP Auto");
+		break;
+	default:
+		ASSERT(FALSE);
+		break;
+	}
+	dlgInfo.m_strSecurity = charTemp;
+	dlgInfo.DoModal();
+}
+
+// 接收包之后的工作 David 2010.6.12 Add
+void CUpgraderView::LaterAction()
+{
+	CUpgraderDoc* pDoc = GetDocument();
+	ASSERT(NULL != pDoc);
+	KillTimer(TIMER_OVERTIME);
+	switch (pDoc->m_RecieveData.m_SendData.m_uMethod)
+	{
+	case UCP_METHOD_DISCOVER:
+		// 检查界面和内存
+		break;
+	case UCP_METHOD_GET_IP:	
+		ShowIPConfigDlg();			
+		break;
+	case UCP_METHOD_GET_INFO:
+		ShowDeviceInfoDlg();
+		break;
+	case UCP_METHOD_SET_WIZARD:
+	case UCP_METHOD_SET_WLAN:
+	case UCP_METHOD_SET_IP:			
+	case UCP_METHOD_RESET:
+		{
+			KillTimer(TIMER_OVERTIME);
+			BeginWaitCursor();	// Display the hourglass cursor.
+			CWaitReset	dlgw(40000);
+			dlgw.DoModal();
+			EndWaitCursor();	// Remove the hourglass cursor.
+			StartDiscovery();
+			break;
+		}				
+	case UCP_METHOD_REBOOT:
+		{
+			KillTimer(TIMER_OVERTIME);
+			BeginWaitCursor();	// Display the hourglass cursor.
+			CWaitReset	dlgw(50000);
+			dlgw.DoModal();
+			EndWaitCursor();	// Remove the hourglass cursor.
+			StartDiscovery();
+			break;
+		}
+	case UCP_METHOD_AUTH:		//登录认证回应包
+		{
+			KillTimer(TIMER_OVERTIME);
+			switch(pDoc->m_RecieveData.m_SendData.m_AuthData.m_uRequestMethod)
+			{
+			case UCP_METHOD_RESET:
+				SetFactoryDefault();
+				SetTimer(TIMER_OVERTIME, 2000, NULL);
+				break;
+			case UCP_METHOD_GET_IP:
+				SendConfig();
+				SetTimer(TIMER_OVERTIME, 2000, NULL);
+				break;
+			case UCP_METHOD_GET_WLAN:
+				GetWirelessInfo();
+				SetTimer(TIMER_OVERTIME, 2000, NULL);
+				break;
+			case UCP_METHOD_REBOOT:
+				SendReboot();
+				SetTimer(TIMER_OVERTIME, 2000, NULL);
+				break;
+			default:
+				ASSERT(FALSE);
+				break;
+			}
+			break;
+		}
+	}
+}

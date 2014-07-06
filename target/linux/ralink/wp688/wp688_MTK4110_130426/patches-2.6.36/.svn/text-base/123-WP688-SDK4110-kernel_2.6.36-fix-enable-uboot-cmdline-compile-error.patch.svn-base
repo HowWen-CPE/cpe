@@ -1,0 +1,17 @@
+Index: linux-2.6.36_MTK4110/arch/mips/ralink/init.c
+===================================================================
+--- linux-2.6.36_MTK4110.orig/arch/mips/ralink/init.c	2013-07-06 09:43:48.175893833 +0800
++++ linux-2.6.36_MTK4110/arch/mips/ralink/init.c	2013-07-06 09:44:26.827922740 +0800
+@@ -682,9 +682,9 @@
+ 	//mips_machtype = MACH_RALINK_ROUTER;
+ 
+ #ifdef CONFIG_UBOOT_CMDLINE
+-	prom_argc = fw_arg0;
+-	_prom_argv = fw_arg1;
+-	_prom_envp = fw_arg2;
++	prom_argc = (int)fw_arg0;
++	_prom_argv = (int *)fw_arg1;
++	_prom_envp = (int *)fw_arg2;
+ #endif
+ 
+ 	prom_init_cmdline();

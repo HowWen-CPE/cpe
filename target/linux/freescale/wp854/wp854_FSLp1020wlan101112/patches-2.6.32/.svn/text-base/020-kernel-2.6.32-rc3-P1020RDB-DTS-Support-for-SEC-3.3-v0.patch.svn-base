@@ -1,0 +1,48 @@
+From 0c78f61eb7f0a57024dacaa6f72b7660bfed9e3d Mon Sep 17 00:00:00 2001
+From: Vishnu Suresh <Vishnu@freescale.com>
+Date: Wed, 14 Oct 2009 17:12:57 +0530
+Subject: [PATCH 05/16] DTS: Support for SEC 3.3
+
+This patch adds support for SEC 3.3 found in P1020
+The changes are with respect to the EU and Descriptor types
+
+Supported EU are:-
+PKEU, RNGU, DEU, AESU, MDEU and CRCU
+
+Supported Descriptor types:-
+AESU_CTR_NONSNOOP, IPSEC_ESP, COMMON_NONSNOOP_NOAFEU, 802.11I_AES_CCMP,
+HMAC_SNOOP_NOAFEU, SRTP, PKEU_BUILD, PKEU_PTMUL, PKEU_PTADD_DBL, PKEU_MM,
+TLS_SSL_BLOCK, RAID_XOR, IPSEC_AES_GCM, HMAC_SNOOP_AESU_CTR, DBL_DIGEST
+
+Signed-off-by: Vishnu Suresh <Vishnu@freescale.com>
+---
+ arch/powerpc/boot/dts/p1020rdb.dts |    7 ++++---
+ 1 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p1020rdb.dts b/arch/powerpc/boot/dts/p1020rdb.dts
+index df52690..4c6d061 100644
+--- a/arch/powerpc/boot/dts/p1020rdb.dts
++++ b/arch/powerpc/boot/dts/p1020rdb.dts
+@@ -376,15 +376,16 @@
+ 		};
+ 
+ 		crypto@30000 {
+-			compatible = "fsl,sec3.1", "fsl,sec3.0", "fsl,sec2.4",
++			compatible = "fsl,sec3.3", "fsl,sec3.1",
++				     "fsl,sec3.0", "fsl,sec2.4",
+ 				     "fsl,sec2.2", "fsl,sec2.1", "fsl,sec2.0";
+ 			reg = <0x30000 0x10000>;
+ 			interrupts = <45 2 58 2>;
+ 			interrupt-parent = <&mpic>;
+ 			fsl,num-channels = <4>;
+ 			fsl,channel-fifo-len = <24>;
+-			fsl,exec-units-mask = <0xbfe>;
+-			fsl,descriptor-types-mask = <0x3ab0ebf>;
++			fsl,exec-units-mask = <0x93c>;
++			fsl,descriptor-types-mask = <0x3a30abf>;
+ 		};
+ 
+ 		mpic: pic@40000 {
+-- 
+1.6.4.2
+

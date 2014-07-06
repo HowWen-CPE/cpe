@@ -1,0 +1,331 @@
+--- u-boot-freescale-p1020-sku/lib_ppc/board.c	2012-07-11 19:41:34.451311108 -0700
++++ u-boot-liteon-wp854-openwrt/lib_ppc/board.c	2011-11-08 23:26:37.678802000 -0800
+@@ -28,6 +28,7 @@
+ #include <command.h>
+ #include <malloc.h>
+ #include <stdio_dev.h>
++#include <asm/io.h>
+ #ifdef CONFIG_8xx
+ #include <mpc8xx.h>
+ #endif
+@@ -89,6 +90,33 @@
+ #include <miiphy.h>
+ #endif
+ 
++/*Added by sirian, 2011-07-25*/
++#include <asm/io.h>
++
++#if defined(CONFIG_P1011) ||defined(CONFIG_P1020) || defined(CONFIG_P2020)
++static struct devdis_env{
++		  	char *core0_enable_env;
++			char *core1_enable_env;
++			char *tdm_env;
++			char *sdhc_env;
++			char *etsec1_env;
++			char *etsec2_env;
++			char *etsec3_env;
++			char *spi_env;
++			char *i2c_env;
++			char *sec_env;
++			char *usb1_env;
++			char *usb2_env;
++			char *pcie1_env;
++			char *pcie2_env;
++			char *pcie3_env;
++			char *elbc_env;
++			char *ddr_env;
++			char *dma_env;
++			char *duart_env;
++} *devdis_env_var;
++#endif
++
+ #ifdef CONFIG_SYS_UPDATE_FLASH_SIZE
+ extern int update_flash_size (int flash_size);
+ #endif
+@@ -212,6 +240,15 @@
+ #if defined(CONFIG_HARD_I2C) || defined(CONFIG_SOFT_I2C)
+ static int init_func_i2c (void)
+ {
++/*Added by sirian, 2011-07-26, for disable i2c hardware function*/
++#if defined(CONFIG_P1011) ||defined(CONFIG_P1020) || defined(CONFIG_P2020)
++       char * disablei2c_env = getenv ("disablei2c");
++	if (disablei2c_env && (strncmp(disablei2c_env,"1", 1)==0))
++	{
++	       		return (0);
++	}
++#endif
++
+ 	puts ("I2C:   ");
+ 	i2c_init (CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
+ 	puts ("ready\n");
+@@ -222,6 +259,14 @@
+ #if defined(CONFIG_HARD_SPI)
+ static int init_func_spi (void)
+ {
++/*Added by sirian, 2011-07-26, for disable spi hardware function*/
++#if defined(CONFIG_P1011) ||defined(CONFIG_P1020) || defined(CONFIG_P2020)
++       char * disablespi_env = getenv ("disablespi");
++	if (disablespi_env && (strncmp(disablespi_env,"1", 1)==0))
++	{
++	       		return (0);
++	}
++#endif
+ 	puts ("SPI:   ");
+ 	spi_init ();
+ 	puts ("ready\n");
+@@ -605,7 +650,7 @@
+ 	debug ("New Stack Pointer is: %08lx\n", addr_sp);
+ 
+ 	WATCHDOG_RESET ();
+-
++	
+ #ifdef CONFIG_POST
+ 	post_bootmode_init();
+ 	post_run (NULL, POST_ROM | post_bootmode_get(0));
+@@ -615,11 +660,104 @@
+ 
+ 	memcpy (id, (void *)gd, sizeof (gd_t));
+ 
++	
+ 	relocate_code (addr_sp, id, addr);
++	
+ 
+ 	/* NOTREACHED - relocate_code() does not return */
+ }
+ 
++//Alvin Add Jul 12,2011
++static int Erase_maps_data()
++{
++	ulong addr_first,addr_last;
++	int i = 0;
++	
++	addr_first = (ulong)(MAP_ADD);
++	addr_last = (ulong)(MAP_LEN);
++	addr_last = addr_first + addr_last - 1;
++        
++	if (flash_sect_erase(addr_first, addr_last) != 0)
++	{
++		printf("Error erasing...\n"); 
++		return -2;
++	}
++
++	/*delay some time for erasing successfully*/
++	for(i = 0; i < 0x20000; i++);
++	
++	return 2;
++}
++
++int detect_button(void)
++{
++	int sec;
++	int get;
++
++	/*dealy 50ms to avoid jittering*/
++	udelay(50*1000);  
++	
++	volatile ccsr_gpio_t *pgpio = (void *)(CONFIG_SYS_MPC85xx_GPIO_ADDR);
++	volatile ccsr_gur_t *gur = (void *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
++
++	if(!(in_be32(&gur->gpporcr) & 0xf8000000))
++	{
++		//printf( "-----in_be32(&gur->gpporcr) 0x%x\n", in_be32(&gur->gpporcr));
++		return 0;
++	}
++	
++	GPIOX_SETTING_INPUT(&pgpio,GPIO_RESET_BUTTON_DOWN);
++	get = GPIOX_RESET_BUTTON(&pgpio, GPIO_RESET_BUTTON_DOWN);
++	sec =0;
++       
++	while( get == 0 ){
++		udelay(1000000); 
++		get = GPIOX_RESET_BUTTON(&pgpio, GPIO_RESET_BUTTON_DOWN);
++		if(get != 0)
++			break;
++		sec++;              
++	}
++
++	return sec;
++}
++
++static int set_flag(int sec)
++{
++        int ret = 0;
++
++   	if(sec <= 0)
++		return 0;
++	if (0 < sec && sec< 5)            
++		return 1;
++	else if(sec >= 5)
++		ret = Erase_maps_data();
++        
++	return ret;
++}
++
++static void listen_reset_button(void)
++{
++	int ret = 0;
++    
++	ret = set_flag(detect_button());
++	switch(ret)
++	{
++		case 1:
++			printf("\n\nThe time of press reset button: < 5 seconds --->no action \n");
++			break;
++		case 2:
++			printf("\n\nThe time of press reset button: > 5 seconds --->Erase configuration partition\n");
++			break;
++		case -2:
++			printf("modify data failed!\n");
++			break;
++		default:
++			break;
++	}
++          
++}
++//Add end
++
+ /************************************************************************
+  *
+  * This is the next part if the initialization sequence: we are now
+@@ -961,6 +1099,11 @@
+ #ifdef CONFIG_BITBANGMII
+ 	bb_miiphy_init();
+ #endif
++
++        //Alvin Add Jul 12,2011,listen reset button*/
++        listen_reset_button();
++        //add end
++        
+ #if defined(CONFIG_CMD_NET)
+ #if defined(CONFIG_NET_MULTI)
+ 	WATCHDOG_RESET ();
+@@ -1058,6 +1201,129 @@
+  }
+ #endif
+ 
++
++/*Added by sirian, 2011-07-26, for disable some hardware function by reg DEVDISR*/
++#if defined(CONFIG_P1011) ||defined(CONFIG_P1020) || defined(CONFIG_P2020)
++{
++		 devdis_env_var->core0_enable_env = getenv ("disablecore0");
++		 devdis_env_var->core1_enable_env = getenv ("disablecore1");
++		 devdis_env_var->tdm_env = getenv ("disabletdm");
++		 devdis_env_var->sdhc_env = getenv ("disablesdhc");
++		 devdis_env_var->etsec1_env = getenv ("disabletsec1");
++		 devdis_env_var->etsec2_env = getenv ("disabletsec2");
++		 devdis_env_var->etsec3_env = getenv ("disabletsec3");
++		 devdis_env_var->i2c_env = getenv ("disablei2c");
++		 devdis_env_var->spi_env = getenv ("disablespi");
++		 devdis_env_var->sec_env = getenv ("disablesec");
++		 devdis_env_var->usb1_env = getenv ("disableusb1");
++		 devdis_env_var->usb2_env = getenv ("disableusb2");
++		 devdis_env_var->pcie1_env = getenv ("disablepcie1");
++		 devdis_env_var->pcie2_env = getenv ("disablepcie2");
++		 devdis_env_var->pcie3_env = getenv ("disablepcie3");
++		 devdis_env_var->elbc_env = getenv ("disabletsec3");
++		 devdis_env_var->ddr_env = getenv ("disabletddr");
++		 devdis_env_var->dma_env = getenv ("disabledma");
++		 devdis_env_var->duart_env = getenv ("disableduart");
++
++		 u32 devdisr;
++		 volatile ccsr_gur_t *gur = (void *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
++		 devdisr = in_be32(&gur->devdisr);
++		 
++		if (devdis_env_var->core0_enable_env && (strncmp(devdis_env_var->core0_enable_env,"1", 1)==0)) 
++		{
++	       		devdisr |= (MPC85xx_DEVDISR_TB0|MPC85xx_DEVDISR_CPU0);
++	       }
++		
++		if (devdis_env_var->core1_enable_env && (strncmp(devdis_env_var->core1_enable_env,"1", 1)==0)) 
++		{
++	       		devdisr |= (MPC85xx_DEVDISR_TB1|MPC85xx_DEVDISR_CPU1);
++	       }
++		
++	       if (devdis_env_var->tdm_env && (strncmp(devdis_env_var->tdm_env,"1", 1)==0))
++	       {
++	       		devdisr |= MPC85xx_DEVDISR_TDM;
++	       	}
++		
++	       if (devdis_env_var->sdhc_env && (strncmp(devdis_env_var->sdhc_env,"1", 1)==0))
++	       {
++	       		devdisr |= MPC85xx_DEVDISR_SDHC;
++	       	}
++		
++		if (devdis_env_var->etsec1_env && (strncmp(devdis_env_var->etsec1_env,"1", 1)==0))
++	       {
++	       		devdisr |= MPC85xx_DEVDISR_TSEC1;
++	       	}
++		
++		if (devdis_env_var->etsec2_env && (strncmp(devdis_env_var->etsec2_env,"1", 1)==0))
++	       {
++	       		devdisr |= MPC85xx_DEVDISR_TSEC2;
++	       	}
++
++		if (devdis_env_var->etsec3_env && (strncmp(devdis_env_var->etsec3_env,"1", 1)==0))
++	       {
++	       		devdisr |= MPC85xx_DEVDISR_TSEC3;
++	       	}
++
++              if (devdis_env_var->spi_env && (strncmp(devdis_env_var->spi_env,"1", 1)==0))
++	       {
++	       		devdisr |=  MPC85xx_DEVDISR_SPI;
++	       	}
++			  
++		if (devdis_env_var->i2c_env && (strncmp(devdis_env_var->i2c_env,"1", 1)==0))
++	       {
++	       		devdisr |=  MPC85xx_DEVDISR_I2C;
++	       	}
++
++		if (devdis_env_var->sec_env && (strncmp(devdis_env_var->sec_env,"1", 1)==0))
++	       {
++	       		devdisr |=  MPC85xx_DEVDISR_SEC;
++	       	}
++
++		if (devdis_env_var->usb1_env && (strncmp(devdis_env_var->usb1_env,"1", 1)==0))
++	       {
++	       		devdisr |=  MPC85xx_DEVDISR_USB1;
++	       	}
++
++		if (devdis_env_var->usb2_env && (strncmp(devdis_env_var->usb2_env,"1", 1)==0))
++	       {
++	       		devdisr |=  MPC85xx_DEVDISR_USB2;
++	       	}
++
++		if (devdis_env_var->pcie1_env && (strncmp(devdis_env_var->pcie1_env,"1", 1)==0))
++	       {
++	       		devdisr |=  MPC85xx_DEVDISR_PCIE;
++	       	}
++
++		if (devdis_env_var->pcie2_env && (strncmp(devdis_env_var->pcie2_env,"1", 1)==0))
++	       {
++	       		devdisr |=  MPC85xx_DEVDISR_PCIE2;
++	       	}
++		
++		if (devdis_env_var->elbc_env && (strncmp(devdis_env_var->elbc_env,"1", 1)==0))
++	       {
++	       		devdisr |=  MPC85xx_DEVDISR_LBC;
++	       	}
++
++		if (devdis_env_var->ddr_env && (strncmp(devdis_env_var->ddr_env,"1", 1)==0))
++	       {
++	       		devdisr |=  MPC85xx_DEVDISR_DDR;
++	       	}
++
++		if (devdis_env_var->dma_env && (strncmp(devdis_env_var->dma_env,"1", 1)==0))
++	       {
++	       		devdisr |=  MPC85xx_DEVDISR_DMA;
++	       	}
++
++		if (devdis_env_var->duart_env && (strncmp(devdis_env_var->duart_env,"1", 1)==0))
++	       {
++	       		devdisr |=  MPC85xx_DEVDISR_DUART;
++	       	}
++		
++		out_be32(&gur->devdisr, devdisr);
++		
++	}
++#endif
++
+ 	/* Initialization complete - start the monitor */
+ 
+ 	/* main_loop() can return to retry autoboot, if so just run it again. */

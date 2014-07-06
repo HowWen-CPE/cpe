@@ -1,0 +1,228 @@
+diff -urN d/rt2860v2/ap/ap_apcli.c c/rt2860v2/ap/ap_apcli.c
+--- d/rt2860v2/ap/ap_apcli.c	2013-05-16 14:03:13.000000000 +0800
++++ c/rt2860v2/ap/ap_apcli.c	2013-05-16 14:03:40.000000000 +0800
+@@ -1204,6 +1204,18 @@
+ 				else
+ 				{
+ 					*MsgType = (pFrame->Octet[0]&0x7F);
++                    			/* Added by Bruce Liu, 2013-1-6 
++                     			 * Because 802.11h only used to 5G through iwpriv configure,
++                     			 * but 2.4G's 802.11h need to ourself configure.
++                     			 */
++					#ifdef DOT11N_DRAFT3
++                    			if ( !PHY_MODE_IS_5G_BAND(pAd->CommonCfg.PhyMode) &&  *MsgType == 0) 
++                    			{
++                        			pAd->CommonCfg.bIEEE80211H = TRUE;
++                        			printk(KERN_ERR "%s, 2.4G 802.11h start\n", __func__ );
++                    			}
++					#endif
++                    			/* Ended by Bruce Liu*/
+ 				}
+ 				break;
+ 
+diff -urN d/rt2860v2/ap/ap_data.c c/rt2860v2/ap/ap_data.c
+--- d/rt2860v2/ap/ap_data.c	2013-05-16 14:05:21.000000000 +0800
++++ c/rt2860v2/ap/ap_data.c	2013-05-16 14:05:39.000000000 +0800
+@@ -3767,12 +3767,17 @@
+ 
+ 
+ #ifdef IDS_SUPPORT	
+-		/* Check if a rogue AP impersonats our mgmt frame to spoof clients */
+-		if (RTMPSpoofedMgmtDetection(pAd, pHeader, pRxWI->RSSI0, pRxWI->RSSI1, pRxWI->RSSI2))
+-		{
+-			/* This is a spoofed frame, so give up it. */
+-			break;
+-		}
++        	#ifndef WIFI_DRIVER_PRE_PORTING
++        	/* Added by Bruce Liu, 2013-1-6 
++         	 * Not check ACTION frame, for CSA frame.
++         	 */
++    		/* Check if a rogue AP impersonats our mgmt frame to spoof clients */
++    		if ((pHeader->FC.SubType != SUBTYPE_ACTION) && RTMPSpoofedMgmtDetection(pAd, pHeader, pRxWI->RSSI0, pRxWI->RSSI1, pRxWI->RSSI2))
++    		{
++    			/* This is a spoofed frame, so give up it. */
++    			break;
++    		}
++        #endif
+ #endif /* IDS_SUPPORT */
+ 
+ #ifdef IDS_SUPPORT
+@@ -3782,10 +3787,17 @@
+ 			
+ 		if (!pRxD->U2M)
+ 		{
+-			if ((pHeader->FC.SubType != SUBTYPE_BEACON) && (pHeader->FC.SubType != SUBTYPE_PROBE_REQ))
+-			{
+-				break;
+-			}
++		    #ifndef WIFI_DRIVER_PRE_PORTING
++		    /* Modified by Bruce Liu, 2013-1-6 
++             * If receive broadcast ACTION frame, don't discard it.
++             */
++    		if ((pHeader->FC.SubType != SUBTYPE_BEACON) && (pHeader->FC.SubType != SUBTYPE_PROBE_REQ) 
++                    && (pHeader->FC.SubType != SUBTYPE_ACTION) && (pHeader->FC.SubType != SUBTYPE_ACTION_NO_ACK))
++    		{
++    			break;
++    		} 
++            /* Ended by Bruce Liu */
++            #endif
+ 		}
+ 	
+ 		if (pAd->ApCfg.BANClass3Data == TRUE)
+diff -urN d/rt2860v2/ap/ap_sync.c c/rt2860v2/ap/ap_sync.c
+--- d/rt2860v2/ap/ap_sync.c	2013-05-16 14:06:26.000000000 +0800
++++ c/rt2860v2/ap/ap_sync.c	2013-05-16 14:06:48.000000000 +0800
+@@ -1102,6 +1102,62 @@
+ 						DBGPRINT(RT_DEBUG_INFO, ("FallBack APClient BW to 40MHz\n"));
+ 					}
+ 				}
++
++				#ifndef WIFI_DRIVER_PRE_PORTING
++				/* Added by Bruce Liu, Process channel switch in the beacon, 2013-5-13 */
++				if ( (NewChannel > 0) && (NewChannel < 14)  && (pAd->CommonCfg.Channel != NewChannel) ) 
++				{
++					DBGPRINT(RT_DEBUG_INFO, ("Beacon: Old Channel: %d, new channel: %d, HT40 ChannelOffset: 0x%x\n", pAd->CommonCfg.Channel, NewChannel, NewExtChannelOffset) );
++					if ( (NewExtChannelOffset == 0x1) || (NewExtChannelOffset == 0x3)   ) 
++					{
++						/* support 40M:
++						  NewExtChannelOffset = 1:
++						  	Indicates that the secondary channel is above the primary channel
++						  NewExtChannelOffset = 3:
++						      Indicates that the secondary channel is below the primary channel
++						  */
++						ChannelSwitchAction(pAd, Elem->Wcid, NewChannel, NewExtChannelOffset);
++					}
++					else 
++					{
++						/* Support 20M:
++						     NewExtChannelOffset = 0:
++						     	Indicates that no secondary channel is present 
++						*/
++						ChannelSwitchAction(pAd, Elem->Wcid, NewChannel, 0);
++					}
++					
++					/* Added by Bruce Liu, 2012-1-7 
++		                       If don't update to stored data at client, received beacon will occur
++		                       that client send deauth packet to AP. Then, reconnect AP and disconet 
++		                       over and over. So, for fix the issue, this must update channel number.
++		                     */
++                    
++			                    /* Updated adapter's struct channel */
++			                    pAd->CommonCfg.Channel = NewChannel;
++
++			                    /* Difference mode, central channel is difference 
++			                       1. HT20/lagacy mode: CentralChannel = CurrentChannel
++			                       2. HT40: 
++			                                PlUS: CentralChannel = CurrentChannel + 2;
++			                               MINUS: CentralChannel = CurrentChannel - 2;
++			                     */
++			                    if ( pAd->CommonCfg.HtCapability.HtCapInfo.ChannelWidth == BW_40 )
++			                    {
++			                        /* 7.3.2.20A, 1 if extension channel is above the control channel, 
++			                            3 if below, 0 if not present */
++			                            if (NewExtChannelOffset == 0x3)
++								pAd->CommonCfg.CentralChannel = NewChannel - 2;
++						   else
++			                            		pAd->CommonCfg.CentralChannel = NewChannel + 2;
++			                    }
++			                    else
++			                    {
++			                        pAd->CommonCfg.CentralChannel = NewChannel;
++			                    }
++				}
++				/* Ended by Bruce Liu */
++				#endif 
+ 			}
+ 		}
+ 
+diff -urN d/rt2860v2/common/spectrum.c c/rt2860v2/common/spectrum.c
+--- d/rt2860v2/common/spectrum.c	2013-05-16 14:01:44.000000000 +0800
++++ c/rt2860v2/common/spectrum.c	2013-05-16 14:02:08.000000000 +0800
+@@ -1871,13 +1871,23 @@
+ 	}
+ 
+ #ifdef CONFIG_AP_SUPPORT
+-	/* ChSwAnn need check.*/
+-	if ((pAd->OpMode == OPMODE_AP) &&
+-		(DfsRequirementCheck(pAd, ChSwAnnInfo.Channel) == TRUE))
+-	{
+-		NotifyChSwAnnToPeerAPs(pAd, pFr->Hdr.Addr1, pFr->Hdr.Addr2, ChSwAnnInfo.ChSwMode, ChSwAnnInfo.Channel);
+-		StartDFSProcedure(pAd, ChSwAnnInfo.Channel, ChSwAnnInfo.ChSwMode);
+-	}
++
++    #ifndef WIFI_DRIVER_PRE_PORTING
++    /* Added by Bruce Liu, 2013-1-6 
++     * When device work at 5G, need to detect radar signal.
++     * However, 2.4G don't need it. 
++     */
++    if ( PHY_MODE_IS_5G_BAND(pAd->CommonCfg.PhyMode) ) 
++    {   
++    	/* ChSwAnn need check.*/
++    	if ((pAd->OpMode == OPMODE_AP) &&
++    		(DfsRequirementCheck(pAd, ChSwAnnInfo.Channel) == TRUE))
++    	{
++    		NotifyChSwAnnToPeerAPs(pAd, pFr->Hdr.Addr1, pFr->Hdr.Addr2, ChSwAnnInfo.ChSwMode, ChSwAnnInfo.Channel);
++    		StartDFSProcedure(pAd, ChSwAnnInfo.Channel, ChSwAnnInfo.ChSwMode);
++    	}
++    } /* Ended by Bruce Liu */
++    #endif
+ #endif /* CONFIG_AP_SUPPORT */
+ 
+ #ifdef CONFIG_STA_SUPPORT
+@@ -2153,6 +2163,10 @@
+ 
+ #ifdef DOT11N_DRAFT3
+ 			{
++			    #ifndef WIFI_DRIVER_PRE_PORTING
++			    printk(KERN_ERR "%s, SPECTRUM CHANNEL SWITCH\n", __func__ );
++                #endif
++                
+ 				SEC_CHA_OFFSET_IE	Secondary;
+ 				CHA_SWITCH_ANNOUNCE_IE	ChannelSwitch;
+ 
+@@ -2172,6 +2186,45 @@
+ 				if ((Elem->Msg[LENGTH_802_11+2] == IE_CHANNEL_SWITCH_ANNOUNCEMENT) && (Elem->Msg[LENGTH_802_11+3] == 3))
+ 				{
+ 					ChannelSwitchAction(pAd, Elem->Wcid, ChannelSwitch.NewChannel, Secondary.SecondaryChannelOffset);
++
++                    #ifndef WIFI_DRIVER_PRE_PORTING
++                    /* Added by Bruce Liu, 2012-1-7 
++                       If don't update to stored data at client, received beacon will occur
++                       that client send deauth packet to AP. Then, reconnect AP and disconet 
++                       over and over. So, for fix the issue, this must update channel number.
++                     */
++                    
++                    /* Updated adapter's struct channel */
++                    pAd->CommonCfg.Channel = ChannelSwitch.NewChannel;
++
++                    /* Difference mode, central channel is difference 
++                       1. HT20/lagacy mode: CentralChannel = CurrentChannel
++                       2. HT40: 
++                                PlUS: CentralChannel = CurrentChannel + 2;
++                               MINUS: CentralChannel = CurrentChannel - 2;
++                     */
++                    if ( pAd->CommonCfg.HtCapability.HtCapInfo.ChannelWidth == BW_40 )
++                    {
++                        /* 7.3.2.20A, 1 if extension channel is above the control channel, 
++                            3 if below, 0 if not present */
++                        if (pAd->CommonCfg.NewExtChanOffset.NewExtChanOffset == 0x3)
++                            	pAd->CommonCfg.CentralChannel = ChannelSwitch.NewChannel + 2;
++		        else
++			        pAd->CommonCfg.CentralChannel = ChannelSwitch.NewChannel - 2;
++                        //else if (pAd->CommonCfg.NewExtChanOffset.NewExtChanOffset == 3)
++                            //pAd->CommonCfg.CentralChannel = ChannelSwitch.NewChannel - 2;
++                        //else
++                            //pAd->CommonCfg.CentralChannel = ChannelSwitch.NewChannel;
++                    }
++                    else
++                    {
++                        pAd->CommonCfg.CentralChannel = ChannelSwitch.NewChannel;
++                    }
++					
++		   if (! PHY_MODE_IS_5G_BAND(pAd->CommonCfg.PhyMode) ) 
++			 	pAd->CommonCfg.bIEEE80211H == 0;
++                    /* Ened by Bruce Liu */
++                    #endif
+ 				}
+ 			}
+ #endif /* DOT11N_DRAFT3 */

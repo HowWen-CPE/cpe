@@ -1,0 +1,284 @@
+--- a/rt2860v2/ap/ap_cfg.c
++++ b/rt2860v2/ap/ap_cfg.c
+@@ -923,8 +923,6 @@ static struct {
+ #endif /* DOT1X_SUPPORT */	
+ #ifdef DBG	
+ 	{"Debug",					Set_Debug_Proc},
+-	{"BBPRead",					Set_ApcliBBPRead_Proc},
+-	//{"BBPWrite",					Set_BBPWrite_Proc},
+ #endif /* DBG */
+ 
+ #if defined(DFS_SUPPORT) || defined(CARRIER_DETECTION_SUPPORT)
+@@ -7454,7 +7452,6 @@ INT	Show_Sat_Proc(
+ }
+ 
+ 
+-
+ INT	Show_Sat_Reset_Proc(
+ 	IN	PRTMP_ADAPTER	pAd, 
+ 	IN	PSTRING			arg)
+@@ -14293,3 +14290,102 @@ INT RTMPAPIoctlAckTimeout(
+ /* Ended by Bruce Liu */
+ #endif
+ 
++/* Get channel information, Sean@Liteon, 2013-08-29 */
++/* 
++    ==========================================================================
++    Description:
++        Show channel information
++    Arguments:
++        pAdapter                    Pointer to our adapter
++        wrq                         Pointer to the ioctl argument
++
++    Return Value:
++        None
++
++    Note:
++        Usage: 
++               1.) iwpriv rai0 channel_info     	==> Show channel information
++    ==========================================================================
++*/
++VOID RTMPIoctlChannelInfo(
++	IN VOID *pAdSrc, 
++	IN RTMP_IOCTL_INPUT_STRUCT *wrq)
++{
++        PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdSrc;
++	INT Status;
++	PSTRING msg;
++	UCHAR i;
++	UINT32 Freq = 2412000;
++	UCHAR ExtChannel = 1;
++	
++	os_alloc_mem(pAd, (UCHAR **)&msg, sizeof(CHAR)*(2048));
++	if (msg == NULL) {
++		DBGPRINT(RT_DEBUG_ERROR, ("ERROR===>%s: os_alloc_mem() fail!!!\n", __FUNCTION__));
++		return;
++	}
++
++	memset(msg, 0x00, 2048);
++	sprintf(msg, "\n");
++
++	sprintf(msg + strlen(msg), "%u channels in total : Available frequencies:\n", pAd->ChannelListNum);
++	
++	for (i = 1; i <= pAd->ChannelListNum; i++)
++	{
++		MAP_CHANNEL_ID_TO_KHZ(pAd->ChannelList[i-1].Channel, Freq);
++
++		sprintf(msg + strlen(msg), "\tChannel %2u : %u.%u GHz\n", 
++			pAd->ChannelList[i-1].Channel, 
++			(Freq/1000000),
++			(Freq/1000)%1000);
++	}
++
++	/* Get current main channel, ext channel and frequency */
++	MAP_CHANNEL_ID_TO_KHZ(pAd->CommonCfg.Channel, Freq);
++				
++	sprintf(msg + strlen(msg), "\tCurrent Main channel=%u(%u.%u GHz)",
++		pAd->CommonCfg.Channel,
++		(Freq/1000000),
++		(Freq/1000)%1000);
++	
++	if ( (pAd->CommonCfg.PhyMode >= PHY_11ABGN_MIXED) &&
++		(pAd->CommonCfg.RegTransmitSetting.field.BW == BW_40))
++	{
++		if (pAd->CommonCfg.RegTransmitSetting.field.EXTCHA == EXTCHA_BELOW)
++		{
++			ExtChannel = ((pAd->CommonCfg.Channel - 4) >= pAd->ChannelList[0].Channel) 
++				? (pAd->CommonCfg.Channel - 4) 
++				: (pAd->CommonCfg.Channel + 4);
++		}
++		else if (pAd->CommonCfg.RegTransmitSetting.field.EXTCHA == EXTCHA_ABOVE)
++		{
++			ExtChannel = ((pAd->CommonCfg.Channel + 4) <= pAd->ChannelList[pAd->ChannelListNum - 1].Channel) 
++				? (pAd->CommonCfg.Channel + 4) 
++				: (pAd->CommonCfg.Channel - 4);
++		}
++
++		MAP_CHANNEL_ID_TO_KHZ(ExtChannel, Freq);
++		
++	   	sprintf(msg + strlen(msg), ", Ext channel=%u(%u.%u GHz)\n", ExtChannel, (Freq/1000000), (Freq/1000)%1000);
++	}	
++       else
++	{
++		sprintf(msg + strlen(msg), "\n");
++	}
++
++	/* Copy the information into the user buffer */
++	wrq->u.data.length = strlen(msg);
++	Status = copy_to_user(wrq->u.data.pointer, msg, wrq->u.data.length);
++	if (Status)
++	{
++		DBGPRINT(RT_DEBUG_ERROR, ("ERROR===>%s: copy_to_user() fail!!!\n", __FUNCTION__));
++		os_free_mem(NULL, msg);
++
++		return;
++	}
++
++	if (msg != NULL)
++		os_free_mem(NULL, msg);
++
++}
++/* Sean@Liteon */
++
+--- a/rt2860v2/common/rt_channel.c
++++ b/rt2860v2/common/rt_channel.c
+@@ -1623,9 +1623,10 @@ static UCHAR FillChList(
+ {
+ 	INT i, j, l;
+ 	UCHAR channel;
++	UCHAR NumOfCh = pChDesp->NumOfCh;
+ 
+ 	j = Offset;
+-	for (i = 0; i < pChDesp->NumOfCh; i++)
++	for (i = 0; i < NumOfCh; i++)
+ 	{
+ 		channel = pChDesp->FirstChannel + i * increment;
+ 		if (!strncmp((PSTRING) pAd->CommonCfg.CountryCode, "JP", 2))
+@@ -1633,7 +1634,7 @@ static UCHAR FillChList(
+             /* for JP, ch14 can only be used when PhyMode is "B only" */
+             if ( (channel==14) && (pAd->CommonCfg.PhyMode != PHY_11B) )
+             {
+-                    pChDesp->NumOfCh--;
++                    NumOfCh--;
+                     break;
+             }
+         }
+--- a/rt2860v2/include/os/rt_linux.h
++++ b/rt2860v2/include/os/rt_linux.h
+@@ -57,6 +57,9 @@
+ #include <linux/pid.h>
+ #endif
+ 
++/* For make use of CountryCode, Sean@liteon, 2013-08-26 */
++#define EXT_BUILD_CHANNEL_LIST	
++
+ #ifdef RT_CFG80211_SUPPORT
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28))
+ #include <net/mac80211.h>
+--- a/rt2860v2/include/os/rt_os.h
++++ b/rt2860v2/include/os/rt_os.h
+@@ -82,6 +82,10 @@
+ /* Ended by Bruce Liu */
+ #endif
+ 
++/* Get channel information, Sean@Liteon, 2013-08-29 */
++#define RTPRIV_IOCTL_CHANNEL_INFO (SIOCIWFIRSTPRIV + 0x1D)
++/* Sean@Liteon */
++
+ #endif /* CONFIG_STA_SUPPORT */
+ 
+ #ifdef CONFIG_AP_SUPPORT
+@@ -126,6 +130,10 @@
+ /* Ended by Bruce Liu */
+ #endif
+ 
++/* Get channel information, Sean@Liteon, 2013-08-29 */
++#define RTPRIV_IOCTL_CHANNEL_INFO (SIOCIWFIRSTPRIV + 0x1D)
++/* Sean@Liteon */
++
+ #endif /* CONFIG_AP_SUPPORT */
+ 
+ #endif /* _RT_OS_H_ */
+--- a/rt2860v2/include/rt_os_net.h
++++ b/rt2860v2/include/rt_os_net.h
+@@ -129,7 +129,7 @@ VOID RtmpDrvOpsInit(
+ 	INOUT	VOID				*pDrvNetOpsOrg,
+ 	IN		RTMP_PCI_CONFIG		*pPciConfig,
+ 	IN		RTMP_USB_CONFIG		*pUsbConfig);
+-#endif /* OS_ABL_FUNC_SUPPORT */
++#endif /* OS_ABL_FUNC_SUPPORT */
+ #endif /* LINUX */
+ 
+ 
+@@ -179,7 +179,7 @@ VOID RtmpNetOpsSet(
+ #define RTMPInfClose (((RTMP_DRV_ABL_OPS *)(pRtmpDrvOps))->RTMPInfClose)
+ #define rt28xx_init (((RTMP_DRV_ABL_OPS *)(pRtmpDrvOps))->rt28xx_init)
+ 
+-#else /* RTMP_MODULE_OS && OS_ABL_FUNC_SUPPORT */
++#else /* RTMP_MODULE_OS && OS_ABL_FUNC_SUPPORT */
+ 
+ NDIS_STATUS RTMPAllocAdapterBlock(
+ 	IN	PVOID			handle,
+@@ -267,6 +267,12 @@ INT RTMPAPIoctlAckTimeout(
+ /* Ened by Bruce Liu */
+ #endif
+ 
++/* Get channel information, Sean@liteon, 2013-08-29 */
++VOID RTMPIoctlChannelInfo(
++	IN VOID *pAdSrc, 
++	IN RTMP_IOCTL_INPUT_STRUCT *wrq);
++/* Sean@liteon */
++
+ VOID RTMPDrvOpen(
+ 	IN VOID						*pAd);
+ 
+@@ -284,7 +290,7 @@ int rt28xx_init(
+ 
+ PNET_DEV RtmpPhyNetDevMainCreate(
+ 	IN VOID						*pAd);
+-#endif /* RTMP_MODULE_OS */
++#endif /* RTMP_MODULE_OS */
+ 
+ 
+ 
+@@ -334,7 +340,7 @@ BOOLEAN RtmpPhyNetDevExit(
+ 	IN VOID						*pAd, 
+ 	IN PNET_DEV					net_dev);
+ 
+-#endif /* RTMP_MODULE_OS && OS_ABL_FUNC_SUPPORT */
++#endif /* RTMP_MODULE_OS && OS_ABL_FUNC_SUPPORT */
+ 
+ 
+ VOID RT28xx_MBSS_Init(
+@@ -490,10 +496,10 @@ VOID RTMP_P2P_Remove(
+ #define RTMP_DRIVER_ADAPTER_RT28XX_USB_ASICRADIO_ON(__pAd)								\
+ 	RTMP_COM_IoctlHandle(__pAd, NULL, CMD_RTPRIV_IOCTL_ADAPTER_RT28XX_USB_ASICRADIO_ON, 0, NULL, 0)
+ 
+-
+-#ifdef WOW_SUPPORT
+-#endif /* WOW_SUPPORT */
+-
++
++#ifdef WOW_SUPPORT
++#endif /* WOW_SUPPORT */
++
+ #endif /* USB_SUPPORT_SELECTIVE_SUSPEND */
+ #endif /* CONFIG_PM */	
+ 
+@@ -642,6 +648,6 @@ VOID RTMP_P2P_Remove(
+ #define RTMP_DRIVER_ADAPTER_TSO_SUPPORT_TEST(__pAd, __flag)								\
+ 	RTMP_COM_IoctlHandle(__pAd, NULL, CMD_RTPRIV_IOCTL_ADAPTER_TSO_SUPPORT_TEST, 0,  __flag, 0)
+ 
+-#endif /* __RT_OS_NET_H__ */
++#endif /* __RT_OS_NET_H__ */
+ 
+ /* End of rt_os_net.h */
+--- a/rt2860v2/os/linux/ap_ioctl.c
++++ b/rt2860v2/os/linux/ap_ioctl.c
+@@ -82,6 +82,11 @@ struct iw_priv_args ap_privtab[] = {
+ { RTPRIV_IOCTL_STATISTICS,
+   IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | 1024,
+   "stat"},
++/* Get channel information, Sean@Liteon, 2013-08-29 */
++{ RTPRIV_IOCTL_CHANNEL_INFO,
++  IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | 1024,
++  "channel_info"},
++/* Sean@Liteon */
+ #ifndef WIFI_DRIVER_PRE_PORTING
+  /* Added by Bruce Liu, 2012-12-25 */
+ { RTPRIV_IOCTL_ACK_TIMEOUT,
+@@ -432,7 +437,13 @@ INT rt28xx_ap_ioctl(
+             break;
+         /* Ended by Bruce Liu */
+         #endif
+-        
++
++/* Get channel information, Sean@Liteon, 2013-08-29 */
++		case RTPRIV_IOCTL_CHANNEL_INFO:
++			RTMPIoctlChannelInfo(pAd, wrq);
++		break;
++/* Sean@Liteon */		
++		
+ 		default:
+ /*			DBGPRINT(RT_DEBUG_ERROR, ("IOCTL::unknown IOCTL's cmd = 0x%08x\n", cmd)); */
+ 			Status = RTMP_IO_EOPNOTSUPP;

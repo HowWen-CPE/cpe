@@ -1,0 +1,237 @@
+--- boot_atheros/utility/imagealign/imagealign.c	1970-01-01 07:00:00.000000000 +0700
++++ boot_liteon/utility/imagealign/imagealign.c	2013-03-29 17:58:49.000000000 +0800
+@@ -0,0 +1,234 @@
++/*
++ *    Filename: imagealign.c
++ * Description: 1.make align for image. Fill the empty area with hex value 0xff.
++ *                -Usage: imagealign <input file> <output file> <desired size>
++ *
++ *     Version: 0.10
++ *     Created: 2007.11.1
++ *    Revision: 1) v0.20 
++ *              2009.12.14. Peter. Add hex format for desired size.
++ *              
++ *    Compiler: gcc
++ *      Author: LITEON
++ */
++#include <stdio.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <unistd.h>
++#include <fcntl.h>
++#include <errno.h>
++#include <string.h>
++
++int CopyImage(char *srcFile, char *targetFile, int targetsize);
++
++void usage(void)
++{
++    printf("imagealign <input file> <output file> <desired size>\n");
++    return;
++}
++
++int main(int argc, char **argv)
++{
++    int size;
++
++    if (argc != 4)
++    {
++        usage();
++        return -1;
++    }
++
++    if(strstr(argv[3], "0x"))
++    {
++        /* hex format*/
++        
++        if(sscanf(argv[3], "0x%x\n", &size) != 1)
++        {
++            printf("imagealign: desired size format error\n");
++            return -1;
++        }
++    }else
++    {
++        /* decimal format*/
++        
++        if(sscanf(argv[3], "%d\n", &size) != 1)
++        {
++            printf("imagealign: desired size format error\n");
++            return -1;
++        }
++    }
++
++    /* create aligned image as the desired size*/
++    return CopyImage(argv[1], argv[2], size);
++}
++
++
++/* Read "n" bytes from a descriptor. */
++ssize_t readn(int fd, void *vptr, size_t n)
++{
++    size_t nleft;
++
++    ssize_t nread;
++
++    char *ptr;
++
++    ptr = vptr;
++    nleft = n;
++    while (nleft > 0)
++    {
++        if ((nread = read(fd, ptr, nleft)) < 0)
++        {
++            if (errno == EINTR)
++                nread = 0;      /* and call read() again */
++            else
++                return (-1);
++        }
++        else if (nread == 0)
++            break;              /* EOF */
++
++        nleft -= nread;
++        ptr += nread;
++    }
++    return (n - nleft);         /* return >= 0 */
++}
++
++ /* Write "n" bytes to a descriptor. */
++ssize_t writen(int fd, const void *vptr, size_t n)
++{
++    size_t nleft;
++
++    ssize_t nwritten;
++
++    const char *ptr;
++
++    ptr = vptr;
++    nleft = n;
++    while (nleft > 0)
++    {
++        if ((nwritten = write(fd, ptr, nleft)) <= 0)
++        {
++            if (nwritten < 0 && errno == EINTR)
++                nwritten = 0;   /* and call write() again */
++            else
++                return (-1);    /* error */
++        }
++
++        nleft -= nwritten;
++        ptr += nwritten;
++    }
++    return (n);
++}
++
++int CopyImage(char *srcFile, char *targetFile, int targetsize)
++{
++    int fd, fdwrite;
++    struct stat st;
++    long size;
++    int dataread, datatoread, datatowrite;
++    int readcount, writecount, count, retval;
++    char buf[4096];
++     
++    
++    fd = open(srcFile, O_RDONLY);
++    if (fd < 0)
++    {
++        printf("open file %s failed : %s \n", srcFile, strerror(errno));
++        return -1;
++    }
++
++    retval = fstat(fd, &st);
++    if (retval == -1)
++    {
++        printf("stat file failed : %s \n", strerror(errno));
++        return -1;
++
++    }
++
++    size = st.st_size;
++
++
++    fdwrite = open(targetFile, O_TRUNC | O_CREAT | O_RDWR);
++    if (fdwrite < 0)
++    {
++        return -1;
++    }
++
++    datatowrite = targetsize;
++    datatoread = size;
++
++    if (size > targetsize)
++    {
++        printf("The source file is too bigger\n");
++        return -1;
++    }
++
++    while (datatowrite > 0)
++    {
++        if (datatoread > 0)
++        {
++            if (datatoread > 4096)
++                readcount = 4096;
++            else
++                readcount = datatoread;
++
++            retval = readn(fd, buf, readcount);
++            if (retval != readcount)
++            {
++                printf("read data failed\n");
++                return -1;
++            }
++
++            datatoread -= readcount;
++
++            if (readcount < 4096)
++            {
++                memset(&buf[readcount], 0xff, 4096 - readcount);
++            }
++
++			if(datatowrite >= 4096)
++			{
++            	retval = writen(fdwrite, buf, 4096);
++            	if (retval != 4096)
++            	{
++                	printf("wriete data failed \n");
++                	return -1;
++            	}
++
++            	datatowrite -= 4096;
++			}else
++			{
++            	retval = writen(fdwrite, buf, datatowrite);
++            	if (retval != datatowrite)
++            	{
++                	printf("wriete data failed \n");
++                	return -1;
++            	}
++
++            	datatowrite = 0;
++			}
++        }
++
++        else
++        {
++            if (datatowrite > 4096)
++                writecount = 4096;
++            else
++                writecount = datatowrite;
++
++            memset(&buf[0], 0xff, writecount);
++
++            retval = writen(fdwrite, buf, writecount);
++            if (retval != writecount)
++            {
++                printf("wriete data failed \n");
++                return -1;
++            }
++            datatowrite -= writecount;
++        }
++    }
++	
++	sprintf(buf, "chmod 666 %s", targetFile);	
++	
++	system(buf);
++
++    return 0;
++}

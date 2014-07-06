@@ -1,0 +1,517 @@
+<po>
+	<message msgid="routing title" msgstr="Statik Yönlendirme Ayarları"/>
+	<message msgid="routing add rule" msgstr="Yönlendirme kuralı ekle"/>
+	<message msgid="routing routing dest" msgstr="Hedef IP Adresi"/>
+	<message msgid="routing range" msgstr="Aralık"/>
+	<message msgid="routing netmask" msgstr="IP Alt Ağ Maskesi"/>
+	<message msgid="routing gateway" msgstr="Ağ Geçidi IP Adresi"/>
+	<message msgid="routing interface" msgstr="Arayüz"/>
+	<message msgid="routing custom" msgstr="Özel"/>
+	<message msgid="routing comment" msgstr="Yol Adı"/>
+	<message msgid="routing submit" msgstr="Uygula"/>
+	<message msgid="routing reset" msgstr="İptal et"/>
+	<message msgid="routing Number" msgstr="No."/>
+	<message msgid="routing del title" msgstr="Sistemdeki geçerli Yönlendirne tablosu:"/>
+	<message msgid="routing del dest" msgstr="Hedef"/>
+	<message msgid="routing del netmask" msgstr="Ağ maskesi"/>
+	<message msgid="routing del gateway" msgstr="Ağ geçidi"/>
+	<message msgid="routing del flags" msgstr="Bayraklar"/>
+	<message msgid="routing del metric" msgstr="Metrik"/>
+	<message msgid="routing del Delete" msgstr="Sil"/>
+	<message msgid="routing del ref" msgstr="Ref"/>
+	<message msgid="routing del use" msgstr="Kullan"/>
+	<message msgid="routing del interface" msgstr="Arayüz"/>
+	<message msgid="routing del comment" msgstr="İsim"/>
+	<message msgid="routing del" msgstr="Sil"/>
+	<message msgid="routing del reset" msgstr="İptal et"/>
+	<message msgid="routing host" msgstr="Ana makine"/>
+	<message msgid="routing net" msgstr="Ağ"/>
+	<message msgid="routing LAN" msgstr="LAN"/>
+	<message msgid="routing WAN" msgstr="WAN"/>
+	<message msgid="routing Metric" msgstr="Metrik"/>
+	<message msgid="routing AddRule" msgstr="Kural Ekle"/>
+	<message msgid="routing table" msgstr="Uygulama Kuralları Özeti"/>
+	<message msgid="routing Active" msgstr="Etkin"/>
+	<message msgid="rip title" msgstr="RIP Ayarı"/>
+	<message msgid="rip rip" msgstr="RIP:"/>
+	<message msgid="rip None" msgstr="Yok"/>
+	<message msgid="rip RIPv1" msgstr="RIPv1"/>
+	<message msgid="rip RIPv2" msgstr="RIPv2"/>
+	<message msgid="rip Apply" msgstr="Uygula"/>
+	<message msgid="rip Reset" msgstr="İptal et"/>
+	<message msgid="upnp title" msgstr="UPnP Ayarı"/>
+	<message msgid="upnp DeviceName" msgstr="Cihaz Adı:   <% getCfgGeneral(1, 'SystemName'); %> Internet Sharing Gateway"/>
+	<message msgid="upnp Enb" msgstr="Evrensel Tak-Çalıştır (UPnP) Özelliğini Etkinleştir"/>
+	<message msgid="upnp Apply" msgstr="Uygula"/>
+	<message msgid="upnp Reset" msgstr="İptal et"/>
+	<message msgid="LanDhcp title" msgstr="LAN DHCP Ayarı"/>
+	<message msgid="LanDhcp Enable" msgstr="DHCP Sunucusunu etkinleştir"/>
+	<message msgid="LanDhcp IP" msgstr="IP Havuz Başlangıç Adresi"/>
+	<message msgid="LanDhcp PoolSize" msgstr="Havuz Boyutu"/>
+	<message msgid="LanDhcp Mode" msgstr="DHCP Mode" />
+	<message msgid="LanDhcp serverAddr" msgstr="Remote DHCP Server" />
+	<message msgid="LanDhcp None" msgstr="None" />
+	<message msgid="LanDhcp Server" msgstr="DHCP Server" />
+	<message msgid="LanDhcp Relay" msgstr="DHCP Relay" />
+	<message msgid="DHCP Mode note1_0" msgstr="Note:" />
+	<message msgid="DHCP Mode note1_1" msgstr="DHCP Relay: In this mode, the NAT function should be disabled, otherwise the DHCP Relay does not take effect." />
+	<message msgid="lanDhcp Apply" msgstr="Uygula"/>
+	<message msgid="lanDhcp Reset" msgstr="İptal et"/>
+	<message msgid="lanAdv title" msgstr="LAN Statik DHCP Tablosu"/>
+	<message msgid="lanAdv MAC" msgstr="MAC Adresi"/>
+	<message msgid="lanAdv IP" msgstr="IP Adresi"/>
+	<message msgid="lanAdv DNS" msgstr="DNS Sunucusu"/>
+	<message msgid="lanAdvDNS title" msgstr="DHCP Sunucusunun Atadığı DNS Sunucuları"/>
+	<message msgid="lanAdvDNS Server1" msgstr="İlk DNS Sunucusu:"/>
+	<message msgid="lanAdv DNSServer1ISP" msgstr="ISP'den"/>
+	<message msgid="lanAdv DNSServer1Defined" msgstr="Kullanıcı Tanımlı"/>
+	<message msgid="lanAdv DNSServer1Relay" msgstr="DNS Aktarma"/>
+	<message msgid="lanAdv DNSServer1None" msgstr="Yok"/>
+	<message msgid="lanAdv DNSServer2" msgstr="İkinci DNS Sunucusu:"/>
+	<message msgid="lanAdv DNSServer2ISP" msgstr="ISP'den"/>
+	<message msgid="lanAdv DNSServer2Defined" msgstr="Kullanıcı Tanımlı"/>
+	<message msgid="lanAdv DNSServer2Relay" msgstr="DNS Aktarma"/>
+	<message msgid="lanAdv DNSServer2None" msgstr="Yok"/>
+	<message msgid="lanAdv Apply" msgstr="Uygula"/>
+	<message msgid="lanAdv Reset" msgstr="İptal et"/>
+	<message msgid="ipAlias title" msgstr="Ek IP 1"/>
+	<message msgid="ipAlias enable" msgstr="Ek IP"/>
+	<message msgid="ipAlias Address" msgstr="IP Adresi:"/>
+	<message msgid="ipAlias Subnet" msgstr="IP Alt Ağ Maskesi:"/>
+	<message msgid="ipAlias Apply" msgstr="Uygula"/>
+	<message msgid="ipAlias Reset" msgstr="İptal et"/>
+	<message msgid="Dhcpinfo title" msgstr="DHCP İstemci Tablosu"/>
+	<message msgid="Dhcpinfo Table" msgstr="Tablo Listesi"/>
+	<message msgid="Dhcpinfo TableMAC" msgstr="MAC Adresi"/>
+	<message msgid="Dhcpinfo TableIP" msgstr="IP Adresi"/>
+	<message msgid="Dhcpinfo TableExp" msgstr="Süresi"/>
+	<message msgid="dhcpClient Refresh" msgstr="Yenile"/>
+	<message msgid="wan title" msgstr="Internet Erişimi için ISP Parametreleri"/>
+	<message msgid="wan Encapsulation" msgstr="Kapsülleme:"/>
+	<message msgid="wan Ethernet" msgstr="Ethernet"/>
+	<message msgid="wan PPPOE" msgstr="PPPoE"/>
+	<message msgid="wan PPTP" msgstr="PPTP"/>
+	<message msgid="wan L2TP" msgstr="L2TP"/>
+	<message msgid="wPppoe User" msgstr="Kullanıcı Adı:"/>
+	<message msgid="wPppoe Password" msgstr="Şifre:"/>
+	<message msgid="wPppoe Pass2" msgstr="Onaylamak için Yeniden Yaz:"/>
+	<message msgid="wPppoe Mtu" msgstr="MTU Boyutu:"/>
+	<message msgid="wPppoe Nailedup" msgstr="Sabitlenmiş Bağlantı"/>
+	<message msgid="wPppoe IdleTime" msgstr="Eylemsizlik Zaman Aşımı (sn)"/>
+	<message msgid="wPppoe IdleTimesec" msgstr="saniye(dizi:300-36000)"/>
+	<message msgid="wan title2" msgstr="WAN IP Adres Ataması"/>
+	<message msgid="wPppoe WanIPMode" msgstr="Otomatik olarak ISP'den al"/>
+	<message msgid="wPppoe WanIPMode1" msgstr="Sabit IP Adresi Kullan"/>
+	<message msgid="wPppoe WanIp" msgstr="WAN IP Adresim:"/>
+	<message msgid="wPptp User" msgstr="Kullanıcı Adı:"/>
+	<message msgid="wPptp Password" msgstr="Şifre:"/>
+	<message msgid="wPptp Pass2" msgstr="Onaylamak için Yeniden Yaz:"/>
+	<message msgid="wPptp Nailup" msgstr="Sabitlenmiş Bağlantı"/>
+	<message msgid="wPptp IdleTime" msgstr="Eylemsizlik Zaman Aşımı (sn)"/>
+	<message msgid="wPptp title" msgstr="PPTP Yapılandırması"/>
+	<message msgid="wPptp Server" msgstr="Sunucu IP Adresi:"/>
+	<message msgid="wPptp AddrMode" msgstr="Otomatik olarak ISP'den al"/>
+	<message msgid="wPptp AddrMode1" msgstr="Sabit IP Adresi Kullan"/>
+	<message msgid="wPptp Ip" msgstr="IP Adresi:"/>
+	<message msgid="wPptp Netmask" msgstr="IP Alt Ağ Maskesi:"/>
+	<message msgid="wPptp Gateway" msgstr="Ağ Geçidi IP Adresi:"/>
+	<message msgid="wPptp title1" msgstr="WAN IP Adres Ataması"/>
+	<message msgid="wPptp WanIPMode1" msgstr="Otomatik olarak ISP'den al"/>
+	<message msgid="wPptp WanIPMode2" msgstr="Sabit IP Adresi Kullan"/>
+	<message msgid="wPptp WanIp" msgstr="WAN IP Adresim:"/>
+	<message msgid="wPptp IdleTimesec" msgstr="saniye(dizi:300-36000)"/>
+	<message msgid="wL2tp User" msgstr="Kullanıcı Adı:"/>
+	<message msgid="wL2tp Password" msgstr="Şifre:"/>
+	<message msgid="wL2tp Nailedup" msgstr="Sabitlenmiş Bağlantı"/>
+	<message msgid="wL2tp IdleTime" msgstr="Eylemsizlik Zaman Aşımı (sn)"/>
+	<message msgid="wL2tp IdleTimesec" msgstr="saniye(dizi:300-36000)"/>
+	<message msgid="wL2tp Pass2" msgstr="Onaylamak için Yeniden Yaz:"/>
+	<message msgid="L2TP title" msgstr="L2TP Yapılandırması"/>
+	<message msgid="wL2tp Server" msgstr="Sunucu IP Adresi:"/>
+	<message msgid="wL2tp AddrMode1" msgstr="Otomatik olarak ISP'den al"/>
+	<message msgid="wL2tp AddrMode2" msgstr="Sabit IP Adresi Kullan"/>
+	<message msgid="wL2tp Ip" msgstr="IP Adresi:"/>
+	<message msgid="wL2tp Netmask" msgstr="IP Alt Ağ Maskesi:"/>
+	<message msgid="wL2tp Gateway" msgstr="Ağ Geçidi IP Adresi:"/>
+	<message msgid="ethernet title" msgstr="WAN IP Adres Ataması"/>
+	<message msgid="ethernet d1" msgstr="Otomatik olarak ISP'den al (Varsayılan)"/>
+	<message msgid="ethernet d2" msgstr="Sabit IP Adresi Kullan"/>
+	<message msgid="wStatic Ip" msgstr="IP Adresi:"/>
+	<message msgid="wStatic Netmask" msgstr="IP Alt Ağ Maskesi:"/>
+	<message msgid="wStatic Gateway" msgstr="Ağ Geçidi IP Adresi:"/>
+	<message msgid="wan title3" msgstr="WAN DNS Ataması"/>
+	<message msgid="wan DNS" msgstr="İlk DNS Sunucusu:"/>
+	<message msgid="wan DNSISP" msgstr="ISP'den"/>
+	<message msgid="wan DNSUSER" msgstr="Kullanıcı Tanımlı"/>
+	<message msgid="wan DNSNONE" msgstr="Yok"/>
+	<message msgid="wan DNS2" msgstr="İkinci DNS Sunucusu:"/>
+	<message msgid="wan DNS2ISP" msgstr="ISP'den"/>
+	<message msgid="wan DNS2USER" msgstr="Kullanıcı Tanımlı"/>
+	<message msgid="wan DNS2NONE" msgstr="Yok"/>
+	<message msgid="wan title4" msgstr="WAN MAC Adresi"/>
+	<message msgid="wan macop1" msgstr="Fabrika ayarı"/>
+	<message msgid="wan macop2" msgstr="Bilgisayarın MAC adresi - IP Adresini kopyala"/>
+	<message msgid="wan macop3" msgstr="WAN MAC Adresini ayarla"/>
+	<message msgid="wan Apply" msgstr="Uygula"/>
+	<message msgid="wan Reset" msgstr="İptal et"/>
+	<message msgid="snooping title" msgstr="IGMP Trafik Gözetleme Ayarı"/>
+	<message msgid="snooping Enable" msgstr="IGMP Trafik Gözetlemeyi Etkinleştir"/>
+	<message msgid="snooping LAN1" msgstr="LAN1"/>
+	<message msgid="snooping LAN2" msgstr="LAN2"/>
+	<message msgid="snooping LAN3" msgstr="LAN3"/>
+	<message msgid="snooping LAN4" msgstr="LAN4"/>
+	<message msgid="snooping Apply" msgstr="Uygula"/>
+	<message msgid="snooping Reset" msgstr="İptal et"/>
+	<message msgid="routing dynamic Title" msgstr="Dinamik Yönlendirme Ayarları"/>
+	<message msgid="routing dynamic Title2" msgstr="Dinamik Yönlendirme Protokolü"/>
+	<message msgid="routing dynamic rip disable" msgstr="Devre Dışı Bırak"/>
+	<message msgid="routing dynamic rip enable" msgstr="Etkinleştir"/>
+	<message msgid="routing dynamic rip apply" msgstr="Uygula"/>
+	<message msgid="routing dynamic rip reset" msgstr="İptal et"/>
+	<message msgid="qos title" msgstr="Hizmet Kalitesi Ayarları"/>
+	<message msgid="qos intro" msgstr="Belirli uygulamalara yöenlik Hizmet Kalitesi garantisi vermek için kuralları ayarlayabilirsiniz."/>
+	<message msgid="qos setup" msgstr="QoS Ayarı"/>
+	<message msgid="qos str" msgstr="Hizmet Kalitesi"/>
+	<message msgid="qos disable" msgstr="Devre Dışı Bırak"/>
+	<message msgid="qos enable" msgstr="Etkinleştir"/>
+	<message msgid="qos dscpmarkeronly" msgstr="Sadece DSCP işaretle"/>
+	<message msgid="qos upload bandwidth" msgstr="Yükleme Bant Genişliği:"/>
+	<message msgid="qos bandwidth custom" msgstr="Kullanıcı tanımlı"/>
+	<message msgid="qos download bandwidth" msgstr="İndirme Bant Genişliği:"/>
+	<message msgid="qos setup submit" msgstr="Gönder"/>
+	<message msgid="qos setup reset" msgstr="İptal et"/>
+	<message msgid="qos group" msgstr="Grup"/>
+	<message msgid="qos group attr" msgstr="Öznitelik"/>
+	<message msgid="qos group modify" msgstr="Değiştir"/>
+	<message msgid="qos rule no" msgstr="Hayır"/>
+	<message msgid="qos rule name" msgstr="İsim"/>
+	<message msgid="qos rule prio" msgstr="Grup"/>
+	<message msgid="qos rule info" msgstr="Bilgi"/>
+	<message msgid="qos rule add" msgstr="Ekle"/>
+	<message msgid="qos rule del" msgstr="Sil"/>
+	<message msgid="qos loaddefault" msgstr="Varsayılanları yükle"/>
+	<message msgid="qos Rate" msgstr="Oran:"/>
+	<message msgid="qos Ceil" msgstr="Tavan:"/>
+	<message msgid="qos AF Name" msgstr="Grup Adı"/>
+	<message msgid="qos AF Upload Bandwidth" msgstr="yükleme bant genişliğinin %"/>
+	<message msgid="qos classifier title" msgstr="Sınıflandırıcı Ayarları"/>
+	<message msgid="qos classifier name" msgstr="İsim"/>
+	<message msgid="qos classifier group" msgstr="Grup"/>
+	<message msgid="qos classifier mac" msgstr="MAC Adresi"/>
+	<message msgid="qos classifier dip" msgstr="Hedef IP adresi"/>
+	<message msgid="qos classifier sip" msgstr="Kaynak IP adresi"/>
+	<message msgid="qos classifier pktlen" msgstr="Paket Uzunluğu"/>
+	<message msgid="qos classifier dscp" msgstr="DSCP"/>
+	<message msgid="qos classifier proto" msgstr="Protokol"/>
+	<message msgid="qos classifier dport" msgstr="Hedef bağlantı noktası"/>
+	<message msgid="qos classifier sport" msgstr="Kaynak bağlantı noktası"/>
+	<message msgid="qos classifier l7" msgstr="Uygulama"/>
+	<message msgid="qos classifier remark" msgstr="DSCP'yi tekrar işaretle:"/>
+	<message msgid="qos classifier auto" msgstr="Otomatik"/>
+	<message msgid="bm title" msgstr="Hizmet Yönetimi"/>
+	<message msgid="bm enable qos" msgstr="Bant Genişliği Yönetimini Etkinleştir"/>
+	<message msgid="bm enable auto" msgstr="Otomatik Trafik Sınıflandırıcısını Etkinleştir"/>
+	<message msgid="bm apply" msgstr="Uygula"/>
+	<message msgid="bm reset" msgstr="İptal et"/>
+	<message msgid="adv title1" msgstr="Yönetim Bant Genişliği"/>
+	<message msgid="adv title2" msgstr="Uygulama Listesi"/>
+	<message msgid="adv title3" msgstr="Kullanıcı Tanımlı Hizmet"/>
+	<message msgid="adv up bw" msgstr="Üst Bant Genişliği"/>
+	<message msgid="adv up reserved" msgstr="(10 kbp ayrılmış)"/>
+	<message msgid="adv down bw" msgstr="Alt Bant Genişliği"/>
+	<message msgid="adv down reserved" msgstr="(10 kbp ayrılmış)"/>
+	<message msgid="adv app service" msgstr="Hizmet"/>
+	<message msgid="adv app category" msgstr="Kategori"/>
+	<message msgid="adv app prio" msgstr="Öncelik"/>
+	<message msgid="adv app setting" msgstr="Gelişmiş Ayar"/>
+	<message msgid="adv user enable" msgstr="Etkinleştir"/>
+	<message msgid="adv user dir" msgstr="Yön"/>
+	<message msgid="adv user name" msgstr="Hizmet Adı"/>
+	<message msgid="adv user category" msgstr="Kategori"/>
+	<message msgid="adv user modify" msgstr="Değiştir"/>
+	<message msgid="adv user to lan" msgstr="LAN / WLAN'a"/>
+	<message msgid="adv user to wan" msgstr="WAN'a"/>
+	<message msgid="adv user to wlan" msgstr="WLAN'a"/>
+	<message msgid="adv select high" msgstr="Yüksek"/>
+	<message msgid="adv select mid" msgstr="Orta"/>
+	<message msgid="adv select low" msgstr="Düşük"/>
+	<message msgid="adv apply" msgstr="Uygula"/>
+	<message msgid="adv reset" msgstr="İptal et"/>
+	<message msgid="app edit title" msgstr="Kural Yapılandırması"/>
+	<message msgid="app edit enable" msgstr="Etkinleştir"/>
+	<message msgid="app edit dir" msgstr="Yön"/>
+	<message msgid="app edit bandwidth" msgstr="Bant Genişliği"/>
+	<message msgid="app edit dst port" msgstr="Hedef Bağlantı Noktası"/>
+	<message msgid="app edit src port" msgstr="Kaynak Bağlantı Noktası"/>
+	<message msgid="app edit proto" msgstr="Protokol"/>
+	<message msgid="app edit max bw" msgstr="Maksimum Bant Genişliği"/>
+	<message msgid="app edit min bw" msgstr="Minimum Bant Genişliği"/>
+	<message msgid="app edit cancel" msgstr="İptal et"/>
+	<message msgid="user edit title" msgstr="Kural Yapılandırması"/>
+	<message msgid="user edit bw" msgstr="BW Bütçesi"/>
+	<message msgid="user edit max bw" msgstr="Maksimum Bant Genişliği"/>
+	<message msgid="user edit min bw" msgstr="Minimum Bant Genişliği"/>
+	<message msgid="user edit dst addr" msgstr="Hedef Adres"/>
+	<message msgid="user edit dst mask" msgstr="Hedef Alt Ağ Maskesi"/>
+	<message msgid="user edit dst port" msgstr="Hedef Bağlantı Noktası"/>
+	<message msgid="user edit src addr" msgstr="Kaynak Adres"/>
+	<message msgid="user edit src mask" msgstr="Kaynak Alt Ağ Maskesi"/>
+	<message msgid="user edit src port" msgstr="Kaynak Bağlantı Noktası"/>
+	<message msgid="user edit proto" msgstr="Protokol"/>
+	<message msgid="user edit proto define" msgstr="Kullanıcı tanımlı"/>
+	<message msgid="user edit cancel" msgstr="İptal et"/>
+	<message msgid="moni title" msgstr="Monitör"/>
+	<message msgid="Multicast_Setup" msgstr="Çoklu Dağıtım Ayarı"/>
+	<message msgid="Multicast" msgstr="Çooklu Dağıtım"/>
+	<message msgid="Auto_bridge" msgstr="Otomatik Köprü"/>
+	<message msgid="Enable_Auto_bridge_mode" msgstr="Otomatik Köprü modunu etkinleştir"/>
+	<message msgid="Dynamic_DNS_Setup" msgstr="Dinamik DNS Ayarı"/>
+	<message msgid="Enable_Dynamic_DNS" msgstr="Dinamik DNS'i Etkinleştir"/>
+	<message msgid="Service_Provider" msgstr="Hizmet Sağlayıcı:"/>
+	<message msgid="Host_Name" msgstr="Ana Makine Adı:"/>
+	<message msgid="Host Name can not be empty!" msgstr="Ana Makine Adı boş olamaz!"/>
+	<message msgid="User Name can not be empty!" msgstr="Kullanıcı Adı boş olamaz!"/>
+	<message msgid="Password can not be empty!" msgstr="Şifre boş olamaz!"/>
+	<message msgid="Please select at least one port when snooping enabled!" msgstr="Lütfen trafik gözetleme etkinleştirildiğinde en az bir bağlantı noktası seçiniz!"/>
+	<message msgid="Error. IP address is empty." msgstr="Hata. IP adresi boş."/>
+	<message msgid="Error. IP address is not valid." msgstr="Error. IP address is not valid." />
+	<message msgid="It should be a [0-9] number." msgstr="Bir [0-9] sayısı olmalı."/>
+	<message msgid="IP adress format error." msgstr="IP adres formatı hatası."/>
+	<message msgid="IP Alias address should not be identical to LAN IP Address" msgstr="Ek IP adresi LAN IP Adresi ile aynı olmamalı"/>
+	<message msgid="Error. MAC address is empty." msgstr="Error. MAC address is empty."/>
+	<message msgid="Error. IP address is broadcast address." msgstr="Error. IP address is broadcast address." />
+	<message msgid="Error. Class E IP address cannot be used." msgstr="Error. Class E IP address cannot be used." />
+	<message msgid="Error. IP address is multicast address." msgstr="Error. IP address is multicast address." />
+	<message msgid="Please enter a valid MAC address for the specified IP address." msgstr="Please enter a valid MAC address for the specified IP address." />
+	<message msgid="It should be a [0-9] number." msgstr="Bir [0-9] sayısı olmalı."/>
+	<message msgid="IP adress format error." msgstr="IP adres formatı hatası."/>
+	<message msgid="LAN is Fixed IP, please set DNS Assignment to User-Defined or None." msgstr="LAN Sabit IP olarak ayarlanmış, lütfen DNS Atamayı Kullanıcı Tanımlı ya da Yok olarak ayarlayınız."/>
+	<message msgid="First DNS Server should not be empty with User-Defined." msgstr="İlk DNS Sunucusu Kullanıcı Tanımlıysa boş olmamalı."/>
+	<message msgid="First DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="İlk DNS Sunucusu 0.0.0.0 olmamalı, lütfen DNS IP Adresini veriniz."/>
+	<message msgid="Second DNS Server should not be empty with User-Defined." msgstr="İkinci DNS Sunucusu Kullanıcı Tanımlıysa boş olmamalı."/>
+	<message msgid="Second DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="İkinci DNS Sunucusu 0.0.0.0 olmamalı, lütfen DNS IP Adresini veriniz."/>
+	<message msgid="Error. IP address is empty." msgstr="Hata. IP adresi boş."/>
+	<message msgid="It should be a [0-9] number." msgstr="Bir [0-9] sayısı olmalı."/>
+	<message msgid="IP adress format error." msgstr="IP adres formatı hatası."/>
+	<message msgid="Please enable DHCP Server firstly before using LAN Static DHCP Table or DNS Server." msgstr="Lütfen LAN Statik DHCP Tablosunu ya da DNS Sunucusunu kullanmadan önce ilk olarak DHCP Sunucusunu etkinleştiriniz."/>
+	<message msgid="Please enable DHCP Server before using LAN Static DHCP Table." msgstr="Lütfen LAN Statik DHCP Tablosunu kullanmadan önce DHCP Sunucusunu etkinleştiriniz."/>
+	<message msgid="Please fill the MAC Address in correct format (XX:XX:XX:XX:XX:XX) with hex value !" msgstr="Lütfen MAC Adresini on altılık değerle doğru formatta (XX:XX:XX:XX:XX:XX) giriniz!"/>
+	<message msgid="Please set Idle Timeout value between 300 ~ 36000 seconds." msgstr="Please set Idle Timeout value between 300 ~ 36000 seconds." />
+	<message msgid="The entered user name can not support \ character." msgstr="The entered user name  can not support \ character." />
+  <message msgid="Broadcast or Multicast MAC Address not support!" msgstr="Broadcast or Multicast MAC Address not support!" />
+  <message msgid="Invalid IP address! It should not be the same as current LAN IP address." msgstr="Invalid IP address! It should not be the same as current LAN IP address." />
+	<message msgid="First DNS Server should not be empty with User-Defined." msgstr="İlk DNS Sunucusu Kullanıcı Tanımlıysa boş olmamalı."/>
+	<message msgid="First DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="İlk DNS Sunucusu 0.0.0.0 olmamalı, lütfen DNS IP Adresini veriniz."/>
+	<message msgid="Second DNS Server should not be empty with User-Defined." msgstr="İkinci DNS Sunucusu Kullanıcı Tanımlıysa boş olmamalı."/>
+	<message msgid="Second DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="İkinci DNS Sunucusu 0.0.0.0 olmamalı, lütfen DNS IP Adresini veriniz."/>
+	<message msgid="The value of bandwitdth can not accept empty." msgstr="Bant genişliği değeri boş olamaz."/>
+	<message msgid="The value of bandwitdth is not valid value." msgstr="Bant genişliği değeri geçerli bir değer değildir."/>
+	<message msgid="The value of service name can not accept empty." msgstr="Hizmet adı değeri boş olamaz."/>
+	<message msgid="The value of service name can not accept , and ;  ." msgstr="Hizmet adı değeri ve olamaz."/>
+	<message msgid="The value of bandwidth can not accept empty." msgstr="Bant genişliği değeri boş olamaz."/>
+	<message msgid="The value of bandwidth is not valid value." msgstr="Bant genişliği değeri geçerli bir değer değildir."/>
+	<message msgid="The value of IP can not accept empty." msgstr="IP değeri boş olamaz."/>
+	<message msgid="The value of IP is not valid value." msgstr="IP değeri geçerli bir değer değildir."/>
+	<message msgid="The value of bandwidth can not accept empty." msgstr="Bant genişliği değeri boş olamaz."/>
+	<message msgid="The value of bandwidth is not valid value." msgstr="Bant genişliği değeri geçerli bir değer değildir."/>
+	<message msgid="The value of port can not accept empty." msgstr="Bağlantı noktası değeri boş olamaz."/>
+	<message msgid="The value of port is not valid value." msgstr="Bağlantı noktası değeri geçerli bir değer değildir."/>
+	<message msgid="The value of netmask can not accept empty." msgstr="Ağ maskesi değeri boş olamaz."/>
+	<message msgid="Subnet Mask error" msgstr="Alt Ağ Maskesi hatası"/>
+	<message msgid="The value of protocol can not accept empty." msgstr="Protokol değeri boş olamaz."/>
+	<message msgid="The value of protocol is not valid value." msgstr="Protokol değeri geçerli bir değer değildir."/>
+	<message msgid="The destination has wrong format.Please enter a value between [1-223].xxx.xxx.xxx" msgstr="Hedefin formatı yanlış.Giriş değeri biçimi[1-223].xxx.xxx.xxx"/>
+	<message msgid="The netmask has wrong format." msgstr="Ağ maskesinin formatı yanlış."/>
+	<message msgid="please input the destination." msgstr="lütfen hedefi giriniz."/>
+	<message msgid="please input right destination." msgstr="please input right destination." />
+	<message msgid="Please specify route name." msgstr="Please specify route name." />
+	<message msgid="Name error.The entered value only support 1-20 letters digital or underline, and start with letter." msgstr="Name error.The entered value only support 1-20 letters digital or underline, and start with letter." />
+  <message msgid="Duplicate route name not allowed to be set!" msgstr="Duplicate route name not allowed to be set!" />
+  <message msgid="Invalid metric value!" msgstr="Invalid metric value!" /> 
+  <message msgid="Metric value should be from 1 to 16!" msgstr="Metric value should be from 1 to 16!" />
+  <message msgid="Error. IP address is loopback address." msgstr="Error. IP address is loopback address." />
+	<message msgid="please input the netmask." msgstr="lütfen ağ maskesini giriniz."/>
+	<message msgid="please input right netmask." msgstr="please input right netmask." />
+	<message msgid="please input custom interface name." msgstr="lütfen özel arayüz adını giriniz."/>
+	<message msgid="Static Route table is full (8 entries)!" msgstr="Statik Yol tablosu dolu (8 giriş)!"/>
+	<message msgid="Error. IP address is empty." msgstr="Hata. IP adresi boş."/>
+	<message msgid="It should be a [0-9] number." msgstr="Bir [0-9] sayısı olmalı."/>
+	<message msgid="IP adress format error." msgstr="IP adres formatı hatası."/>
+	<message msgid="WAN is Fixed IP, please set DNS Assignment to User-Defined or None." msgstr="WAN Sabit IP olarak ayarlanmış, lütfen DNS Atamayı Kullanıcı Tanımlı ya da Yok olarak ayarlayın."/>
+	<message msgid="PPPoE user name should not be empty!" msgstr="PPPoE kullanıcı adı boş olmamalı!"/>
+	<message msgid="PPPoE password should not be empty!" msgstr="PPPoE şifresi boş olmamalı!"/>
+	<message msgid="Please retype password to confirm!" msgstr="Lütfen onaylamak için şifreyi tekrar yazınız!"/>
+	<message msgid="Password mismatched!" msgstr="Şifre uyuşmuyor!"/>
+	<message msgid="Please set MTU Size between 1400 ~ 1492 !" msgstr="Lütfen MTU Boyutunu 1400 ~ 1492 arasında ayarlayınız!"/>
+	<message msgid="It should be a [0-9] number with MTU Size." msgstr="MTU Boyutunda bir [0-9] sayısı olmalı."/>
+	<message msgid="Please specify Idle Time" msgstr="Lütfen Eylemsizlik Zamanını belirtiniz."/>
+	<message msgid="L2TP user name should not be empty!" msgstr="L2TP kullanıcı adı boş olmamalı!"/>
+	<message msgid="L2TP password should not be empty!" msgstr="L2TP şifresi boş olmamalı!"/>
+	<message msgid="First DNS Server should not be empty with User-Defined." msgstr="İlk DNS Sunucusu Kullanıcı Tanımlıysa boş olmamalı."/>
+	<message msgid="First DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="İlk DNS Sunucusu 0.0.0.0 olmamalı, lütfen DNS IP Adresini veriniz."/>
+	<message msgid="Second DNS Server should not be empty with User-Defined." msgstr="İkinci DNS Sunucusu Kullanıcı Tanımlıysa boş olmamalı."/>
+	<message msgid="Second DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="İkinci DNS Sunucusu 0.0.0.0 olmamalı, lütfen DNS IP Adresini veriniz."/>
+	<message msgid="MAC Address should not be empty!" msgstr="MAC Adresi boş olmamalı!"/>
+	<message msgid="Please fill the MAC Address in correct format (XX:XX:XX:XX:XX:XX) with hex value !" msgstr="Lütfen MAC Adresini on altılık değerle doğru formatta (XX:XX:XX:XX:XX:XX) giriniz!"/>
+	<message msgid="Cannot get the WAN MAC Address" msgstr="WAN MAC Adresi alınamıyor"/>
+	<message msgid="IP address is identical to WAN" msgstr="IP adresi WAN ile aynı"/>
+	<message msgid="LAN2 IP address is identical to WAN" msgstr="LAN2 IP adresi WAN ile aynı"/>
+	<message msgid="Static Route rule setting fail." msgstr="Statik Yol kural ayarı başarısız."/>
+	<message msgid="Static Route already exists." msgstr="Static Route already exists." />
+	<message msgid="main Ready" msgstr="Hazır"/>
+	<message msgid="main ConfigurationSuccess" msgstr="Yapılandırma başarıyla güncellendi."/>
+	<message msgid="main ConfigurationProceeding" msgstr="Yapılandırma Güncellemesi devam ediyor. Lütfen Bekleyiniz..."/>
+	<message msgid="main firmware download in progress" msgstr="Donanım yazılımı indiriliyor. Lütfen bekleyiniz. . ."/>
+	<message msgid="main firmware upgrade is proceeding" msgstr="Yazılım yükseltmesi devam ediyor. Lütfen bekleyin ve cihazınızı KAPATMAYINIZ."/>
+	<message msgid="ipv6 time minutes" msgstr="(seconds)"/>
+	<message msgid="user edit dst addr1" msgstr="Hedef Adres Başlangıcı"/>
+	<message msgid="user edit dst addr2" msgstr="Hedef Adres Sonu"/>
+	<message msgid="user edit src addr1" msgstr="Kaynak Adres Başlangıcı"/>
+	<message msgid="user edit src addr2" msgstr="Kaynak Adres Sonu"/>
+	<message msgid="wan 3G title" msgstr="3G Yapılandırma"/>
+	<message msgid="wan 3G" msgstr="Mobil 3G"/>
+	<message msgid="wan 3G access point name" msgstr="APN Kodu:"/>
+	<message msgid="wan 3G pin" msgstr="PIN Kodu:"/>
+	<message msgid="wan 3G username" msgstr="Kullanıcı Adı:"/>
+	<message msgid="wan 3G password" msgstr="Şifre:"/>
+	<message msgid="wan 3G dial number" msgstr="Çevirme Sayısı:"/>
+	<message msgid="wan 3G nailup" msgstr="Sabitlenmiş Bağlantı"/>
+	<message msgid="wan 3G IdleTime" msgstr="Eylemsizlik Zaman Aşımı (sn)"/>
+	<message msgid="wan 3G IdleTimesec" msgstr="(saniye)"/>
+	<message msgid="PIN Code length should be between 4~8!" msgstr="PIN Kodu uzunluğu 4~8 arasında olmalı!"/>
+	<message msgid="Please specify APN Code" msgstr="Lütfen APN Kodunu belirtiniz"/>
+	<message msgid="Please specify Dial Number" msgstr="Lütfen Çevirme Sayısını belirtiniz"/>
+	<message msgid="Please set PPP Echo Interval between 3 ~ 50 !" msgstr="Lütfen PPP Eko Aralığını 3 ~ 50 arasında ayarlayınız!"/>
+	<message msgid="It should be a [0-9] number with PPP Echo Interval." msgstr="PPP Eko Aralığında bir [0-9] sayısı olmalı."/>
+	<message msgid="Please set PPP Retry Threshold between 3 ~ 50 !" msgstr="Lütfen PPP Yeniden Deneme Eşğini 3 ~ 50 arasında ayarlayınız!"/>
+	<message msgid="It should be a [0-9] number with PPP Retry Threshold." msgstr="PPP Yeniden Deneme Eşiğinde bir [0-9] sayısı olmalı."/>
+	<message msgid="Please set Max Idle Time between 60 ~ 3600 !" msgstr="Lütfen Maksimum Eylemsizlik Zamanını 60 ~ 3600 arasında ayarlayınız!"/>
+	<message msgid="It should be a [0-9] number with Max Idle Time." msgstr="Maksimum Eylemsizlik Zamanında bir [0-9] sayısı olmalı."/>
+	<message msgid="Please set Mobile WAN MTU between 592 ~ 1492 !" msgstr="Lütfen Mobil WAN MTU'yu 592 ~ 1492 arasında ayarlayın!"/>
+	<message msgid="It should be a [0-9] number with Mobile WAN MTU." msgstr="Mobil WAN MTU'da bir [0-9] sayısı olmalı."/>
+	<message msgid="wPppoe service name" msgstr="Hizmet Adı:"/>
+	<message msgid="lan static dhcp table" msgstr="LAN Statik DHCP Tablosu"/>
+	<message msgid="wan BigPond" msgstr="Bigpond:"/>
+	<message msgid="wan BigPond enable" msgstr="Etkinleştir"/>
+	<message msgid="wan BigPond disable" msgstr="Devre Dışı Bırak"/>
+	<message msgid="wan BigPond server" msgstr="Sunucu:"/>
+	<message msgid="wan BigPond server queenland" msgstr="Queensland (61.9.208.13)"/>
+	<message msgid="wan BigPond server newSouthWales" msgstr="New South Wales (61.9.192.13)"/>
+	<message msgid="wan BigPond server victoria" msgstr="Victoria (61.9.128.13)"/>
+	<message msgid="wan BigPond server southAus" msgstr="Güney Avustralya (61.9.224.13)"/>
+	<message msgid="wan BigPond server westernAus" msgstr="Batı Avustralya (61.9.240.13)"/>
+	<message msgid="wan BigPond username" msgstr="Kullanıcı Adı:"/>
+	<message msgid="wan BigPond password" msgstr="Şifre:"/>
+	<message msgid="wan BigPond password2" msgstr="Onaylamak için Yeniden Yazınız:"/>
+	<message msgid="Bigpond user name should not be empty!" msgstr="Bigpond kullanıcı adı boş olmamalı!"/>
+	<message msgid="Bigpond password should not be empty!" msgstr="Bigpond şifresi boş olmamalı!"/>
+	<message msgid="wan auto bridge none" msgstr="Yok"/>
+	<message msgid="enable auto ip change mode" msgstr="Otomatik IP Değiştirme modunu etkinleştir"/>
+	<message msgid="auto ip note_0" msgstr="Not:"/>
+	<message msgid="auto ip note_1" msgstr="Not: Otomatik IP Değiştirme modunu etkinleştirmeyi seçerseniz, WAN IP ve LAN IP çakıştığında LAN IP otomatik olarak 10.0.0.1'e değişecektir."/>
+	<message msgid="auto subnet configuration" msgstr="Otomatik Alt Ağ Yapılandırması"/>
+	<message msgid="ipv6 connection type setup" msgstr="IPv6 Bağlantı Türü Kurulumu"/>
+	<message msgid="ipv6 connection type" msgstr="IPv6 Bağlantı Türü:"/>
+	<message msgid="ethernet" msgstr="Ethernet"/>
+	<message msgid="link local only" msgstr="Sadece yerel bağlantı"/>
+	<message msgid="lan addr setup" msgstr="LAN IPv6 Adres Kurulumu"/>
+	<message msgid="lan local link addr" msgstr="LAN IPv6 Yerel Bağlantı Adresi:"/>
+	<message msgid="wan addr setup" msgstr="WAN IPv6 Adres Kurulumu"/>
+	<message msgid="ipv6 wan address" msgstr="IPv6 Adresi:"/>
+	<message msgid="ipv6 wan net size" msgstr="Alt Ağ Önek Uzunluğu:"/>
+	<message msgid="ipv6 wan gateway" msgstr="Ağ Geçidi IP Adresi:"/>
+	<message msgid="ipv6 wan primary dns" msgstr="İlk DNS Sunucusu:"/>
+	<message msgid="ipv6 wan secondary dns" msgstr="İkinci DNS Sunucusu:"/>
+	<message msgid="ipv6 lan address" msgstr="LAN IPv6 adresi:"/>
+	<message msgid="autoconfiguration addr setup" msgstr="Adres Otomatik Yapılandırma Kurulumu"/>
+	<message msgid="ipv6 dhcp enable" msgstr="Durum Denetimsiz Adres Otomatik Yapılandırmasını Etkinleştir"/>
+	<message msgid="ipv6 dhcp life time" msgstr="Yönlendirici Reklam Ömrü:"/>
+	<message msgid="general apply" msgstr="Uygula"/>
+	<message msgid="general reset" msgstr="İptal"/>
+	<message msgid="Error. Invalid Subnet Mask." msgstr="Hata. Geçersiz Alt Ağ Maskesi."/>
+	<message msgid="Invalid IP Alias address! It should not be located in the same subnet of current WAN IP address." msgstr="Geçersiz IP Öteki adresi! Geçerli WAN IP adresiyle aynı alt ağda olmamalı."/>
+	<message msgid="Invalid DHCP start address! It should be located in the same subnet of current LAN IP address." msgstr="Geçersiz DHCP başlangıç adresi! Geçerli LAN IP adresiyle aynı alt ağda olmalı."/>
+	<message msgid="Invalid DHCP end address with pool size allocated! It should be located in the same subnet of current LAN IP address." msgstr="Havuz boyutu atanmış geçersiz DHCP bitiş adresi! Geçerli LAN IP adresiyle aynı alt ağda olmalı."/>
+    <message msgid="Invalid IP address! It should be located in the same subnet of current LAN IP address." msgstr="Invalid IP address! It should be located in the same subnet of current LAN IP address."/>
+	<message msgid="Invalid DHCP address range!" msgstr="Geçersiz DHCP adres aralığı!"/>
+	<message msgid="Invalid Pool Size value!" msgstr="Invalid Pool Size value!"/> 
+	
+	<message msgid="The gateway has wrong format." msgstr="Ağ geçidinin formatı yanlış."/>
+	<message msgid="please input the gateway." msgstr="lütfen ağ geçidini girin."/>
+	<message msgid="routing del interface" msgstr="Arayüz"/>
+	<message msgid="Input maximum rate is greater than uplink rate." msgstr="Giriş maksimum hızı yer-uydu bağlantısı hızından büyüktür."/>
+	<message msgid="Input maximum rate is greater than total downlink rate." msgstr="Giriş maksimum hızı toplam uydu-yer bağlantısı hızından büyüktür."/>
+	<message msgid="Input minimum rate is greater than downlink rate." msgstr="Giriş minimum hızı uydu-yer bağlantısı hızından büyüktür."/>
+	<message msgid="Input minimum rate is greater than uplink rate." msgstr="Giriş minimum hızı yer-uydu bağlantısı hızından büyüktür."/>
+	<message msgid="Please set value between 64~32768" msgstr="Lütfen değeri 64~32768 arasında ayarlayınız."/>
+	<message msgid="lan fallback ip" msgstr="Son çare ip" />
+<message msgid="lan fallback mask" msgstr="Son çare ağ maskesi" />
+<message msgid="subnet is invalid" msgstr="Alt geçersiz." />
+<message msgid="LAN is Fixed IP, please set Gateway IP Address." msgstr="LAN IP Sabit olduğunu, Ağ Geçidi IP Adresi ayarlayın." />
+<message msgid="- Switch LAN IP MODE to STATIC" msgstr="- Statik LAN IP modunu" />
+<message msgid="- Switch LAN IP MODE to DHCP"   msgstr="- Dhcp LAN IP modunu" />
+<message msgid="- May loose the access to WEB UI" msgstr="- WEB UI erişim gevşek olabilir" />
+<!-- stp.asp --> 
+<message msgid="stp" msgstr="kapsayan ağaç protokolü (STP)" />
+<message msgid="stp setup" msgstr="kapsayan ağaç protokolü Kurulum" />
+<message msgid="stp set 1" msgstr="etkin" />
+<message msgid="stp set 0" msgstr="devre dışı" />
+<message msgid="stp Apply" msgstr="Uygula" />
+<message msgid="stp Reset" msgstr="İptal et" />
+<!-- route_table.asp --> 
+<message msgid="route_table" msgstr="Tablo y?nlendirme" />
+<message msgid="It should be a [1-10] number." msgstr="Please enter a number between 1-10" />
+<message msgid="It should be a [1-15] number." msgstr="Please enter a number between 1-15" />
+<!--vpn_ipsec.asp alert-->
+<message msgid="Lifetime value should be digit." msgstr="Lifetime value should be digit." />
+<message msgid="phase1 lifetime should be from 1200s to 86400s." msgstr="phase1 lifetime should be from 1200s to 86400s." />
+<message msgid="phase2 lifetime should be from 1200s to 86400s." msgstr="phase2 lifetime should be from 1200s to 86400s." />
+<message msgid="DPD Interval should be from 10s to 1200s." msgstr="DPD Interval should be from 10s to 1200s." />
+<message msgid="DPD Timeout should be from 30s to 3600s." msgstr="DPD Timeout should be from 30s to 3600s." />
+<message msgid="Local internal ip address error!" msgstr="Local internal ip address error!" />
+<message msgid="Local netmask error!" msgstr="Local netmask error!" />
+<message msgid="VPN mode error, there is already a rule with same VPN mode." msgstr="VPN mode error, there is already a rule with same VPN mode." />
+<message msgid="Connection name repeats." msgstr="Connection name repeats." />
+<message msgid="Name is required." msgstr="Name is required." />
+<message msgid="Name error. The entered value only support 1-20 letters digits underline or dot, and start with letter." msgstr="Name error. The entered value only support 1-20 letters digits underline or dot, and start with letter." />
+<message msgid="Remote Gateway is required." msgstr="Remote Gateway is required." />
+<message msgid="Remote Subnet IP is required." msgstr="Remote Subnet IP is required." />
+<message msgid="Remote Gateway ip address error!" msgstr="Remote Gateway ip address error!" />
+<message msgid="Remote internal ip address error!" msgstr="Remote internal ip address error!" />
+<message msgid="Remote netmask error!" msgstr="Remote netmask error!" />
+<message msgid="Remote subnet IP should not the same as current LAN subnet IP!" msgstr="Remote subnet IP should not the same as current LAN subnet IP!" />
+<message msgid="DPD Interval error!" msgstr="DPD Interval error!" />
+<message msgid="DPD Timeout error!" msgstr="DPD Timeout error!" />
+<message msgid="Preshared Key is required!" msgstr="Preshared Key is required!" />
+<message msgid="The setting rules exceed maximum!" msgstr="The setting rules exceed maximum!" />
+<message msgid="Remote FQDN identifier repeats." msgstr="Remote FQDN identifier repeats." />
+<message msgid="Local FQDN identifier repeats." msgstr="Local FQDN identifier repeats." />
+<message msgid="FQDN value error. The entered value only support 1-40 letters digits hyphen or dot, and start with letter or digital." msgstr="FQDN value error. The entered value only support 1-40 letters digits hyphen or dot, and start with letter or digital." />
+<message msgid="Remote identifier IP address format is error!" msgstr="Remote identifier IP address format is error!" />
+<message msgid="Local identifier IP address format is error!" msgstr="Local identifier IP address format is error!" />
+<message msgid="Remote ID Type" msgstr="Remote ID Type" />
+<message msgid="Remote Identifier" msgstr="Remote Identifier" />
+<message msgid="Local ID Type" msgstr="Local ID Type" />
+<message msgid="Local Identifier" msgstr="Local Identifier" />
+<message msgid="Remote WAN IP" msgstr="Remote WAN (internet) IP" />
+<message msgid="Local WAN IP" msgstr="Local WAN (internet) IP" />
+<message msgid="IPsec net2net_mode" msgstr="Site-to-Site" />
+<message msgid="IPsec rw_mode" msgstr="Remote User" />
+<message msgid="IPsec main_mode" msgstr="Main" />
+<message msgid="IPsec aggre_mode" msgstr="Aggressive" />
+<message msgid="IPsec note1_1" msgstr="Site-to-Site: In this mode, when the setting LAN IP address is in the same network segment as remote subnet, the corresponding IPsec rule will be disabled." />
+<message msgid="Enter letters or digits. Preshared Key length should be from 8 to 40 digits or letters!" msgstr="Enter letters or digitals. Preshared Key length should be from 8 to 40 digits or letters!" />
+<message msgid="Preshared Key length should be from 8 to 40 digits or letters." msgstr="Preshared Key length should be from 8 to 40 digits or letters." />
+<message msgid="Connection Name has illegal ascii code!" msgstr="Connection Name has illegal ascii code!" />
+<message msgid="Connection Name is not allowed to contain any space character!" msgstr="Connection Name is not allowed to contain any space character!" />
+<message msgid="Connection Name has illegal hexadecimal digits!" msgstr="Connection Name has illegal hexadecimal digits!" />
+<message msgid="Connection Name contains illegal characters" msgstr="Connection Name contains illegal characters" />
+<message msgid="LAN and WAN is in the same network segment,error." msgstr="LAN and WAN is in the same network segment,error." />
+<message msgid="WAN is Fixed IP, please set Gateway IP Address." msgstr="WAN is Fixed IP, please set Gateway IP Address." />
+<message msgid="Please check WAN IP or gateway!" msgstr="Please check WAN IP or gateway!" />
+<message msgid="Invalid Lan IP Address." msgstr="Invalid Lan IP Address." />
+<message msgid="WAN is Fixed IP, please set First DNS Server to User-Defined, Second DNS Server User-Defined or None." msgstr="WAN is Fixed IP, please set First DNS Server to User-Defined, Second DNS Server User-Defined or None." />
+<message msgid="IP Address has already been assigned to other host." msgstr="IP Address has already been assigned to other host." />
+<message msgid="Mac Address already exists." msgstr="Mac Address already exists." />
+<message msgid="IP Address already exists." msgstr="IP Address already exists." />
+</po>

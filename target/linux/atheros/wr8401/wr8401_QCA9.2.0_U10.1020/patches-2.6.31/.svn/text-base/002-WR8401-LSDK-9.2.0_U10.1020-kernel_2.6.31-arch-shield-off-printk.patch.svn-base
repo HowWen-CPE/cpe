@@ -1,0 +1,11 @@
+--- linux-2.6.31_atheros/arch/mips/atheros/setup.c	2013-04-03 13:34:13.000000000 +0800
++++ linux-2.6.31_liteon/arch/mips/atheros/setup.c	2013-02-04 09:37:56.000000000 +0800
+@@ -455,7 +455,7 @@
+ 
+ 	if (!len || !retlen) return (0);
+ 
+-	printk("Reading Flash for Calibraton data from 0x%llx and partition name is %s\n",from,cal_part);
++	//printk("Reading Flash for Calibraton data from 0x%llx and partition name is %s\n",from,cal_part);
+ 
+ 	mtd = get_mtd_device_nm(cal_part);
+ 	if (mtd == ERR_PTR(-ENODEV)) {

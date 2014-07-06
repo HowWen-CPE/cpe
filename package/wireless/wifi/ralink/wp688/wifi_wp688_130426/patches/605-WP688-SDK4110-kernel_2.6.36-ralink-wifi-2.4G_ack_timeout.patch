@@ -1,0 +1,348 @@
+diff -urN a/rt2860v2/ap/ap_cfg.c b/rt2860v2/ap/ap_cfg.c
+--- a/rt2860v2/ap/ap_cfg.c	2013-05-13 17:37:09.761727736 +0800
++++ b/rt2860v2/ap/ap_cfg.c	2013-05-13 17:37:54.973728289 +0800
+@@ -13697,3 +13697,261 @@
+ #endif /* DYNAMIC_VGA_SUPPORT */
+ #endif /* defined(MICROWAVE_OVEN_SUPPORT) || defined(DYNAMIC_VGA_SUPPORT) */
+ 
++
++#ifndef WIFI_DRIVER_PRE_PORTING
++/* Added by Bruce Liu, 2012-12-26 */
++/*
++========================================================================
++Routine Description:
++	Read / Write ACK timeout register
++
++Arguments:
++	pAd					- WLAN control block pointer
++	Arg					- Input arguments
++
++Return Value:
++	True                - if successful
++	False               - if failure or other errors
++
++Note:
++    Usage: 
++           1.) iwpriv ra0 ack_timeout 1111111111111=  => read distance client and AP, unit: m.
++           2.) iwpriv ra0 rf 1=1000    => write max coverage of AP, unit: m.
++
++========================================================================
++*/
++
++/* Velocity of light 299792458, 3.0 * 10^8, unit: m/s */
++#define LIGHT_SPEED    (3*(10^8))  /* UNIT: m/s */
++#define LIGHT_SPEED_2  300         /* UNIT: m/us  (3*(10^8))um / (1*10^(-6))us = 300 m/us */ 
++#define LIGHT_SPEED_3  30          /* UNIT: cm/ns */
++
++/* Maximum theoretical ACK timeouts are approximately 744us (11 km) 
++    for 802.11b, and 372us (55 km) for 802.11g.
++   1) Time Unit: 1s = 10^3ms = 10^6us = 10^9.
++   2) Distance Unit: 1km = 1000m.
++   3) 11G max timeout: 372us = 372*10^-6 s = 0.000372s
++   4) 11B max timeout: 744us = 744*10^-6 s = 0.000744s
++   5) From distance to time, calculate expresion: 
++        Time = (distance * 1000) / LIGHT_SPEED
++   6) From time to distance, calculate expresion:
++        distance = (LIGHT_SPEED * value of ACK register * 10^-6) / 1000
++ */
++#define OFDM_11G_MAX_TIMEOUT 372  /* unit: us */
++#define CCK_11B_MAX_TIMEOUT  744  /* unit: us */
++
++/* From ralink, Could change 0x24 and 0xca is 2000 meters in range.
++
++   ------------------------------------------------------------
++   Assume between ap and client,
++   Distance: s
++   Time of light spread: t1
++   Time of client RF IC response: t2
++   Total time: 
++   11G: t = 2*t1 + t2 = 36us (0x24 us)
++   11B: t = 2*t1 + t2 = 202us (0xca us)
++
++   ------------------------------------------------------------
++   ------------------------------------------------------------
++   
++   For examle: 
++   When distance is 2000m between AP and client1, so, 
++        t1 = 2000m / (3.0 * (10^8)) m/s = 6.7us.
++   11G: t2 = 36us - 2*6.7us = 22.6us.
++   11B: t2 = 202us - 2*6.7us = 188.6us. 
++
++   When distance is 3000m between AP and client2, so,
++       t1 + t1' = 3000m / (3.0 * (10^8))m/s = 10us.
++   =>  t1' = 10us - t1 = 10us - 6.7us = 3.3us.
++
++   11G: (t1 + t1') * 2 + t2 = (6.7us + 3.3us) * 2 + 22.6us = 42.6us
++   11B: (t1 + t1') * 2 + t2 = (6.7us + 3.3us) * 2 + 188.6us = 208.6us
++
++   ------------------------------------------------------------
++   ------------------------------------------------------------
++   
++   For the expresion of getting distance between ap and client as follow:
++   1. read ack regiter: t
++   2. (t - tg2/tb2)us * 2 * LIGHT_SPEED_2 m/us = S
++
++   For the expresion of write distance between ap and client as follow:
++   1. input unit: S m
++   2. t = S / LIGHT_SPEED
++   3. tt = t*2 + tg/tb
++   4. write tt to ack register.
++   
++ */
++
++#define HW_REPLY_TIME_11G 22600    /* UNIT: us */
++#define HW_REPLY_TIME_11B 188600   /* UNIT: us */
++
++#define CALCU_TIME_TO_DISTANCE(_t, _hw_reply_time) do {_t = (((_t - _hw_reply_time)  * LIGHT_SPEED_3) / 2 );} while(0)
++
++#define CALCU_DISTANCE_TO_TIME(_distance, _hw_reply_time, _total_time) \
++                        do {                                           \
++                            INT t, tmp_distance;                       \
++                            t = 0;                                     \
++                            tmp_distance = 100*_distance;              \
++                            t = ( tmp_distance / LIGHT_SPEED_3 );             \
++                            _total_time = ( 2*t + _hw_reply_time );        \
++                        }while(0)
++
++
++#define IS_11B(_pAd) (                                                 \
++                      (_pAd->CommonCfg.PhyMode == PHY_11B) ||          \
++                      (_pAd->CommonCfg.PhyMode == PHY_11BG_MIXED) ||   \
++                      (_pAd->CommonCfg.PhyMode == PHY_11ABG_MIXED) ||  \
++                      (_pAd->CommonCfg.PhyMode == PHY_11ABGN_MIXED) || \
++                      (_pAd->CommonCfg.PhyMode == PHY_11BGN_MIXED)     \
++                     )
++
++/* ACK register */
++#define EXP_ACK_TIME	0x1380		
++
++INT RTMPAPIoctlAckTimeout(
++    IN VOID *pAdSrc, 
++	IN struct iwreq *wrq)
++{
++        #if 1
++        PSTRING             this_char;
++        PSTRING             value;
++        PSTRING             mpool, msg; /* msg[2048]; */
++        PSTRING             arg; /* arg[255]; */
++        PSTRING             ptr;
++        INT                 ack_timeout;
++        ULONG               ack_timeout_val, tmp_time, input_distance;
++        ULONG               distance_11b, distance_11g;
++        BOOLEAN             bFromUI;
++        INT                 memLen = sizeof(CHAR) * (2048+256+12);
++
++        PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdSrc;
++        
++        mpool = (PSTRING)kmalloc(memLen, MEM_ALLOC_FLAG);
++        if (mpool == NULL) {
++            return;
++        }
++
++        ack_timeout_val = 0;
++        ack_timeout = 0;
++        distance_11b = 0;
++        distance_11g = 0;
++        tmp_time = 0;
++        input_distance = 0;
++
++        bFromUI = ((wrq->u.data.flags & RTPRIV_IOCTL_FLAG_UI) == RTPRIV_IOCTL_FLAG_UI) ? TRUE : FALSE;
++        
++        NdisZeroMemory(mpool, memLen);
++        msg = (PSTRING)((ULONG)(mpool+3) & (ULONG)~0x03);
++        arg = (PSTRING)((ULONG)(msg+2048+3) & (ULONG)~0x03);
++        
++        if ((wrq->u.data.length > 1) /* No parameters. */
++            )
++        {
++            NdisMoveMemory(arg, wrq->u.data.pointer, (wrq->u.data.length > 255) ? 255 : wrq->u.data.length);
++            ptr = arg;
++            //sprintf(msg, "\n");
++            
++            /* Parsing Read or Write */
++            while ((this_char = strsep((char **)&ptr, ",")) != NULL)
++            {
++                if (!*this_char)
++                    continue;
++    
++                if ((value = strchr(this_char, '=')) != NULL)
++                    *value++ = 0;
++    
++                if (!value || !*value)
++                { /* Read ack register */
++                        /* read ack timeout register */
++                        //printk(KERN_ERR "%s, read ack timeout register\n", __func__ );
++                        
++                        RTMP_IO_READ32(pAd,  EXP_ACK_TIME, &ack_timeout_val);
++
++                        distance_11b = (ack_timeout_val & 0x7fff);
++                        distance_11b = 1000* distance_11b;
++
++                        /* distance_11b unit: cm */
++                        CALCU_TIME_TO_DISTANCE( distance_11b, HW_REPLY_TIME_11B); 
++
++                        /* convert to from cm to m */
++                        distance_11b = distance_11b / 100;
++                        
++                        distance_11g = ((ack_timeout_val >> 16) & 0x7fff);
++                        distance_11g = 1000 * distance_11g;
++                        CALCU_TIME_TO_DISTANCE( distance_11g, HW_REPLY_TIME_11G);
++
++                        distance_11g = distance_11g / 100;
++
++                        sprintf(msg+strlen(msg), " 11b:%ldm, 11g:%ldm ", distance_11b, distance_11g);
++                        
++                        break;
++                }
++                else
++                { /* Write ack register */
++                    if ((sscanf(this_char, "%d", &(ack_timeout)) == 1) && (sscanf(value, "%d", &(input_distance)) == 1))
++                    {
++
++                        if ( ( ack_timeout == 1 ) && ( input_distance > 0 ) ) {
++                                /* write ack timeout register, unit: us */
++
++                                /* write 11B */
++                                if ( IS_11B(pAd) ) {
++                                    CALCU_DISTANCE_TO_TIME(input_distance, HW_REPLY_TIME_11B, ack_timeout_val);
++                                    ack_timeout_val = (ack_timeout_val + 300) / 1000;
++                                    if (ack_timeout_val < CCK_11B_MAX_TIMEOUT) {
++                                        /* read ack register */
++                                        RTMP_IO_READ32(pAd, EXP_ACK_TIME, &tmp_time);
++
++                                        /* write value to ack register, unit: us */
++                                        tmp_time &= 0x7fff0000; /* reserve high 16 bit for 11G */
++                                        ack_timeout_val |= tmp_time;
++                                        RTMP_IO_WRITE32(pAd,  EXP_ACK_TIME,	 ack_timeout_val );
++                                    }
++                                } 
++
++                                /* write 11G */
++                                CALCU_DISTANCE_TO_TIME(input_distance, HW_REPLY_TIME_11G, ack_timeout_val);
++                                ack_timeout_val = (ack_timeout_val + 300) / 1000 ;
++                                if (ack_timeout_val < OFDM_11G_MAX_TIMEOUT) {
++                                    /* read ack register */
++                                    RTMP_IO_READ32(pAd, EXP_ACK_TIME, &tmp_time);
++                                    
++                                    /* write value to ack register, unit: us */
++                                    tmp_time &= 0x7fff; /* reserve low 16 bit for 11b */
++                                    ack_timeout_val = (ack_timeout_val << 16) | tmp_time;
++                    				RTMP_IO_WRITE32(pAd,  EXP_ACK_TIME,	 ack_timeout_val );
++                                }
++
++                                /* after write and read for indicating to user space, unit: us */
++                                RTMP_IO_READ32(pAd,  EXP_ACK_TIME,	 &ack_timeout_val );
++                                
++                                break;
++                        }
++                    }
++                }
++            }
++        }
++
++        if ( ack_timeout_val == 0 ) {
++            sprintf(msg+strlen(msg), " %s", " Param valid");
++        }
++        
++        memset(wrq->u.data.pointer, 0x0, wrq->u.data.length);
++
++        wrq->u.data.length = strlen(msg);
++
++        if (copy_to_user(wrq->u.data.pointer, msg, wrq->u.data.length))
++        {
++            DBGPRINT(RT_DEBUG_TRACE, ("%s: copy_to_user() fail\n", __FUNCTION__));
++            return FALSE;
++        }
++
++         
++        kfree(mpool);
++        #endif
++
++        return TRUE;
++}
++/* Ended by Bruce Liu */
++#endif
++
+diff -urN a/rt2860v2/include/os/rt_os.h b/rt2860v2/include/os/rt_os.h
+--- a/rt2860v2/include/os/rt_os.h	2013-05-13 17:37:09.761727736 +0800
++++ b/rt2860v2/include/os/rt_os.h	2013-05-13 13:29:26.349723503 +0800
+@@ -75,6 +75,13 @@
+ #define RTPRIV_IOCTL_SET_WSC_PROFILE_U32_ITEM       (SIOCIWFIRSTPRIV + 0x14)
+ #define RTPRIV_IOCTL_SET_WSC_PROFILE_STRING_ITEM    (SIOCIWFIRSTPRIV + 0x16)
+ #endif /* WSC_STA_SUPPORT */
++
++#ifndef WIFI_DRIVER_PRE_PORTING
++/* Added by Bruce Liu, 2012-12-26 */
++#define RTPRIV_IOCTL_ACK_TIMEOUT (SIOCIWFIRSTPRIV + 0x18)
++/* Ended by Bruce Liu */
++#endif
++
+ #endif /* CONFIG_STA_SUPPORT */
+ 
+ #ifdef CONFIG_AP_SUPPORT
+@@ -112,6 +119,13 @@
+ #endif/* INF_AR9 */
+ #define RTPRIV_IOCTL_SET_WSCOOB	(SIOCIWFIRSTPRIV + 0x19)
+ #define RTPRIV_IOCTL_WSC_CALLBACK	(SIOCIWFIRSTPRIV + 0x1A)
++
++#ifndef WIFI_DRIVER_PRE_PORTING
++/* Added by Bruce Liu, 2012-12-26 */
++#define RTPRIV_IOCTL_ACK_TIMEOUT (SIOCIWFIRSTPRIV + 0x18)
++/* Ended by Bruce Liu */
++#endif
++
+ #endif /* CONFIG_AP_SUPPORT */
+ 
+ #endif /* _RT_OS_H_ */
+diff -urN a/rt2860v2/include/rt_os_net.h b/rt2860v2/include/rt_os_net.h
+--- a/rt2860v2/include/rt_os_net.h	2013-05-13 17:37:09.757728164 +0800
++++ b/rt2860v2/include/rt_os_net.h	2013-05-13 13:29:53.289723805 +0800
+@@ -259,6 +259,14 @@
+ 	IN  USHORT                  priv_flags );
+ #endif /* CONFIG_STA_SUPPORT */
+ 
++#ifndef WIFI_DRIVER_PRE_PORTING
++/* Added by Bruce Liu, 2012-12-26 */
++INT RTMPAPIoctlAckTimeout(
++    IN VOID *pAdSrc, 
++	IN struct iwreq *wrq);
++/* Ened by Bruce Liu */
++#endif
++
+ VOID RTMPDrvOpen(
+ 	IN VOID						*pAd);
+ 
+diff -urN a/rt2860v2/os/linux/ap_ioctl.c b/rt2860v2/os/linux/ap_ioctl.c
+--- a/rt2860v2/os/linux/ap_ioctl.c	2013-05-13 17:37:09.765977552 +0800
++++ b/rt2860v2/os/linux/ap_ioctl.c	2013-05-13 13:30:35.925722632 +0800
+@@ -81,7 +81,14 @@
+   "get_ba_table"},
+ { RTPRIV_IOCTL_STATISTICS,
+   IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | 1024,
+-  "stat"}
++  "stat"},
++#ifndef WIFI_DRIVER_PRE_PORTING
++ /* Added by Bruce Liu, 2012-12-25 */
++{ RTPRIV_IOCTL_ACK_TIMEOUT,
++  IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | 1024,
++  "ack_timeout"}
++/* Ended by Bruce Liu */
++#endif
+ };
+ 
+ 
+@@ -415,6 +422,14 @@
+ #endif /* RTMP_RF_RW_SUPPORT */
+ #endif /* DBG */
+ 
++        #ifndef WIFI_DRIVER_PRE_PORTING
++        /* Added by Bruce Liu, 2012-12-26 */
++        case RTPRIV_IOCTL_ACK_TIMEOUT:
++            RTMPAPIoctlAckTimeout(pAd, wrqin);
++            break;
++        /* Ended by Bruce Liu */
++        #endif
++        
+ 		default:
+ /*			DBGPRINT(RT_DEBUG_ERROR, ("IOCTL::unknown IOCTL's cmd = 0x%08x\n", cmd)); */
+ 			Status = RTMP_IO_EOPNOTSUPP;

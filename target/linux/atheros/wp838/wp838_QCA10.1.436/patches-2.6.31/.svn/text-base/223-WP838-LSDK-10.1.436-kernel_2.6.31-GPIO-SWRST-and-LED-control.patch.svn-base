@@ -1,0 +1,405 @@
+--- a/arch/mips/atheros/gpio.c
++++ b/arch/mips/atheros/gpio.c
+@@ -36,7 +36,22 @@
+ 
+ #include <atheros.h>
+ 
++/* SWRST GPIO & MAX GPIO number macro definition, Sean@Liteon, 2013-12-20*/
++#define LITEON_SWRST_GPIO			17
++#define ATH_MAX_GPIO_NUMBER         23
++/* Power LED GPIO macro definition, Sean@Liteon, 2013-12-20*/
++#define LITEON_PWR_GLED_GPIO		4
++#define LITEON_PWR_YLED_GPIO		14
++/* Control macro definition, Sean@Liteon, 2013-12-20*/
++#define LITEON_LED_CTRL			1
++
+ #define ATH_FACTORY_RESET		0x89ABCDEF
++/* 
++ * SWRST GPIO interrupt enable command , which is provided to upper level ioctl() ,
++ * Sean@Liteon, 2013-12-20
++ */
++#define LITEON_GPIO_REG_IRQ              0x89ABCDF0
++#define LITEON_GPIO_ENA_INT              0x89ABCDF1
+ 
+ static atomic_t ath_fr_status = ATOMIC_INIT(0);
+ static volatile int ath_fr_opened = 0;
+@@ -53,6 +68,13 @@ static volatile int power_on_finish = 0;
+ struct timer_list power_on_timer;
+ static struct proc_dir_entry *power_on_proc_entry = NULL;
+ #endif
++/* LED control variable definition, Sean@Liteon, 2013-12-23 */
++#ifdef LITEON_LED_CTRL
++/* Power LED variable, Sean@Liteon, 2013-12-20 */
++#define LITEON_PWR_LED_BLINK_INTERVAL   500
++struct timer_list liteon_power_led_timer;
++static struct proc_dir_entry *liteon_led_ctrl_proc_entry = NULL;
++#endif
+ 
+ #define frdbg printk
+ 
+@@ -62,8 +84,10 @@ static struct proc_dir_entry *power_on_p
+ #define USB_LED_OFF 1
+ #define USB_LED_ON 0
+ 
+-#define POWER_LED_OFF 1
+-#define POWER_LED_ON 0
++#define POWER_LED_OFF 	1
++#define POWER_LED_ON 	0
++/* Power LED blink, Sean@Liteon, 2013-12-23 */
++#define POWER_LED_BLINK	2
+ 
+ #define SIMPLE_CONFIG_OFF	1
+ #define SIMPLE_CONFIG_ON	2
+@@ -99,6 +123,17 @@ typedef enum {
+     INT_POL_ACTIVE_LOW,
+     INT_POL_ACTIVE_HIGH,
+ } ath_gpio_int_pol_t;
++
++/* 
++ * Add the macro definition about LITEON SWRST GPIO interrupt configure,
++ * Sean@Liteon, 2013-12-20 
++ */
++#define LITEON_SWRST_GPIO_INT_CFG(active_polarity) do { \
++        ath_gpio_config_int(LITEON_SWRST_GPIO, INT_TYPE_LEVEL, active_polarity); \
++        local_irq_enable(); \
++    } while (0)
++/* Macro definition end, Sean@Liteon, 2013-12-20 */
++
+ /*
+ ** Simple Config stuff
+ */
+@@ -123,6 +158,16 @@ typedef struct {
+ 	void		*cb_arg2;
+ } multi_callback_t;
+ 
++/*
++ * Structure used at regsitration, Sean@Liteon, 2013-12-20 
++ */
++typedef struct {
++    unsigned int irq;	//request irq pin number
++    pid_t pid;			//process id to notify
++} gpio_reg_info;
++
++gpio_reg_info gpio_info;
++
+ //liteon+
+ int wdt_flag=0;
+ //int cc=0;
+@@ -486,6 +531,19 @@ static OS_TIMER_FUNC(wps_led_success)
+ }
+ #endif /* ifdef WPS_LED_GPIO */
+ 
++/* Power LED blink function, Sean@Liteon, 2013-12-20 */
++#ifdef LITEON_LED_CTRL
++static OS_TIMER_FUNC(liteon_pwr_led_blink)
++{
++ 	static int PWRled = POWER_LED_ON;
++    
++	ath_gpio_out_val(LITEON_PWR_YLED_GPIO, PWRled);
++	PWRled = !PWRled;
++   
++	OS_SET_TIMER(&liteon_power_led_timer, LITEON_PWR_LED_BLINK_INTERVAL);
++}
++#endif
++
+ #ifdef JUMPSTART_GPIO
+ int ath_simple_config_invoke_cb(int simplecfg_only, int irq_enable, int cpl)
+ {
+@@ -615,6 +673,71 @@ irqreturn_t ath_reset_irq(int cpl, void
+ }
+ #endif
+ 
++/* The function implementation of SWRST, Sean@Liteon, 2013-12-20 */
++#ifdef LITEON_SWRST_GPIO
++
++/*
++ * Send a signal to the registered user process whenever SWRST gpio
++ * interrupt comes (called by interrupt handler)
++ */
++void gpio_notify_user(int sig)
++{
++    struct task_struct *p = NULL;
++
++    /* Don't send any signal if pid is 0 or 1 */
++    if ((int)gpio_info.pid < 2)
++        return;
++
++    p = find_task_by_vpid(gpio_info.pid);
++
++    if (NULL == p) {
++        printk(": no registered process to notify\n");
++        return;
++    }
++    
++    send_sig(sig, p, 0);
++}
++
++irqreturn_t liteon_reset_irq(int cpl, void *dev_id)
++{
++    unsigned long now;
++    static u_int32_t    press_time = 0;
++
++    now = jiffies;
++    
++    local_irq_disable();
++
++    if (press_time == 0) {
++        LITEON_SWRST_GPIO_INT_CFG(INT_POL_ACTIVE_HIGH);
++        press_time = now;
++
++        gpio_notify_user(SIGUSR1);
++
++        return IRQ_HANDLED;
++        
++    } else {
++        press_time = now - press_time;
++
++        LITEON_SWRST_GPIO_INT_CFG(INT_POL_ACTIVE_LOW);
++    }
++
++    /* 
++     * If the time of press the reset button above 100ms, we send a SIGUSR2 to user,
++     * Else, it might be floating, we ignore it.
++     */
++    if (press_time >= 50L) {
++        gpio_notify_user(SIGUSR2);
++    } 
++
++    press_time = 0;
++    local_irq_enable();
++
++    return IRQ_HANDLED;
++
++}
++#endif
++/* End, Sean@Liteon, 2013-12-20 */
++
+ static int push_button_read(char *page, char **start, off_t off,
+ 				int count, int *eof, void *data)
+ {
+@@ -698,6 +821,92 @@ static int gpio_simple_config_led_write(
+ }
+ #endif /* ifdef WPS_LED_GPIO */
+ 
++/* LED blink & read & write function, Sean@Liteon, 2013-12-20 */
++#ifdef LITEON_LED_CTRL
++static char liteon_led_state[5] = {'0'};
++
++void liteon_pwr_led_blink_start(void)
++{    	
++        ath_gpio_config_output(LITEON_PWR_YLED_GPIO);
++        ath_gpio_out_val(LITEON_PWR_YLED_GPIO, POWER_LED_ON);
++        OS_CANCEL_TIMER(&liteon_power_led_timer);
++        OS_INIT_TIMER(NULL, &liteon_power_led_timer, liteon_pwr_led_blink, &liteon_power_led_timer);
++        OS_SET_TIMER(&liteon_power_led_timer, LITEON_PWR_LED_BLINK_INTERVAL);
++}
++EXPORT_SYMBOL(liteon_pwr_led_blink_start);
++
++void liteon_green_pwr_led_off(void)
++{
++        ath_gpio_config_output(LITEON_PWR_GLED_GPIO);
++        ath_gpio_out_val(LITEON_PWR_GLED_GPIO, POWER_LED_OFF);
++}
++EXPORT_SYMBOL(liteon_green_pwr_led_off);
++
++static int 
++liteon_led_ctrl_read(char *page, char **start, off_t off,
++					int count, int *eof, void *data)
++{
++	return sprintf(page, "%s\n", liteon_led_state);
++}
++
++static int 
++liteon_led_ctrl_write(struct file *file, const char *buf,
++					unsigned long count, void *data)
++{
++	u_int32_t led_state;
++	u_int32_t led_gpio;
++	char *buf_cp = NULL;
++	char *this_string = NULL;
++	u_int32_t param_count = 0;
++
++	buf_cp = (char *)kmalloc(strlen(buf) + sizeof(char), GFP_KERNEL);
++	if (buf_cp == NULL)
++		return -1;
++	
++	strcpy(buf_cp, buf);
++	while ((this_string = strsep(&buf_cp, " ")) != NULL) {
++		if (param_count == 0){
++			if (sscanf(this_string, "%d", &led_gpio) == 0)
++				goto failed;
++		} else if (param_count == 1) {
++			if (sscanf(this_string, "%d", &led_state) == 0)
++				goto failed;
++
++		} else {
++			printk("Error: Wrong number of parameters!!!\n");
++			goto failed;
++		}
++
++		param_count++;
++	}
++
++	if (led_gpio > ATH_MAX_GPIO_NUMBER || led_state > POWER_LED_BLINK) {
++		printk("Error: Unkonwn GPIO number or LED state!!!\n");
++		goto failed;
++	}
++
++	if (led_state == POWER_LED_BLINK && led_gpio == LITEON_PWR_YLED_GPIO) {
++		liteon_pwr_led_blink_start();
++	} else {
++	         if (led_gpio == LITEON_PWR_YLED_GPIO)
++                    OS_CANCEL_TIMER(&liteon_power_led_timer);
++             
++		ath_gpio_config_output(led_gpio);
++		ath_gpio_out_val(led_gpio, led_state);
++	}
++
++	sprintf(liteon_led_state, "%d %d\n", led_gpio, led_state);
++
++failed:
++	if (buf_cp)
++		kfree(buf_cp);
++	
++	return count;
++}
++
++#endif /* LITEON_LED_CTRL */
++
++
+ void ap_usb_led_on(void)
+ {
+ #ifdef CONFIG_MACH_AR934x
+@@ -856,6 +1065,16 @@ static int create_simple_config_led_proc
+ 	power_on_proc_entry->write_proc = power_on_finish_write;
+ 	power_on_proc_entry->read_proc = power_on_finish_read;
+ #endif
++
++#ifdef LITEON_LED_CTRL
++	liteon_led_ctrl_proc_entry = create_proc_entry("led_ctrl", 0644,
++							simple_config_entry);
++	if (!liteon_led_ctrl_proc_entry)
++		return -ENOENT;
++
++	liteon_led_ctrl_proc_entry->write_proc = liteon_led_ctrl_write;
++	liteon_led_ctrl_proc_entry->read_proc = liteon_led_ctrl_read;
++#endif
+ 	return 0;
+ }
+ #endif /* ifdef WPS_LED_GPIO */
+@@ -903,6 +1122,7 @@ athfr_ioctl(struct inode *inode, struct
+ 		unsigned long arg)
+ {
+ 	int ret = 0;
++        gpio_reg_info info; /*Structure used at regsitration, Sean@Liteon, 2013-12-20 */
+ 
+ 	switch (cmd) {
+ 	case ATH_FACTORY_RESET:
+@@ -911,7 +1131,18 @@ athfr_ioctl(struct inode *inode, struct
+ #endif
+ 		sleep_on(&ath_fr_wq);
+ 		break;
+-
++        /* Get the daemon's PID, Sean@Liteon, 2013-12-20*/
++	case LITEON_GPIO_REG_IRQ:
++                copy_from_user(&info, (gpio_reg_info *)arg, sizeof(info));
++                if (0 <= info.irq && info.irq < ATH_MAX_GPIO_NUMBER) {
++                	gpio_info.pid = info.pid;
++                }
++                break;   
++        /* Enable the SWRST GPIO interrupt, Sean@Liteon, 2013-12-20 */
++        case LITEON_GPIO_ENA_INT:
++                ath_gpio_config_input(LITEON_SWRST_GPIO);
++                ath_gpio_config_int(LITEON_SWRST_GPIO, INT_TYPE_LEVEL, INT_POL_ACTIVE_LOW);
++                break;
+ 	default:
+ 		ret = -EINVAL;
+ 	}
+@@ -929,7 +1160,7 @@ static struct file_operations athfr_fops
+ 
+ static struct miscdevice athfr_miscdev = {
+ 	FACTORY_RESET_MINOR,
+-	"Factory reset",
++	"Factory_reset",
+ 	&athfr_fops
+ };
+ 
+@@ -946,6 +1177,12 @@ int __init ath_simple_config_init(void)
+ #ifdef AP_RESET_GPIO
+     int req2;
+ #endif
++
++/* The SWRST interrupt request variable definition, Sean@Liteon, 2013-12-20 */
++#ifdef LITEON_SWRST_GPIO
++    int req3;
++#endif
++
+ 	ret = misc_register(&athfr_miscdev);
+ 
+ 	if (ret < 0) {
+@@ -1026,6 +1263,29 @@ int __init ath_simple_config_init(void)
+     OS_INIT_TIMER(NULL, &power_on_timer, power_led_blink, NULL);
+     OS_SET_TIMER(&power_on_timer, POWER_LED_BLINK_INTERVAL);
+ #endif
++
++/* Request SWRST interrupt, Sean@Liteon, 2013-12-20 */
++#ifdef LITEON_SWRST_GPIO
++    printk("%s LITEON_SWRST_GPIO: %d\n", __func__, LITEON_SWRST_GPIO);
++
++    req3 = request_irq(ATH_GPIO_IRQn(LITEON_SWRST_GPIO), liteon_reset_irq, 0,
++            "SW RESET/FACTORY RESET", NULL);
++    if (req3!= 0) {
++        printk("request_irq for sw reset/factory reset failed (error %d)\n", req3);
++        misc_deregister(&athfr_miscdev);
++        free_irq(req, NULL);
++        return -1;
++    }
++    printk("req_num: %d\n", req3);
++#endif
++/* End, Sean@Liteon, 2013-12-20 */
++
++/* Control power LED, Sean@Liteon, 2013-12-20 */
++#ifdef LITEON_LED_CTRL
++    liteon_green_pwr_led_off();
++    liteon_pwr_led_blink_start();
++#endif
++
+     //module_init(init_modules);
+     init_modules();
+ 	return 0;
+--- a/kernel/panic.c
++++ b/kernel/panic.c
+@@ -29,6 +29,10 @@ static int pause_on_oops;
+ static int pause_on_oops_flag;
+ static DEFINE_SPINLOCK(pause_on_oops_lock);
+ 
++/* Power yellow LED blink function, Sean@Liteon, 2013-12-24 */
++extern void liteon_pwr_led_blink_start(void);
++extern void liteon_green_pwr_led_off(void);
++
+ int panic_timeout;
+ 
+ ATOMIC_NOTIFIER_HEAD(panic_notifier_list);
+@@ -57,7 +61,7 @@ NORET_TYPE void panic(const char * fmt,
+ 	static char buf[1024];
+ 	va_list args;
+ 	long i;
+-
++        
+ 	/*
+ 	 * It's possible to come here directly from a panic-assertion and
+ 	 * not have preempt disabled. Some functions called from here want
+@@ -65,6 +69,13 @@ NORET_TYPE void panic(const char * fmt,
+ 	 */
+ 	preempt_disable();
+ 
++        /* 
++         * As the system is halted, start the power yellow LED blink, 
++         * Sean@Liteon, 2013-12-24  
++         */
++	liteon_green_pwr_led_off();
++	liteon_pwr_led_blink_start();
++
+ 	bust_spinlocks(1);
+ 	va_start(args, fmt);
+ 	vsnprintf(buf, sizeof(buf), fmt, args);

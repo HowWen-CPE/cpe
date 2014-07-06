@@ -1,0 +1,28 @@
+--- a/rt2860v2/ap/ap_cfg.c
++++ b/rt2860v2/ap/ap_cfg.c
+@@ -9288,6 +9288,9 @@ VOID RTMPIoctlStatistics(
+             }
+         }
+ #endif
++
++/* This information may result in MSG buffer overflow. Sean@liteon, 2013-09-06 */
++#if 0
+     sprintf(msg+strlen(msg), "MAT information:\n");
+     if(pIPMacTable!=NULL && pIPMacTable->valid)
+     {
+@@ -9313,6 +9316,8 @@ VOID RTMPIoctlStatistics(
+          }
+       }
+     }
++#endif
++/* Sean@liteon */
+ 
+     /* Copy the information into the user buffer */
+     wrq->u.data.length = strlen(msg);
+@@ -14480,4 +14485,4 @@ VOID RTMPIoctlCutTxPowerScope(
+ 	
+ }
+ #endif
+-/*<-----daniel@liteon,2013-8-19*/
+\ No newline at end of file
++/*<-----daniel@liteon,2013-8-19*/

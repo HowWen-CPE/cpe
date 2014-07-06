@@ -1,0 +1,41 @@
+--- u-boot-freescale-p1020-sku/board/freescale/p1020_sku/config.mk	2012-07-11 19:41:34.463244734 -0700
++++ u-boot-liteon-wp854-openwrt/board/freescale/p1020_sku/config.mk	2011-03-16 04:46:41.000000000 -0700
+@@ -24,6 +24,38 @@
+ #p10xx_20xxerdb board
+ #
+ 
++#
++#=====Added by sirian begin=====
++#
++ifndef NAND_SPL
++ifeq ($(CONFIG_MK_NAND), y)
++TEXT_BASE = $(CONFIG_RAMBOOT_TEXT_BASE)
++LDSCRIPT := $(TOPDIR)/cpu/$(CPU)/u-boot-nand.lds
++endif
++endif
++
++ifeq ($(CONFIG_MK_SDCARD), y)
++TEXT_BASE = $(CONFIG_RAMBOOT_TEXT_BASE)
++ifdef CONFIG_SYS_FSL_BOOT_DDR
++RESET_VECTOR_ADDRESS = 0x1107fffc
++else
++RESET_VECTOR_ADDRESS = 0xf8fffffc
++endif
++endif
++
++ifeq ($(CONFIG_MK_SPIFLASH), y)
++TEXT_BASE = $(CONFIG_RAMBOOT_TEXT_BASE)
++ifdef CONFIG_SYS_FSL_BOOT_DDR
++RESET_VECTOR_ADDRESS = 0x1107fffc
++else
++RESET_VECTOR_ADDRESS = 0xf8fffffc
++endif
++endif
++
++#
++#=====sirian end=====
++#
++
+ ifndef TEXT_BASE
+ TEXT_BASE = 0xeff80000
+ endif

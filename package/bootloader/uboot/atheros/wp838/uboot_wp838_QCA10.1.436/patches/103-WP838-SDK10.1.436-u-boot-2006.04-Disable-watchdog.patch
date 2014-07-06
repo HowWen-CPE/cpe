@@ -1,0 +1,54 @@
+Index: u-boot-2006-04-06-1725/board/ar7240/db12x/db12x.c
+===================================================================
+--- u-boot-2006-04-06-1725.orig/board/ar7240/db12x/db12x.c	2013-12-14 10:23:09.514965940 +0800
++++ u-boot-2006-04-06-1725/board/ar7240/db12x/db12x.c	2013-12-14 10:29:41.400155575 +0800
+@@ -146,6 +146,35 @@
+ 	board_str("MI124\n");
+ #else
+ 	board_str("DB120\n");
++//liteon add+
++#define WP833_HW_VER_MASK   0x00500000
++    if ( (ar7240_reg_rd(WASP_BOOTSTRAP_REG) & WP833_HW_VER_MASK) == 0 )                 //EVT1
++    {
++        ar7240_reg_rmw_clear(AR7240_GPIO_OE, (1 << 18));    //setgpio18 as output,WATCH DOG_EN
++        ar7240_reg_wr(AR7240_GPIO_CLEAR, (1 << 18));        //set output low to disable WATCH DOG
++
++        ar7240_reg_rmw_set(AR7240_GPIO_BASE+0x6C, (1 << 1));//disable JTAG
++        ar7240_reg_rmw_clear(AR7240_GPIO_OE, (3 << 1));     //setgpio1,2 as output,PWROK & PWRNG
++        ar7240_reg_wr(AR7240_GPIO_CLEAR, (1 << 1));         //set output low to turn on PWROK
++        ar7240_reg_wr(AR7240_GPIO_SET, (1 << 2));           //set output high to turn off PWRNG
++    }
++    else if ( (ar7240_reg_rd(WASP_BOOTSTRAP_REG) & WP833_HW_VER_MASK) == 0x00100000 )   //EVT2
++    {
++        ar7240_reg_rmw_clear(0x18040034, 0xff000000);       //setgpio11 as GPIO
++        ar7240_reg_rmw_clear(AR7240_GPIO_OE, 0x00140810);   //setgpio 4, 11, 18, 20 as output
++                                                            //USB_CPEN, PWROK, PWRNG, WATCH DOG_EN
++        ar7240_reg_wr(AR7240_GPIO_CLEAR, (1 << 20));        //set output low to disable WATCH DOG
++        ar7240_reg_wr(AR7240_GPIO_SET, (1 << 18));          //set output high to turn off PWRNG
++        ar7240_reg_wr(AR7240_GPIO_CLEAR, (1 << 11));        //set output low to turn on PWROK
++        ar7240_reg_wr(AR7240_GPIO_CLEAR, (1 << 4));         //set output low to turn off USB
++    }
++    else if ( (ar7240_reg_rd(WASP_BOOTSTRAP_REG) & WP833_HW_VER_MASK) == 0x00400000 )
++    {
++    }
++    else if ( (ar7240_reg_rd(WASP_BOOTSTRAP_REG) & WP833_HW_VER_MASK) == 0x00500000 )
++    {
++    }
++//liteon add-
+ #endif
+ 	return 0;
+ }
+Index: u-boot-2006-04-06-1725/board/atheros/board955x/board955x.c
+===================================================================
+--- u-boot-2006-04-06-1725.orig/board/atheros/board955x/board955x.c	2013-12-14 10:23:09.526955126 +0800
++++ u-boot-2006-04-06-1725/board/atheros/board955x/board955x.c	2013-12-14 10:23:09.747048581 +0800
+@@ -161,5 +161,9 @@
+ int	checkboard(args)
+ {
+ 	board_str(CONFIG_BOARD_NAME);
++//liteon add+
++    ath_reg_rmw_clear(GPIO_OE_ADDRESS, (1 << 20));  //setgpio20 as output,WATCH DOG_EN
++    ath_reg_wr(0x18040010, (1 << 20));              //set output low to disable WATCH DOG
++//liteon add-
+ 	return 0;
+ }

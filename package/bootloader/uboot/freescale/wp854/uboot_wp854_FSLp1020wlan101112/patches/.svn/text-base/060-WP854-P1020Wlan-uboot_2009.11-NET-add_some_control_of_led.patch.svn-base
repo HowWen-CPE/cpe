@@ -1,0 +1,302 @@
+--- u-boot-freescale-p1020-sku/drivers/net/tsec.c	2012-07-11 19:41:34.459275501 -0700
++++ u-boot-liteon-wp854-openwrt/drivers/net/tsec.c	2011-11-08 23:26:37.678802000 -0800
+@@ -157,7 +157,7 @@
+ 
+ 	/* Reset the MAC */
+ 	priv->regs->maccfg1 |= MACCFG1_SOFT_RESET;
+-	udelay(2);  /* Soft Reset must be asserted for 3 TX clocks */
++	udelay(4);  /* Soft Reset must be asserted for 3 TX clocks */
+ 	priv->regs->maccfg1 &= ~(MACCFG1_SOFT_RESET);
+ 
+ #if defined(CONFIG_MII) || defined(CONFIG_CMD_MII) \
+@@ -306,6 +306,7 @@
+ 	struct phy_info *curphy;
+ 	volatile tsec_mdio_t *phyregs = priv->phyregs;
+ 	volatile tsec_t *regs = priv->regs;
++	uint phy_reg_aux,phy_reg_skew;
+ 
+ 	/* Assign a Physical address to the TBI */
+ 	regs->tbipa = CONFIG_SYS_TBIPA_VALUE;
+@@ -316,12 +317,13 @@
+ 	asm("sync");
+ 	priv->phyregs->miimcfg = MIIMCFG_INIT_VALUE;
+ 	asm("sync");
++	
+ 	while (priv->phyregs->miimind & MIIMIND_BUSY) ;
+ 
+ 	/* Get the cmd structure corresponding to the attached
+ 	 * PHY */
+ 	curphy = get_phy_info(dev);
+-
++	
+ 	if (curphy == NULL) {
+ 		priv->phyinfo = NULL;
+ 		printf("%s: No PHY found\n", dev->name);
+@@ -336,7 +338,59 @@
+ 
+ 	phy_run_commands(priv, priv->phyinfo->config);
+ 
++        
++	/*Read duplex speed for setting led color, added by sirian, 2011-05-17*/
++	if(priv->phyinfo)
++		phy_run_commands(priv, priv->phyinfo->startup);
++
++        if (curphy->id == 0x0143bd6 || curphy->id == 0x03625e6)
++        {
++	 	/*Added by sirian, 2011-05-16 for controling led status based on speed*/
++	 	switch(priv->phyaddr){
++	 		case 0:
++	 	        	{
++	 					if (priv->speed == 1000)
++	 					{
++	 					        write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb8ee);
++	 						write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb8e3);
++	 						write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xa410);
++	 						break;
++	 					}
++	 					else if (priv->speed == 100 || priv->speed == 10)
++	 					{
++	 					        write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb8ee);
++	 						write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb83e);
++	 						write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xa410);
++	 						break;
++	 					}
++	 						
++	 			}
++	 		case 1:
++	 	        	{
++	 					if (priv->speed == 1000)
++	 					{
++	 					        write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb4ee);
++	 						write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb4e3);
++	 						write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xa410);
++	 						break;
++	 					}
++	 					else if (priv->speed == 100 || priv->speed == 10)
++	 					{
++	 					        write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb4ee);
++	 						write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb43e);
++	 						write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xa410);
++	 						break;
++	 					}
++	 						
++	 			}
++	 		default:
++	 				printf("Undefined phy address\n");
++	 	}
++		
++        }
++	
+ 	return 1;
++	
+ }
+ 
+ /*
+@@ -356,6 +410,35 @@
+  */
+ uint mii_parse_sr(uint mii_reg, struct tsec_private * priv)
+ {
++
++/*Added by sirian, 2011-05-17, check whether or not working under test mode*/
++#ifdef BCM_ETHERNET_HW_TEST
++        uint phy_reg, phy_ID;
++        /* Grab the bits from PHYIR1, and put them in the upper half */
++	phy_reg = read_phy_reg(priv, MIIM_PHYIR1);
++	
++	phy_ID = (phy_reg & 0xffff) << 16;
++
++	/* Grab the bits from PHYIR2, and put them in the lower half */
++	phy_reg = read_phy_reg(priv, MIIM_PHYIR2);
++
++	
++	phy_ID |= (phy_reg & 0xffff);
++
++	 if ((phy_ID >> 4)  == 0x0143bd6 || (phy_ID >> 4) == 0x03625e6)
++	 {
++	 	mii_reg =  read_phy_reg(priv, MIIM_BCM54xx_AUXCNTL);
++		
++		if (!(mii_reg & 0x0400))
++		{
++	        	printf("Current mode is test mode\n");
++			priv->link = 1;
++		
++			return 0;
++		}
++	 }
++#endif
++
+ 	/*
+ 	 * Wait if the link is up, and autonegotiation is in progress
+ 	 * (ie - we're capable and it's not done)
+@@ -818,7 +901,8 @@
+ {
+ 	struct tsec_private *priv = (struct tsec_private *)dev->priv;
+ 	volatile tsec_t *regs = priv->regs;
+-
++	struct phy_info *curphy;
++		 
+ 	if (priv->link) {
+ 		if (priv->duplexity != 0)
+ 			regs->maccfg2 |= MACCFG2_FULL_DUPLEX;
+@@ -848,6 +932,54 @@
+ 			break;
+ 		}
+ 
++         
++	 curphy = get_phy_info(dev);
++
++	 if (curphy->id == 0x0143bd6 || curphy->id == 0x03625e6)
++	 {
++			/*Added by sirian, 2011-05-16 for controling led status based on speed*/
++		switch(priv->phyaddr){
++			case 0:
++		        	{
++						if (priv->speed == 1000)
++						{
++							write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb8ee);
++							write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb8e3);
++							write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xa410);
++							break;
++						}
++						else if (priv->speed == 100 || priv->speed == 10)
++						{
++							write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb8ee);
++							write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb83e);
++							write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xa410);
++							break;
++						}
++							
++				}
++			case 1:
++		        	{
++						if (priv->speed == 1000)
++						{
++							write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb4ee);
++							write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb4e3);
++							write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xa410);
++							break;
++						}
++						else if (priv->speed == 100 || priv->speed == 10)
++						{
++							write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb4ee);
++							write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xb43e);
++							write_phy_reg(priv, MIIM_BCM54xx_SKEW_CTRL, 0xa410);
++							break;
++						}
++							
++				}
++			default:
++					printf("Undefined phy address\n");
++		}
++	}
++	
+ 		printf("Speed: %d, %s duplex\n", priv->speed,
+ 		       (priv->duplexity) ? "full" : "half");
+ 
+@@ -1086,6 +1218,69 @@
+ 	},
+ };
+ 
++
++/* Added by sirian, 2011-04-18, for BCM 54610 */
++struct phy_info phy_info_BCM54610 = {
++	0x0143bd6,	/* 54610 ID */
++	"Broadcom BCM54610",
++	4, /* not clear to me what minor revisions we can shift away */
++	(struct phy_cmd[]) { /* config */
++		/* Reset and configure the PHY */
++		{MIIM_CONTROL, MIIM_CONTROL_RESET, NULL},
++		{MIIM_GBIT_CONTROL, MIIM_GBIT_CONTROL_INIT, NULL},
++		{MIIM_ANAR, MIIM_ANAR_INIT, NULL},
++		{MIIM_CONTROL, MIIM_CONTROL_RESET, NULL},
++		/*modified by sirian, 2011-07-15, disable super isolate*/
++		{MIIM_BCM54xx_AUXCNTL, 0x01c2, NULL},
++		{MIIM_CONTROL, MIIM_CONTROL_INIT, &mii_cr_init},
++		{miim_end,}
++	},
++	(struct phy_cmd[]) { /* startup */
++		/* Status is read once to clear old link state */
++		{MIIM_STATUS, miim_read, NULL},
++		/* Auto-negotiate */
++		{MIIM_STATUS, miim_read, &mii_parse_sr},
++		/* Read the status */
++		{MIIM_BCM54xx_AUXSTATUS, miim_read, &mii_parse_BCM54xx_sr},
++		{miim_end,}
++	},
++	(struct phy_cmd[]) { /* shutdown */
++		{miim_end,}
++	},
++};
++
++
++/* Added by sirian, 2011-03-31, for BCM 54612E-DS102-RDS */
++struct phy_info phy_info_BCM54612E = {
++	0x03625e6,	/* 54612E ID */
++	"Broadcom BCM54612E",
++	4, /* not clear to me what minor revisions we can shift away */
++	(struct phy_cmd[]) { /* config */
++		/* Reset and configure the PHY */
++		{MIIM_CONTROL, MIIM_CONTROL_RESET, NULL},
++		{MIIM_GBIT_CONTROL, MIIM_GBIT_CONTROL_INIT, NULL},
++		{MIIM_ANAR, MIIM_ANAR_INIT, NULL},
++		{MIIM_CONTROL, MIIM_CONTROL_RESET, NULL},
++		/*modified by sirian, 2011-07-15, disable super isolate*/
++		{MIIM_BCM54xx_AUXCNTL, 0x01c2, NULL},
++		{MIIM_CONTROL, MIIM_CONTROL_INIT, &mii_cr_init},
++		{miim_end,}
++	},
++	(struct phy_cmd[]) { /* startup */
++		/* Status is read once to clear old link state */
++		{MIIM_STATUS, miim_read, NULL},
++		/* Auto-negotiate */
++		{MIIM_STATUS, miim_read, &mii_parse_sr},
++		/* Read the status */
++		{MIIM_BCM54xx_AUXSTATUS, miim_read, &mii_parse_BCM54xx_sr},
++		{miim_end,}
++	},
++	(struct phy_cmd[]) { /* shutdown */
++		{miim_end,}
++	},
++};
++
++
+ struct phy_info phy_info_BCM5482S =  {
+ 	0x0143bcb,
+ 	"Broadcom BCM5482S",
+@@ -1703,6 +1898,8 @@
+ 	&phy_info_cis8201,
+ 	&phy_info_BCM5461S,
+ 	&phy_info_BCM5464S,
++	&phy_info_BCM54610,
++	&phy_info_BCM54612E,
+ 	&phy_info_BCM5482S,
+ 	&phy_info_M88E1011S,
+ 	&phy_info_M88E1111S,
+@@ -1736,12 +1933,17 @@
+ 
+ 	/* Grab the bits from PHYIR1, and put them in the upper half */
+ 	phy_reg = read_phy_reg(priv, MIIM_PHYIR1);
++	
+ 	phy_ID = (phy_reg & 0xffff) << 16;
+ 
+ 	/* Grab the bits from PHYIR2, and put them in the lower half */
+ 	phy_reg = read_phy_reg(priv, MIIM_PHYIR2);
++	
+ 	phy_ID |= (phy_reg & 0xffff);
+ 
++       
++	
++
+ 	/* loop through all the known PHY types, and find one that */
+ 	/* matches the ID we read from the PHY. */
+ 	for (i = 0; phy_info[i]; i++) {
+@@ -1758,6 +1960,9 @@
+ 	}
+ 
+ 	return theInfo;
++
++       
++	
+ }
+ 
+ /* Execute the given series of commands on the given device's

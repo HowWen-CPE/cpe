@@ -1,0 +1,14 @@
+--- a/iwlib.c
++++ b/iwlib.c
+@@ -716,7 +716,10 @@ iw_get_basic_config(int			skfd,
+ 
+   /* Get ESSID */
+   wrq.u.essid.pointer = (caddr_t) info->essid;
+-  wrq.u.essid.length = IW_ESSID_MAX_SIZE + 1;
++  /*Modify for iwconfig can display 32ch ssid on wp838, Daniel@Liteon, 2013-11-29----->*/
++  //wrq.u.essid.length = IW_ESSID_MAX_SIZE + 1;  
++  wrq.u.essid.length = IW_ESSID_MAX_SIZE;
++  /*<-----Daniel@Liteon,2013-11-29*/
+   wrq.u.essid.flags = 0;
+   if(iw_get_ext(skfd, ifname, SIOCGIWESSID, &wrq) >= 0)
+     {

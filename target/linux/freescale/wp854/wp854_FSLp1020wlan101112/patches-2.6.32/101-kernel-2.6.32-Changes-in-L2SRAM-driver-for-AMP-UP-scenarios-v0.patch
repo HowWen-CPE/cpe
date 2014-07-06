@@ -1,0 +1,143 @@
+From 74445139b4f3f6a070ee2c7b34c50e1cc8ff2256 Mon Sep 17 00:00:00 2001
+From: Harninder Rai <harninder.rai@freescale.com>
+Date: Tue, 9 Feb 2010 17:38:50 +0530
+Subject: [PATCH] Changes in L2SRAM driver for AMP/UP scenarios
+
+L2SRAM is still a single window but partitioned into two
+for core0 and core1
+
+Signed-off-by: Harninder Rai <harninder.rai@freescale.com>
+---
+ arch/powerpc/sysdev/fsl_85xx_cache_ctlr.h |    9 ++++++++-
+ arch/powerpc/sysdev/fsl_85xx_cache_sram.c |   14 ++++++++++++--
+ arch/powerpc/sysdev/fsl_85xx_l2ctlr.c     |   26 ++++++++++++++++++++------
+ 3 files changed, 40 insertions(+), 9 deletions(-)
+
+diff --git a/arch/powerpc/sysdev/fsl_85xx_cache_ctlr.h b/arch/powerpc/sysdev/fsl_85xx_cache_ctlr.h
+index 8c4a4ac..9160cc5 100644
+--- a/arch/powerpc/sysdev/fsl_85xx_cache_ctlr.h
++++ b/arch/powerpc/sysdev/fsl_85xx_cache_ctlr.h
+@@ -47,6 +47,12 @@ enum cache_sram_lock_ways {
+ 	LOCK_WAYS_FULL = 8,
+ };
+ 
++enum config_mode{
++	SMP,
++	AMP,
++	UP
++};
++
+ struct mpc85xx_l2ctlr {
+ 	u32	ctl;		/* 0x000 - L2 control */
+ 	u8	res1[0xC];
+@@ -89,7 +95,8 @@ struct mpc85xx_l2ctlr {
+ 	u8	res9[0x1A4];
+ };
+ 
+-extern int instantiate_cache_sram(struct of_device *dev, unsigned int size);
++extern int instantiate_cache_sram(struct of_device *dev, unsigned int size,
++			enum config_mode mode);
+ extern void remove_cache_sram(struct of_device *dev);
+ 
+ #endif /* __FSL_85XX_CACHE_CTLR_H__ */
+diff --git a/arch/powerpc/sysdev/fsl_85xx_cache_sram.c b/arch/powerpc/sysdev/fsl_85xx_cache_sram.c
+index 6744083..f9a3e1e 100644
+--- a/arch/powerpc/sysdev/fsl_85xx_cache_sram.c
++++ b/arch/powerpc/sysdev/fsl_85xx_cache_sram.c
+@@ -28,6 +28,8 @@
+ #include <asm/pgtable.h>
+ #include <asm/fsl_85xx_cache_sram.h>
+ 
++#include "fsl_85xx_cache_ctlr.h"
++
+ struct mpc85xx_cache_sram *cache_sram;
+ 
+ void *mpc85xx_cache_sram_alloc(unsigned int size,
+@@ -72,7 +74,8 @@ void mpc85xx_cache_sram_free(void *ptr)
+ }
+ EXPORT_SYMBOL(mpc85xx_cache_sram_free);
+ 
+-int __init instantiate_cache_sram(struct of_device *dev, unsigned int size)
++int __init instantiate_cache_sram(struct of_device *dev, unsigned int size,
++			enum config_mode mode)
+ {
+ 	if (cache_sram) {
+ 		dev_err(&dev->dev, "Already initialized cache-sram\n");
+@@ -85,8 +88,15 @@ int __init instantiate_cache_sram(struct of_device *dev, unsigned int size)
+ 		return -ENOMEM;
+ 	}
+ 
+-	cache_sram->base_phys = CONFIG_FSL_85XX_CACHE_SRAM_BASE;
+ 	cache_sram->size = size;
++	cache_sram->base_phys = CONFIG_FSL_85XX_CACHE_SRAM_BASE;
++
++	if (AMP == mode) {
++		cache_sram->size = size/2;
++		if (mfspr(SPRN_PIR))
++			cache_sram->base_phys = CONFIG_FSL_85XX_CACHE_SRAM_BASE +
++				cache_sram->size;
++	}
+ 
+ 	if (!request_mem_region(cache_sram->base_phys, cache_sram->size,
+ 						"fsl_85xx_cache_sram")) {
+diff --git a/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c b/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c
+index 84087c4..fd61796 100644
+--- a/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c
++++ b/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c
+@@ -23,6 +23,7 @@
+ #include <linux/kernel.h>
+ #include <linux/of_platform.h>
+ #include <asm/io.h>
++#include <asm/reg_booke.h>
+ 
+ #include "fsl_85xx_cache_ctlr.h"
+ 
+@@ -38,7 +39,6 @@ static long get_cache_sram_size(void)
+ 
+ 	return val;
+ }
+-
+ static int __init get_cmdline_param(char *str)
+ {
+ 	if (!str)
+@@ -59,6 +59,7 @@ static int __devinit mpc85xx_l2ctlr_of_probe(struct of_device *dev,
+ 	const unsigned int *prop;
+ 	unsigned int l2cache_size;
+ 	unsigned int sram_size;
++	struct device_node *np = NULL;
+ 
+ 	if (!dev->node) {
+ 		dev_err(&dev->dev, "Device's OF-node is NULL\n");
+@@ -132,11 +133,24 @@ static int __devinit mpc85xx_l2ctlr_of_probe(struct of_device *dev,
+ 	}
+ 	eieio();
+ 
+-	rval = instantiate_cache_sram(dev, sram_size);
+-	if (rval < 0) {
+-		dev_err(&dev->dev, "Can't instantiate Cache-SRAM\n");
+-		iounmap(l2ctlr);
+-		return -EINVAL;
++	np = of_find_compatible_node(NULL, NULL, "fsl,MPC85XXRDB-CAMP");
++	if (np) {
++		rval = instantiate_cache_sram(dev, sram_size, AMP);
++		if (rval < 0) {
++			dev_err(&dev->dev, "Can't instantiate"
++					"Cache-SRAM\n");
++			iounmap(l2ctlr);
++			return -EINVAL;
++		}
++
++	} else {
++		rval = instantiate_cache_sram(dev, sram_size, SMP);
++		if (rval < 0) {
++			dev_err(&dev->dev, "Can't instantiate"
++					"Cache-SRAM\n");
++			iounmap(l2ctlr);
++			return -EINVAL;
++		}
+ 	}
+ 
+ 	return 0;
+-- 
+1.5.6.3
+

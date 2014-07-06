@@ -1,0 +1,100 @@
+#!/bin/sh /etc/rc.common
+
+START=20
+boot () {
+#prepare ethernet IO 
+    mknod /dev/rdm0 c 253 0
+    reg s 0xb0110000
+
+# get based mac address from boarddata
+    macaddr=$(boarddata get mac)
+    mac1=${macaddr:0:2}
+    mac2=${macaddr:3:2}
+    mac3=${macaddr:6:2}
+    mac4=${macaddr:9:2}
+    mac5=${macaddr:12:2}
+    mac6=${macaddr:15:2}
+
+    echo "Based MAC Address: ${mac1}:${mac2}:${mac3}:${mac4}:${mac5}:${mac6}"
+
+# get original wifi mac address from calidata
+   o_mac1=`flash -r 0x7f0004 -c 1 |awk -F ':' '{print $2}'`
+   if [ "${o_mac1:2:1}" = "" ];then
+        o_mac1=0${o_mac1:1:1}
+   else
+        o_mac1=${o_mac1:1:2}
+   fi
+   o_mac2=`flash -r 0x7f0005 -c 1 |awk -F ':' '{print $2}'`
+   if [ "${o_mac2:2:1}" = "" ];then
+        o_mac2=0${o_mac2:1:1}
+   else
+        o_mac2=${o_mac2:1:2}
+   fi
+   o_mac3=`flash -r 0x7f0006 -c 1 |awk -F ':' '{print $2}'`
+   if [ "${o_mac3:2:1}" = "" ];then
+        o_mac3=0${o_mac3:1:1}
+   else
+        o_mac3=${o_mac3:1:2}
+   fi
+   o_mac4=`flash -r 0x7f0007 -c 1 |awk -F ':' '{print $2}'`
+   if [ "${o_mac4:2:1}" = "" ];then
+        o_mac4=0${o_mac4:1:1}
+   else
+        o_mac4=${o_mac4:1:2}
+   fi
+   o_mac5=`flash -r 0x7f0008 -c 1 |awk -F ':' '{print $2}'`
+   if [ "${o_mac5:2:1}" = "" ];then
+        o_mac5=0${o_mac5:1:1}
+   else
+        o_mac5=${o_mac5:1:2}
+
+   fi
+   o_mac6=`flash -r 0x7f0009 -c 1 |awk -F ':' '{print $2}'`
+   if [ "${o_mac6:2:1}" = "" ];then
+        o_mac6=0${o_mac6:1:1}
+   else
+        o_mac6=${o_mac6:1:2}
+   fi
+
+   echo "WiFi MAC Address: ${o_mac1}:${o_mac2}:${o_mac3}:${o_mac4}:${o_mac5}:${o_mac6}"
+
+
+#judge wifi mac same with boarddata
+   if [ "$o_mac1" != "$mac1" -o "$o_mac2" != "$mac2" -o "$o_mac3" != "$mac3" -o "$o_mac4" != "$mac4" -o "$o_mac5" != "$mac5" -o "$o_mac6" != "$mac6" ];then
+   	   flash -w 0x7f0004 -o $mac1
+   	   flash -w 0x7f0005 -o $mac2
+   	   flash -w 0x7f0006 -o $mac3
+   	   flash -w 0x7f0007 -o $mac4
+   	   flash -w 0x7f0008 -o $mac5
+   	   flash -w 0x7f0009 -o $mac6
+   	   sync
+   	   sleep 1
+   fi
+
+# start WiFi
+#    wlan_init
+    #/etc/wl/wlan-boot
+    /etc/wl/wlan-init create
+    sleep 5
+#    sleep 1
+#    ifconfig rai0 up
+#    sleep 5
+
+# set Ethernet MAC same as WiFi dev MAC
+    wifidev="rai0"
+#    ip link set dev $wifidev up
+    hwaddrstr=$(iwpriv $wifidev e2p 04 | awk -F: '{print $2}' | sed -n 's/0x//gp')
+    hwaddr0=${hwaddrstr:2:2}
+    hwaddr1=${hwaddrstr:0:2}
+    hwaddrstr=$(iwpriv $wifidev e2p 06 | awk -F: '{print $2}' | sed -n 's/0x//gp')
+    hwaddr2=${hwaddrstr:2:2}
+    hwaddr3=${hwaddrstr:0:2}
+    hwaddrstr=$(iwpriv $wifidev e2p 08 | awk -F: '{print $2}' | sed -n 's/0x//gp')
+    hwaddr4=${hwaddrstr:2:2}
+    hwaddr51=${hwaddrstr:0:1}
+    hwaddr52=${hwaddrstr:1:1}
+#hwaddr52="$(base16op inc $hwaddr52)"
+    hwaddr="$hwaddr0:$hwaddr1:$hwaddr2:$hwaddr3:$hwaddr4:${hwaddr51}${hwaddr52}"
+    ethdev=$(nvram show lan_wan_mode_rule 0 wan_ifnames)
+    ${hwaddr:+$DEBUG ip link set dev $ethdev address $hwaddr}
+}

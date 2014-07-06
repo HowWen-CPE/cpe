@@ -1,0 +1,142 @@
+#!/bin/sh
+# ifup.l2tp $iface $type $num $ifname
+. /etc/network.sh
+
+####################### VPN Client Start ####################################
+# ifup.l2tp $iface $type $num $ifname
+#############################################################################
+
+static_link_up()
+{
+    localipaddr="$(nvram show wan_l2tpc_rule $3 ipaddr)"
+    localgateway="$(nvram show wan_l2tpc_rule $3 gateway)"
+    localnetmask="$(nvram show wan_l2tpc_rule $3 netmask)"
+    PREFIX="$(ipcalc $localipaddr $localnetmask | grep 'PREFIX' | sed 's/PREFIX=//g')"
+    $DEBUG ip addr flush dev $4
+    $DEBUG ip addr add $localipaddr/$PREFIX broadcast + dev $4
+    $DEBUG ip link set dev $4 up
+    iface_up "$1" "$localipaddr" "$localnetmask" "$localgateway" "$localgateway"
+}
+
+dhcp_link_up()
+{
+    pidfile=/var/run/dhcpcd-$1.pid                                                    
+    [ -f $pidfile ] && $DEBUG kill -9 $(cat $pidfile) && rm -fr $pidfile              
+    vendor_class=$(nvram get brand)                                                   
+    dhcp_hostname=$(nvram get hostname)                                         
+    dhcp_args="-Y -N -R $4 "                                                 
+    [ -z $vendor_class ] || dhcp_args="$dhcp_args -i $vendor_class"             
+    [ -z $dhcp_hostname ] || dhcp_args="$dhcp_args -h $dhcp_hostname"           
+    [ -r $pidfile ] && oldpid=$(cat $pidfile 2>&-)                      
+    [ -n "$oldpid" ] && pidof dhcpcd | grep "$oldpid" >&- 2>&- && {     
+    sleep 1                                                         
+    kill -9 $oldpid                                                 
+    }                                                                   
+    mkdir -p /var/lib/dhcpcd                                            
+    rm -fr $pidfile                                                     
+    dhcpcdstart $dhcp_args &
+}
+
+l2tp_up()
+{
+    proto_orig="$(nvram show wan0_proto 0 curr)"
+    # delete intermediate routing rule
+    iface_del_route \
+       "$3" "$(nvram get ${1}_ipaddr)" "$(nvram get ${1}_netmask)" \
+       "$(nvram get ${1}_gateway)" "$(nvram get ${1}_ifname)" "$2"
+    nvram set ${1}_proto=$proto_orig^$proto_orig
+    #nvram replace attr ${1}_proto 0 curr l2tp
+    wan_num="$(nvram get wan_num)"
+    unitid="$(($wan_num + $3))"
+    nvram set ${1}_ifname="ppp$unitid"
+    username="$(nvram show wan_l2tpc_rule $3 username)"
+    password="$(nvram show wan_l2tpc_rule $3 passwd)"
+    host="$(nvram show wan_l2tpc_rule $3 serverip)"
+    # Reserve ip/mask/gateway information
+    nvram replace attr wan_l2tpc_rule $3 ipaddr $(nvram get ${1}_ipaddr)
+    nvram replace attr wan_l2tpc_rule $3 netmask $(nvram get ${1}_mask)
+    nvram replace attr wan_l2tpc_rule $3 gateway $(nvram get ${1}_gateway)
+    #construct /etc/ppp/chap-secrets
+    passline="${username} L2TP ${password} \*"
+    if [ -f "/tmp/chap-secrets" ]; then
+        retline=$(cat /etc/ppp/chap-secrets | grep "$passline")
+        [ -z "${retline}" ] && {
+            echo "$passline" >> /etc/ppp/chap-secrets
+            echo "$passline" >> /etc/ppp/pap-secrets
+        }
+    else
+        cat /etc/ppp/chap-secrets.template >> /tmp/chap-secrets
+        echo "$passline" >> /tmp/chap-secrets
+        cp /tmp/chap-secrets /tmp/pap-secrets
+    fi
+    if [ "$(nvram show wan_l2tpc_rule $3 pppiptype)" = "custom" -a \
+         -n "$(nvram show wan_l2tpc_rule $3 custom_ipaddr)" ]; then
+        LOCAL_IPADDR_OPT="$(nvram show wan_l2tpc_rule $3 custom_ipaddr):"
+    else
+        LOCAL_IPADDR_OPT="ipcp-accept-local"
+    fi
+
+    if [ "$(nvram show wan_l2tpc_rule $3 nailup)" = "1" -o \
+         -z "$(nvram show wan_l2tpc_rule $3 timeout)" ]; then
+        L2TP_PERSIST_DEMAND="persist"
+    else
+        L2TP_PERSIST_DEMAND="demand idle $(nvram show wan_l2tpc_rule $3 timeout)"
+    fi
+
+    #construct /etc/xl2tpd_client.conf and pppd options
+    cat /etc/xl2tpd/l2tpClient/xl2tpd_client.conf_template | sed "s/L2TP_HOST/${host}/g" >\
+       /tmp/xl2tpd_client.conf
+
+    optfile=/tmp/options.xl2tpd_client
+    username=${username//\\/\\\\}
+    password=${password//\\/\\\\}
+    username=${username//\"/\\\"}
+    password=${password//\"/\\\"}
+   cat /etc/ppp/l2tpClient/options.xl2tpd_client_template | \
+      sed "s/L2TP_PERSIST_DEMAND/${L2TP_PERSIST_DEMAND}/g" | sed "s/IFACE/$1/g" |\
+      sed "s/L2TP_UNITID/$unitid/g" | sed "s/L2TP_LOCAL_IPADDR/$LOCAL_IPADDR_OPT/g" > \
+      /tmp/options.xl2tpd_client
+   
+    echo "${username:+name \"$username\"}" >> "${optfile}"
+    echo "${password:+password \"$password\"}" >> "${optfile}"
+    
+    myPath="/var/run/xl2tpd/"
+    [ ! -d "$myPath" ] && mkdir "$myPath"
+    xl2tpd -c /tmp/xl2tpd_client.conf -p /var/run/xl2tpd/xl2tpd_client.pid
+    sleep 1
+    xl2tpd-control connect l2tp_conn
+}
+
+l2tp_down()
+{
+	killall pppd
+	# This triggers ip-down which unset NVRAM and generates an ifdown event.
+	[ -r /var/run/xl2tpd/xl2tpd_client.pid ] && {
+		IFACE_PID=$(cat /var/run/xl2tpd/xl2tpd_client.pid 2>&-)
+		if_serialize_lock "$LOCKFILE" "$IFACE_PID"
+		kill -9 $IFACE_PID && kill -9 `pidof pppd`
+	}
+	nvram replace attr wan_pptp_l2tp_rule 0 ipaddr "0.0.0.0" 
+	nvram replace attr wan_pptp_l2tp_rule 0 netmask "0.0.0.0"
+	nvram replace attr wan_pptp_l2tp_rule 0 gateway "0.0.0.0" 
+}
+
+[ -z "$5" ] && {
+    localiptype="$(nvram show wan_l2tpc_rule $3 iptype)"
+    ifnamebak="$(nvram get ${1}_ifname)"
+    proto_orig="$(nvram get ${1}_proto)"
+
+    [ "${localiptype}" = "static" ] && {
+	    nvram set ${1}_ifname=$4
+	    static_link_up $1 $2 $3 $4 $5
+	    l2tp_up $1 $2 $3 $4 $5
+    }
+
+    [ "${localiptype}" = "dhcp" ] && {
+	    nvram set ${1}_ifname=$4
+	    dhcp_link_up $1 $2 $3 $4 $5
+    }
+}
+
+[ "$5" = "down" ] && l2tp_down $1 $2
+[ "$5" = "up" ] && l2tp_up $1 $2 $3 $4

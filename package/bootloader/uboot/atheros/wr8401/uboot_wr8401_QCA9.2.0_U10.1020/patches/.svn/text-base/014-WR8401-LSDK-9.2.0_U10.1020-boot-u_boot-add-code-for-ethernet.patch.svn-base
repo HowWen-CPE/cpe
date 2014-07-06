@@ -1,0 +1,16 @@
+--- boot_atheros/u-boot/cpu/mips/ar7240/ag934x_phy.h	2013-04-03 13:42:49.000000000 +0800
++++ boot_liteon/u-boot/cpu/mips/ar7240/ag934x_phy.h	2013-03-29 17:58:51.000000000 +0800
+@@ -86,6 +86,13 @@
+     }
+ }
+ 
++
++/*Added by sirian, 2011-05-08, for getting speed ,duplex and link*/
++static inline void ag7240_phy_speed_duplex_link(int unit, int *speed, int *duplex, int * link)
++{
++	athr_phy_get_speed_duplex_link(unit,speed, duplex, link);
++}
++
+ static inline void ag7240_phy_speed(int unit, int *speed)
+ {
+ #ifdef CONFIG_AR7242_S16_PHY

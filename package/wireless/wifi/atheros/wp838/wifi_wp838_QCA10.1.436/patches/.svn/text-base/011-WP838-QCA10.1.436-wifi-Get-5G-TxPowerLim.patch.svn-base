@@ -1,0 +1,55 @@
+Index: wifi_QCA_10.1.436/perf_pwr_offload/drivers/host/include/ol_params.h
+===================================================================
+--- wifi_QCA_10.1.436.orig/perf_pwr_offload/drivers/host/include/ol_params.h	2013-08-27 07:08:10.000000000 +0800
++++ wifi_QCA_10.1.436/perf_pwr_offload/drivers/host/include/ol_params.h	2014-01-14 17:05:01.250800659 +0800
+@@ -33,6 +33,13 @@
+     OL_ATH_PARAM_AMPDU_SUBFRAMES           = 8,
+     OL_ATH_PARAM_TXPOWER_LIMIT2G           = 12,
+     OL_ATH_PARAM_TXPOWER_LIMIT5G           = 13,
++
++    /*add for get 5g max txpower function, daniel@liteon,2014-01-12----->*/
++
++    OL_ATH_PARAM_TXPOWER_MAX5G           = 14,
++
++    /*<-----daniel@liteon,2014-01-12*/
++
+     OL_ATH_PARAM_LDPC                      = 32,
+     OL_ATH_PARAM_VOW_EXT_STATS             = 45,
+     OL_ATH_PARAM_DYN_TX_CHAINMASK          = 73,
+Index: wifi_QCA_10.1.436/perf_pwr_offload/drivers/host/os/linux/ol_ath_iw_handler.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/perf_pwr_offload/drivers/host/os/linux/ol_ath_iw_handler.c	2013-08-27 07:08:11.000000000 +0800
++++ wifi_QCA_10.1.436/perf_pwr_offload/drivers/host/os/linux/ol_ath_iw_handler.c	2014-01-14 17:05:26.034355787 +0800
+@@ -225,6 +225,13 @@
+     { OL_ATH_PARAM_TXPOWER_LIMIT5G | OL_ATH_PARAM_SHIFT,
+         0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1,       "getTxPowLim5G" },
+ 
++     /*add for get 5g max txpower function, daniel@liteon,2014-01-12----->*/
++
++    { OL_ATH_PARAM_TXPOWER_MAX5G | OL_ATH_PARAM_SHIFT,
++        0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1,       "getTxMaxPower5G" },
++
++     /*<-----daniel@liteon,2014-01-12*/
++
+     { OL_ATH_PARAM_TXPOWER_SCALE | ATH_PARAM_SHIFT,
+         IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0,       "tpscale" },
+ 
+Index: wifi_QCA_10.1.436/perf_pwr_offload/drivers/host/wlan/lmac_offload_if/ol_if_ath_config.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/perf_pwr_offload/drivers/host/wlan/lmac_offload_if/ol_if_ath_config.c	2013-08-27 07:08:14.000000000 +0800
++++ wifi_QCA_10.1.436/perf_pwr_offload/drivers/host/wlan/lmac_offload_if/ol_if_ath_config.c	2014-01-14 17:08:47.029550926 +0800
+@@ -696,6 +696,14 @@
+             *(int *)buff = scn->txpowlimit5G;
+         break;
+ 
++        /*add for get 5g max txpower function, daniel@liteon,2014-01-12----->*/
++
++	 case OL_ATH_PARAM_TXPOWER_MAX5G:
++		*(int *)buff = (u_int32_t )ic->ic_curchanmaxpwr;
++        break;
++
++       /*<-----daniel@liteon,2014-01-12*/
++
+         case OL_ATH_PARAM_TXPOWER_SCALE:
+             *(int *)buff = scn->txpower_scale;
+         break;

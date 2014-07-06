@@ -1,0 +1,15 @@
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/BuildCaps.inc
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/os/linux/BuildCaps.inc	2014-01-26 14:28:32.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/BuildCaps.inc	2014-01-26 14:29:20.000000000 +0800
+@@ -2,6 +2,10 @@
+ # defaults
+ #
+ 
++ifneq ($(strip ${LITEON_SRC_VALID}),)
++COPTS+= -DLITEON_SRC_VALID
++endif
++
+ ifndef ENCAP_OFFLOAD
+ export ENCAP_OFFLOAD=0
+ endif

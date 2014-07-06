@@ -1,0 +1,395 @@
+Index: linux-2.6.31/drivers/net/ethernet/athrs_mac_timer.c
+===================================================================
+--- linux-2.6.31.orig/drivers/net/ethernet/athrs_mac_timer.c	2013-11-29 16:36:30.106734988 +0800
++++ linux-2.6.31/drivers/net/ethernet/athrs_mac_timer.c	2013-12-13 14:06:09.315067992 +0800
+@@ -95,11 +95,14 @@
+ 
+     assert(mac->mac_ifup);
+     if (mac->mac_unit == 0)
+-        phyUnit = 4;
++//liteon modify+
++        //phyUnit = 4;
++        phyUnit = 0;
++//liteon modify-
+ 
+     rc = athr_gmac_get_link_st(mac, &phy_up, &fdx, &speed, phyUnit);
+ 
+- #if HYBRID_LINK_CHANGE_EVENT
++#if HYBRID_LINK_CHANGE_EVENT
+     for(i=0; i<HYBRID_MAX_VLAN; i++){
+         if(athr_hybrid_lce[i].vlanid == 0)
+             continue;
+Index: linux-2.6.31/drivers/net/ethernet/athrs_phy_ctrl.c
+===================================================================
+--- linux-2.6.31.orig/drivers/net/ethernet/athrs_phy_ctrl.c	2013-11-29 16:36:30.109789332 +0800
++++ linux-2.6.31/drivers/net/ethernet/athrs_phy_ctrl.c	2013-12-13 14:06:09.315067992 +0800
+@@ -174,14 +174,21 @@
+         return -EINVAL;
+     }
+     
++//liteon add+
++    if ( !(is_f1e() && (mac->mac_unit == 0)) )
++//liteon add-
+     if (!(phy->read_mac_reg || phy->write_mac_reg))
+         return -EINVAL;
+ 
+     if (!(phy->read_phy_reg || phy->write_phy_reg))
+         return -EINVAL;
+ 
++//liteon remove+
++#if 0
+     if (!(phy->read_mac_reg || phy->write_mac_reg))
+         return -EINVAL;
++#endif
++//liteon remove-
+ 
+     if (cmd != ATHR_PHY_CTRL_IOC)
+         return -EINVAL;
+Index: linux-2.6.31/drivers/net/ethernet/include/athrs_mac_def.h
+===================================================================
+--- linux-2.6.31.orig/drivers/net/ethernet/include/athrs_mac_def.h	2013-11-29 16:36:24.234268397 +0800
++++ linux-2.6.31/drivers/net/ethernet/include/athrs_mac_def.h	2013-12-13 14:06:09.319442243 +0800
+@@ -408,8 +408,12 @@
+         athr_gmac_check_link(mac, 0);
+ #else
+ #define athr_swap_phy() /* do nothing */
++//liteon modify+
++//#define athr_gmac_force_check_link()					\
++        //athr_gmac_check_link(mac, 4);
+ #define athr_gmac_force_check_link()					\
+-        athr_gmac_check_link(mac, 4);
++        athr_gmac_check_link(mac, 0);
++//liteon modify-
+ #endif
+ 
+ #ifdef CONFIG_ATHRS_QOS
+Index: linux-2.6.31/drivers/net/ethernet/phys/athrs17_phy.c
+===================================================================
+--- linux-2.6.31.orig/drivers/net/ethernet/phys/athrs17_phy.c	2013-11-29 16:36:23.788745677 +0800
++++ linux-2.6.31/drivers/net/ethernet/phys/athrs17_phy.c	2013-12-13 15:39:43.848021194 +0800
+@@ -356,13 +356,13 @@
+      S17_PHY0_ADDR,
+      S17_LAN_PORT_VLAN
+     },
+-
++//liteon+
+     {TRUE,   /* phy port 1 -- MAC port 2 0x300 */
+      FALSE,
+-     ENET_UNIT,
++     ENET_UNIT_WAN,
+      0,
+      S17_PHY1_ADDR,
+-     S17_LAN_PORT_VLAN
++     S17_WAN_PORT_VLAN
+     },
+ 
+     {TRUE,   /* phy port 2 -- MAC port 3 0x400 */
+@@ -372,7 +372,7 @@
+      S17_PHY2_ADDR, 
+      S17_LAN_PORT_VLAN
+     },
+-
++//liteon-
+     {TRUE,   /* phy port 3 -- MAC port 4 0x500 */
+      FALSE,
+      ENET_UNIT,
+@@ -604,8 +604,8 @@
+ #else 
+ void athrs17_vlan_config(void)
+ {
+-
+-    
++//liteon+
++#if 0    
+     athrs17_reg_write(S17_P0LOOKUP_CTRL_REG, 0x0014001e);
+     athrs17_reg_write(S17_P0VLAN_CTRL0_REG, 0x10001);
+ 
+@@ -626,7 +626,36 @@
+ 
+     athrs17_reg_write(S17_P6LOOKUP_CTRL_REG, 0x00140020);
+     athrs17_reg_write(S17_P6VLAN_CTRL0_REG, 0x20001);
+-    
++#else
++    //Port0,Port3->VID1 as WAN; Port2,Port6->VID2 as LAN
++    //Step1--Set 802.1Q check mode
++    athrs17_reg_write(0x660, 0x0014027e); //PORT0_LOOKUP_CTRL; check mode
++    athrs17_reg_write(0x678, 0x0014027b); //PORT2_LOOKUP_CTRL
++    athrs17_reg_write(0x684, 0x00140277); //PORT3_LOOKUP_CTRL
++    athrs17_reg_write(0x6A8, 0x0014023f); //PORT6_LOOKUP_CTRL
++
++    //Step2--Set Port Port0,2 default CVID=1 (LAN), Port3,6 default CVID=2 (WAN)
++    athrs17_reg_write(0x420, 0x00010001); //PORT0_VLAN_CTRL0;  default CVID=1,SVID=1
++    athrs17_reg_write(0x430, 0x00020002); //PORT2_VLAN_CTRL0;  default CVID=2,SVID=2
++    athrs17_reg_write(0x438, 0x00010001); //PORT3_VLAN_CTRL0;  default CVID=1,SVID=1
++    athrs17_reg_write(0x450, 0x00020002); //PORT6_VLAN_CTRL0;  default CVID=2,SVID=2
++    
++    //Step4--Set VLAN entry wirte reg. LAN (VID=1)
++    athrs17_reg_write(0x610, 0x001BF7D0); //VTU_FUNC_REG0; Port0,3=untagged;Port1,2,4,5,6=not member;
++    athrs17_reg_write(0x614, 0x80010002); //VTU_FUNC_REG1; VID=1
++
++    //Step5--Set VLAN entry wirte reg. WAN (VID=2)
++    athrs17_reg_write(0x610, 0x0019FDF0); //VTU_FUNC_REG0; Port0,1,3,4,5=not member; port2,6=untagged
++    athrs17_reg_write(0x614, 0x80020002); //VTU_FUNC_REG1; VID=2
++
++    //Step6--VLAN type wirte reg. each port.
++    athrs17_reg_write(0x424, 0x00001040); //PORT0_VLAN_CTRL1; remove tag to CPU port
++    athrs17_reg_write(0x434, 0x00001040); //PORT2_VLAN_CTRL1; remove tag
++    athrs17_reg_write(0x43c, 0x00001040); //PORT3_VLAN_CTRL1; remove tag
++    athrs17_reg_write(0x454, 0x00001040); //PORT6_VLAN_CTRL1: remove tag
++    printk("@athrs17_vlan_config...done \n");
++#endif
++//liteon-    
+ }
+ #endif 
+ static BOOL _athrs17_mac0_intf(athr_switch_intf_type_t type)
+@@ -649,6 +678,9 @@
+ 
+         case RGMII:
+             /* configure the RGMII */
++//liteon+            
++            printk ("MAC0 as RGMII\n");
++//liteon-            
+             athrs17_reg_write(S17_P0PAD_MODE_REG, S17_MAC0_RGMII_EN | S17_MAC0_RGMII_TXCLK_DELAY | \
+                               S17_MAC0_RGMII_RXCLK_DELAY | (1 << S17_MAC0_RGMII_TXCLK_SHIFT) | \
+                               (1 << S17_MAC0_RGMII_RXCLK_SEL) | (S17_MAC0_SGMII_DELAY));
+@@ -659,8 +691,14 @@
+             break;
+ 
+         case SGMII:
++//liteon+		
++	    printk ("MAC0 as SGMII\n");	
++//liteon-	    
+             athrs17_reg_write(S17_P0PAD_MODE_REG, (S17_MAC0_SGMII_EN | S17_MAC0_SGMII_DELAY));
+-            athrs17_reg_write(S17_SGMII_CTRL_REG , 0xc74164d0); /* SGMII control */
++//liteon+            
++            //athrs17_reg_write(S17_SGMII_CTRL_REG , 0xc74164d0); /* SGMII control */
++            athrs17_reg_write(S17_SGMII_CTRL_REG , 0xc78164de); /* SGMII control */
++//liteon-            
+             athrs17_reg_write(S17_P0STATUS_REG, S17_PORT_STATUS_AZ_DEFAULT);
+             break;
+ 
+@@ -685,17 +723,30 @@
+     switch (type)
+     {
+         case RGMII:
++//liteon+		
++	    printk ("MAC6 as RGMII\n");	
++//liteon-	    
+             athrs17_reg_write(S17_P6PAD_MODE_REG, S17_MAC6_RGMII_EN | S17_MAC6_RGMII_TXCLK_DELAY | \
+                               S17_MAC6_RGMII_RXCLK_DELAY | (1 << S17_MAC6_RGMII_TXCLK_SHIFT) | \
+                               (2 << S17_MAC6_RGMII_RXCLK_SHIFT));
+             athrs17_reg_write(S17_P6STATUS_REG, S17_PORT_STATUS_AZ_DEFAULT);
++//liteon+
++            athrs17_reg_write(S17_P0PAD_MODE_REG,athrs17_reg_read(S17_P0PAD_MODE_REG)|S17_MAC06_EXCHANGE_EN);
++            //ath_reg_wr(ETH_XMII_ADDRESS, 0x56000000);
++//liteon-
+             break;
+ 
+         case SGMII:
++//liteon+		
++	    printk ("MAC6 as SGMII\n");
++//liteon-	    
+             athrs17_reg_write(S17_P6PAD_MODE_REG,
+                         athrs17_reg_read(S17_P6PAD_MODE_REG)|S17_MAC6_SGMII_EN);
+             athrs17_reg_write(S17_P6STATUS_REG, S17_PORT_STATUS_AZ_DEFAULT);
+-            athrs17_reg_write(S17_SGMII_CTRL_REG , 0xc74164d0); /* SGMII control */
++//liteon+            
++            //athrs17_reg_write(S17_SGMII_CTRL_REG , 0xc74164d0); /* SGMII control */
++            athrs17_reg_write(S17_SGMII_CTRL_REG , 0xc78164de); /* SGMII control */
++//liteon-            
+ 
+             break;
+ 
+@@ -993,10 +1044,14 @@
+     athr17_init_flag = 1;
+ 
+     /* LED control */
+-    athrs17_reg_write(S17_LED_CTRL0_REG, 0xffb7ffb7);
+-    athrs17_reg_write(S17_LED_CTRL1_REG, 0xffb7ffb7);
+-    athrs17_reg_write(S17_LED_CTRL2_REG, 0xffb7ffb7);
+-
++//liteon+    
++    //athrs17_reg_write(S17_LED_CTRL0_REG, 0xffb7ffb7);
++    //athrs17_reg_write(S17_LED_CTRL1_REG, 0xffb7ffb7);
++    //athrs17_reg_write(S17_LED_CTRL2_REG, 0xffb7ffb7);
++    athrs17_reg_write(S17_LED_CTRL0_REG, 0xcc35cc35);
++    athrs17_reg_write(S17_LED_CTRL1_REG, 0xca35ca35);
++    athrs17_reg_write(S17_LED_CTRL2_REG, 0xc935c935);    
++//liteon-
+ #if defined (CONFIG_MACH_QCA955x)
+     if (mac_has_flag(mac, ATHR_SGMII_FORCED)) {
+         athrs17_reg_write(S17_PWS_REG, 0x602613a0);
+Index: linux-2.6.31/drivers/net/ethernet/qca_soc_mac.c
+===================================================================
+--- linux-2.6.31.orig/drivers/net/ethernet/qca_soc_mac.c	2013-11-29 16:36:30.109789332 +0800
++++ linux-2.6.31/drivers/net/ethernet/qca_soc_mac.c	2013-12-13 15:27:07.251154538 +0800
+@@ -136,11 +136,11 @@
+             phy->reg_config(ATHR_GMAC_PORT_OFF, ENET_UNIT_LAN); /* LAN ports */
+             phy->reg_config(ATHR_GMAC_PORT_OFF, ENET_UNIT_WAN); /* WAN port */       
+ 	}else {  
+-       	if ((mac_has_flag(mac,ATHR_S17_MAC0_SGMII))){
++        if ((mac_has_flag(mac,ATHR_S17_MAC0_SGMII))){
+             phy->reg_config(ATHR_GMAC_PORT_OFF, ((mac->mac_unit == 0) ? ENET_UNIT_WAN : ENET_UNIT_LAN));
+-	} else{
++    } else{
+             phy->reg_config(ATHR_GMAC_PORT_OFF, ((mac->mac_unit == 1) ? ENET_UNIT_WAN : ENET_UNIT_LAN));
+-        } 
++        }
+ 	} /* end of is_s27 */ 
+     }
+ 
+@@ -249,8 +249,8 @@
+     /*
+      * XXX  FIX ME: Enable intterupt only after link is asserted
+      * check if interrupts are enabled by default.
+-    */
+-      athr_gmac_int_disable(mac);
++     */
++     athr_gmac_int_disable(mac);
+      
+ 
+     /*
+@@ -272,15 +272,15 @@
+         if ( is_s27() && athr_gmacs[0]->mac_ifup == 0 && athr_gmacs[1]->mac_ifup == 0) {
+             st = request_irq(ATHR_IRQ_ENET_LINK, athr_gmac_link_intr, 
+                     ATHR_MAC_IRQF_DISABLED, "gmac link intr", mac);
+-	}else if(mac->mii_intf == ATHR_SGMII) { 
+-		  st = request_irq(ATHR_IRQ_ENET_LINK, athr_gmac_link_intr, 
++	}else if(mac->mii_intf == ATHR_SGMII) {
++	      st = request_irq(ATHR_IRQ_ENET_LINK, athr_gmac_link_intr, 
+ 			ATHR_MAC_IRQF_DISABLED, "gmac sgmii link intr", mac);	
+-        } 	
+- 	if( st < 0) {
++	    }
++	if( st < 0) {
+                 printk(MODULE_NAME ": request irq %d failed %d\n", ATHR_IRQ_ENET_LINK, st);
+ 		free_irq(ATHR_IRQ_ENET_LINK, mac);
+ 	  }
+-    }
++    } 
+     mac->mac_ifup = 1;
+ 
+     /*
+@@ -319,11 +319,11 @@
+             phy->reg_config(ATHR_GMAC_PORT_ON, ENET_UNIT_LAN); /* LAN ports */
+ 	    phy->reg_config(ATHR_GMAC_PORT_ON, ENET_UNIT_WAN); /* WAN port */ 
+         } else { 
+-	    if ((mac_has_flag(mac,ATHR_S17_MAC0_SGMII))) {
+-	            phy->reg_config(ATHR_GMAC_PORT_ON, ((mac->mac_unit == 0) ? ENET_UNIT_WAN : ENET_UNIT_LAN));
+-	        } else {
+-	            phy->reg_config(ATHR_GMAC_PORT_ON, ((mac->mac_unit == 1) ? ENET_UNIT_WAN : ENET_UNIT_LAN));
+-	        }
++        if ((mac_has_flag(mac,ATHR_S17_MAC0_SGMII))) {
++                phy->reg_config(ATHR_GMAC_PORT_ON, ((mac->mac_unit == 0) ? ENET_UNIT_WAN : ENET_UNIT_LAN));
++            } else {
++                phy->reg_config(ATHR_GMAC_PORT_ON, ((mac->mac_unit == 1) ? ENET_UNIT_WAN : ENET_UNIT_LAN));
++            }
+ 	}  
+     }
+     return 0;
+@@ -378,9 +378,9 @@
+     if(mac_has_flag(mac, ETH_LINK_INTERRUPT)) {
+         if(is_s27() && athr_gmacs[0]->mac_ifup == 0 && athr_gmacs[1]->mac_ifup == 0 ) {
+             free_irq(ATHR_IRQ_ENET_LINK, mac);
+-	}else if (mac->mii_intf == ATHR_SGMII ){  
+-	    free_irq(ATHR_IRQ_ENET_LINK, mac);
+-	} 
++	}else if (mac->mii_intf == ATHR_SGMII ) {
++		free_irq(ATHR_IRQ_ENET_LINK, mac);
++	}
+     }
+ 
+     return 0;
+@@ -407,8 +407,8 @@
+             athr_reg_wr(SGMII_INTERRUPT_MASK_ADDRESS, 0x0);
+         } else {  
+             mac->phy->dis_link_intrs(mac);
+-        }   
+-    }    
++        }
++    }
+    /* During interface up on PHY reset the link status will be updated.
+     * Clearing the software link status while bringing the interface down
+     * will avoid the race condition during PHY RESET.
+@@ -964,16 +964,16 @@
+     if(is_s27()){ 
+    	   mac->phy->link_isr(0);
+     }else { 
+-	    isr =athr_reg_rd(SGMII_INTERRUPT_ADDRESS);
+-	    DPRINTF (MODULE_NAME "Debug:isr %x\n",isr);
++        isr =athr_reg_rd(SGMII_INTERRUPT_ADDRESS);
++        DPRINTF (MODULE_NAME "Debug:isr %x\n",isr);
+     
+-	    athr_reg_rmw_clear(SGMII_INTERRUPT_MASK_ADDRESS, isr);
+-	    /* 
+-	      Let's  go out of the interrupt context!
+-	    */
+-	    schedule_work(&mac->mac_sgmii_intr);
++        athr_reg_rmw_clear(SGMII_INTERRUPT_MASK_ADDRESS, isr);
++        /* 
++          Let's  go out of the interrupt context!
++        */
++        schedule_work(&mac->mac_sgmii_intr);
+    } 
+-       return IRQ_HANDLED;
++    return IRQ_HANDLED;
+ }
+ 
+ static int
+@@ -1079,7 +1079,7 @@
+         mac->dma_check = 0;
+     }else 
+ #endif 
+-	ATHR_NAPI_CHECK_STATUS();
++    ATHR_NAPI_CHECK_STATUS();
+ 
+     while(quota)
+     {
+@@ -1585,7 +1585,7 @@
+               phy->reg_config(ATHR_GMAC_PORT_ON, ENET_UNIT_WAN); /* enable all the WAN ports */
+           }
+       }
+-#endif   
++#endif
+ 
+       /*
+        * Do the reset outside of interrupt context
+@@ -1621,9 +1621,17 @@
+         ** Check for a valid manufacturer prefix.  If not, then use the defaults
+         */
+ 
++//liteon modify+
++#if 1
++        if(eep_mac_addr[0] != 0xff || eep_mac_addr[1] != 0xff ||
++           eep_mac_addr[2] != 0xff || eep_mac_addr[3] != 0xff ||
++           eep_mac_addr[4] != 0xff || eep_mac_addr[5] != 0xff)
++#else
+         if(eep_mac_addr[0] == 0x00 &&
+            eep_mac_addr[1] == 0x03 &&
+            eep_mac_addr[2] == 0x7f)
++#endif
++//liteon modify-
+         {
+             memcpy(mac_addr, eep_mac_addr, 6);
+             return ;
+@@ -1898,7 +1906,7 @@
+         printk(MODULE_NAME ": Max rx descriptor count :   %d\n", mac->num_rx_desc);
+         printk(MODULE_NAME ": Mac capability flags    :   %X\n", mac->mac_flags);
+     }
+-
++    
+     if (athr_gmacs[0]->mii_intf == ATHR_SGMII ||
+         ( (ATHR_GMAC_NMACS > 1) && athr_gmacs[1]->mii_intf == ATHR_SGMII)) {
+         serdes_pll_lock_detect_st();
+Index: linux-2.6.31/drivers/net/ethernet/include/phys/athrs17_phy.h
+===================================================================
+--- linux-2.6.31.orig/drivers/net/ethernet/include/phys/athrs17_phy.h	2013-12-13 15:36:59.047261604 +0800
++++ linux-2.6.31/drivers/net/ethernet/include/phys/athrs17_phy.h	2013-12-13 15:37:34.431022249 +0800
+@@ -295,6 +295,7 @@
+ #define S17_MAC0_RGMII_RXCLK_DELAY	(1 << 24)
+ #define S17_MAC0_RGMII_TXCLK_DELAY	(1 << 25)
+ #define S17_MAC0_RGMII_EN		(1 << 26)
++#define S17_MAC06_EXCHANGE_EN           (1<<31)
+ 
+ #define S17_MAC5_MAC_MII_RXCLK_SEL	(1 << 0)
+ #define S17_MAC5_MAC_MII_TXCLK_SEL	(1 << 1)

@@ -1,0 +1,7 @@
+#!/bin/sh
+
+./etc/arch.sh
+
+echo "0" > /proc/ezp_gpio
+#gpioctl led 9 1 1 1 0 1 > /dev/null
+nvram factory

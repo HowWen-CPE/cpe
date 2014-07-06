@@ -1,0 +1,173 @@
+--- linux-2.6.32-freescale-p1020-sku/drivers/net/phy/phy.c	2012-07-13 03:19:15.101921251 -0700
++++ linux-liteon-wp854-openwrt/drivers/net/phy/phy.c	2012-07-13 03:21:25.397913709 -0700
+@@ -299,6 +299,51 @@
+ }
+ EXPORT_SYMBOL(phy_ethtool_gset);
+ 
++//Alvin <------------add 2011.6.1
++struct p1020_config_param 
++{
++	int cmd;
++	void * data;
++};
++
++struct eth_config
++{
++	int index;
++	int value;
++};
++
++
++typedef enum {
++	ETH_REG_READ = 1,
++	ETH_REG_WRITE,
++	ETH_REG_MAX,
++}eth_reg_operation_t;
++
++
++int liteon_phy_mii(struct phy_device *phydev, struct ifreq *ifrq)
++{
++    struct p1020_config_param  *p_param = (struct p1020_config_param *)ifrq->ifr_data;
++    struct eth_config e_cfg;
++    int val = 0;
++
++    if(p_param->cmd == ETH_REG_READ)
++    {
++        if(copy_from_user(&e_cfg, p_param->data, sizeof(e_cfg)))
++            return -EFAULT;
++        e_cfg.value = phy_read(phydev, e_cfg.index);
++        if(copy_to_user(p_param->data, &e_cfg, sizeof(e_cfg)))
++            return -EFAULT;
++    }
++    else
++    {
++        if(copy_from_user(&e_cfg, p_param->data, sizeof(e_cfg)))
++            return -EFAULT;
++        phy_write(phydev, e_cfg.index, e_cfg.value);
++    }
++    return 0;
++}
++//------------------>end
++
+ /**
+  * phy_mii_ioctl - generic PHY MII ioctl interface
+  * @phydev: the phy_device struct
+@@ -757,7 +802,92 @@
+ EXPORT_SYMBOL(phy_stop);
+ EXPORT_SYMBOL(phy_start);
+ 
+-/**
++
++/*
++* Function: control led color based on speed
++* Input para:1)struct phy_device *phydev 2)int enable
++* ret value: null
++* added by sirian, 2011-05-18
++*/
++static void phy_led_color_control(struct phy_device *phydev, int enable)
++{
++	/*Added by sirian, 2011-05-16 for controling led status based on speed*/
++	if ((phydev->phy_id >> 4) == 0x0143bd6 || (phydev->phy_id >> 4) == 0x03625e6)
++	{
++		switch(phydev->addr){
++			case 0:
++		        	{
++						if (enable == 1)
++						{
++							if (phydev->speed == 1000)
++							{
++							        phy_write(phydev,MII_NCONFIG, 0xb8ee);
++								phy_write(phydev,MII_NCONFIG, 0xb8e3);
++								phy_write(phydev,MII_NCONFIG, 0xa410);
++								phydev->led_color_set = 1;
++								break;
++							}
++							else if (phydev->speed == 100 ||phydev->speed == 10)
++							{
++							        phy_write(phydev,MII_NCONFIG, 0xb8ee);
++								phy_write(phydev,MII_NCONFIG, 0xb83e);
++								phy_write(phydev,MII_NCONFIG, 0xa410);
++								phydev->led_color_set = 1;
++								break;
++							}
++							
++							
++						}
++						else
++						{
++							phy_write(phydev,MII_NCONFIG, 0xb8ee);
++							phydev->led_color_set = 0;
++							break;
++						}
++							
++				}
++			case 1:
++		        	{
++					        if (enable == 1)
++					       {
++							if (phydev->speed == 1000)
++							{
++								phy_write(phydev,MII_NCONFIG, 0xb4ee);
++								phy_write(phydev,MII_NCONFIG, 0xb4e3);
++								phy_write(phydev,MII_NCONFIG, 0xa410);
++								phydev->led_color_set = 1;
++								break;
++							}
++							else if (phydev->speed == 100 || phydev->speed == 10)
++							{
++								phy_write(phydev,MII_NCONFIG, 0xb4ee);
++								phy_write(phydev,MII_NCONFIG, 0xb43e);
++								phy_write(phydev,MII_NCONFIG, 0xa410);
++								phydev->led_color_set = 1;
++								break;
++							}
++
++							
++					        }
++						else
++						{
++							phy_write(phydev,MII_NCONFIG, 0xb4ee);
++							phydev->led_color_set = 0;
++							break;
++						}
++							
++				}
++			default:
++					printk("Undefined phy address\n");
++		}
++		
++	}
++	
++}
++
++
++/*
++ *
+  * phy_state_machine - Handle the state machine
+  * @work: work_struct that describes the work to be done
+  */
+@@ -773,6 +903,7 @@
+ 
+ 	if (phydev->adjust_state)
+ 		phydev->adjust_state(phydev->attached_dev);
++	
+ 
+ 	switch(phydev->state) {
+ 		case PHY_DOWN:
+@@ -962,5 +1093,16 @@
+ 	if (err < 0)
+ 		phy_error(phydev);
+ 
++
++	 /*Control Led color ,added by sirian, 2011-05-17*/
++	 if (phydev->state == PHY_RUNNING && (phydev->led_color_set == 0))
++	{
++		phy_led_color_control(phydev, 1);
++	 }
++	 else if (phydev->state == PHY_NOLINK)
++	 {
++	 	phy_led_color_control(phydev, 0);
++	 }
++
+ 	schedule_delayed_work(&phydev->state_queue, PHY_STATE_TIME * HZ);
+ }

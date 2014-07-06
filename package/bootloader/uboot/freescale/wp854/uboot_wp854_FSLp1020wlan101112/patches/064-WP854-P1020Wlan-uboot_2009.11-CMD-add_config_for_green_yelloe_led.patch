@@ -1,0 +1,15 @@
+--- u-boot-freescale-p1020-sku/common/env_embedded.c	2009-12-15 14:20:54.000000000 -0800
++++ u-boot-liteon-wp854-openwrt/common/env_embedded.c	2011-06-08 05:48:19.693181000 -0700
+@@ -183,6 +183,12 @@
+ #ifdef  CONFIG_EXTRA_ENV_SETTINGS
+ 	CONFIG_EXTRA_ENV_SETTINGS
+ #endif
++#ifdef  CONFIG_LEDGREENCMD
++	CONFIG_LEDGREENCMD
++#endif
++#ifdef  CONFIG_LEDYELLOWCMD
++	CONFIG_LEDYELLOWCMD
++#endif
+ 	"\0"		/* Term. env_t.data with 2 NULs */
+ 	}
+ };

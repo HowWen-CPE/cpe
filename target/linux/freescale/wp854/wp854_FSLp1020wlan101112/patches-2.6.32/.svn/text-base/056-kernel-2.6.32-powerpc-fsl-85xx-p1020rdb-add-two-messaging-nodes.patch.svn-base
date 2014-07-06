@@ -1,0 +1,46 @@
+From b45ccbc1ab38b6c94e2f3f9152b5b723431fcc89 Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Mon, 14 Dec 2009 11:39:30 +0530
+Subject: [PATCH 1/1] powerpc/fsl: 85xx: p1020rdb: add two messaging nodes
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ arch/powerpc/boot/dts/p1020rdb.dts |   22 ++++++++++++++++++++++
+ 1 files changed, 22 insertions(+), 0 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p1020rdb.dts b/arch/powerpc/boot/dts/p1020rdb.dts
+index 837c7c6..f03b65a 100644
+--- a/arch/powerpc/boot/dts/p1020rdb.dts
++++ b/arch/powerpc/boot/dts/p1020rdb.dts
+@@ -554,6 +554,28 @@
+ 			device_type = "open-pic";
+ 		};
+ 
++		message@41400 {
++			compatible = "fsl,p1020-msg", "fsl,mpic-msg";
++			reg = <0x41400 0x200>;
++			interrupts = <
++				0xb0 2
++				0xb1 2
++				0xb2 2
++				0xb3 2>;
++			interrupt-parent = <&mpic>;
++		};
++
++		message@42400 {
++			compatible = "fsl,p1020-msg", "fsl,mpic-msg";
++			reg = <0x42400 0x200>;
++			interrupts = <
++				0xb4 2
++				0xb5 2
++				0xb6 2
++				0xb7 2>;
++			interrupt-parent = <&mpic>;
++		};
++
+ 		msi@41600 {
+ 			compatible = "fsl,p1020-msi", "fsl,mpic-msi";
+ 			reg = <0x41600 0x80>;
+-- 
+1.5.6.5
+

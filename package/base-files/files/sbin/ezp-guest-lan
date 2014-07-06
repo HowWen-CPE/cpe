@@ -1,0 +1,206 @@
+#!/bin/sh
+
+# Modify br_rule member
+# $1 : add/del
+# $2 : ifname
+mod_lan_member()
+{
+    case "$1" in
+    add)
+        ifname="$2"
+        brifnames="$(nvram show br_rule 0 ifnames)"
+        [ -z "$(echo \"$brifnames\" | grep $ifname)" ] && {
+            brifnames="$brifnames $ifname"
+            nvram replace attr br_rule 0 ifnames "$brifnames"
+        }
+    ;;
+    del)
+        ifname="$2"
+        brifnames="$(nvram show br_rule 0 ifnames)"
+        [ -n "$(echo \"$brifnames\" | grep $ifname)" ] && {
+            brifnames="$(nvram show br_rule 0 ifnames | sed s/$ifname//g | sed 's/  / /g' )"
+            nvram replace attr br_rule 0 ifnames "$brifnames"
+        }
+    ;;
+    *)
+    esac
+}
+
+glanwifidev=$(nvram show guest_lan_rule 0 wif)
+glandev=$(nvram show guest_lan_rule 0 bif)
+glanipaddr=$(nvram show guest_lan_rule 0 ipaddr)
+glannetmask=$(nvram show guest_lan_rule 0 netmask)
+[ -z "$glanwifidev" -o -z "$glandev" -o -z "$glanipaddr" -o -z "$glannetmask" ] && exit 1
+
+# First we decide to construct or destruct guest lan rule
+toconstruct=0
+[ "$(nvram show guest_lan_rule 0 enable)" = "1" ] && toconstruct=1
+# Construct br_rule
+# Remove guest lan wifi interface(ra3) from br_rule ifnames
+# Add guest lan wifi interface(ra3) to br_rule entry
+i=0
+loopcount="$(nvram get br_rule_num)"
+entryadded=0
+glanbrid=2
+ifentryadded=0
+glanifid=1
+while [ "$i" -lt "$loopcount" ]; do
+    glanname="$(nvram show br_rule $i name)"
+    [ "$glanname" = "GuestLAN" ] && {
+        glanbrid=$i
+        entryadded=1
+    }
+    glanname="$(nvram show lan_main_rule $i name)"
+    [ "$glanname" = "GuestLAN" ] && {
+        glanifid=$i
+        ifentryadded=1
+    }
+    i=$(($i + 1))
+done
+i=0
+loopcount="$(nvram get bw_sbm_rule_num)"
+glanbwtolan=8
+glanbwtowan=9
+while [ "$i" -lt "$loopcount" ]; do
+    glanname="$(nvram show bw_sbm_rule $i name)"
+    [ "$glanname" = "GuestLANtoLAN" ] && {
+        glanbwtolan=$i
+    }
+    [ "$glanname" = "GuestLANtoWAN" ] && {
+        glanbwtowan=$i
+    }
+    i=$(($i + 1))
+done
+
+# If this entry is not yet constructed and we want it, create it
+[ "$entryadded" = "0" -a "$toconstruct" = "1" ] && {
+    mod_lan_member del "$glanwifidev"
+    nvram append rule br_rule "GuestLAN^1^$glanwifidev^"
+    brnum=$(nvram get br_rule_num)
+    glanbrid=$brnum
+    nvram fset br_rule_num=$(($brnum + 1))
+    
+    glanbw=$(nvram show guest_lan_rule 0 bw)
+    glanbwen=$(nvram show guest_lan_rule 0 bwen)
+    glanprio=$(nvram show guest_lan_rule 0 prio)
+    glandomain=$(nvram show guest_lan_rule 0 domain)
+    glanipstart=$(nvram show guest_lan_rule 0 start)
+    glanipcount=$(nvram show guest_lan_rule 0 count)
+    # Add additional lan interface
+    lannum="$(nvram get lan_num)"
+    iface=lan$lannum
+    nvram fset ${iface}_ifname=br$glanbrid
+    nvram fset ${iface}_device=br$glanbrid
+	nvram replace attr ${iface}_proto 0 prev $(nvram show ${iface}_proto 0 curr)
+	nvram replace attr ${iface}_proto 0 curr static
+    nvram append rule lan_main_rule "GuestLAN^1^1500^0^1"
+    nvram append rule lan_static_rule "$glanipaddr^$glannetmask^^$glanipaddr^^0^^^$glanipaddr^$glannetmask^192.168.1.2^24"
+    nvram append rule lan_dhcps_rule "default^1^$glanipstart^$glanipcount^86400^$glandomain^^isp^^^^^none^opendns^opendns^^^^"
+    nvram replace attr guest_lan_rule 0 lanid "$lannum"
+    nvram replace attr guest_lan_rule 0 bif "br$glanbrid"
+    nvram fset lan_num=$(($lannum + 1))
+    [ "$glanbw" != "0" -a "$glanbwen" = "1" ] && {
+        # Add to bw-tolan rule
+        eval $(ipcalc $glanipaddr $glannetmask)
+        local ip1=$(echo "$NETWORK" | awk 'BEGIN { FS = "." } { print $1 }')
+        local ip2=$(echo "$NETWORK" | awk 'BEGIN { FS = "." } { print $2 }')
+        local ip3=$(echo "$NETWORK" | awk 'BEGIN { FS = "." } { print $3 }')
+        nvram replace attr bw_sbm_rule $glanbwtolan bw_tolan $glanbw
+        nvram replace attr bw_sbm_rule $glanbwtowan bw_towan $glanbw
+        [ "$glannetmask" -ge "16" -a "$glannetmask" -lt "24" ] && {
+            nvram replace attr bw_sbm_rule $glanbwtolan outipaddr_start "$ip1.$ip2.0.1"
+            nvram replace attr bw_sbm_rule $glanbwtolan outipaddr_end "$ip1.$ip2.255.254"
+            nvram replace attr bw_sbm_rule $glanbwtowan inipaddr_start "$ip1.$ip2.0.1"
+            nvram replace attr bw_sbm_rule $glanbwtowan inipaddr_end "$ip1.$ip2.255.254"
+        }
+        [ "$glannetmask" -ge "24" ] && {
+            nvram replace attr bw_sbm_rule $glanbwtolan outipaddr_start "$ip1.$ip2.$ip3.1"
+            nvram replace attr bw_sbm_rule $glanbwtolan outipaddr_end "$ip1.$ip2.$ip3.254"
+            nvram replace attr bw_sbm_rule $glanbwtowan inipaddr_start "$ip1.$ip2.$ip3.1"
+            nvram replace attr bw_sbm_rule $glanbwtowan inipaddr_end "$ip1.$ip2.$ip3.254"
+        }
+        nvram replace attr bw_sbm_rule $glanbwtolan prio $glanprio
+        nvram replace attr bw_sbm_rule $glanbwtowan prio $glanprio
+        nvram replace attr bw_sbm_rule $glanbwtolan enable 1
+        nvram replace attr bw_sbm_rule $glanbwtowan enable 1
+    }
+    nvram commit
+}
+# If this entry is not yet constructed and we want it, create it
+[ "$entryadded" = "1" -a "$toconstruct" = "1" ] && {
+    mod_lan_member del "$glanwifidev"
+    nvram replace attr br_rule $glanbrid ifnames "$glanwifidev"
+    nvram replace attr br_rule $glanbrid enable "1"
+    
+    glanbw=$(nvram show guest_lan_rule 0 bw)
+    glanbwen=$(nvram show guest_lan_rule 0 bwen)
+    glanprio=$(nvram show guest_lan_rule 0 prio)
+    glandomain=$(nvram show guest_lan_rule 0 domain)
+    glanipstart=$(nvram show guest_lan_rule 0 start)
+    glanipcount=$(nvram show guest_lan_rule 0 count)
+    # Add additional lan interface
+    iface=lan$glanifid
+    nvram fset ${iface}_ifname=br$glanbrid
+    nvram fset ${iface}_device=br$glanbrid
+	nvram replace attr ${iface}_proto 0 prev $(nvram show ${iface}_proto 0 curr)
+	nvram replace attr ${iface}_proto 0 curr static
+    # Enable lan main rule
+    nvram replace attr lan_main_rule $glanifid enable "1"
+    # Set lan static address information
+    nvram replace attr lan_static_rule $glanifid ipaddr $glanipaddr
+    nvram replace attr lan_static_rule $glanifid mask $glannetmask
+    nvram replace attr lan_static_rule $glanifid dns $glanipaddr
+    nvram replace attr lan_static_rule $glanifid ipaddr_normal $glanipaddr
+    nvram replace attr lan_static_rule $glanifid mask_normal $glannetmask
+    # Set lan dhcp server information
+    nvram replace attr lan_dhcps_rule $glanifid dhcpmode "DHCPS"
+    nvram replace attr lan_dhcps_rule $glanifid start "$glanipstart"
+    nvram replace attr lan_dhcps_rule $glanifid num "$glanipcount"
+    nvram replace attr lan_dhcps_rule $glanifid domain "$glandomain"
+    nvram replace attr lan_dhcps_rule $glanifid dnstype "ispdns"
+    nvram replace attr guest_lan_rule 0 lanid "$glanifid"
+    nvram replace attr guest_lan_rule 0 bif "br$glanbrid"
+    # Set bandwidth rule
+    [ "$glanbw" != "0" -a "$glanbwen" = "1" ] && {
+        # Add to bw-tolan rule
+        eval $(ipcalc $glanipaddr $glannetmask)
+        local ip1=$(echo "$NETWORK" | awk 'BEGIN { FS = "." } { print $1 }')
+        local ip2=$(echo "$NETWORK" | awk 'BEGIN { FS = "." } { print $2 }')
+        local ip3=$(echo "$NETWORK" | awk 'BEGIN { FS = "." } { print $3 }')
+        nvram replace attr bw_sbm_rule $glanbwtolan bw_tolan $glanbw
+        nvram replace attr bw_sbm_rule $glanbwtowan bw_towan $glanbw
+        [ "$glannetmask" -ge "16" -a "$glannetmask" -lt "24" ] && {
+            nvram replace attr bw_sbm_rule $glanbwtolan outipaddr_start "$ip1.$ip2.0.1"
+            nvram replace attr bw_sbm_rule $glanbwtolan outipaddr_end "$ip1.$ip2.255.254"
+            nvram replace attr bw_sbm_rule $glanbwtowan inipaddr_start "$ip1.$ip2.0.1"
+            nvram replace attr bw_sbm_rule $glanbwtowan inipaddr_end "$ip1.$ip2.255.254"
+        }
+        [ "$glannetmask" -ge "24" ] && {
+            nvram replace attr bw_sbm_rule $glanbwtolan outipaddr_start "$ip1.$ip2.$ip3.1"
+            nvram replace attr bw_sbm_rule $glanbwtolan outipaddr_end "$ip1.$ip2.$ip3.254"
+            nvram replace attr bw_sbm_rule $glanbwtowan inipaddr_start "$ip1.$ip2.$ip3.1"
+            nvram replace attr bw_sbm_rule $glanbwtowan inipaddr_end "$ip1.$ip2.$ip3.254"
+        }
+        nvram replace attr bw_sbm_rule $glanbwtolan prio $glanprio
+        nvram replace attr bw_sbm_rule $glanbwtowan prio $glanprio
+        nvram replace attr bw_sbm_rule $glanbwtolan enable 1
+        nvram replace attr bw_sbm_rule $glanbwtowan enable 1
+    }
+    nvram commit
+}
+
+
+# If this entry is constructed and we want it removed, fire it out
+[ "$entryadded" = "1" -a "$toconstruct" = "0" ] && {
+    mod_lan_member add "$glanwifidev"
+    # Disable guest bridge device
+    nvram replace attr br_rule $glanbrid enable "0"
+    # Disable guest lan main rule
+    nvram replace attr lan_main_rule $glanifid enable "0"
+    # Disable guest lan dhcp server information
+    nvram replace attr lan_dhcps_rule $glanifid dhcpmode "NONE"
+    nvram replace attr bw_sbm_rule $glanbwtolan enable 0
+    nvram replace attr bw_sbm_rule $glanbwtowan enable 0
+    nvram commit
+}
+

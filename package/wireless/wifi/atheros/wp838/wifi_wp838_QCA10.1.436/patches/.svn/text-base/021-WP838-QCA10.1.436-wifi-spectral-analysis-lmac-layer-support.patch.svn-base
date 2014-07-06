@@ -1,0 +1,710 @@
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/Kbuild
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/lmac/spectral/Kbuild	2013-08-27 07:05:21.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/Kbuild	2014-03-20 15:26:51.231281474 +0800
+@@ -12,4 +12,4 @@
+ 
+ EXTRA_CFLAGS+= $(INCS) $(COPTS) -DATH_SUPPORT_SPECTRAL=1 -DSPECTRAL_USE_NETLINK_SOCKETS=1
+ 
+-ath_spectral-objs := spectral.o spectral_netlink.o spectral_cmds.o spectral_process_data.o spectral_phyerr.o
++ath_spectral-objs := spectral.o spectral_netlink.o spectral_cmds.o spectral_process_data.o spectral_phyerr.o spectral_debug.o spectral_samp.o spectral_ht20_data.o spectral_ht40_data.o  spectralscan_classifier.o classifier_init.o
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/lmac/spectral/spectral.c	2013-08-27 07:05:21.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral.c	2014-03-20 15:27:40.119073700 +0800
+@@ -294,9 +294,13 @@
+     current_channel = p_sops->get_current_channel(spectral);
+     ext_channel     = p_sops->get_extension_channel(spectral);
+ 
+-    if ((current_channel == 0) || (ext_channel == 0)) {
++  /*daniel modify begin*/
++   //Atheros BUG
++ // if ((current_channel == 0) || (ext_channel == 0)) {
++  if ((current_channel == 0)) {
+         return;
+     }
++  /*daniel modify end*/
+ 
+     if (spectral->sc_spectral_20_40_mode) {
+         // HT40 mode
+@@ -446,14 +450,20 @@
+ 
+         }
+     } else {
+-        printk("SPECTRAL : Legacy (Non-11AC)\n");
++	/*daniel modify for debug begin*/
++	//printk("SPECTRAL : Legacy (Non-11AC)\n");
++
++/*daniel modify for debug end*/
+         /*
+          * The decision to find 20/40 mode is found based on the presence of extension channel
+          * instead of channel width, as the channel width can dynamically change
+          */
+ 
+         if (extension_channel == 0) {
+-            printk("SPECTRAL : (Legacy) 20MHz Channel Width (Channel = %d)\n", current_channel);
++		/*daniel modify for debug begin*/
++	//	printk("SPECTRAL : (Legacy) 20MHz Channel Width (Channel = %d)\n", current_channel);
++
++/*daniel modify for debug end*/	
+             spectral->spectral_numbins                  = SPECTRAL_HT20_NUM_BINS;
+             spectral->spectral_dc_index                 = SPECTRAL_HT20_DC_INDEX;
+             spectral->spectral_fft_len                  = SPECTRAL_HT20_FFT_LEN;
+@@ -468,7 +478,11 @@
+             spectral->classifier_params.upper_chan_in_mhz = 0;
+ 
+         } else {
+-            printk("SPECTRAL : (Legacy) 40MHz Channel Width (Channel = %d)\n", current_channel);
++           
++		/*daniel modify for debug begin*/
++	//	printk("SPECTRAL : (Legacy) 40MHz Channel Width (Channel = %d)\n", current_channel);
++
++/*daniel modify for debug end*/	
+             spectral->spectral_numbins                  = SPECTRAL_HT40_TOTAL_NUM_BINS;
+             spectral->spectral_fft_len                  = SPECTRAL_HT40_FFT_LEN;
+             spectral->spectral_data_len                 = SPECTRAL_HT40_TOTAL_DATA_LEN;
+@@ -499,9 +513,13 @@
+      if (!p_sops->is_spectral_active(spectral)) {
+         p_sops->configure_spectral(spectral, spectral_params);
+         p_sops->start_spectral_scan(spectral);
+-        printk("Enabled spectral scan on channel %d\n", p_sops->get_current_channel(spectral));
++	/*daniel modify for debug begin*/	
++   //     printk("Enabled spectral scan on channel %d\n", p_sops->get_current_channel(spectral));
++	/*daniel modify for debug end*/	
+     } else {
+-        printk("Spectral scan is already ACTIVE on channel %d\n", p_sops->get_current_channel(spectral));
++    /*daniel modify for debug begin*/
++ //       printk("Spectral scan is already ACTIVE on channel %d\n", p_sops->get_current_channel(spectral));
++	/*daniel modify for debug end*/	
+     }
+ 
+     /* get current spectral configuration */
+@@ -561,6 +579,9 @@
+     SPECTRAL_OPS* p_sops = NULL;
+     struct ath_spectral *spectral = ic->ic_spectral;
+ 
++   /*daniel add begin*/
++   struct ath_softc *l_sc=GET_SPECTRAL_ATHSOFTC(spectral);
++    /*daniel add end*/
+     p_sops = GET_SPECTRAL_OPS(spectral);
+ 
+ 
+@@ -760,6 +781,9 @@
+     case SPECTRAL_ACTIVATE_SCAN:
+         {
+           spectral->scan_start_tstamp = p_sops->get_tsf64(spectral);
++          /*daniel add begin*/
++           disable_beacons(l_sc);/* dxm 2013.8.30 16:49*/
++         /*daniel add end*/
+           SPECTRAL_LOCK(spectral);
+           start_spectral_scan(spectral);
+           spectral->sc_spectral_scan = 1;
+@@ -773,10 +797,16 @@
+           stop_current_scan(spectral);
+           spectral->sc_spectral_scan = 0;
+           SPECTRAL_UNLOCK(spectral);
++	 /*daniel add begin*/  
++	  enable_beacons(l_sc); /* dxm 2013.8.30 16:49*/
++	 /*daniel add end*/
+         }
+         break;
+     case SPECTRAL_ACTIVATE_FULL_SCAN:
+         {
++          /*daniel add begin*/
++            disable_beacons(l_sc);/* dxm 2013.8.30 16:49*/
++	  /*daniel add end*/
+           SPECTRAL_LOCK(spectral);
+           start_spectral_scan(spectral);
+           spectral->sc_spectral_full_scan = 1;
+@@ -790,6 +820,9 @@
+           stop_current_scan(spectral);
+           spectral->sc_spectral_full_scan = 0;
+           SPECTRAL_UNLOCK(spectral);
++          /*daniel add begin*/
++          enable_beacons(l_sc); /* dxm 2013.8.30 16:49*/
++         /*daniel add end*/
+         }
+         break;
+     
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral.h
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/lmac/spectral/spectral.h	2013-08-27 07:05:21.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral.h	2014-03-20 15:27:54.929150678 +0800
+@@ -172,11 +172,13 @@
+ extern int BTH_MIN_NUMBER_OF_FRAMES;
+ extern int spectral_debug_level;
+ 
++/*daniel modify begin*/
+ #define SPECTRAL_DPRINTK(_sc, _m, _fmt, ...) do {                  \
+-        printk(_fmt, __VA_ARGS__);                                 \
++if ((_m) <= spectral_debug_level) {               \
++        printk(_fmt, __VA_ARGS__);\
+   }                                                                \
+ }while (0)
+-
++/*daniel modify end*/
+ #define SPECTRAL_MIN(a,b) ((a)<(b)?(a):(b))
+ #define SPECTRAL_MAX(a,b) ((a)>(b)?(a):(b))
+ #define SPECTRAL_DIFF(a,b) (SPECTRAL_MAX(a,b) - SPECTRAL_MIN(a,b))
+@@ -720,7 +722,12 @@
+ extern void stop_current_scan(struct ath_spectral* spectral);
+ extern int spectral_set_thresholds(struct ath_spectral *spectral, const u_int32_t threshtype,const u_int32_t value);
+ 
+-extern int8_t fix_maxindex_inv_only (struct ath_spectral *spectral, u_int8_t val);
++
++/*daniel modify begin*/
++//extern int8_t fix_maxindex_inv_only (struct ath_spectral *spectral, u_int8_t val);
++extern int8_t fix_maxindex_inv_only (u_int8_t val);
++/*daniel modify end*/
++
+ extern int8_t adjust_rssi_with_nf_noconv_dbm (struct ath_spectral *spectral, int8_t rssi, int upper, int lower);
+ extern int8_t adjust_rssi_with_nf_conv_dbm (struct ath_spectral *spectral, int8_t rssi, int upper, int lower);
+ extern int8_t adjust_rssi_with_nf_dbm (struct ath_spectral* spectral, int8_t rssi, int upper, int lower, int convert_to_dbm); 
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral_cmds.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/lmac/spectral/spectral_cmds.c	2013-08-27 07:05:21.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral_cmds.c	2014-03-20 15:28:13.816471325 +0800
+@@ -55,6 +55,10 @@
+ void stop_current_scan(struct ath_spectral* spectral)
+ {
+     SPECTRAL_OPS *p_sops = GET_SPECTRAL_OPS(spectral);
++    /*daniel add begin*/
++    u_int32_t           rfilt;/* dxm 2013.9.3 18:54*/
++    struct ath_softc *l_sc=GET_SPECTRAL_ATHSOFTC(spectral);	
++   /*daniel add end*/
+ 
+     if (spectral == NULL) {
+         printk("SPECTRAL : Spectral is NUll  (%s)\n", __func__);
+@@ -82,6 +86,14 @@
+      *
+      */
+     spectral->params.ss_spectral_pri    = 0;    /* Reset Priority */
++    /*daniel add begin*/
++      /* dxm 2013.9.3 18:54 [START]*/
++    rfilt = ath_hal_getrxfilter(l_sc->sc_ah);
++    rfilt &= ~HAL_RX_FILTER_PROBEREQ; //don't allow probe request frames
++    ath_hal_setrxfilter(l_sc->sc_ah, rfilt);
++    /* dxm 2013.9.3 18:54 [END]*/
++    
++    /*daniel add end*/
+ }
+ 
+ /*
+@@ -96,12 +108,23 @@
+ 
+     HAL_SPECTRAL_PARAM params;
+     SPECTRAL_OPS* p_sops = GET_SPECTRAL_OPS(spectral);
++   /*daniel add begin*/
++    u_int32_t           rfilt;/* dxm 2013.9.3 18:54*/
++    struct ath_softc *l_sc=GET_SPECTRAL_ATHSOFTC(spectral);	
++   /*daniel add end*/
+ 
+     if (spectral == NULL) {
+         printk("SPECTRAL : Spectral is NUll  (%s)\n", __func__);
+         return;
+     }
+ 
++    /*daniel add begin*/    
++    /* dxm 2013.9.3 18:54 [START]*/
++    rfilt = ath_hal_getrxfilter(l_sc->sc_ah);
++    rfilt |= HAL_RX_FILTER_PROBEREQ;// allow probe request frames
++    ath_hal_setrxfilter(l_sc->sc_ah, rfilt);
++    /* dxm 2013.9.3 18:54 [END]*/   
++   /*daniel add end*/
+     spectral_scan_enable_params(spectral, &spectral->params);
+ 
+     p_sops->configure_spectral(spectral, &spectral->params);
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral_debug.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/lmac/spectral/spectral_debug.c	2013-08-27 07:05:21.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral_debug.c	2014-03-20 15:28:20.928343945 +0800
+@@ -32,6 +32,10 @@
+     SPECTRAL_DPRINTK(sc, ATH_DEBUG_SPECTRAL2,"AFTER imask = 0x%x\n", ath_hal_intrget(sc->sc_ah));
+ }
+ 
++/*daniel add begin*/
++EXPORT_SYMBOL(disable_beacons);/*dxm add*/
++EXPORT_SYMBOL(enable_beacons);/*dxm add*/
++/*daniel add end*/
+ void print_classifier_counts(struct ath_softc *sc, struct ss *bd, const char *print_str)
+ {
+     if(bd->count_mwo || bd->count_bts || bd->count_bth || bd->count_cwa || bd->count_wln)
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral_ht20_data.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/lmac/spectral/spectral_ht20_data.c	2013-08-27 07:05:21.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral_ht20_data.c	2014-03-20 15:28:28.151129533 +0800
+@@ -63,7 +63,12 @@
+     int small_bitmap=0, high_rssi=0;
+     int8_t minimum_rssi=5;
+     u_int8_t  calc_maxindex=0, calc_strongbins=0, calc_maxval=0; 
+-    int one_over_wideband_min_large_bin_ratio=7, one_side_length = SPECTRAL_HT20_NUM_BINS;
++    /*daniel add begin*/
++    //int one_over_wideband_min_large_bin_ratio=7, one_side_length = SPECTRAL_HT20_NUM_BINS;
++    /* dxm 2013.9.10 8:38 [START]*/
++    int one_over_wideband_min_large_bin_ratio=4, one_side_length = SPECTRAL_HT20_NUM_BINS;
++    /* dxm 2013.9.10 8:38 [END]*/
++    /*daniel add end*/
+ 
+     bmag = &(fft_20->lower_bins);
+     bindata = bmag->bin_magnitude;
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral_ht40_data.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/lmac/spectral/spectral_ht40_data.c	2013-08-27 07:05:21.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral_ht40_data.c	2014-03-20 15:28:37.174092792 +0800
+@@ -8,121 +8,113 @@
+  * 
+  */
+ 
+-#include "ath_internal.h"
+ 
+ #if ATH_SUPPORT_SPECTRAL
+-
+ #include "spectral.h"
+ 
+-void get_ht20_bmap_maxindex(struct ath_softc *sc, u_int8_t *fft_20_data, int datalen, u_int8_t *bmap_wt, u_int8_t *max_index);
+-
+-int8_t fix_maxindex_inv_only(u_int8_t val)
+-{
+-    int8_t temp = val;
+-    int8_t inv  = 0;
+-    if (val > 31) {
+-        temp = val & 0x1f;
+-        inv = ((~(temp) & 0x1F)+ 1) & 0x1f;
+-        temp = 0 - inv;
+-    }
+-    return temp;
+-}
+ 
+-#ifdef OLD_MAGDATA_DEF
+-void process_ht20_mag_data(MAX_MAG_INDEX_DATA *imag, u_int16_t *mmag, u_int8_t *bmap_wt, u_int8_t *max_index)
++void process_fft_ht40_packet(HT40_FFT_PACKET *fft_40, struct ath_softc *sc, u_int16_t *max_mag_lower, u_int8_t* max_index_lower, u_int16_t *max_mag_upper, u_int8_t* max_index_upper, u_int16_t *max_mag, u_int8_t* max_index, int *narrowband_lower, int *narrowband_upper, int8_t *rssi_lower, int8_t *rssi_upper, int *bmap_lower, int *bmap_upper)
+ {
+-    u_int16_t max_mag=0;
+-    u_int16_t temp=0;
+-    u_int8_t  maxindex;
+-
+-
+-    *bmap_wt= imag->bmap_wt;
+-
+-    *max_index = imag->max_index_bits05;
+-    maxindex = *max_index;
+-    *max_index=fix_maxindex_inv_only (maxindex);
+-    *max_index += 29;
+-
+-    max_mag = imag->max_mag_bits01;
+-    temp = imag->max_mag_bits29;
+-    max_mag = ((temp << 2) |  max_mag);
+-
+-    temp = imag->max_mag_bits1110;
+-    max_mag = ((temp << 10) | max_mag);
+-    *mmag = max_mag;
+-}
+-#endif
+-
+-void process_fft_ht20_packet(HT20_FFT_PACKET *fft_20, struct ath_softc *sc, u_int16_t *max_mag, u_int8_t* max_index, int *narrowband, int8_t *rssi, int *bmap)
+-{
+-    HT20_BIN_MAG_DATA *bmag=NULL;
++    HT40_BIN_MAG_DATA *bmag=NULL;
+     MAX_MAG_INDEX_DATA *imag=NULL;
+-
+-    u_int8_t maxval=0, maxindex=0, *bindata=NULL, bmapwt;
+-    u_int16_t maxmag;
+-    int small_bitmap=0, high_rssi=0;
++    u_int8_t maxval=0, maxindex=0, *bindata=NULL, maxindex_lower, bmapwt_upper, maxindex_upper, bmapwt_lower;
++    u_int16_t maxmag_lower, maxmag_upper;
++    int small_bitmap_lower=0, small_bitmap_upper=0, high_rssi_upper=0, high_rssi_lower=0;
+     int8_t minimum_rssi=5;
+-    u_int8_t  calc_maxindex=0, calc_strongbins=0, calc_maxval=0; 
+-    int one_over_wideband_min_large_bin_ratio=7, one_side_length = SPECTRAL_HT20_NUM_BINS;
++    u_int8_t  calc_maxindex=0, calc_strongbins=0, calc_maxval=0;
+ 
+-    bmag = &(fft_20->lower_bins);
+-    bindata = bmag->bin_magnitude;
+-
+-    maxval = return_max_value(bindata, SPECTRAL_HT20_NUM_BINS, &maxindex, sc, &calc_strongbins);
+-
+-    calc_maxval = return_max_value(bindata, SPECTRAL_HT20_NUM_BINS, &calc_maxindex, sc, &calc_strongbins);
+-
+-    imag = &(fft_20->lower_bins_max);
+-    //process_ht20_mag_data(imag, &maxmag, &bmapwt, &maxindex);
+-    process_mag_data(imag, &maxmag, &bmapwt, &maxindex);
+-
+-    /* Do this only for HT20 mode */
+-    maxindex = fix_maxindex_inv_only(maxindex);
+-    maxindex += 29;
+-
+-    *max_mag = maxmag;
+-    *max_index = maxindex;
+-    *bmap = bmapwt;
+-
+-    SPECTRAL_DPRINTK(sc, ATH_DEBUG_SPECTRAL2,"strongbins=%d bmapwt=%d calc_maxval=%d maxmag=%d calc_maxindex=%d maxindex=%d\n",calc_strongbins, bmapwt, calc_maxval, maxmag, calc_maxindex, maxindex);
+-
+-    small_bitmap = (bmapwt < 2);
++    /* dxm 2013.9.4 10:29 [START]*/
++    /*int one_over_wideband_min_large_bin_ratio=7, one_side_length = SPECTRAL_HT40_NUM_BINS;*/
++    int one_over_wideband_min_large_bin_ratio=4, one_side_length = SPECTRAL_HT40_NUM_BINS;
++    /* dxm2013.9.4 10:29 [END]*/
+ 
+-    high_rssi = (*rssi > minimum_rssi);
++    bmag = &(fft_40->lower_bins);
++    bindata = bmag->bin_magnitude;
++    maxval = return_max_value(bindata, SPECTRAL_HT40_NUM_BINS, &maxindex, sc, &calc_strongbins);
++    calc_maxval = return_max_value(bindata, SPECTRAL_HT40_NUM_BINS, &calc_maxindex, sc, &calc_strongbins);
+ 
+-    *narrowband = 0;       
++    imag = &(fft_40->lower_bins_max);
++    process_mag_data(imag, &maxmag_lower, &bmapwt_lower, &maxindex_lower);
++    print_max_mag_index_data(imag, sc);
+ 
+-    if((bmapwt * one_over_wideband_min_large_bin_ratio) < (one_side_length - 1)){
+-           *narrowband = 1;       
+-            SPECTRAL_DPRINTK(sc, ATH_DEBUG_SPECTRAL3,"%s nb=%d \n",__func__, *narrowband);
++    bmag = &(fft_40->upper_bins);
++    bindata = bmag->bin_magnitude;
++    //maxval = return_max_value(bindata, SPECTRAL_HT40_NUM_BINS, &maxindex, sc);
++    imag = &(fft_40->upper_bins_max);
++    process_mag_data(imag, &maxmag_upper, &bmapwt_upper, &maxindex_upper);
++    print_max_mag_index_data(imag, sc);
++
++    *max_mag_upper = maxmag_upper; *max_index_upper = maxindex_upper;
++    *max_mag_lower = maxmag_lower; *max_index_lower = maxindex_lower;
++
++    small_bitmap_lower = (bmapwt_lower < 2);
++    small_bitmap_upper = (bmapwt_upper < 2);
++
++    *bmap_lower = bmapwt_lower;
++    *bmap_upper = bmapwt_upper;
++
++   high_rssi_lower = (*rssi_lower > minimum_rssi);
++   high_rssi_upper = (*rssi_upper > minimum_rssi);
++
++    if (maxmag_upper > maxmag_lower) {
++        *rssi_lower = minimum_rssi - 1;
++        high_rssi_lower = 0;
+     } else {
+-            SPECTRAL_DPRINTK(sc, ATH_DEBUG_SPECTRAL3,"%s nb=%d \n",__func__, *narrowband);
++        *rssi_upper = minimum_rssi - 1;
++        high_rssi_upper = 0;
++    } 
++
++    *narrowband_lower=0;       
++    *narrowband_upper=0;       
++
++    if(high_rssi_lower) {
++        SPECTRAL_DPRINTK(sc, ATH_DEBUG_SPECTRAL2,"%d bmap_lower=%d bmap_upper=%d\n",__LINE__, bmapwt_lower, bmapwt_upper);
++        if((bmapwt_lower * one_over_wideband_min_large_bin_ratio) < (one_side_length - 1)){
++            *narrowband_lower=1;       
++            SPECTRAL_DPRINTK(sc, ATH_DEBUG_SPECTRAL2,"nb_lower=%d nb_upper=%d\n",*narrowband_lower, *narrowband_upper);
++        }
+     }
++    if(high_rssi_upper) {
++        SPECTRAL_DPRINTK(sc, ATH_DEBUG_SPECTRAL2,"%d bmap_lower=%d bmap_upper=%d\n",__LINE__, bmapwt_lower, bmapwt_upper);
++        if((bmapwt_upper * one_over_wideband_min_large_bin_ratio) < (one_side_length - 1)){
++            *narrowband_upper=1;       
++            SPECTRAL_DPRINTK(sc, ATH_DEBUG_SPECTRAL2,"nb_lower=%d nb_upper=%d\n",*narrowband_lower, *narrowband_upper);
++        }
++    }
++
++    *max_mag = (maxmag_lower > maxmag_upper)? maxmag_lower:maxmag_upper; 
++    *max_index = (maxmag_lower > maxmag_upper)? maxindex_lower:(maxindex_upper+64); 
++	//daniel delete
++ //  if ((sc->sc_spectral->classify_scan)) {
++  //              SPECTRAL_DPRINTK(sc, ATH_DEBUG_SPECTRAL2,"nb_lower=%d nb_upper=%d bmap_lower=%d bmap_upper=%d rssi_lower=%d rssi_upper=%d maxmag_lower=%d maxmag_upper=%d\n",*narrowband_lower, *narrowband_upper, bmapwt_lower, bmapwt_upper, *rssi_lower, *rssi_upper, maxmag_lower, maxmag_upper);
++  //  }
+ }
+ 
+-void get_ht20_bmap_maxindex(struct ath_softc *sc, u_int8_t *fft_20_data, int datalen, u_int8_t *bmap_wt, u_int8_t *max_index) 
++void get_ht40_bmap_maxindex(struct ath_softc *sc, u_int8_t *fft_40_data, int datalen, u_int8_t *bmap_wt_lwr, u_int8_t *max_index_lwr, u_int8_t *bmap_wt_higher, u_int8_t *max_index_higher) 
+ {
+ 
+-    int offset = (SPECTRAL_HT20_TOTAL_DATA_LEN - datalen);
++    int offset = (SPECTRAL_HT40_TOTAL_DATA_LEN - datalen);
+     u_int8_t temp_maxindex=0, temp_bmapwt=0;
+ 
+-    SPECTRAL_DPRINTK(sc, ATH_DEBUG_SPECTRAL1,"%s datalen=%d\n",__func__, datalen);    
++    temp_maxindex = fft_40_data[SPECTRAL_HT40_LOWER_MAXINDEX_INDEX + offset];
++    temp_maxindex = ((temp_maxindex >> 2) & 0x3F);
++    temp_maxindex = fix_maxindex_inv_only(temp_maxindex);
+ 
+-    temp_maxindex = fft_20_data[SPECTRAL_HT20_MAXINDEX_INDEX + offset];
++    temp_bmapwt=fft_40_data[SPECTRAL_HT40_LOWER_BMAPWT_INDEX + offset];
++    temp_bmapwt &= 0x3F;
+ 
+-    temp_maxindex=(temp_maxindex & 0xFC);
+-    temp_maxindex=(temp_maxindex >> 2);
++    *bmap_wt_lwr = temp_bmapwt;
++    *max_index_lwr = temp_maxindex;
+ 
+-   //temp_maxindex = ((temp_maxindex >> 2) & 0x3F);
++    temp_maxindex = fft_40_data[SPECTRAL_HT40_HIGHER_MAXINDEX_INDEX + offset];
++    temp_maxindex = ((temp_maxindex >> 2) & 0x3F);
+     temp_maxindex = fix_maxindex_inv_only(temp_maxindex);
+-    temp_maxindex += 29;
+ 
+-    temp_bmapwt=fft_20_data[SPECTRAL_HT20_BMAPWT_INDEX + offset];
++    temp_bmapwt=fft_40_data[SPECTRAL_HT40_HIGHER_BMAPWT_INDEX + offset];
+     temp_bmapwt &= 0x3F;
+ 
+-    *bmap_wt = temp_bmapwt;
+-    *max_index = temp_maxindex;
+-
++    *bmap_wt_higher = temp_bmapwt;
++    *max_index_higher = temp_maxindex;
+ }
+ 
+ #endif
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral_process_data.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/lmac/spectral/spectral_process_data.c	2013-08-27 07:05:21.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral_process_data.c	2014-03-20 15:29:22.936448920 +0800
+@@ -11,6 +11,137 @@
+ #include "spectral.h"
+ 
+ #if ATH_SUPPORT_SPECTRAL
++//daniel begin
++
++void ret_bin_thresh_sel(struct ath_softc *sc, u_int8_t *numerator, u_int8_t* denominator)
++{
++    struct ath_spectral *spectral=sc->sc_spectral;
++    *numerator=0;
++    *denominator=0;
++	
++
++    //spectral_get_thresholds(sc, &(spectral->params));
++   //kernel panic
++   //daniel modify
++	spectral_get_thresholds(spectral, &(spectral->params));
++	
++    *numerator = (spectral->params.radar_bin_thresh_sel + 1); 
++    *denominator=8;
++	//printk(KERN_ERR"~~ERROR~3~~\n");
++	//printk(KERN_ERR"~~ERROR~4~~ %d~~~\n",spectral->params.radar_bin_thresh_sel);
++
++    switch(spectral->params.radar_bin_thresh_sel) {
++
++        case 0:*numerator=1;*denominator=8;break;
++        case 1:*numerator=2;*denominator=8;break;
++        case 2:*numerator=3;*denominator=8;break;
++        case 3:*numerator=4;*denominator=8;break;
++        case 4:*numerator=5;*denominator=8;break;
++        case 5:*numerator=6;*denominator=8;break;
++        case 6:*numerator=7;*denominator=8;break;
++        default:break;
++    }
++//	printk(KERN_ERR"~~ERROR~5~~\n");
++    
++}
++
++
++
++
++u_int8_t return_max_value(u_int8_t* datap, u_int8_t numdata, u_int8_t *max_index, struct ath_softc *sc, u_int8_t *strong_bins)
++{
++    int i=0, temp=0, strong_bin_count=0, one_over_max_to_large_ratio=4; 
++    u_int8_t maxval=*datap;
++    u_int8_t numerator, denominator;
++    int8_t real_maxindex=-28;
++
++    *max_index = 0;
++    *strong_bins = 0;
++
++    SPECTRAL_DPRINTK(sc,ATH_DEBUG_SPECTRAL3, "datap=%p *datap=0x%x \n",datap, *datap);
++
++    for (i=0; i< numdata;  i++) {
++        if(maxval < *(datap + i)) {
++            *max_index = i;
++             maxval = *(datap + i);
++             SPECTRAL_DPRINTK(sc,ATH_DEBUG_SPECTRAL3, "max_mag=0x%x max_index=%d\n",maxval, *max_index);
++        }
++    }
++ //   printk(KERN_ERR"==ERROR=0==");
++    real_maxindex += *max_index;
++    SPECTRAL_DPRINTK(sc,ATH_DEBUG_SPECTRAL2, "real_maxindex=%d fix_mag_inv=%d\n",real_maxindex, fix_maxindex_inv_only(real_maxindex));
++
++ //  printk(KERN_ERR"==ERROR=1==");
++    ret_bin_thresh_sel(sc, &numerator, &denominator);
++ //  printk(KERN_ERR"==ERROR=2==");
++
++	one_over_max_to_large_ratio = (int) (denominator / numerator);
++ //   printk(KERN_ERR"==ERROR=3==");
++    for (i=0; i< numdata;  i++) {
++        temp = *(datap + i);
++        if ((temp * one_over_max_to_large_ratio) > maxval) {
++            strong_bin_count++;
++        }
++    }
++ //   printk(KERN_ERR"==ERROR=4==");
++    *strong_bins = strong_bin_count;
++//	  printk(KERN_ERR"==ERROR=5==");
++    return maxval;
++}
++
++void process_mag_data(MAX_MAG_INDEX_DATA *imag, u_int16_t *mmag, u_int8_t *bmap_wt, u_int8_t *max_index)
++{
++    u_int16_t max_mag=0;
++    u_int16_t temp=0;
++    u_int8_t temp_maxindex=0, temp_bmap=0, temp_maxmag=0;
++
++#ifdef OLD_MAGDATA_DEF
++    *bmap_wt= imag->bmap_wt;  
++    *max_index = imag->max_index_bits05;
++
++    temp_maxindex = imag->max_index_bits05;
++    temp_maxindex = (temp_maxindex >> 2);
++
++    max_mag = imag->max_mag_bits01;  
++    temp = imag->max_mag_bits29;
++    max_mag = ((temp << 2) |  max_mag);
++
++    temp = imag->max_mag_bits1110;
++    max_mag = ((temp << 10) | max_mag);
++
++#else
++
++    //Get last 6 bits for bitmap_weight
++    temp_bmap=(imag->all_bins1 & 0x3F);
++
++    //Get first 2 bits for max_mag
++    temp_maxmag=(imag->all_bins1 & 0xC0);
++    temp_maxmag=(temp_maxmag >> 6);
++
++
++    temp = imag->max_mag_bits29;
++    max_mag = ((temp << 2) | temp_maxmag);
++
++
++    temp_maxmag=(imag->all_bins2 & 0x03);
++    temp = (temp_maxmag << 10);
++    max_mag = temp | max_mag;
++
++    //Get first 6 bits for bitmap_weight
++    temp_maxindex=(imag->all_bins2 & 0xFC);
++    temp_maxindex=(temp_maxindex >> 2);
++
++
++    *bmap_wt= temp_bmap;  
++    *max_index = temp_maxindex;
++
++#endif
++    *mmag = max_mag;
++}
++
++
++//daniel end
++
+ 
+ u_int32_t
+ spectral_round(int32_t val)
+@@ -99,6 +230,12 @@
+ #define SPECTRAL_SCAN_DATA          0x10
+ #define DEFAULT_CHAN_NOISE_FLOOR    -110
+ 
++
++   /*daniel modify for debug begin*/
++   u_int32_t  process_msg_index=0;
++   SPECTRAL_SAMP_MSG   *local_msg		 = NULL;
++
++  /*daniel modify for debug end*/
+     int i = 0;
+     struct samp_msg_params params;
+ 
+@@ -131,7 +268,15 @@
+     u_int16_t already_copied    = 0;
+     u_int16_t maxmag_upper      = 0;
+ 
++    //daniel begin
++    u_int16_t maxmag_lower;
++   //daniel end
+     u_int8_t maxindex_upper     = 0;
++    //daniel begin
++    u_int8_t maxindex_lower;
++	 int bmap_lower=0, bmap_upper=0;
++    //daniel end
++	
+     u_int8_t max_index          = 0;
+     u_int8_t bin_pwr_data[130]  = {0};
+ 
+@@ -294,6 +439,17 @@
+ 
+         if (datalen > spectral->spectral_data_len + 2) {
+             //printk("Invalid spectral scan datalen = %d\n", datalen);
++          /*daniel add begin*/
++	  //the SA have some printk        
++          /* dxm 2013.9.2 10:30 [START]*/
++			
++          //modify by daniel for GP's wifi correspond function begin, SA spectral_scan_enable <=>spectral_scan_enable_params
++	   //spectral_scan_enable(sc);
++	   spectral_scan_enable_params( spectral,&spectral->params);   
++          //modify by daniel for GP's wifi correspond function end
++			
++           /* dxm 2013.9.2 10:30 [END]*/
++         /*daniel add end*/
+             return;
+         }
+ 
+@@ -461,6 +617,8 @@
+                                                                        ext_chan_noise_floor);
+         }
+ 
++/*daniel modify begin*/
++        /*
+         if (!spectral->sc_spectral_20_40_mode) {
+             rssi_up             = 0;
+             extension_rssi      = 0;
+@@ -469,7 +627,21 @@
+             maxindex_upper      = 0;
+             maxmag_upper        = 0;
+         }
+-
++        */
++	if (spectral->sc_spectral_20_40_mode) {
++                print_fft_ht40_packet(&fft_40, sc);
++                process_fft_ht40_packet(&fft_40, sc, &maxmag_lower, &maxindex_lower, &maxmag_upper, &maxindex_upper, &max_mag,  &max_index, &nb_lower, &nb_upper, &rssi_low, &rssi_up, &bmap_lower, &bmap_upper);
++            } else {
++                print_hex_fft_ht20_packet(&fft_20, sc);
++                process_fft_ht20_packet(&fft_20, sc, &maxmag_lower, &maxindex_lower, &nb_lower, &rssi_low, &bmap_lower);
++                rssi_up = 0;
++                extension_rssi=0;
++                inv_extension_rssi=0;
++                nb_upper=0;
++                maxindex_upper=0;
++                maxmag_upper=0;
++            }
++/*daniel modify end*/
+         params.rssi         = inv_combined_rssi;
+         params.lower_rssi   = rssi_low;
+         params.upper_rssi   = rssi_up;
+@@ -499,8 +671,15 @@
+             params.freq_loading = 0;
+         }
+         params.interf_list.count = 0;
+-        params.max_lower_index   = 0;//maxindex_lower;
+-        params.max_upper_index   = 0;//maxindex_upper;
++
++	/*daniel modify begin*/
++	//params.max_lower_index	 = 0;//maxindex_lower;
++	//params.max_upper_index	 = 0;//maxindex_upper;
++       //ATHERO BUG
++        params.max_lower_index   = maxindex_lower;//maxindex_lower;
++        params.max_upper_index   = maxindex_upper;//maxindex_upper;
++      /*daniel modify end*/
++        
+         params.nb_lower          = nb_lower;
+         params.nb_upper          = nb_upper;
+         params.last_tstamp       = spectral->last_tstamp;
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral_samp.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/lmac/spectral/spectral_samp.c	2013-08-27 07:05:21.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/lmac/spectral/spectral_samp.c	2014-03-20 15:29:30.591344145 +0800
+@@ -40,7 +40,10 @@
+     spectral_add_interf_samp_msg(&fake_params, sc);
+     //spectral_debug_level=ATH_DEBUG_SPECTRAL3;
+     //print_samp_msg_params(sc, &fake_params);
+-    spectral_create_samp_msg(&fake_params);
++    /*daniel modify begin*/
++    ///spectral_create_samp_msg(&fake_params);
++   spectral_create_samp_msg(spectral,&fake_params);
++   /*daniel modify end*/
+     //spectral_debug_level=ATH_DEBUG_SPECTRAL;
+     SPECTRAL_DPRINTK(sc, ATH_DEBUG_SPECTRAL2,"===================%s %d freq=%u =====================\n", __func__, __LINE__, fake_params.freq); 
+     return;

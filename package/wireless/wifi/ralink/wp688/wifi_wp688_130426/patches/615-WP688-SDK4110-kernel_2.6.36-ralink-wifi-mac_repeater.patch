@@ -1,0 +1,370 @@
+diff -urN a/rt2860v2/ap/ap_apcli.c b/rt2860v2/ap/ap_apcli.c
+--- a/rt2860v2/ap/ap_apcli.c	2013-05-13 18:19:20.865728087 +0800
++++ b/rt2860v2/ap/ap_apcli.c	2013-05-13 16:27:49.018473300 +0800
+@@ -1551,7 +1551,8 @@
+ 	OUT UCHAR		*pWcid)
+ {
+ 	UCHAR apCliIdx;
+-	BOOLEAN	allowed;
++	BOOLEAN	allowed=FALSE;
++	BOOLEAN	  bClientFull=FALSE;
+ 		
+ 	/*DBGPRINT(RT_DEBUG_TRACE, ("ApCliAllowToSendPacket():Packet to ApCli interface!\n")); */
+ 	apCliIdx = RTMP_GET_PACKET_NET_DEVICE(pPacket) - MIN_NET_DEVICE_FOR_APCLI;
+@@ -1577,6 +1578,11 @@
+ 			}
+ 			else
+ 			{
++				if (pAd->ApCfg.RepeaterCliSize >= MAX_EXT_MAC_ADDR_SIZE)
++				{
++					DBGPRINT(RT_DEBUG_ERROR, (" Repeater Client Full,reject the connection!!!\n"));
++					bClientFull=TRUE;
++				}
+ 				if (RTMPRepeaterVaildMacEntry(pAd, pSrcBufVA + MAC_ADDR_LEN))
+ 				{
+ 					pEntry = &pAd->MacTab.Content[pAd->ApCfg.ApCliTab[apCliIdx].MacTabWCID];
+@@ -1596,7 +1602,8 @@
+ #endif /* MAC_REPEATER_SUPPORT */
+ 		*pWcid = pAd->ApCfg.ApCliTab[apCliIdx].MacTabWCID;
+ 		
+-		allowed = TRUE;
++		if(!bClientFull)
++			allowed = TRUE;
+ 	}
+ 	else
+ 	{
+diff -urN a/rt2860v2/ap/ap_cfg.c b/rt2860v2/ap/ap_cfg.c
+--- a/rt2860v2/ap/ap_cfg.c	2013-05-13 18:19:20.865728087 +0800
++++ b/rt2860v2/ap/ap_cfg.c	2013-05-13 18:25:24.369724636 +0800
+@@ -798,6 +798,7 @@
+ 	{"CountryRegionABand",			Set_CountryRegionABand_Proc},
+ 	{"CountryString",				Set_CountryString_Proc},
+ 	{"CountryCode",				Set_CountryCode_Proc},
++	{"DeviceMode",				Set_DeviceMode_Proc},
+ #ifdef EXT_BUILD_CHANNEL_LIST
+ 	{"ChGeography",				Set_ChGeography_Proc},
+ #endif /* EXT_BUILD_CHANNEL_LIST */
+@@ -1416,6 +1417,22 @@
+ };
+ 
+ 
++typedef struct _IPMacMappingEntry
++{
++	UINT	ipAddr;	/* In network order */
++	UCHAR	macAddr[MAC_ADDR_LEN];
++	ULONG	lastTime;
++	struct _IPMacMappingEntry *pNext;
++}IPMacMappingEntry, *PIPMacMappingEntry;
++
++
++typedef struct _IPMacMappingTable
++{
++	BOOLEAN			valid;
++	IPMacMappingEntry *hash[MAT_MAX_HASH_ENTRY_SUPPORT+1]; /*0~63 for specific station, 64 for broadcast MacAddress */
++	UCHAR			curMcastAddr[MAC_ADDR_LEN]; /* The multicast mac addr for currecnt received packet destined to ipv4 multicast addr */
++}IPMacMappingTable;
++
+ INT RTMPAPPrivIoctlSet(
+ 	IN RTMP_ADAPTER *pAd, 
+ 	IN RTMP_IOCTL_INPUT_STRUCT *pIoctlCmdStr)
+@@ -8946,15 +8963,23 @@
+ #ifdef RTMP_EFUSE_SUPPORT
+ 	UINT efusefreenum=0;
+ #endif /* RTMP_EFUSE_SUPPORT */
++#ifdef MAC_REPEATER_SUPPORT
++       UINT32 RegValue;
++       ULONG DataRate=0;
++#endif
++
++       IPMacMappingTable *pIPMacTable=NULL;
++       IPMacMappingEntry   *pEntry = NULL;
+ 
++       pIPMacTable=(IPMacMappingTable *)pAd->MatCfg.MatTableSet.IPMacTable;
+ /*	msg = (PSTRING)kmalloc(sizeof(CHAR)*(2048), MEM_ALLOC_FLAG); */
+-	os_alloc_mem(pAd, (UCHAR **)&msg, sizeof(CHAR)*(2048));
++	os_alloc_mem(pAd, (UCHAR **)&msg, sizeof(CHAR)*(2048*2));
+ 	if (msg == NULL) {
+ 		return;
+ 	}
+ 
+ 
+-    memset(msg, 0x00, 1600);
++    memset(msg, 0x00, 4096);
+     sprintf(msg, "\n");
+ 
+ #ifdef RALINK_QA
+@@ -9155,6 +9180,83 @@
+ 		sprintf(msg+strlen(msg), "efuseFreeNumber                 = %d\n", efusefreenum);
+ 	}
+ #endif /* RTMP_EFUSE_SUPPORT */    
++#ifdef MAC_REPEATER_SUPPORT
++        sprintf(msg+strlen(msg), "MAC Repeater information:\n");
++
++
++        RTMP_IO_READ32(pAd, BKOFF_SLOT_CFG, &RegValue);
++           sprintf(msg+strlen(msg), "BackOff Slot      : %s slot time, BKOFF_SLOT_CFG(0x1104) = 0x%08x\n", 
++                OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_SHORT_SLOT_INUSED) ? "short" : "long",
++                RegValue);
++#ifdef DOT11_N_SUPPORT
++         sprintf(msg+strlen(msg),"HT Operating Mode : %d\n", pAd->CommonCfg.AddHTInfo.AddHtInfo2.OperaionMode);
++    
++#endif /* DOT11_N_SUPPORT */
++        
++         sprintf(msg+strlen(msg),"\n%-19s%-4s%-4s%-4s%-4s%-8s%-7s%-7s%-7s%-10s%-6s%-6s%-6s%-6s%-7s%-7s\n",
++               "MAC", "AID", "BSS", "PSM", "WMM", "MIMOPS", "RSSI0", "RSSI1", 
++               "RSSI2", "PhMd", "BW", "MCS", "SGI", "STBC", "Idle", "Rate");
++        
++        for (i = MAX_LEN_OF_MAC_TABLE; i < MAX_MAC_TABLE_SIZE_WITH_REPEATER; i++)
++        {
++    
++            PMAC_TABLE_ENTRY pEntry = &pAd->MacTab.Content[i];
++            if (pEntry && IS_ENTRY_APCLI(pEntry)&& (pEntry->Sst == SST_ASSOC) && (pEntry->bReptCli))
++            {
++                DataRate=0;
++                getRate(pEntry->HTPhyMode, &DataRate);
++    
++                 sprintf(msg+strlen(msg),"%02X:%02X:%02X:%02X:%02X:%02X  ",
++                        pEntry->ReptCliAddr[0], pEntry->ReptCliAddr[1], pEntry->ReptCliAddr[2],
++                        pEntry->ReptCliAddr[3], pEntry->ReptCliAddr[4], pEntry->ReptCliAddr[5]);
++                 sprintf(msg+strlen(msg),"%-4d", (int)pEntry->Aid);
++                 sprintf(msg+strlen(msg),"%-4d", (int)pEntry->apidx);
++                 sprintf(msg+strlen(msg),"%-4d", (int)pEntry->PsMode);
++                 sprintf(msg+strlen(msg),"%-4d", (int)CLIENT_STATUS_TEST_FLAG(pEntry, fCLIENT_STATUS_WMM_CAPABLE));
++#ifdef DOT11_N_SUPPORT
++                 sprintf(msg+strlen(msg),"%-8d", (int)pEntry->MmpsMode);
++#endif /* DOT11_N_SUPPORT */
++                 sprintf(msg+strlen(msg),"%-7d", pEntry->RssiSample.AvgRssi0);
++                 sprintf(msg+strlen(msg),"%-7d", pEntry->RssiSample.AvgRssi1);
++                 sprintf(msg+strlen(msg),"%-7d", pEntry->RssiSample.AvgRssi2);
++                 sprintf(msg+strlen(msg),"%-10s", GetPhyMode(pEntry->HTPhyMode.field.MODE));
++                 sprintf(msg+strlen(msg),"%-6s", GetBW(pEntry->HTPhyMode.field.BW));
++                 sprintf(msg+strlen(msg),"%-6d", pEntry->HTPhyMode.field.MCS);
++                 sprintf(msg+strlen(msg),"%-6d", pEntry->HTPhyMode.field.ShortGI);
++                 sprintf(msg+strlen(msg),"%-6d", pEntry->HTPhyMode.field.STBC);
++                 sprintf(msg+strlen(msg),"%-7d", (int)(pEntry->StaIdleTimeout - pEntry->NoDataIdleCount));
++                 sprintf(msg+strlen(msg),"%-7d", (int)DataRate);
++                 sprintf(msg+strlen(msg),"%-10d, %d, %d%%\n", pEntry->DebugFIFOCount, pEntry->DebugTxCount, 
++                            (pEntry->DebugTxCount) ? ((pEntry->DebugTxCount-pEntry->DebugFIFOCount)*100/pEntry->DebugTxCount) : 0);
++            }
++        }
++#endif
++    sprintf(msg+strlen(msg), "MAT information:\n");
++    if(pIPMacTable!=NULL && pIPMacTable->valid)
++    {
++        int j=0;
++      for(i=0;i<64;i++)
++      {
++         pEntry =pIPMacTable->hash[i];         
++         if(pEntry!=NULL)
++         {
++               if((0==strcmp( pIPMacTable->hash[i]->macAddr,pAd->ApCfg.ApCliTab[0].CurrentAddress))||
++                   (0==strcmp( pIPMacTable->hash[i]->macAddr,pAd->CurrentAddress)))
++               {
++                   continue;
++               }
++                j++;
++                sprintf(msg+strlen(msg),"%-4d", j);         
++                sprintf(msg+strlen(msg),"%02X:%02X:%02X:%02X:%02X:%02X           ", 
++                    pIPMacTable->hash[i]->macAddr[0], pIPMacTable->hash[i]->macAddr[1], pIPMacTable->hash[i]->macAddr[2],
++                    pIPMacTable->hash[i]->macAddr[3], pIPMacTable->hash[i]->macAddr[4], pIPMacTable->hash[i]->macAddr[5]);
++                sprintf(msg+strlen(msg),"%d.%d.%d.%d  \n", 
++                pIPMacTable->hash[i]->ipAddr & 0xff ,(pIPMacTable->hash[i]->ipAddr>>8) & 0xff,
++                (pIPMacTable->hash[i]->ipAddr>>16) & 0xff,(pIPMacTable->hash[i]->ipAddr>>24) & 0xff);    
++         }
++      }
++    }
++
+     /* Copy the information into the user buffer */
+     wrq->u.data.length = strlen(msg);
+     Status = copy_to_user(wrq->u.data.pointer, msg, wrq->u.data.length);
+diff -urN a/rt2860v2/ap/ap_repeater.c b/rt2860v2/ap/ap_repeater.c
+--- a/rt2860v2/ap/ap_repeater.c	2013-05-13 18:19:20.865728087 +0800
++++ b/rt2860v2/ap/ap_repeater.c	2013-05-13 16:35:17.065723446 +0800
+@@ -42,38 +42,18 @@
+ 	ULONG HashIdx;
+ 	UCHAR tempMAC[6];
+ 	REPEATER_CLIENT_ENTRY *pEntry = NULL;
+-	REPEATER_CLIENT_ENTRY_MAP *pMapEntry = NULL;
+ 
+ 	NdisAcquireSpinLock(&pAd->ApCfg.ReptCliEntryLock);
+ 	COPY_MAC_ADDR(tempMAC, pAddr);
+ 	HashIdx = MAC_ADDR_HASH_INDEX(tempMAC);
+-
+-	if (bRealMAC == TRUE)
+-	{
+-		pMapEntry = pAd->ApCfg.ReptMapHash[HashIdx];
+-		while (pMapEntry)
+-		{
+-			pEntry = pMapEntry->pReptCliEntry;
+-
+-			if (pEntry->CliValid && MAC_ADDR_EQUAL(pEntry->OriginalAddress, tempMAC))
+-				break;
+-			else
+-			{
+-				pEntry = NULL;
+-				pMapEntry = pMapEntry->pNext;
+-			}
+-		}
+-	}
+-	else
+-	{
+ 		pEntry = pAd->ApCfg.ReptCliHash[HashIdx];
+ 		while (pEntry)
+ 		{
+-			if (pEntry->CliValid && MAC_ADDR_EQUAL(pEntry->CurrentAddress, tempMAC))
++			//if (pEntry->CliValid && MAC_ADDR_EQUAL(pEntry->CurrentAddress, tempMAC))
++			if (pEntry->CliValid && MAC_ADDR_EQUAL(pEntry->OriginalAddress, tempMAC))
+ 				break;
+ 			else
+ 				pEntry = pEntry->pNext;
+-		}
+ 	}
+ 	NdisReleaseSpinLock(&pAd->ApCfg.ReptCliEntryLock);
+ 
+@@ -224,15 +204,17 @@
+ 		NdisCopyMemory(tempMAC, pAd->ApCfg.ApCliTab[apidx].CurrentAddress, 3);
+ 	}
+ 
+-	COPY_MAC_ADDR(pReptCliEntry->CurrentAddress, tempMAC);
++	//COPY_MAC_ADDR(pReptCliEntry->CurrentAddress, tempMAC);
++	COPY_MAC_ADDR(pReptCliEntry->CurrentAddress, pAddr);
+ 	pReptCliEntry->CliEnable = TRUE;
+ 	pReptCliEntry->CliConnectState = 1;
+ 	pReptCliEntry->pNext = NULL;
+ 	NdisGetSystemUpTime(&pReptCliEntry->CliTriggerTime);
+ 
+-	RTMPInsertRepeaterAsicEntry(pAd, CliIdx, tempMAC);
+-		
+-	HashIdx = MAC_ADDR_HASH_INDEX(tempMAC);
++	//RTMPInsertRepeaterAsicEntry(pAd, CliIdx, tempMAC);
++	//HashIdx = MAC_ADDR_HASH_INDEX(tempMAC);
++	RTMPInsertRepeaterAsicEntry(pAd, CliIdx, pAddr);	
++	HashIdx = MAC_ADDR_HASH_INDEX(pAddr);
+ 	if (pAd->ApCfg.ReptCliHash[HashIdx] == NULL)
+ 	{
+ 		pAd->ApCfg.ReptCliHash[HashIdx] = pReptCliEntry;
+@@ -264,7 +246,8 @@
+ 
+ 	NdisZeroMemory(&ApCliCtrlMsg, sizeof(APCLI_CTRL_MSG_STRUCT));
+ 	ApCliCtrlMsg.Status = MLME_SUCCESS;
+-	COPY_MAC_ADDR(&ApCliCtrlMsg.SrcAddr[0], tempMAC);
++	//COPY_MAC_ADDR(&ApCliCtrlMsg.SrcAddr[0], tempMAC);
++	COPY_MAC_ADDR(&ApCliCtrlMsg.SrcAddr[0], pAddr);
+ 	ApCliCtrlMsg.BssIdx = apidx;
+ 	ApCliCtrlMsg.CliIdx = CliIdx;
+ 
+diff -urN a/rt2860v2/ap/ap_sync.c b/rt2860v2/ap/ap_sync.c
+--- a/rt2860v2/ap/ap_sync.c	2013-05-13 18:19:20.865728087 +0800
++++ b/rt2860v2/ap/ap_sync.c	2013-05-13 16:36:57.425723853 +0800
+@@ -107,6 +107,13 @@
+ 	UCHAR   RSNIe=IE_WPA, RSNIe2=IE_WPA2;/*, RSN_Len=22; */
+ 	BOOLEAN		bRequestRssi=FALSE;
+ 
++#ifdef MAC_REPEATER_SUPPORT
++	//only ap send probe response
++	if(0!=pAd->DeviceMode)  
++	{
++		return;
++	}
++#endif
+ #ifdef WSC_AP_SUPPORT
+     UCHAR		  Addr3[MAC_ADDR_LEN];
+     PFRAME_802_11 pFrame = (PFRAME_802_11)Elem->Msg;
+diff -urN a/rt2860v2/common/cmm_asic.c b/rt2860v2/common/cmm_asic.c
+--- a/rt2860v2/common/cmm_asic.c	2013-05-13 18:19:20.861728292 +0800
++++ b/rt2860v2/common/cmm_asic.c	2013-05-13 18:27:00.517728020 +0800
+@@ -2674,7 +2674,10 @@
+ 		csr.field.BeaconInterval = pAd->CommonCfg.BeaconPeriod << 4; /* ASIC register in units of 1/16 TU*/
+ 		csr.field.bTsfTicking = 1;
+ 		csr.field.TsfSyncMode = 3; /* sync TSF similar as in ADHOC mode?*/
+-		csr.field.bBeaconGen  = 1; /* AP should generate BEACON*/
++		if(0==pAd->DeviceMode)
++			csr.field.bBeaconGen  = 1; /* AP should generate BEACON*/
++		else
++			csr.field.bBeaconGen  = 0; /* ur and WISP should not generate BEACON*/
+ 		csr.field.bTBTTEnable = 1;
+ 	}
+ #endif /* CONFIG_AP_SUPPORT */
+@@ -2778,7 +2781,11 @@
+ 	csr9.field.TsfSyncMode = 2; /* sync TSF in IBSS mode*/
+ #endif /* !IWSC_SUPPORT */
+ 	csr9.field.bTBTTEnable = 1;
+-	csr9.field.bBeaconGen = 1;
++	if(0==pAd->DeviceMode)
++		csr9.field.bBeaconGen  = 1; /* AP should generate BEACON*/
++	else
++		csr9.field.bBeaconGen  = 0; /* ur and WISP should not generate BEACON*/
++       
+ 	RTMP_IO_WRITE32(pAd, BCN_TIME_CFG, csr9.word);
+ }
+ 
+diff -urN a/rt2860v2/common/cmm_info.c b/rt2860v2/common/cmm_info.c
+--- a/rt2860v2/common/cmm_info.c	2013-05-13 18:19:20.857728378 +0800
++++ b/rt2860v2/common/cmm_info.c	2013-05-13 18:27:16.529821222 +0800
+@@ -372,6 +372,32 @@
+     return TRUE;
+ }
+ 
++INT Set_DeviceMode_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg)
++{
++    UCHAR   DeviceMode=1;//0-AP 1-bridge 2-WISP
++    DeviceMode = simple_strtol(arg, 0, 10);
++    if(0==DeviceMode)
++    {
++         pAd->DeviceMode=0;
++         DBGPRINT(RT_DEBUG_TRACE, ("AP................................\n"));
++     }
++    else if(1==DeviceMode)
++    {
++        pAd->DeviceMode=1;
++         DBGPRINT(RT_DEBUG_TRACE, ("Bridge................................\n"));
++    }
++    else
++    {
++        pAd->DeviceMode=2;
++         DBGPRINT(RT_DEBUG_TRACE, ("WISP................................\n"));
++    }
++
++    return TRUE;
++}
++
++
+ /* 
+     ==========================================================================
+     Description:
+diff -urN a/rt2860v2/common/rtmp_init.c b/rt2860v2/common/rtmp_init.c
+--- a/rt2860v2/common/rtmp_init.c	2013-05-13 18:19:20.857728378 +0800
++++ b/rt2860v2/common/rtmp_init.c	2013-05-14 13:55:08.210228821 +0800
+@@ -4006,7 +4006,7 @@
+ 	pAd->Dot11_H.bDFSIndoor = 1;
+ 
+ 
+-	pAd->bEnableMacWD = TRUE;
++	pAd->bEnableMacWD = FALSE;
+ 	pAd->CommonCfg.bRcvBSSWidthTriggerEvents = FALSE;
+ 
+ 
+diff -urN a/rt2860v2/include/rtmp.h b/rt2860v2/include/rtmp.h
+--- a/rt2860v2/include/rtmp.h	2013-05-13 18:19:20.861728292 +0800
++++ b/rt2860v2/include/rtmp.h	2013-05-13 18:27:46.429735646 +0800
+@@ -4287,6 +4287,7 @@
+ 	CHAR SingleSkuRatePwrDiff[18];
+ 	BOOLEAN bOpenFileSuccess;
+ #endif /* SINGLE_SKU_V2 */
++	UCHAR DeviceMode;//0-AP 1-bridge 2-WISP
+ };
+ 
+ #if defined(RTMP_INTERNAL_TX_ALC) || defined(RTMP_TEMPERATURE_COMPENSATION) 
+@@ -8293,6 +8294,10 @@
+ 	IN	PRTMP_ADAPTER	pAd, 
+ 	IN	PSTRING			arg);
+ 
++INT Set_DeviceMode_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg);
++
+ INT Set_CountryRegion_Proc(
+ 	IN	PRTMP_ADAPTER	pAd, 
+ 	IN	PSTRING			arg);

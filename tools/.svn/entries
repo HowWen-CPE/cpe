@@ -1,0 +1,209 @@
+10
+
+dir
+12
+svn://192.168.1.17/trunk/cpe/tools
+svn://192.168.1.17
+
+
+
+2014-05-24T22:14:21.990336Z
+5
+peter
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+e6ba6a40-ba65-43fd-b1f0-5c3b951f9f94
+
+cloog
+dir
+
+lzma
+dir
+
+libtool
+dir
+
+mpfr
+dir
+
+ccache
+dir
+
+dtc
+dir
+
+mkimage
+dir
+
+sdcc
+dir
+
+mtools
+dir
+
+Makefile
+file
+
+
+
+
+2014-06-21T05:05:56.579040Z
+24d412ef94c1c8fa4eb9491a6b6b189f
+2014-05-17T01:39:21.519443Z
+2
+peter
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5245
+
+autoconf
+dir
+
+mpc
+dir
+
+lzma-old
+dir
+
+cmake
+dir
+
+mklibs
+dir
+
+squashfs4
+dir
+
+mtd-utils
+dir
+
+sstrip
+dir
+
+scons
+dir
+
+ipkg-utils
+dir
+
+ppl
+dir
+
+mm-macros
+dir
+
+libelf
+dir
+
+liteonimage
+dir
+
+quilt
+dir
+
+padjffs2
+dir
+
+dosfstools
+dir
+
+xorg-macros
+dir
+
+xz
+dir
+
+genext2fs
+dir
+
+automake
+dir
+
+qemu
+dir
+
+xfce-macros
+dir
+
+patch-cmdline
+dir
+
+bison
+dir
+
+e2fsprogs
+dir
+
+firmware-utils
+dir
+
+sed
+dir
+
+upx
+dir
+
+wrt350nv2-builder
+dir
+
+m4
+dir
+
+gmp
+dir
+
+include
+dir
+
+pkg-config
+dir
+
+yaffs2
+dir
+
+missing-macros
+dir
+
+squashfs
+dir
+
+flex
+dir
+
+flock
+dir
+
+upslug2
+dir
+

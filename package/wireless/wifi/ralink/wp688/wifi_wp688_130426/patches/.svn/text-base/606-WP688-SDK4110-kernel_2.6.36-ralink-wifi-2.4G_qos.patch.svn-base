@@ -1,0 +1,229 @@
+diff -urN a/rt2860v2/ap/ap_cfg.c b/rt2860v2/ap/ap_cfg.c
+--- a/rt2860v2/ap/ap_cfg.c	2013-05-13 17:41:21.753727802 +0800
++++ b/rt2860v2/ap/ap_cfg.c	2013-05-13 17:42:09.849722312 +0800
+@@ -716,6 +716,47 @@
+ #endif /* WSC_AP_SUPPORT */
+ #endif /* P2P_SUPPORT */
+ 
++/* QoS Mark Configuration, --Jack--20121219-------->*/
++INT	Set_TosMarkStatus_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg);
++
++INT	Set_TosMarkVo_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg);
++
++INT	Set_TosMarkVi_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg);
++
++INT	Set_TosMarkBe_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg);
++
++INT	Set_TosMarkBk_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg);
++INT	Show_TosMarkStatus_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg);
++
++INT	Show_TosMarkVo_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg);
++
++INT	Show_TosMarkVi_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg);
++
++INT	Show_TosMarkBe_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg);
++
++INT	Show_TosMarkBk_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg);
++/*<----------*/
++
+ INT Set_MacWatchDog_Proc(
+ 	IN RTMP_ADAPTER	*pAd,
+ 	IN PSTRING arg);
+@@ -1300,6 +1341,14 @@
+ #endif
+ #endif
+ 
++/*QoS Mark Configuration, --Jack--20121219-------->*/
++	{"markstatus",			Set_TosMarkStatus_Proc},
++	{"mark_vo",				Set_TosMarkVo_Proc},
++	{"mark_vi",				Set_TosMarkVi_Proc}, 
++	{"mark_be",				Set_TosMarkBe_Proc},
++	{"mark_bk",				Set_TosMarkBk_Proc}, 	
++/*<----------*/	
++
+ 	{NULL,}
+ };
+ 
+@@ -1354,6 +1403,14 @@
+ #ifdef WSC_AP_SUPPORT
+ 	{"WscPeerList", 		WscApShowPeerList},
+ #endif /* WSC_AP_SUPPORT */
++
++/*QoS Mark Configuration, --Jack--20121219-------->*/
++	{"markstatus",			Show_TosMarkStatus_Proc},
++	{"mark_vo",				Show_TosMarkVo_Proc},
++	{"mark_vi",				Show_TosMarkVi_Proc}, 
++	{"mark_be",				Show_TosMarkBe_Proc},
++	{"mark_bk",				Show_TosMarkBk_Proc}, 	
++
+ 	{NULL,}
+ };
+ 
+@@ -12904,6 +12961,93 @@
+ 	return Status;
+ }
+ 
++/*QoS Mark Configuration, --Jack--20121219-------->*/
++INT	Set_TosMarkStatus_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg)
++{
++	UCHAR value = (UCHAR)simple_strtol(arg, 0, 0);
++
++        if (value > 1)
++        {
++		return FALSE;
++        }
++
++	pAd->ApCfg.Tos_Mark_Status = value;
++	return TRUE;
++}
++INT	Set_TosMarkVo_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg)
++{
++	UCHAR value = (UCHAR)simple_strtol(arg, 0, 0);
++
++	pAd->ApCfg.Tos_Mark_Value[0]= value;
++	return TRUE;
++}
++INT	Set_TosMarkVi_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg)
++{
++	UCHAR value = (UCHAR)simple_strtol(arg, 0, 0);
++
++	pAd->ApCfg.Tos_Mark_Value[1]= value;
++	return TRUE;
++}
++INT	Set_TosMarkBe_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg)
++{
++	UCHAR value = (UCHAR)simple_strtol(arg, 0, 0);
++
++	pAd->ApCfg.Tos_Mark_Value[2]= value;
++	return TRUE;
++}
++INT	Set_TosMarkBk_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg)
++{
++	UCHAR value = (UCHAR)simple_strtol(arg, 0, 0);
++
++	pAd->ApCfg.Tos_Mark_Value[3]= value;
++	return TRUE;
++}
++INT	Show_TosMarkStatus_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg)
++{
++	printk("markstatus = %d\n", pAd->ApCfg.Tos_Mark_Status);
++	return TRUE;
++}
++INT	Show_TosMarkVo_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg)
++{
++	printk("mark_vo = 0x%02x\n", pAd->ApCfg.Tos_Mark_Value[0]);
++	return TRUE;
++}
++INT	Show_TosMarkVi_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg)
++{
++	printk("mark_vi = 0x%02x\n", pAd->ApCfg.Tos_Mark_Value[1]);
++	return TRUE;
++}
++INT	Show_TosMarkBe_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg)
++{
++	printk("mark_be = 0x%02x\n", pAd->ApCfg.Tos_Mark_Value[2]);
++	return TRUE;
++}
++INT	Show_TosMarkBk_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg)
++{
++	printk("mark_bk = 0x%02x\n", pAd->ApCfg.Tos_Mark_Value[3]);
++	return TRUE;
++}
++
+ #ifdef P2P_SUPPORT
+ INT Set_P2p_OpMode_Proc(
+ 	IN  PRTMP_ADAPTER pAd, 
+diff -urN a/rt2860v2/common/cmm_data.c b/rt2860v2/common/cmm_data.c
+--- a/rt2860v2/common/cmm_data.c	2013-05-13 17:41:21.745728222 +0800
++++ b/rt2860v2/common/cmm_data.c	2013-05-13 13:40:19.061723818 +0800
+@@ -3869,6 +3869,35 @@
+ 	}
+ 
+ 
++	/*QoS Mark Configuration, --Jack--20121219-------->*/
++	if (pAd->ApCfg.Tos_Mark_Status) {
++	    if (!(((struct sk_buff *)pPacket)->mark & 0x0f)) {
++		*pUserPriority = 0;
++		*pQueIdx		= QID_AC_BE;
++                 	
++	    }
++	    else if ((((struct sk_buff *)pPacket)->mark & 0x0f) == pAd->ApCfg.Tos_Mark_Value[0]) {
++		*pUserPriority = 6;
++		*pQueIdx		= QID_AC_VO;	
++	    }
++	    else if ((((struct sk_buff *)pPacket)->mark & 0x0f) == pAd->ApCfg.Tos_Mark_Value[1]) {
++		*pUserPriority = 5;
++		*pQueIdx		= QID_AC_VI;
++	    }
++	    else if ((((struct sk_buff *)pPacket)->mark & 0x0f) == pAd->ApCfg.Tos_Mark_Value[2]) {
++		*pUserPriority = 0;
++		*pQueIdx		= QID_AC_BE;
++	    }
++	    else if ((((struct sk_buff *)pPacket)->mark & 0x0f) == pAd->ApCfg.Tos_Mark_Value[3]) {
++		*pUserPriority = 1;
++		*pQueIdx		= QID_AC_BK;
++	    }
++	    else {
++		*pUserPriority = 0;
++		*pQueIdx		= QID_AC_BE;
++	    }
++	}
++/*<------------*/
+ 	return TRUE;
+ 	
+ }
+diff -urN a/rt2860v2/include/rtmp.h b/rt2860v2/include/rtmp.h
+--- a/rt2860v2/include/rtmp.h	2013-05-13 17:41:21.749728408 +0800
++++ b/rt2860v2/include/rtmp.h	2013-05-13 17:43:53.933723778 +0800
+@@ -3189,6 +3189,11 @@
+ 
+ 	UCHAR	EntryClientCount;
+ 
++/*QoS Mark Configuration, --Jack--20121219-------->*/
++	UCHAR	Tos_Mark_Status;
++	UCHAR	Tos_Mark_Value[4];
++/*<------------------*/
++
+ #ifdef MAC_REPEATER_SUPPORT
+ 	BOOLEAN bMACRepeaterEn;
+ 	UCHAR MACRepeaterOuiMode;

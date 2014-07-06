@@ -1,0 +1,41 @@
+--- boot_atheros/u-boot/include/configs/db12x.h	2013-04-03 13:42:56.000000000 +0800
++++ boot_liteon/u-boot/include/configs/db12x.h	2013-03-29 17:59:12.000000000 +0800
+@@ -7,6 +7,13 @@
+ 
+ #include <configs/ar7240.h>
+ 
++/*Added by sirian, 2011-05-08 ----->*/
++#undef DEBUG
++#undef BCM_ENET_PHY /*Define this Macro for select BCM PHY 54610, otherwise undefine it*/
++#define CONFIG_PHY_GIGE		1	/* Include GbE speed/duplex detection */
++#define UBOOT_ROM_VERSION      /*Switch for compiling ram boot or rom boot*/
++/*<-----end sirian*/
++
+ #ifndef FLASH_SIZE
+ #define FLASH_SIZE		8
+ #endif
+@@ -109,7 +116,7 @@
+ #ifdef CONFIG_ATH_NAND_SUPPORT
+ #	ifdef CONFIG_ATH_NAND_BR	// nand boot rom
+ #		define ATH_U_CMD	nand_gen_cmd(lu, 0x0, 2fw.bin, 0x40000)
+-#		define MTDPARTS_DEFAULT "mtdparts=ath-nand:256k(u-boot),256k(u-boot-env),1280k(uImage),7m(rootfs),128k(dummy),128k(caldata)"
++#		define MTDPARTS_DEFAULT "mtdparts=ath-nand:256k(u-boot),256k(u-boot-env),1280k(uImage),8m(rootfs),128k(cfg),118m(dummy),128k(caldata),64m@0(part1),65408k@64m(part2),"
+ #		define ATH_ROOT_DEV	"31:03"
+ #		define CFG_ENV_ADDR	0x00040000
+ #	else	//dual flash
+@@ -400,6 +407,7 @@
+ 				CFG_CMD_RUN	|	\
+ 				CFG_CMD_ELF	|	\
+ 				CFG_CMD_DDR	|	\
++				CFG_CMD_LOADB |  \
+ 				CFG_CMD_ETHREG		\
+ 				) & ~(			\
+ 				CFG_CMD_IMLS	|	\
+@@ -430,7 +438,6 @@
+ #	define CFG_ENV_SIZE			CFG_FLASH_SECTOR_SIZE
+ #endif
+ 
+-#define DEBUG
+ 
+ #ifdef COMPRESSED_UBOOT
+ #undef  CFG_ENV_IS_IN_FLASH

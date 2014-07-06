@@ -1,0 +1,110 @@
+--- u-boot-freescale-p1020-sku/common/cmd_load.c	2009-12-15 14:20:54.000000000 -0800
++++ u-boot-liteon-wp854-openwrt/common/cmd_load.c	2011-03-01 00:10:00.000000000 -0800
+@@ -34,6 +34,8 @@
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+ #if defined(CONFIG_CMD_LOADB)
++/* support xmodem */
++static ulong load_serial_xmodem (ulong offset);
+ static ulong load_serial_ymodem (ulong offset);
+ #endif
+ 
+@@ -475,7 +477,16 @@
+ 		}
+ 	}
+ 
+-	if (strcmp(argv[0],"loady")==0) {
++     /* support xmodem */
++        if (strcmp(argv[0],"loadx")==0) {
++            printf ("## Ready for binary (xmodem) download "
++                "to 0x%08lX at %d bps...\n",
++                offset,
++                load_baudrate);
++    
++            addr = load_serial_xmodem (offset);
++            
++	}else if (strcmp(argv[0],"loady")==0) {
+ 		printf ("## Ready for binary (ymodem) download "
+ 			"to 0x%08lX at %d bps...\n",
+ 			offset,
+@@ -963,6 +974,64 @@
+ 		return (getc());
+ 	return -1;
+ }
++
++/* support xmodem, www.100ask.net */
++static ulong load_serial_xmodem (ulong offset)
++{
++    int size;
++    char buf[32];
++    int err;
++    int res;
++    connection_info_t info;
++    char xmodemBuf[1024];
++    ulong store_addr = ~0;
++    ulong addr = 0;
++
++    size = 0;
++    info.mode = xyzModem_xmodem;
++    res = xyzModem_stream_open (&info, &err);
++    if (!res) {
++
++        while ((res =
++            xyzModem_stream_read (xmodemBuf, 1024, &err)) > 0) {
++            store_addr = addr + offset;
++            size += res;
++            addr += res;
++#ifndef CONFIG_SYS_NO_FLASH
++            if (addr2info (store_addr)) {
++                int rc;
++
++                rc = flash_write ((char *) xmodemBuf,
++                          store_addr, res);
++                if (rc != 0) {
++                    flash_perror (rc);
++                    return (~0);
++                }
++            } else
++#endif
++            {
++                memcpy ((char *) (store_addr), xmodemBuf,
++                    res);
++            }
++
++        }
++    } else {
++        printf ("%s\n", xyzModem_error (err));
++    }
++
++    xyzModem_stream_close (&err);
++    xyzModem_stream_terminate (false, &getcxmodem);
++
++
++    flush_cache (offset, size);
++
++    printf ("## Total Size      = 0x%08x = %d Bytes\n", size, size);
++    sprintf (buf, "%X", size);
++    setenv ("filesize", buf);
++
++    return offset;
++}
++
+ static ulong load_serial_ymodem (ulong offset)
+ {
+ 	int size;
+@@ -1078,6 +1147,15 @@
+ 	" with offset 'off' and baudrate 'baud'"
+ );
+ 
++/* support xmodem, www.100ask.net */
++U_BOOT_CMD(
++    loadx, 3, 0,    do_load_serial_bin,
++    "loadx   - load binary file over serial line (xmodem mode)\n",
++    "[ off ] [ baud ]\n"
++    "    - load binary file over serial line"
++    " with offset 'off' and baudrate 'baud'\n"
++);
++
+ U_BOOT_CMD(
+ 	loady, 3, 0,	do_load_serial_bin,
+ 	"load binary file over serial line (ymodem mode)",

@@ -1,0 +1,90 @@
+--- old/common/cmd_net.c	2012-11-28 15:36:34.000000000 +0800
++++ new/common/cmd_net.c	2012-11-28 15:57:49.000000000 +0800
+@@ -241,6 +241,87 @@
+ 	return rcode;
+ }
+ 
++/*added by sean. Nov 2012,28*/
++#ifdef LITEON_SRC_VALID
++#ifdef CONFIG_LITEON_HW_DIAGNOSE
++volatile ulong put_to_server_base_addr  =  CONFIG_TO_SERVER_BASE;
++volatile char  put_to_server_file_name[128] = {'0'};
++volatile ulong put_to_server_file_len = 0;
++
++#define default_mem_addr "0x80100000"
++
++int liteon_net_common (proto_t proto, cmd_tbl_t *cmdtp, int argc, char *argv[])
++{
++	char *s;
++	int   rcode = 0;
++	int   size;
++        ulong base_addr;
++
++        if ((argv[2][0] == '0') && ((argv[2][1] == 'x') ||(argv[2][1] = 'X')))
++        {
++            	/*copy base_addr */
++            	base_addr = simple_strtoul(argv[2], NULL, 16);
++		if (base_addr < simple_strtoul(default_mem_addr, NULL, 16))
++		{
++           		printf("please input base_addr > = %s\n", default_mem_addr);
++			return 1;
++		}
++        }
++        else
++        {
++            	/*copy base_addr */
++            	base_addr = simple_strtoul(argv[2], NULL, 10);
++		if (base_addr < simple_strtoul(default_mem_addr, NULL, 10))
++		{
++           		printf("please input base_addr > = %s\n", default_mem_addr);
++			return 1;
++		}
++        }
++
++         if ((argv[4][0] == '0') && ((argv[4][1] == 'x') ||(argv[4][1] = 'X')))
++        {
++            /*The file length of putting to server*/
++            if ((put_to_server_file_len = simple_strtoul(argv[4], NULL, 16)) <= 0)
++                return 1;
++        }
++        else
++        {
++            /*The file length of putting to server*/
++            if ((put_to_server_file_len = simple_strtoul(argv[4], NULL, 10)) <= 0)
++                return 1;
++        }
++
++        if ((0xbc000000 <=  base_addr) && ( base_addr <= 0xbc800000))
++        {
++            char *argvv[] = {"liteon_cp.b", argv[2], default_mem_addr,argv[4],NULL};
++             argc =  4;
++            liteon_do_mem_cp(cmdtp,0,argc, argvv);
++            put_to_server_base_addr = simple_strtoul(default_mem_addr, NULL, 16);
++        }   
++        else
++             put_to_server_base_addr = base_addr;
++        
++        /*file name of sending to server*/
++        copy_filename ( put_to_server_file_name, argv[6], sizeof(put_to_server_file_name));
++        
++	if ((size = liteon_netloop(proto)) < 0)
++		return 1;
++
++	/* NetLoop ok, update environment */
++	netboot_update_env();
++
++	/* done if no file was loaded (no errors though) */
++	if (size == 0)
++		return 0;
++
++	/* flush cache */
++	flush_cache(put_to_server_base_addr, size);
++    
++	return rcode;
++}
++#endif
++#endif //LITEON_SRC_VALID
++/*<-----end sean-----*/
+ #if (CONFIG_COMMANDS & CFG_CMD_PING)
+ int do_ping (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
+ {

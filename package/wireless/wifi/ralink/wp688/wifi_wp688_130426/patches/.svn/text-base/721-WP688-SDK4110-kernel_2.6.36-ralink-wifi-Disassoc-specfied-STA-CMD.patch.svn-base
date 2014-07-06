@@ -1,0 +1,133 @@
+--- a/rt2860v2/ap/ap_cfg.c
++++ b/rt2860v2/ap/ap_cfg.c
+@@ -181,6 +181,12 @@ INT Set_AP_SSID_Proc(
+     IN  PRTMP_ADAPTER   pAdapter, 
+     IN  PSTRING          arg);
+ 
++/* Force the AP disassociated the specified STA, Sean@Liteon, 2014-01-26 */
++INT	Set_KickMAC_Proc(
++	IN	PRTMP_ADAPTER	pAdapter, 
++	IN	PSTRING			arg);
++
++
+ INT Set_TxRate_Proc(
+     IN  PRTMP_ADAPTER   pAdapter, 
+     IN  PSTRING          arg);
+@@ -822,6 +828,9 @@ static struct {
+ #endif 
+ /*<-----daniel@liteon,2013-9-26*/
+ 
++	/* Force the AP disassociated the specified STA, Sean@Liteon, 2014-01-26 */
++	{"KickMAC",					Set_KickMAC_Proc},
++
+ 	{"BGProtection",				Set_BGProtection_Proc},
+ 	{"DisableOLBC", 				Set_OLBCDetection_Proc},
+ 	{"TxPreamble",				Set_TxPreamble_Proc},
+@@ -5138,6 +5147,95 @@ INT	Set_AP_SSID_Proc(
+ 	return success;
+ }
+ 
++/* 
++    ==========================================================================
++    Description:
++        Set the specified STA which is force disassociated by AP
++    Return:
++        TRUE if all parameters are OK, FALSE otherwise
++    Author:
++    	Sean@Liteon.com
++    Date:
++    	2014-01-26
++    ==========================================================================
++*/
++INT	Set_KickMAC_Proc(
++	IN	PRTMP_ADAPTER	pAdapter, 
++	IN	PSTRING			arg)
++{
++	UCHAR					macAddr[MAC_ADDR_LEN];
++	INT   success = FALSE;
++	POS_COOKIE pObj = (POS_COOKIE) pAdapter->OS_Cookie;
++	MLME_DISASSOC_REQ_STRUCT DisassocReq;
++	PSTRING					value;
++	INT						i, HashIdx;
++	MAC_TABLE_ENTRY *pEntry = NULL;
++	
++	if(strlen(arg) == 17)
++	{
++	        for (i=0, value = rstrtok(arg,":"); value; value = rstrtok(NULL,":")) 
++		{
++			if((strlen(value) != 2) || (!isxdigit(*value)) || (!isxdigit(*(value+1))) ) 
++			{
++				DBGPRINT(RT_DEBUG_ERROR, ("illegal MAC address format or octet!\n"));
++				/* Do not use "continue" to replace "break" */
++				break;
++			}
++			AtoH(value, &macAddr[i++], 1);
++		}
++
++		if (i != MAC_ADDR_LEN)
++		{
++			DBGPRINT(RT_DEBUG_ERROR, ("illegal MAC address format or octet!\n"));
++			success = FALSE;
++			return success;
++		}
++		
++		NdisMoveMemory(DisassocReq.Addr, &macAddr, MAC_ADDR_LEN);
++		DisassocReq.Reason = REASON_DISASSOC_INACTIVE;
++		MlmeEnqueue(pAdapter, AP_ASSOC_STATE_MACHINE, APMT2_MLME_DISASSOC_REQ, sizeof(MLME_DISASSOC_REQ_STRUCT), &DisassocReq,0);
++		RTMP_MLME_HANDLER(pAdapter);
++		
++		success = TRUE;
++
++		DBGPRINT(RT_DEBUG_TRACE, ("I/F(rai%d) Set_KickMAC_Proc::(%02X:%02X:%02X:%02X:%02x:%02X)\n", 
++			pObj->ioctl_if,
++			macAddr[0],macAddr[1],macAddr[2],
++			macAddr[3],macAddr[4],macAddr[5]));
++
++	}
++	else if (!strcmp(arg, "all")) 
++	{
++		for (HashIdx = 0; HashIdx < HASH_TABLE_SIZE; HashIdx++)
++		{
++			pEntry = pAdapter->MacTab.Hash[HashIdx];
++
++			while (pEntry && !IS_ENTRY_NONE(pEntry))
++			{
++				NdisMoveMemory(DisassocReq.Addr, &pEntry->Addr, MAC_ADDR_LEN);
++				DisassocReq.Reason = REASON_DISASSOC_INACTIVE;
++				MlmeEnqueue(pAdapter, AP_ASSOC_STATE_MACHINE, APMT2_MLME_DISASSOC_REQ, sizeof(MLME_DISASSOC_REQ_STRUCT), &DisassocReq,0);
++
++				DBGPRINT(RT_DEBUG_TRACE, ("I/F(rai%d) Set_KickMAC_Proc::(%02X:%02X:%02X:%02X:%02x:%02X)\n", 
++					pObj->ioctl_if,
++					pEntry->Addr[0],pEntry->Addr[1],pEntry->Addr[2],
++					pEntry->Addr[3],pEntry->Addr[4],pEntry->Addr[5]));
++				
++				pEntry = pEntry->pNext;
++			}
++		}
++
++		RTMP_MLME_HANDLER(pAdapter);
++		success = TRUE;
++	}
++	else
++	{
++		DBGPRINT(RT_DEBUG_ERROR, ("illegal MAC address format or octet!\n"));
++		success = FALSE;
++	}
++	
++	return success;
++}
+ 
+ /* 
+     ==========================================================================
+--- a/rt2860v2/ap/ap_assoc.c
++++ b/rt2860v2/ap/ap_assoc.c
+@@ -1135,7 +1135,8 @@ VOID APMlmeKickOutSta(
+ 	Aid = pEntry->Aid;
+ 	ApIdx = pEntry->apidx;
+ 
+-	ASSERT(Aid == Wcid);
++	/* Shield off unavailable information, Sean@Liteon, 2014-01-27 */
++	//ASSERT(Aid == Wcid);
+ 
+ 	if (ApIdx >= pAd->ApCfg.BssidNum)
+ 	{

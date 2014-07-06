@@ -1,0 +1,732 @@
+#!/bin/sh
+
+export PATH=/bin:/usr/bin:/sbin/:/usr/sbin
+export LD_LIBRARY_PATH=/lib:/usr/lib
+
+BIN_TC=$(which tc)
+BIN_IPT=$(which iptables)
+HTB_OPT=""
+#FIXME! Set the quantum is tricky and it affects bw borrowing. Need more
+# study on this value.
+MTU="1500"
+# set minimum bandwidth to 10kbps
+MINBW=30
+CLASSID_APP="3"
+CLASSID_SBM="6"
+CLASSID_OTHER="9"
+APP_MAX=16
+SBM_MAX=16
+MIN_PRIO=1
+MAX_PRIO=7
+CLASS_OTHER_PRIO=7
+UL_MARK=1
+DL_MARK=2
+wandev="$(nvram get wan0_ifname)"
+wannum="$(nvram get wan_num)"
+landev="$(nvram get lan0_ifname)"
+gwlandev="$(nvram show guest_lan_rule 0 wif)"
+LINK_DL_RATE="$(nvram show bw_rule 0 bw_download)"
+LINK_UL_RATE="$(nvram show bw_rule 0 bw_upload)"
+guest_wlan_start()
+{
+    GUSET_BW="$(nvram show guest_lan_rule 0 bw)"
+    $BIN_TC qdisc add dev $gwlandev root handle 1: htb default 1
+    $BIN_TC class add dev $gwlandev parent 1: classid 1:1 \
+    htb rate ${GUSET_BW}kbit ceil ${GUSET_BW}kbit 
+}
+
+# $1:dev $2:Parent/Handle
+bw_add_monitor_rule ()
+{
+    local landev=$1
+    local wandev=$2
+    local mark=$3
+    local mask=$4
+    $BIN_IPT -D EZP_BW_MARK -t mangle -o $wandev -m mark --mark 0x$mark/$mask \
+        -j RETURN
+    $BIN_IPT -D EZP_BW_MARK -t mangle -o $landev -m mark --mark 0x$mark/$mask \
+        -j RETURN
+    $BIN_IPT -A EZP_BW_MARK -t mangle -o $wandev -m mark --mark 0x$mark/$mask \
+        -j RETURN
+    $BIN_IPT -A EZP_BW_MARK -t mangle -o $landev -m mark --mark 0x$mark/$mask \
+        -j RETURN
+}
+
+bw_set_leaf_node ()
+{
+    local dev=$1
+    local parenthandle=$2
+    # Add qdisc priority queue
+    $BIN_TC qdisc add dev ${dev} parent 1:${parenthandle} \
+        handle ${parenthandle}: prio
+    $BIN_TC qdisc add dev ${dev} parent ${parenthandle}:1 \
+        handle ${parenthandle}1: sfq perturb 9
+    $BIN_TC qdisc add dev ${dev} parent ${parenthandle}:2 \
+        handle ${parenthandle}2: sfq perturb 10 
+    $BIN_TC qdisc add dev ${dev} parent ${parenthandle}:3 \
+        handle ${parenthandle}3: sfq perturb 11
+}
+
+# $1:if_idx (0-based) $2:nth (1-based) $3:BW_MARK 
+# $4:dl_dev $5:dl_rate $6:$dl_ceil 
+# $7:ul_dev $8:ul_rate $9:$ul_ceil
+# we need other parameters needed to be externally defined
+# PRIO : prio
+# CLASSID : classid
+
+bw_set_traffic ()
+{
+    NTH=$(awk "BEGIN{x=sprintf(\"%02d\", $2);print x}")
+    IFIDX=$(expr $1 + 1)
+    [ -z "$CLASSID" ] && CLASSID="6"
+    BW_TC_MASK=$(nvram get bw_tc_mask)
+
+    dl_dev=$4
+    dl_rate=$5
+    dl_ceil=$6
+    ul_dev=$7
+    ul_rate=$8
+    ul_ceil=$9
+    
+    # Download bandwidth
+    [ -n "$dl_dev" -a -n "$dl_rate" -a -n "$dl_ceil" ] && \
+    [ "$dl_rate" != "0" -o "$dl_ceil" != "0" ] && {
+        # Add HTB class.
+        $BIN_TC class add dev ${dl_dev} parent 1:${IFIDX}${CLASSID} \
+                    classid 1:${IFIDX}${CLASSID}${NTH} \
+                    htb rate ${5}kbit ceil ${6}kbit quantum $MTU prio $PRIO $HTB_OPT
+    
+        # Add filter for this user.
+        $BIN_TC filter add dev ${dl_dev} parent 1: protocol ip prio $PRIO \
+        u32 match mark 0x00${3} $BW_TC_MASK \
+        flowid 1:${IFIDX}${CLASSID}${NTH}
+
+        # Add qdisc priority queue
+        bw_set_leaf_node "${dl_dev}" "${IFIDX}${CLASSID}${NTH}"
+    }
+    # Upload bandwidth
+    [ -n "$ul_dev" -a -n "$ul_rate" -a -n "$ul_ceil" ] && \
+    [ "$ul_rate" != "0" -o "$ul_ceil" != "0" ] && {
+        # Add HTB class.
+        $BIN_TC class add dev ${ul_dev} parent 1:${IFIDX}${CLASSID} \
+                    classid 1:${IFIDX}${CLASSID}${NTH} \
+                    htb rate ${8}kbit ceil ${9}kbit quantum $MTU prio $PRIO $HTB_OPT
+    
+        # Add filter for this user.
+        $BIN_TC filter add dev ${ul_dev} parent 1: protocol ip prio $PRIO \
+        u32 match mark 0x00${3} $BW_TC_MASK \
+        flowid 1:${IFIDX}${CLASSID}${NTH}
+
+        # Add qdisc priority queue
+        bw_set_leaf_node "${ul_dev}" "${IFIDX}${CLASSID}${NTH}"
+    }
+}
+
+bw_min_max_decide ()
+{
+    local bw=$1
+    local minbw=$2
+    local maxbw=$3
+    local ismin=$4
+    [ "$maxbw" -lt "$bw" ] && maxbw=$bw
+    [ "$minbw" -lt "$bw" ] && minbw=$bw
+    if [ "$ismin" = "1" ]; then
+        echo "bwmin=$bw;bwmax=$maxbw"
+    else
+        echo "bwmin=$minbw;bwmax=$bw"
+    fi
+}
+
+bw_get_max_by_prio ()
+{
+    local bwceil=$1
+    local prio=$2
+    local maxbw=$1
+    local bwratio="1"
+    if [ -z "$prio" ]; then
+        maxbw="$(($bwceil / 10))"
+    else
+        #bwratio="$(($prio + 1))"
+        #maxbw="$(($bwceil / $bwratio))"
+        # prio 0 : 90%
+        # prio i : (100 - 20i)%
+        #   prio 1 : 80%
+        #   prio 2 : 60%
+        #   prio 3 : 40%
+        # prio > 4 : 40%
+        [ "$prio" = "0" ] && {
+            bwratio="90"
+        }
+        [ "$prio" -lt "4" ] && {
+            bwratio="$((20 * $prio))"
+            bwratio="$((100 - $bwratio))"
+        } || {
+            bwratio="20"
+        }
+        maxbw="$(($bwceil * $bwratio / 100))"
+    fi
+    echo "$maxbw"
+}
+
+# $1 : port string
+# $2 : mark
+# $3 : mask
+# $4 : proto
+bw_set_ipt_port_mark()
+{
+    local port=$1
+    local mark=$2
+    local mask=$3
+    local proto=$4
+    local i=0
+    local portstr=$(echo "$port" | sed 's/,/ /g')
+    local multistr=""
+    local rangestr=""
+    for portentry in $portstr
+    do
+        if [ -n "$(echo $portentry | sed -n '/:/p')" ]; then
+            #add a range port iptable entry
+            $BIN_IPT -A EZP_BW_SET_MARK -t mangle -p $proto -o $wandev \
+                --dport $portentry -j MARK --set-mark 0x$mark/$mask
+        else
+            multistr="${multistr:+$multistr,}$portentry"
+        fi
+    done
+    #add a range port iptable entry
+    [ -n "$multistr" ] && $BIN_IPT -A EZP_BW_SET_MARK -t mangle -p $proto -o $wandev \
+        -m multiport --dport $multistr -j MARK --set-mark 0x$mark/$mask
+    $BIN_IPT -A EZP_BW_SET_MARK -t mangle -m mark --mark 0x$mark/$mask \
+        -j CONNMARK --save-mark
+    $BIN_IPT -A EZP_BW_SET_MARK -t mangle -m mark --mark 0x$mark/$mask \
+        -j RETURN
+#    bw_add_monitor_rule "$landev" "$wandev" "$mark" "$mask"
+#    $BIN_IPT -D EZP_BW_MARK -t mangle -m mark --mark 0x$mark/$mask \
+#        -j RETURN
+#    $BIN_IPT -A EZP_BW_MARK -t mangle -m mark --mark 0x$mark/$mask \
+#        -j RETURN
+    
+}
+
+# Used to add a iptables rule which matches specified criteria
+# $1 : match string
+# $2 : mark
+# $3 : mask
+# $4 : proto
+bw_set_ipt_match_mark()
+{
+    local matchstr=$1
+    local mark=$2
+    local mask=$3
+    local proto=$4
+    $BIN_IPT -A EZP_BW_HP_SET_MARK -t mangle -p $proto -o $wandev \
+        $matchstr -j MARK --set-mark 0x$mark/$mask
+    $BIN_IPT -A EZP_BW_HP_SET_MARK -t mangle -m mark --mark 0x$mark/$mask \
+        -j RETURN
+#    bw_add_monitor_rule "$landev" "$wandev" "$mark" "$mask"
+#    $BIN_IPT -D EZP_BW_MARK -t mangle -m mark --mark 0x$mark/$mask \
+#        -j RETURN
+#    $BIN_IPT -A EZP_BW_MARK -t mangle -m mark --mark 0x$mark/$mask \
+#        -j RETURN
+}
+
+bw_app_start ()
+{
+    BW_MASK=$(nvram get bw_sbm_mask)
+    BW_TC_MASK=$(nvram get bw_tc_mask)
+    local BW_APP_RULE_NUM="$(nvram get bw_app_rule_num)"
+    local APP_LAN_TOTAL_RATE="0"
+    local APP_WAN_TOTAL_RATE="0"
+    local APP_DL_RATE=$1
+    local APP_UL_RATE=$2
+    APP_NTH=$SBM_MAX
+    $BIN_TC class add dev ${landev} parent 1:${INDEX} \
+        classid 1:${INDEX}${CLASSID_APP} \
+        htb rate ${MINBW}kbit ceil ${APP_DL_RATE}kbit quantum $MTU $HTB_OPT
+    $BIN_TC class add dev ${wandev} parent 1:${INDEX} \
+        classid 1:${INDEX}${CLASSID_APP} \
+        htb rate ${MINBW}kbit ceil ${APP_UL_RATE}kbit quantum $MTU $HTB_OPT
+    i=0
+    while [ "$i" -lt "$BW_APP_RULE_NUM" ];
+    do
+        [ "$(nvram show bw_app_rule $i enable)" = "1" ] || {
+            i=$(($i + 1))
+            continue;
+        }
+        # tcp bandwidth setting
+        [ "$(nvram show bw_app_rule $i lan_tcp_enable)" = "1" -a \
+          "$(nvram show bw_app_rule $i wan_tcp_enable)" = "1" ] && {
+            port="$(nvram show bw_app_rule $i tcp_port)"
+            APP_MARK=$(awk "BEGIN{x=sprintf(\"%02X0000\", $APP_NTH);print x}")
+            # iptables
+            if [ "$(nvram show bw_app_rule $i serv)" = "BitTorrent" ]; then
+#                bw_set_ipt_match_mark " -m length --length 512: " "$APP_MARK" "$BW_MASK" "tcp" 
+                bw_set_ipt_port_mark " --dport 5000:65535 " "$APP_MARK" "$BW_MASK" "tcp" 
+            else
+                [ "$port" = "tport" ] && {
+                    i=$(($i + 1))
+                    continue
+                }
+                bw_set_ipt_port_mark "$port" "${APP_MARK}" "$BW_MASK" "tcp" 
+            fi
+#            echo "$(nvram show bw_app_rule $i cat)|$(nvram show bw_app_rule $i serv)|tcp|${APP_MARK}" >> /tmp/appmark
+            # tc
+            # bw_min_max_decide will output string looks like "bwmin=10;bwmax=100"
+            # eval the string will get 2veriables : $bwmin and $bwmax
+            # lan side bandwidth
+            prio="$(nvram show bw_app_rule $i prio)"
+            ismin="$(nvram show bw_app_rule $i lan_tcp_min)"
+            sbw="$(nvram show bw_app_rule $i lan_tcp_bw)"
+            maxbw="$(bw_get_max_by_prio $APP_DL_RATE $prio)"
+            bwstr="$(bw_min_max_decide $sbw $MINBW $maxbw $ismin)"
+            eval $bwstr
+            tcp_lan_bw=$bwmin
+            tcp_lan_ceil=$bwmax
+            # if the lan side tcp is disabled, set lan side tcp bandwidth to 0
+            [ "$(nvram show bw_app_rule $i lan_tcp_enable)" = "1" ] || tcp_lan_bw="0"
+            APP_LAN_TOTAL_RATE="$(($APP_LAN_TOTAL_RATE + $tcp_lan_bw))"
+            # wan
+            ismin="$(nvram show bw_app_rule $i wan_tcp_min)"
+            sbw="$(nvram show bw_app_rule $i wan_tcp_bw)"
+            maxbw="$(bw_get_max_by_prio $APP_UL_RATE $prio)"
+            bwstr="$(bw_min_max_decide $sbw $MINBW $maxbw $ismin)"
+            eval $bwstr
+            tcp_wan_bw=$bwmin
+            tcp_wan_ceil=$bwmax
+            # if the wan side tcp is disabled, set wan side tcp bandwidth to 0
+            [ "$(nvram show bw_app_rule $i wan_tcp_enable)" = "1" ] || tcp_wan_bw="0"
+            APP_WAN_TOTAL_RATE="$(($APP_WAN_TOTAL_RATE + $tcp_wan_bw))"
+            PRIO="$prio" CLASSID="$CLASSID_APP" \
+                bw_set_traffic "0" $APP_NTH $APP_MARK \
+                    $landev $tcp_lan_bw $tcp_lan_ceil \
+                    $wandev $tcp_wan_bw $tcp_wan_ceil
+            MNTH=$(awk "BEGIN{x=sprintf(\"%02d\", $APP_NTH);print x}")
+            echo "$(nvram show bw_app_rule $i cat)|$(nvram show bw_app_rule $i serv)|tcp|1${CLASSID_APP}${MNTH}" >> /tmp/appmark
+            APP_NTH="$(($APP_NTH + 1))"
+        }
+        # udp bandwidth setting
+        [ "$(nvram show bw_app_rule $i lan_udp_enable)" = "1" -a \
+          "$(nvram show bw_app_rule $i wan_udp_enable)" = "1" ] && {
+            port="$(nvram show bw_app_rule $i udp_port)"
+            APP_MARK=$(awk "BEGIN{x=sprintf(\"%02X0000\", $APP_NTH);print x}")
+            # iptables
+            if [ "$(nvram show bw_app_rule $i serv)" = "BitTorrent" ]; then
+#                bw_set_ipt_match_mark " -m length --length 1024: " "$APP_MARK" "$BW_MASK" "udp" 
+                bw_set_ipt_port_mark " --dport 5000:65535 " "$APP_MARK" "$BW_MASK" "udp" 
+            else
+                [ "$port" = "uport" ] && {
+                    i=$(($i + 1))
+                    continue
+                }
+                bw_set_ipt_port_mark "$port" "$APP_MARK" "$BW_MASK" "udp" 
+            fi
+#            echo "$(nvram show bw_app_rule $i cat)|$(nvram show bw_app_rule $i serv)|udp|${APP_MARK}" >> /tmp/appmark
+            # tc
+            # bw_min_max_decide will output string looks like "bwmin=10;bwmax=100"
+            # eval the string will get 2veriables : $bwmin and $bwmax
+            # lan 
+            ismin="$(nvram show bw_app_rule $i lan_udp_min)"
+            sbw="$(nvram show bw_app_rule $i lan_udp_bw)"
+            maxbw="$(bw_get_max_by_prio $APP_DL_RATE $prio)"
+            bwstr="$(bw_min_max_decide $sbw ${MINBW} $maxbw $ismin)"
+            eval $bwstr
+            udp_lan_bw=$bwmin
+            udp_lan_ceil=$bwmax
+            # if the lan side udp is disabled, set lan side udp bandwidth to 0
+            [ "$(nvram show bw_app_rule $i lan_udp_enable)" = "1" ] || udp_lan_bw="0"
+            APP_LAN_TOTAL_RATE="$(($APP_LAN_TOTAL_RATE + $udp_lan_bw))"
+            # wan
+            ismin="$(nvram show bw_app_rule $i wan_udp_min)"
+            sbw="$(nvram show bw_app_rule $i wan_udp_bw)"
+            maxbw="$(bw_get_max_by_prio $APP_UL_RATE $prio)"
+            bwstr="$(bw_min_max_decide $sbw ${MINBW} $maxbw $ismin)"
+            eval $bwstr
+            udp_wan_bw=$bwmin
+            udp_wan_ceil=$bwmax
+            # if the wan side udp is disabled, set wan side udp bandwidth to 0
+            [ "$(nvram show bw_app_rule $i wan_udp_enable)" = "1" ] || udp_wan_bw="0"
+            APP_WAN_TOTAL_RATE="$(($APP_WAN_TOTAL_RATE + $udp_wan_bw))"
+            PRIO="$prio" CLASSID="$CLASSID_APP" \
+                bw_set_traffic "0" $APP_NTH $APP_MARK \
+                    $landev $udp_lan_bw $udp_lan_ceil \
+                    $wandev $udp_wan_bw $udp_wan_ceil
+            MNTH=$(awk "BEGIN{x=sprintf(\"%02d\", $APP_NTH);print x}")
+            echo "$(nvram show bw_app_rule $i cat)|$(nvram show bw_app_rule $i serv)|udp|1${CLASSID_APP}${MNTH}" >> /tmp/appmark
+            APP_NTH="$(($APP_NTH + 1))"
+        }
+        i=$(($i + 1))
+    done
+    APP_MARK=$(awk "BEGIN{x=sprintf(\"%02X0000\", $APP_NTH);print x}")
+    #bw_set_ipt_match_mark " -m length --length :64 -m tcp --tcp-flags SYN,RST,ACK ACK " \
+    #   "$APP_MARK" "$BW_MASK" "tcp" 
+    #bw_set_ipt_match_mark " -m length --length :256 " "$APP_MARK" "$BW_MASK" "udp" 
+    #bw_set_ipt_match_mark " --dport 53 " "$APP_MARK" "$BW_MASK" "tcp" 
+    #bw_set_ipt_match_mark " --dport 53 " "$APP_MARK" "$BW_MASK" "udp" 
+    #bw_set_ipt_match_mark " " "$APP_MARK" "$BW_MASK" "icmp" 
+    #bw_set_ipt_match_mark " -m tcp --tcp-flags SYN,RST,ACK SYN " "$APP_MARK" "$BW_MASK" "tcp" 
+    PRIO="${MIN_PRIO}" CLASSID="$CLASSID_APP" \
+        bw_set_traffic "0" $APP_NTH $APP_MARK \
+        $landev $MINBW $APP_DL_RATE \
+        $wandev $MINBW $APP_UL_RATE
+    APP_WAN_TOTAL_RATE="$(($APP_WAN_TOTAL_RATE + $MINBW))"
+    APP_LAN_TOTAL_RATE="$(($APP_LAN_TOTAL_RATE + $MINBW))"
+
+
+    # pkt port
+    # pkt tcp flags
+    # bw set to minimum with quarter ceil
+    [ -n " ${APP_LAN_TOTAL_RATE}" ] && $BIN_TC class change dev ${landev} \
+        parent 1:${INDEX} \
+        classid 1:${INDEX}${CLASSID_APP} \
+        htb rate ${APP_LAN_TOTAL_RATE}kbit ceil ${APP_DL_RATE}kbit quantum $MTU $HTB_OPT
+    [ -n " ${APP_WAN_TOTAL_RATE}" ] && $BIN_TC class change dev ${wandev} \
+        parent 1:${INDEX} \
+        classid 1:${INDEX}${CLASSID_APP} \
+        htb rate ${APP_WAN_TOTAL_RATE}kbit ceil ${APP_UL_RATE}kbit quantum $MTU $HTB_OPT
+    echo "APP_DL_RATE=$APP_LAN_TOTAL_RATE;APP_UL_RATE=$APP_WAN_TOTAL_RATE"
+}
+
+bw_set_wan_mark()
+{
+    local wanidx=0
+    local wanmarkidx
+    while [ "$wanidx" -lt "$wannum" ];
+    do
+        wanmarkidx="$(($wanidx + 1))"
+        $BIN_IPT -A EZP_RT_MARK -t mangle -m mark --mark 0x0/0xFF000000 \
+            -j EZP_RT_SET_MARK
+        $BIN_IPT -A EZP_RT_SET_MARK -t mangle -i $wandev \
+            -j MARK --set-mark 0x${wanmarkidx}0000000/0xFF000000
+        $BIN_IPT -A EZP_RT_SET_MARK -t mangle -m mark --mark 0x0/0xFF000000 \
+            -j RETURN
+        $BIN_IPT -A EZP_RT_SET_MARK -t mangle -j CONNMARK --save-mark
+
+        $BIN_IPT -A EZP_RT_CONN_MARK -t mangle -m mark --mark 0x0/0xFF000000 \
+            -j EZP_RT_CONN_SET_MARK
+        $BIN_IPT -A EZP_RT_CONN_SET_MARK -t mangle -o $wandev \
+            -j MARK --set-mark 0x${wanmarkidx}0000000/0xFF000000
+        $BIN_IPT -A EZP_RT_CONN_SET_MARK -t mangle -m mark --mark 0x0/0xFF000000 \
+            -j RETURN
+        $BIN_IPT -A EZP_RT_CONN_SET_MARK -t mangle -j CONNMARK --save-mark
+
+        wanidx="$(($wanidx + 1))"
+    done
+}
+
+bw_stop ()
+{
+    $BIN_IPT -t mangle -F EZP_BW_SET_MARK
+    $BIN_IPT -t mangle -F EZP_BW_HP_SET_MARK
+    $BIN_IPT -t mangle -F EZP_BW_MARK
+    $BIN_IPT -t mangle -F EZP_RT_MARK
+    $BIN_IPT -t mangle -F EZP_RT_SET_MARK
+    $BIN_IPT -t mangle -F EZP_RT_CONN_MARK
+    $BIN_IPT -t mangle -F EZP_RT_CONN_SET_MARK
+    $BIN_TC qdisc del dev $wandev root 2> /dev/null > /dev/null
+    $BIN_TC qdisc del dev $landev root 2> /dev/null > /dev/null
+    $BIN_TC qdisc del dev $gwlandev root 2> /dev/null > /dev/null
+    rmmod sch_htb
+    rmmod cls_u32
+    rmmod sch_prio
+    rmmod sch_sfg
+    #killall ezp-bwm
+}
+
+bw_start ()
+{
+    #bw_stop
+    lock /tmp/.iface_bw
+    insmod sch_htb
+    insmod cls_u32
+    insmod sch_prio
+    insmod sch_sfq
+    # Decide direction
+    BW_MASK=$(nvram get bw_sbm_mask)
+    BW_TC_MASK=$(nvram get bw_tc_mask)
+    MAX_PRIO="0"
+    INDEX=1
+    i=0
+    echo -n "" > /tmp/appmark
+    # Root QDisc:
+    $BIN_TC qdisc add dev $wandev root handle 1: htb default 13
+    $BIN_TC qdisc add dev $landev root handle 1: htb default 13
+    [ "$(nvram show guest_lan_rule 0 enable)" = "1" ] && guest_wlan_start
+    $BIN_TC class add dev $landev parent 1: classid 1:$INDEX \
+    htb rate ${LINK_DL_RATE}kbit ceil ${LINK_DL_RATE}kbit \
+    quantum $MTU $HTB_OPT
+
+    $BIN_TC class add dev $wandev parent 1: classid 1:$INDEX \
+    htb rate ${LINK_UL_RATE}kbit ceil ${LINK_UL_RATE}kbit \
+    quantum $MTU $HTB_OPT
+
+    # iptables, add a "ff" as default mark for all packet
+    $BIN_IPT -A EZP_BW_MARK -t mangle -m mark --mark 0x000000/$BW_MASK -j EZP_BW_SET_MARK
+    $BIN_IPT -A EZP_BW_MARK -t mangle -j EZP_BW_HP_SET_MARK
+    $BIN_IPT -I EZP_BW_SET_MARK -t mangle \
+             -j MARK --set-mark 0xff0000/$BW_MASK
+
+    # Single wan
+    # SBM calculate total class bw
+    j=0
+    SBM_RULE_NUM=$(nvram get bw_sbm_rule_num)
+    SBM_DL_RATE="0"
+    SBM_UL_RATE="0"
+    while [ $j -lt $SBM_RULE_NUM ];
+    do
+        [ "$(nvram show bw_sbm_rule $j enable)" = "0" ] && {
+            j=$((j+1))
+            continue
+        }
+        # tc
+        if [ "$(nvram show bw_sbm_rule $j reserve_bw)" = "1" ]; then
+            DL_RATE=$(nvram show bw_sbm_rule $j bw_tolan)
+            [ -z "$DL_RATE" -o "$DL_RATE" = "0" ] && DL_RATE="$MINBW"
+            UL_RATE=$(nvram show bw_sbm_rule $j bw_towan)
+            [ -z "$UL_RATE" -o "$UL_RATE" = "0" ] && UL_RATE="$MINBW"
+        else
+            DL_RATE="$MINBW"
+            UL_RATE="$MINBW"
+        fi
+        SBM_DL_RATE=$(($SBM_DL_RATE + $DL_RATE))
+        SBM_UL_RATE=$(($SBM_UL_RATE + $UL_RATE))
+
+        j=$(($j+1))
+    done
+    # setup application bandwidth management
+    app_rate_str="$(bw_app_start $LINK_DL_RATE $LINK_UL_RATE)"
+    eval "${app_rate_str}"
+    [ "${SBM_DL_RATE}" != "0" ] && {
+        SBM_DL_TOT=$LINK_DL_RATE
+        [ -n "$APP_DL_RATE" ] && SBM_DL_TOT=$(($LINK_DL_RATE - $APP_DL_RATE))
+        $BIN_TC class add dev ${landev} parent 1:${INDEX} \
+            classid 1:${INDEX}${CLASSID_SBM} \
+            htb rate ${SBM_DL_RATE}kbit ceil ${SBM_DL_TOT}kbit prio ${MIN_PRIO} quantum $MTU $HTB_OPT
+#            htb rate ${SBM_DL_RATE}kbit ceil ${SBM_DL_RATE}kbit quantum $MTU $HTB_OPT
+    }
+    
+    [ "${SBM_UL_RATE}" != "0" ] && {
+        SBM_UL_TOT=$LINK_UL_RATE
+        [ -n "$APP_UL_RATE" ] && SBM_UL_TOT=$(($LINK_UL_RATE - $APP_UL_RATE))
+        $BIN_TC class add dev ${wandev} parent 1:${INDEX} \
+            classid 1:${INDEX}${CLASSID_SBM} \
+            htb rate ${SBM_UL_RATE}kbit ceil ${SBM_UL_TOT}kbit prio ${MIN_PRIO} quantum $MTU $HTB_OPT
+#            htb rate ${SBM_UL_RATE}kbit ceil ${SBM_UL_RATE}kbit quantum $MTU $HTB_OPT
+    }
+    # min bw
+    USED_DL_RATE=$SBM_DL_RATE
+    [ -n "$APP_DL_RATE" ] && USED_DL_RATE="$(($SBM_DL_RATE + $APP_DL_RATE))"
+    REMAIN_DL_RATE="${MINBW}"
+    [ "${USED_DL_RATE}" -lt "${LINK_DL_RATE}" ] && {
+        REMAIN_DL_RATE="$(($LINK_DL_RATE - $USED_DL_RATE))"
+    }
+    # min bw
+    USED_UL_RATE=$SBM_UL_RATE
+    [ -n "$APP_UL_RATE" ] && USED_UL_RATE="$((${SBM_UL_RATE} + $APP_UL_RATE))"
+    REMAIN_UL_RATE="${MINBW}"
+    [ "${USED_UL_RATE}" -lt "${LINK_UL_RATE}" ] && {
+        REMAIN_UL_RATE="$(($LINK_UL_RATE - $USED_UL_RATE))"
+    }
+    j=0
+    BW_NTH=1
+    SBM_DL_RATE="0"
+    SBM_UL_RATE="0"
+    while [ "$j" -lt "$SBM_RULE_NUM" ];
+    do
+        [ "$(nvram show bw_sbm_rule $j enable)" = "0" ] && {
+            j=$((j+1))
+            continue
+        }
+
+        # iptables
+        SBM_ARGS=""
+        SBM_MARK=$(awk "BEGIN{x=sprintf(\"%02X\", $BW_NTH);print x}")
+        MARK="${SBM_MARK}0000"
+
+        # tc
+        prio="$(nvram show bw_sbm_rule $j prio)"
+#        if [ -z "$prio" -o "$prio" = "0" ]; then
+#            bw_max_ratio="1"
+#        else
+#            bw_max_ratio="$(($prio * $prio))"
+#        fi
+        if [ "$(nvram show bw_sbm_rule $j reserve_bw)" = "1" ]; then
+#            DL_CEIL=$(nvram show bw_sbm_rule $j bw_tolan)
+#            UL_CEIL=$(nvram show bw_sbm_rule $j bw_towan)
+#            DL_CEIL=$(($SBM_DL_TOT / $bw_max_ratio))
+#            UL_CEIL=$(($SBM_UL_TOT / $bw_max_ratio))
+            DL_CEIL=$(bw_get_max_by_prio "$SBM_DL_TOT" "$prio")
+            UL_CEIL=$(bw_get_max_by_prio "$SBM_UL_TOT" "$prio")
+            DL_RATE=$(nvram show bw_sbm_rule $j bw_tolan)
+            UL_RATE=$(nvram show bw_sbm_rule $j bw_towan)
+            # We disable end traffic if set to use reserved bandwidth but
+            # reservation is 0
+            [ -z "$DL_RATE" -o "$DL_RATE" = "0" ] && DL_CEIL="0"
+            [ -z "$UL_RATE" -o "$UL_RATE" = "0" ] && UL_CEIL="0"
+            [ "$DL_CEIL" -lt "$DL_RATE" ] && DL_CEIL=$DL_RATE
+            [ "$UL_CEIL" -lt "$UL_RATE" ] && UL_CEIL=$UL_RATE
+        else
+            DL_RATE="$MINBW"
+            UL_RATE="$MINBW"
+            DL_CEIL=$(nvram show bw_sbm_rule $j bw_tolan)
+            if [ -z "$DL_CEIL" -o "$DL_CEIL" = "0" ]; then
+                DL_RATE="0"
+                DL_CEIL="0"
+            elif [ "$DL_CEIL" != "0" -a "$DL_CEIL" -lt "$DL_RATE" ]; then
+                DL_CEIL="$DL_RATE"
+            fi
+            UL_CEIL=$(nvram show bw_sbm_rule $j bw_towan)
+            if [ -z "$UL_CEIL" -o "$UL_CEIL" = "0" ]; then
+                UL_RATE="0"
+                UL_CEIL="0"
+            elif [ "$UL_CEIL" != "0" -a "$UL_CEIL" -lt "$UL_RATE" ]; then
+                UL_CEIL="$UL_RATE"
+            fi
+        fi
+        SBM_DL_RATE=$(($SBM_DL_RATE + $DL_RATE))
+        SBM_UL_RATE=$(($SBM_UL_RATE + $UL_RATE))
+
+        # prio
+        PRIO="$(nvram show bw_sbm_rule $j prio)" CLASSID=$CLASSID_SBM \
+            bw_set_traffic $i $BW_NTH $MARK $landev $DL_RATE $DL_CEIL $wandev $UL_RATE $UL_CEIL
+        MNTH=$(awk "BEGIN{x=sprintf(\"%02d\", $BW_NTH);print x}")
+        echo "$(nvram show bw_sbm_rule $j name)|$(nvram show bw_sbm_rule $j name)|$(nvram show bw_sbm_rule $j proto)|$(($i + 1))${CLASSID_SBM}${MNTH}" >> /tmp/appmark
+        [ "$MAX_PRIO" -le "$PRIO" ] && {
+            MAX_PRIO=$(($PRIO + 1))
+        }
+        j=$(($j+1))
+        BW_NTH=$(($BW_NTH+1))
+    done
+    # download
+    $BIN_TC class add dev ${landev} parent 1:${INDEX} \
+        classid 1:${INDEX}${CLASSID_OTHER} \
+        htb rate ${MINBW}kbit ceil ${REMAIN_DL_RATE}kbit \
+        prio $CLASS_OTHER_PRIO quantum $MTU $HTB_OPT
+    # Remain class ID
+    $BIN_TC filter add dev ${landev} parent 1: protocol ip \
+        u32 match mark 0x10000000 0xFF000000 flowid 1:${INDEX}${CLASSID_OTHER}
+#        flowid 1:${INDEX}${CLASSID_OTHER}
+    bw_set_leaf_node "${landev}" "${INDEX}${CLASSID_OTHER}"
+    # upload
+    $BIN_TC class add dev ${wandev} parent 1:${INDEX} \
+        classid 1:${INDEX}${CLASSID_OTHER} \
+        htb rate ${MINBW}kbit ceil ${REMAIN_UL_RATE}kbit \
+        prio $CLASS_OTHER_PRIO quantum $MTU $HTB_OPT
+    # Remain class ID
+    $BIN_TC filter add dev ${wandev} parent 1: protocol ip prio $MAX_PRIO \
+        u32 match mark 0x10000000 0xFF000000 flowid 1:${INDEX}${CLASSID_OTHER}
+#        flowid 1:${INDEX}${CLASSID_OTHER}
+    bw_set_leaf_node "${wandev}" "${INDEX}${CLASSID_OTHER}"
+
+    # SBM
+    BW_NTH=1
+    SBM_RULE_NUM=$(nvram get bw_sbm_rule_num)
+    i=0
+    while [ $i -lt $SBM_RULE_NUM ];
+    do
+        [ "$(nvram show bw_sbm_rule $i enable)" = "0" ] && {
+            i=$((i+1))
+            continue
+        }
+
+        SBM_ARGS=""
+        SBM_RANGE_ARGS=""
+        IPADDR_START=$(nvram show bw_sbm_rule $i inipaddr_start)
+        IPADDR_END=$(nvram show bw_sbm_rule $i inipaddr_end)
+        [ -n "$IPADDR_START" ] && {
+            if [ -n "$IPADDR_END" ]; then
+                SBM_RANGE_ARGS=" -m iprange --src-range $IPADDR_START-$IPADDR_END "
+            else
+                SBM_ARGS="$SBM_ARGS -s $IPADDR_START"
+            fi
+        }
+        OUTIPADDR_START=$(nvram show bw_sbm_rule $i outipaddr_start)
+        OUTIPADDR_END=$(nvram show bw_sbm_rule $i outipaddr_end)
+        [ -n "$OUTIPADDR_START" ] && {
+            if [ -n "$OUTIPADDR_END" ]; then
+                [ -z "$SBM_RANGE_ARGS" ] && SBM_RANGE_ARGS=" -m iprange "
+                SBM_RANGE_ARGS=" $SBM_RANGE_ARGS --dst-range $OUTIPADDR_START-$OUTIPADDR_END "
+            else
+                SBM_ARGS="$SBM_ARGS -d $OUTIPADDR_START"
+            fi
+        }
+        SBM_MARK=$(awk "BEGIN{x=sprintf(\"%02X\", $BW_NTH);print x}")
+        MARK="${SBM_MARK}0000"
+        PROTO=$(nvram show bw_sbm_rule $i proto)
+        [ "$PROTO" == "both" ] && {
+            PROTO="tcp"
+            # Add another "udp" protocol
+            PROTO1="udp"
+            SBM_ARGS1=$SBM_ARGS
+        }
+        # TCP or UDP or user defined protocol
+        [ -n "$PROTO" ] && {
+            SBM_ARGS="$SBM_ARGS -p $PROTO"
+        }
+        [ -n "$PROTO1" ] && {
+            SBM_ARGS1="$SBM_ARGS1 -p $PROTO1"
+        }
+
+        # TCP or UDP
+        [ "$PROTO" = "tcp" -o "$PROTO" = "udp" ] && {
+            INPORT=$(nvram show bw_sbm_rule $i inport)
+                OUTPORT=$(nvram show bw_sbm_rule $i outport)
+                [ "$INPORT" = "0" ] && INPORT=""
+                INPORT=${INPORT:+ --sport $INPORT}
+            [ "$OUTPORT" = "0" ] && OUTPORT=""
+                OUTPORT=${OUTPORT:+ --dport $OUTPORT}
+            SBM_ARGS="$SBM_ARGS $INPORT $OUTPORT"
+        }
+        [ "$PROTO1" = "tcp" -o "$PROTO1" = "udp" ] && {
+            SBM_ARGS1="$SBM_ARGS1 $INPORT $OUTPORT"
+        }
+
+        $BIN_IPT -A EZP_BW_SET_MARK -t mangle $SBM_ARGS $SBM_RANGE_ARGS \
+            -j MARK --set-mark 0x$MARK/$BW_MASK
+        [ -n "$PROTO1" ] && {
+            $BIN_IPT -A EZP_BW_SET_MARK -t mangle $SBM_ARGS1 $SBM_RANGE_ARGS \
+                -j MARK --set-mark 0x$MARK/$BW_MASK
+        }
+        $BIN_IPT -A EZP_BW_SET_MARK -t mangle -m mark --mark 0x$MARK/$BW_MASK \
+            -j CONNMARK --save-mark
+        $BIN_IPT -A EZP_BW_SET_MARK -t mangle -m mark --mark 0x$MARK/$BW_MASK \
+            -j RETURN
+#        bw_add_monitor_rule "${landev}" "${wandev}" "$MARK" "$BW_MASK"
+#        $BIN_IPT -D EZP_BW_MARK -t mangle -m mark --mark 0x$MARK/$BW_MASK \
+#            -j RETURN
+#        $BIN_IPT -A EZP_BW_MARK -t mangle -m mark --mark 0x$MARK/$BW_MASK \
+#            -j RETURN
+        [ "$DEBUG_ON_MASK" = "1" ] && {
+            $BIN_IPT -A EZP_BW_MARK -t mangle -m mark --mark 0x$MARK/$BW_MASK \
+            -j RETURN
+        }
+#        echo "$(nvram show bw_sbm_rule $i name)|$(nvram show bw_sbm_rule $i name)|$PROTO|${MARK}" >> /tmp/appmark
+        i=$(($i+1))
+        BW_NTH=$(($BW_NTH+1))
+    done
+    bw_set_wan_mark 
+    [ "$DEBUG_ON_MASK" = "1" ] && {
+        $BIN_IPT -A EZP_BW_MARK -t mangle -j LOG --log-prefix "EZP_IPT ---"
+    }
+    [ "$(nvram show bw_monitor_rule 0 enable)" = "1" -a -f "/bin/ezp-bwm" ] && ezp-bwm -s
+    lock -u /tmp/.iface_bw
+}
+
+[ -n "$1" ] && {
+    case "$1" in
+    start)
+        # disable hardware nat for obstacle
+        /etc/rc.common /etc/init.d/hwnat stop
+        bw_start
+    ;;
+    restart)
+        /etc/rc.common /etc/init.d/hwnat start
+        bw_stop
+        # disable hardware nat for obstacle
+        /etc/rc.common /etc/init.d/hwnat stop
+        bw_start
+    ;;
+    *)
+        /etc/rc.common /etc/init.d/hwnat start
+        bw_stop
+    ;;
+    esac
+}

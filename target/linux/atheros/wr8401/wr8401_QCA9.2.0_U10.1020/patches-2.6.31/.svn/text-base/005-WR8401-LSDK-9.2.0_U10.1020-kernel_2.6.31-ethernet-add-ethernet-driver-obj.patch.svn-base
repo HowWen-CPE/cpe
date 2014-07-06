@@ -1,0 +1,10 @@
+--- linux-2.6.31/drivers/net/Makefile	2013-04-03 13:35:39.000000000 +0800
++++ linux-2.6.31_new/drivers/net/Makefile	2013-04-28 16:17:25.000000000 +0800
+@@ -280,3 +280,7 @@
+ obj-$(CONFIG_SFC) += sfc/
+ 
+ obj-$(CONFIG_WIMAX) += wimax/
++
++# Add ar934x ethernet compile, Sean@liteon.com, 2013-04-28----->
++obj-$(CONFIG_ETHERNET) += ar934x/
++# <-----Sean@liteon.com, 2013-04-28

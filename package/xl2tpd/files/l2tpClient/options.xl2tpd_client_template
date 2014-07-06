@@ -1,0 +1,14 @@
+noauth refuse-eap
+maxfail 0
+noccp
+usepeerdns
+L2TP_PERSIST_DEMAND
+defaultroute
+ipcp-accept-remote L2TP_LOCAL_IPADDR noipdefault
+default-asyncmap nopcomp noaccomp
+novj nobsdcomp nodeflate
+lcp-echo-interval 20
+lcp-echo-failure 4
+lcp-max-terminate 0
+unit L2TP_UNITID
+ipparam IFACE

@@ -1,0 +1,238 @@
+From 0546b54fc6482778e005462c49221fc3ebf526dc Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Thu, 11 Mar 2010 15:41:27 +0530
+Subject: [PATCH] 85xx/p1_p2_rdb: p1020: add muxed usb2 handling
+
+This patch adds the 2nd USB (muxed with eLBC) node
+depending upon enabling the 'usb2' environment variable
+via hwconfig i.e. 'setenv hwconfig usb2', so that linux
+has the 2nd USB controller enabled, which will lead to
+the disabling of the eLBC (NAND, NOR etc).
+
+Also the 2nd USB controller has been left disabled in
+the u-boot, otherwise any changes in the environment
+won't be saved.
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ board/freescale/p1_p2_rdb/p1_p2_rdb.c |   23 +++++++-
+ cpu/mpc85xx/fdt.c                     |  105 ++++++++++++++++++++++++++++++++-
+ include/asm-ppc/immap_85xx.h          |    2 +
+ include/fdt_support.h                 |    1 +
+ 4 files changed, 129 insertions(+), 2 deletions(-)
+
+diff --git a/board/freescale/p1_p2_rdb/p1_p2_rdb.c b/board/freescale/p1_p2_rdb/p1_p2_rdb.c
+index 2fa30c3..9b5f0cf 100644
+--- a/board/freescale/p1_p2_rdb/p1_p2_rdb.c
++++ b/board/freescale/p1_p2_rdb/p1_p2_rdb.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright 2009 Freescale Semiconductor, Inc.
++ * Copyright 2009-2010 Freescale Semiconductor, Inc.
+  *
+  * See file CREDITS for list of people who contributed to this
+  * project.
+@@ -21,6 +21,7 @@
+  */
+ 
+ #include <common.h>
++#include <hwconfig.h>
+ #include <command.h>
+ #include <asm/processor.h>
+ #include <asm/mmu.h>
+@@ -43,6 +44,7 @@ DECLARE_GLOBAL_DATA_PTR;
+ #define SGMII_PHY_RST_SET	0x00020000
+ #define PCIE_RST_SET		0x00010000
+ #define RGMII_PHY_RST_SET	0x02000000
++#define USB2_PORT_OUT_EN	0x01000000
+ 
+ #define USB_RST_CLR		0x04000000
+ 
+@@ -227,8 +229,11 @@ int board_eth_init(bd_t *bis)
+ #if defined(CONFIG_OF_BOARD_SETUP)
+ void ft_board_setup(void *blob, bd_t *bd)
+ {
++	volatile ccsr_gur_t *gur = (void *)CONFIG_SYS_MPC85xx_GUTS_ADDR;
++	volatile ccsr_gpio_t *gpio = (void *)CONFIG_SYS_MPC85xx_GPIO_ADDR;
+ 	phys_addr_t base;
+ 	phys_size_t size;
++	int agent;
+ 
+ 	ft_cpu_setup(blob, bd);
+ 
+@@ -236,6 +241,22 @@ void ft_board_setup(void *blob, bd_t *bd)
+ 	size = getenv_bootm_size();
+ 
+ 	fdt_fixup_memory(blob, (u64)base, (u64)size);
++
++	if (!hwconfig("usb2"))
++		return;
++
++	agent = hwconfig_subarg_cmp("usb2", "dr_mode", "peripheral");
++
++	/*
++	 * Add the 2nd usb node and enable it. eLBC will
++	 * now be disabled since it is MUXed with USB2
++	 */
++
++	fdt_fixup_add_2nd_usb(blob, agent);
++
++	setbits_be32(&gpio->gpdir, USB2_PORT_OUT_EN);
++	setbits_be32(&gpio->gpdat, USB2_PORT_OUT_EN);
++	setbits_be32(&gur->pmuxcr, MPC85xx_PMUXCR_ELBC_OFF_USB2_ON);
+ }
+ #endif
+ 
+diff --git a/cpu/mpc85xx/fdt.c b/cpu/mpc85xx/fdt.c
+index de2dcac..cfec359 100644
+--- a/cpu/mpc85xx/fdt.c
++++ b/cpu/mpc85xx/fdt.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright 2007-2009 Freescale Semiconductor, Inc.
++ * Copyright 2007-2010 Freescale Semiconductor, Inc.
+  *
+  * (C) Copyright 2000
+  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
+@@ -343,3 +343,106 @@ void ft_cpu_setup(void *blob, bd_t *bd)
+ 	fdt_fixup_esdhc(blob, bd);
+ #endif
+ }
++
++void fdt_fixup_add_2nd_usb(void *blob, int agent)
++{
++	const char *soc_compat = "fsl,p1020-immr";
++	const char *lbc_compat = "fsl,p1020-elbc";
++	const u32 *addrcell, *sizecell, *ph;
++	int off, lbcoff, len, err;
++	u32 *regbuf = NULL;
++	u32 *irqbuf = NULL;
++
++	off = fdt_node_offset_by_compatible(blob, -1, soc_compat);
++	if (off < 0) {
++		printf("WARNING: could not find compatible node %s: %s.\n",
++			soc_compat, fdt_strerror(off));
++		return;
++	}
++
++	lbcoff = fdt_node_offset_by_compatible(blob, -1, lbc_compat);
++	if (lbcoff < 0) {
++		printf("WARNING: could not find compatible node %s: %s.\n",
++			lbc_compat, fdt_strerror(lbcoff));
++		return;
++	}
++
++	addrcell = fdt_getprop(blob, off, "#address-cells", NULL);
++	sizecell = fdt_getprop(blob, off, "#size-cells", NULL);
++
++	off = fdt_add_subnode(blob, off, "usb@23000");
++	if (off < 0) {
++		printf("WARNING: could not add 2nd usb node %s.\n",
++				fdt_strerror(off));
++		return;
++	}
++
++	err = fdt_setprop_cell(blob, off, "#address-cells", 1);
++	if (err < 0)
++		printf("WARNING: could not set #address-cell property: %s\n",
++		       fdt_strerror(err));
++
++	err = fdt_setprop_cell(blob, off, "#size-cells", 0);
++	if (err < 0)
++		printf("WARNING: could not set #size-cells property: %s\n",
++		       fdt_strerror(err));
++
++	err = fdt_setprop_string(blob, off, "compatible", "fsl-usb2-dr");
++	if (err < 0)
++		printf("WARNING: could not set compatible property: %s\n",
++		       fdt_strerror(err));
++
++	err = fdt_setprop_string(blob, off, "phy_type", "ulpi");
++	if (err < 0)
++		printf("WARNING: could not set phy_type property: %s\n",
++		       fdt_strerror(err));
++
++	if (agent) {
++		err = fdt_setprop_string(blob, off, "dr_mode", "peripheral");
++		if (err < 0)
++			printf("WARNING: could not set dr_mode property: %s\n",
++			       fdt_strerror(err));
++	}
++
++	if (addrcell && *addrcell == 2) {
++		regbuf[0] = 0;
++		regbuf[1] = CONFIG_SYS_MPC85xx_USB2_OFFSET;
++		len = 2;
++	} else {
++		regbuf[0] = CONFIG_SYS_MPC85xx_USB2_OFFSET;
++		len = 1;
++	}
++
++	if (sizecell && *sizecell == 2) {
++		regbuf[len] = 0;
++		regbuf[len + 1] = 0x1000;
++		len += 2;
++	} else {
++		regbuf[len] = 0x1000;
++		len++;
++	}
++
++	err = fdt_setprop(blob, off, "reg", regbuf, len * sizeof(u32));
++	if (err < 0)
++		printf("WARNING: could not set <%s> %s\n",
++					"reg", fdt_strerror(err));
++
++	irqbuf[0] = 0x2e;
++	irqbuf[1] = 0x2;
++
++	err = fdt_setprop(blob, off, "interrupts", irqbuf, 2 * sizeof(u32));
++	if (err < 0)
++		printf("WARNING: could not set %s %s\n",
++				"interrupts", fdt_strerror(err));
++
++	ph = fdt_getprop(blob, lbcoff, "interrupt-parent", 0);
++	if (!ph) {
++		printf("WARNING: could not read interrupt-parent property\n");
++		return;
++	}
++
++	err = fdt_setprop(blob, off, "interrupt-parent", ph, sizeof(u32));
++	if (err < 0)
++		printf("WARNING: could not set %s %s\n",
++				"interrupt-parent", fdt_strerror(err));
++}
+diff --git a/include/asm-ppc/immap_85xx.h b/include/asm-ppc/immap_85xx.h
+index e53685b..6689a0a 100644
+--- a/include/asm-ppc/immap_85xx.h
++++ b/include/asm-ppc/immap_85xx.h
+@@ -1805,6 +1805,7 @@ typedef struct ccsr_gur {
+ #define MPC85xx_PMUXCR_SD_DATA		0x80000000
+ #define MPC85xx_PMUXCR_SDHC_CD		0x40000000
+ #define MPC85xx_PMUXCR_SDHC_WP		0x20000000
++#define MPC85xx_PMUXCR_ELBC_OFF_USB2_ON	0x01000000
+ 	u8	res6[12];
+ 	u32	devdisr;	/* Device disable control */
+ #define MPC85xx_DEVDISR_PCI1		0x80000000
+@@ -1888,6 +1889,7 @@ typedef struct ccsr_gur {
+ #define CONFIG_SYS_MPC85xx_L2_OFFSET		0x20000
+ #define CONFIG_SYS_MPC85xx_DMA_OFFSET		0x21000
+ #define CONFIG_SYS_MPC85xx_USB_OFFSET		0x22000
++#define CONFIG_SYS_MPC85xx_USB2_OFFSET		0x23000
+ #define CONFIG_SYS_MPC85xx_ESDHC_OFFSET		0x2e000
+ #define CONFIG_SYS_MPC85xx_SERDES2_OFFSET	0xE3100
+ #define CONFIG_SYS_MPC85xx_SERDES1_OFFSET	0xE3000
+diff --git a/include/fdt_support.h b/include/fdt_support.h
+index 0a9dd0d..e7b005d 100644
+--- a/include/fdt_support.h
++++ b/include/fdt_support.h
+@@ -74,6 +74,7 @@ int fdt_pci_dma_ranges(void *blob, int phb_off, struct pci_controller *hose);
+ void ft_board_setup(void *blob, bd_t *bd);
+ void ft_cpu_setup(void *blob, bd_t *bd);
+ void ft_pci_setup(void *blob, bd_t *bd);
++void fdt_fixup_add_2nd_usb(void *blob, int agent);
+ #endif
+ 
+ void set_working_fdt_addr(void *addr);
+-- 
+1.5.6.3
+

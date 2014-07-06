@@ -1,0 +1,15 @@
+# WPA/WPA2 Enterprise TKIP/CCMP, Sean@Liteon.com, 2013-12-02
+
+network={
+       ~eAP_SSID#!any~ ssid="~~AP_SSID#~"
+       ~eAP_SSID#:any~ ssid=""
+       ~eAP_SSID#:any~ bssid=~~ROOTAP_MAC#~
+       ~eAP_SSID#!any~ scan_ssid=1
+        key_mgmt=WPA-EAP
+        proto=~~AP_PROTO#~
+        pairwise=~~AP_CYPHER#~
+        eap=~~AP_AUTH#~
+        identity="~~AP_AUTH_USR#~"
+        password="~~AP_AUTH_PASSWD#~"
+        phase2="auth=MSCHAPV2"
+}

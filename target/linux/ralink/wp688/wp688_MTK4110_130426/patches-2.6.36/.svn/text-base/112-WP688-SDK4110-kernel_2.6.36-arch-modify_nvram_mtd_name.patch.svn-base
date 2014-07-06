@@ -1,0 +1,37 @@
+--- linux-2.6.36-ra4110/arch/mips/ralink/nvram.h	2012-12-10 16:32:06.000000000 +0800
++++ linux-2.6.36-ra4110_new/arch/mips/ralink/nvram.h	2012-12-27 14:51:50.568516000 +0800
+@@ -14,7 +14,16 @@
+ #define CERT_NVRAM    	3
+ #define WAPI_NVRAM    	4
+ #else
++
++/*modify for wp777 nvram, daniel@liteon,2012-10-15----->*/
++#ifdef LITEON_SRC_VALID
++#define FLASH_BLOCK_NUM	1
++#else
+ #define FLASH_BLOCK_NUM	4
++#endif //LITEON_SRC_VALID
++/*<-----daniel@liteon,2012-10-15*/
++
++
+ #define RT2860_NVRAM    0
+ #define RTDEV_NVRAM    	1
+ #define CERT_NVRAM    	2
+@@ -22,7 +31,17 @@
+ #endif
+ 
+ #define RALINK_NVRAM_DEVNAME "nvram"
++
++
++/*modify for wp777 nvram mtdname, daniel@liteon,2012-10-15----->*/
++#ifdef LITEON_SRC_VALID
++#define RALINK_NVRAM_MTDNAME "nvram"
++#else
+ #define RALINK_NVRAM_MTDNAME "Config"
++#endif //LITEON_SRC_VALID
++/*<-----daniel@liteon,2012-10-15*/
++
++
+ 
+ #define RANV_PRINT(x, ...) do { if (ra_nvram_debug) printk("\n%s %d: " x, __FILE__, __LINE__, ## __VA_ARGS__); } while(0)
+ #define RANV_ERROR(x, ...) do { printk("%s %d: ERROR! " x, __FILE__, __LINE__, ## __VA_ARGS__); } while(0)

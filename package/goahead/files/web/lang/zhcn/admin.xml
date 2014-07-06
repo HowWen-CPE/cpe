@@ -1,0 +1,280 @@
+﻿<po>
+	<message msgid="upload title" msgstr="升级软件"/>
+	<message msgid="upload titleOnLine" msgstr="线上软件升级"/>
+	<message msgid="upload introduction1" msgstr="若要进行软件升级，请选择到软件升级程序(*.BIN)的位置，然后点击上传。 软件升级程序可以从网站上下载。 如果网站上的软件程序有经过压缩程序 (*.ZIP 文件)，请您必须先将程序解压缩后再进行上传。在某些情况下，您可能需要将设备重新设置。"/>
+	<message msgid="upload Path" msgstr="上传地址："/>
+	<message msgid="admin Upload" msgstr="上传"/>
+	<message msgid="check latest Upload" msgstr="现在检查最新软件"/>
+	<message msgid="upload current FW version" msgstr="您目前正在使用软件版本："/>
+	<message msgid="upload latest FW version" msgstr="最新软件版本"/>
+	<message msgid="upload release date" msgstr="发行日期"/>
+	<message msgid="upload release note" msgstr="发行注释"/>
+	<message msgid="upload size" msgstr="大小"/>
+	<message msgid="do FW upgrade" msgstr="Do_Firmware_Upgrade"/>
+	<message msgid="Retrieve Failed. Please check your Internet connection or try again later." msgstr="取回失败。请检查网络连线或稍后再试。"/>
+	<message msgid="Not a valid firmware." msgstr="并非有效软件。"/>
+	<message msgid="Firmware download has stopped. Please check your Internet connection or try again later." msgstr="软件下载停止。请检查网络连线或稍后再试。"/>
+	
+	<message msgid="reset title" msgstr="系统重新启动"/>
+	<message msgid="reset introduction" msgstr="请点选重新启动让设备重新开机。装置重新启动时SYS (或 PWR) LED 指示灯会闪烁，重新启动成功后灯号就会持续亮着。 请稍待约一分钟再重新登录设备。"/>
+	<message msgid="reset Restart" msgstr="重新启动"/>
+	<message msgid="logsystem title" msgstr="日志"/>
+	<message msgid="logsystem display" msgstr="显示："/>
+	<message msgid="logsystem op1" msgstr="所有日志"/>
+	<message msgid="logsystem table_title" msgstr="摘要"/>
+	<message msgid="logsystem time" msgstr="时间"/>
+	<message msgid="logsystem msg" msgstr="信息"/>
+	<message msgid="logsystem logAll" msgstr="全部日志"/>
+	<message msgid="logsystem logWebmgt" msgstr="网页管理"/>
+	<message msgid="logsystem logDNS" msgstr="DNS"/>
+	<message msgid="logsystem logPPP" msgstr="PPP"/>
+	<message msgid="logsystem logUPnP" msgstr="UPnP"/>
+	<message msgid="logsystem logWireless" msgstr="无线"/>
+	<message msgid="logsystem logNTPClient" msgstr="NTP 用户端"/>
+	<message msgid="logsystem logSysWarn" msgstr="系统警告"/>
+	<message msgid="logsystem logDhcpSrv" msgstr="DHCP 服务器"/>
+	<message msgid="logsystem logDhcpCli" msgstr="DHCP 用户端"/>
+	<message msgid="logsystem logDDNS" msgstr="DDNS"/>
+	<message msgid="logsystem logVPN" msgstr="VPN"/>
+	<message msgid="logsystem logIpaddr" msgstr="服务器IP（全0关服务器）:"/>
+	<message msgid="logsystem logEnable" msgstr="开启"/>
+	<message msgid="logsystem logPort" msgstr="服务器端口:"/>
+	<message msgid="logsystem logDisable" msgstr="关闭"/>	
+	<message msgid="logsystem logFirewall" msgstr="防火墙"/>
+	<message msgid="active log" msgstr="现行日志 "/>
+	<message msgid="logsystem refresh" msgstr="刷新"/>
+	<message msgid="logsystem clear" msgstr="清除"/>
+	<message msgid="syssettings title" msgstr="设置文件备份"/>
+	<message msgid="syssettings introduction" msgstr="点击备份，将系统目前的设置储存到您的电脑。"/>
+	<message msgid="syssettings title_1" msgstr="恢复设置"/>
+	<message msgid="syssettings introduction_1" msgstr="若要将先前储存的配置文件恢复至系统，请选择配置文件存放的位置，然后点击上传。"/>
+	<message msgid="syssettings path" msgstr="配置文件路径："/>
+	<message msgid="syssettings upload" msgstr="上传"/>
+	<message msgid="syssettings title_2" msgstr="恢复出厂值"/>
+	<message msgid="syssettings introduction_2" msgstr="点击重设，清除所有使用者输入的设置信息并且还原为出厂值。 重设后，"/>
+	<message msgid="syssettings introduction_3" msgstr="- 密码将会还原为admin"/>
+	<message msgid="WP838_syssettings introduction_4" msgstr="- LAN IP 地址将会还原为192.168.1.2 "/>
+	<message msgid="WP688_syssettings introduction_4" msgstr="- LAN IP 地址将会还原为192.168.1.2 "/>
+	<message msgid="syssettings introduction_5" msgstr="- DHCP 重设为服务器"/>
+	<message msgid="syssettings introduction_6" msgstr="- 操作模式将为设置为AP模式"/>
+	<message msgid="syssettings Reset" msgstr="重设"/>
+	<message msgid="syssettings Backup" msgstr="备份"/>
+	<message msgid="management title" msgstr="现在的时间与日期"/>
+	<message msgid="management CurrentTime" msgstr="现在时间："/>
+	<message msgid="management CurrentDate" msgstr="现在日期："/>
+	<message msgid="management title_1" msgstr="现在的时间与日期"/>
+	<message msgid="management Manual" msgstr="手动"/>
+	<message msgid="management NewTime" msgstr="新的时间 (hh:mm:ss)："/>
+	<message msgid="management NewDate" msgstr="新的日期 (yyyy/mm/dd)："/>
+	<message msgid="management TimeServer" msgstr="从时间服务器取得"/>
+	<message msgid="management Auto" msgstr="自动"/>
+	<message msgid="management UserDefined" msgstr="使用者自定义的时间服务器地址："/>
+	<message msgid="management title_2" msgstr="时区设置"/>
+	<message msgid="management TimeZone" msgstr="时区："/>
+	<message msgid="management manNTPMidIsland" msgstr="(GMT-11:00) 中途岛、萨摩亚群岛"/>
+	<message msgid="management manNTPHawaii" msgstr="(GMT-10:00) 夏威夷"/>
+	<message msgid="management manNTPAlaska" msgstr="(GMT-09:00) 阿拉斯加"/>
+	<message msgid="management manNTPPacific" msgstr="(GMT-08:00) 太平洋时区 (美国与加拿大) 、提华纳"/>
+	<message msgid="management manNTPArizona" msgstr="(GMT-07:00) 亚利桑那州"/>
+	<message msgid="management manNTPMountain" msgstr="(GMT-07:00) 山区时区 (美国与加拿大)"/>
+	<message msgid="management manNTPCentralAmerica" msgstr="(GMT-06:00) 中美洲"/>
+	<message msgid="management manNTPCentralTime" msgstr="(GMT-06:00) 中部时区 (美国与加拿大)"/>
+	<message msgid="management manNTPBogota" msgstr="(GMT-05:00) 波哥大、利马、基多"/>
+	<message msgid="management manNTPEasternTime" msgstr="(GMT-05:00) 东部时区 (美国与加拿大)"/>
+	<message msgid="management manNTPAltlantic" msgstr="(GMT-04:00) 大西洋时区 (加拿大)"/>
+	<message msgid="management manNTPCaracas" msgstr="(GMT-04:00) 卡拉卡斯、拉巴斯、圣地牙哥"/>
+	<message msgid="management manNTPBrasilia" msgstr="(GMT-03:00) 巴西利亚、格陵兰"/>
+	<message msgid="management manNTPBuenos" msgstr="(GMT-03:00) 布宜诺斯艾利斯、乔治城"/>
+	<message msgid="management manNTPMid-Atlantic" msgstr="(GMT-02:00) 大西洋中部"/>
+	<message msgid="management manNTPAzores" msgstr="(GMT-01:00) 亚速群岛、维德角群岛"/>
+	<message msgid="management manNTPCasablanca" msgstr="(GMT) 卡萨布兰加、蒙罗维亚"/>
+	<message msgid="management manNTPGreenwich" msgstr="(GMT) 格林威治标准时区：都柏林、爱丁堡、里斯本、伦敦"/>
+	<message msgid="management manNTPAmsterdam" msgstr="(GMT+01:00) 阿姆斯特丹、柏林、伯恩、罗马、斯德哥尔摩、维也纳"/>
+	<message msgid="management manNTPBelgrade" msgstr="(GMT+01:00) 贝尔格勒、布拉提拉瓦、布达佩斯，留布利安纳、布拉格"/>
+	<message msgid="management manNTPBrussels" msgstr="(GMT+01:00) 布鲁塞尔、哥本哈根、马德里、巴黎"/>
+	<message msgid="management manNTPAthens" msgstr="(GMT+02:00) 雅典、贝鲁特、伊斯坦堡、明斯克"/>
+	<message msgid="management manNTPBucharest" msgstr="(GMT+02:00) 布加勒斯、开罗，哈拉雷、普利托里亚"/>
+	<message msgid="management manNTPBaghdad" msgstr="(GMT+03:00) 巴格达、科威特、利雅德、奈洛比"/>
+	<message msgid="management manNTPMoscow" msgstr="(GMT+03:00) 莫斯科、圣 彼得堡、伏尔加格勒"/>
+	<message msgid="management manNTPMuscat" msgstr="(GMT+04:00) 阿布达比、马斯喀特"/>
+	<message msgid="management manNTPEkaterinburg" msgstr="(GMT+05:00) 叶卡捷琳堡"/>
+	<message msgid="management manNTPAlmaty" msgstr="(GMT+06:00) 阿拉木图、新西伯利亚"/>
+	<message msgid="management manNTPBangkok" msgstr="(GMT+07:00) 曼谷、河内、雅加达"/>
+	<message msgid="management manNTPBeijing" msgstr="(GMT+08:00) 北京、重庆、香港、乌鲁木齐"/>
+	<message msgid="management manNTPIrkutsk" msgstr="(GMT+08:00) 伊尔库次克、乌兰巴托"/>
+	<message msgid="management manNTPSingapore" msgstr="(GMT+08:00) 吉隆坡、新加坡"/>
+	<message msgid="management manNTPTaipei" msgstr="(GMT+08:00) 伯斯、台北"/>
+	<message msgid="management manNTPTokyo" msgstr="(GMT+09:00) 大阪、札幌、东京"/>
+	<message msgid="management manNTPYakutsk" msgstr="(GMT+09:00) 首尔、雅库次克"/>
+	<message msgid="management manNTPVladivostok" msgstr="(GMT+10:00) 布里斯本、海参崴"/>
+	<message msgid="management manNTPCanberra" msgstr="(GMT+10:00) 坎培拉、墨尔本、雪梨"/>
+	<message msgid="management manNTPMagadan" msgstr="(GMT+11:00) 马加丹、所罗门群岛、新喀里多尼亚岛"/>
+	<message msgid="management manNTPAuckland" msgstr="(GMT+12:00) 奥克兰、威灵顿"/>
+	<message msgid="management manNTPFiji" msgstr="(GMT+12:00) 斐济、堪察加半岛、马绍尔群岛"/>
+	<message msgid="management Apply" msgstr="应用"/>
+	<message msgid="management Reset" msgstr="重设"/>
+	<message msgid="management Cancel" msgstr="取消" />
+	<message msgid="management Daylight" msgstr="夏令时"/>
+	<message msgid="management DaylightStart" msgstr="起始日期 (mm/dd)"/>
+	<message msgid="management DaylightStartat" msgstr="于"/>
+	<message msgid="management DaylightStartclock" msgstr="点钟"/>
+	<message msgid="management DaylightEnd" msgstr="结束日期"/>
+	<message msgid="management Daylightendat" msgstr="于"/>
+	<message msgid="management Daylightendclock" msgstr="点钟"/>
+	<message msgid="man select language" msgstr="语言"/>
+	<message msgid="man admin username" msgstr="用户名" />
+	<message msgid="man admin passwd" msgstr="密 码"/>
+	<message msgid="man title" msgstr="使用设备设置介面。 请点击「执行」，进入基本模式。"/>
+	<message msgid="login loginmsg" msgstr="使用设备设置介面。 请输入密码，并点击「登录」。"/>
+	<message msgid="login passmsg" msgstr="(最多 30 个文字或数字字符，中间请不要有空格)"/>
+	<message msgid="login login" msgstr="登录"/>
+	<message msgid="man GO" msgstr="执行"/>
+	<message msgid="login continue" msgstr="继续" />
+	<message msgid="login cancel" msgstr="取消" />
+	<message msgid="force login title" msgstr="用户已经登录" />
+	<message msgid="force loginmsg" msgstr="如果要结束其他会话，请在六十秒内点击'继续'. 点击'取消'退出" />
+	<message msgid="city1" msgstr="奥地利 - 维也纳"/>
+	<message msgid="city2" msgstr="中国 - 北京"/>
+	<message msgid="city3" msgstr="哥斯达黎加 - 圣荷西"/>
+	<message msgid="city4" msgstr="捷克 - 布拉格"/>
+	<message msgid="city5" msgstr="丹麦 - 哥本哈根"/>
+	<message msgid="city6" msgstr="芬兰 - 赫尔辛基"/>
+	<message msgid="city7" msgstr="法国 - 巴黎"/>
+	<message msgid="city8" msgstr="德国 - 柏林"/>
+	<message msgid="city9" msgstr="希腊 - 雅典"/>
+	<message msgid="city10" msgstr="印度 - 新德里"/>
+	<message msgid="city11" msgstr="印尼 - 雅加达"/>
+	<message msgid="city12" msgstr="义大利 - 罗马"/>
+	<message msgid="city13" msgstr="日本 - 东京"/>
+	<message msgid="city14" msgstr="马来西亚 - 吉隆坡"/>
+	<message msgid="city15" msgstr="荷兰 - 阿姆斯特丹"/>
+	<message msgid="city16" msgstr="挪威 - 奥斯陆"/>
+	<message msgid="city17" msgstr="俄罗斯 - 莫斯科"/>
+	<message msgid="city18" msgstr="新加坡 - 新加坡"/>
+	<message msgid="city19" msgstr="西班牙 - 马德里"/>
+	<message msgid="city20" msgstr="瑞典 - 斯德哥尔摩"/>
+	<message msgid="city21" msgstr="瑞士 - 伯恩"/>
+	<message msgid="city22" msgstr="台湾 - 台北"/>
+	<message msgid="city23" msgstr="泰国 - 曼谷"/>
+	<message msgid="city24" msgstr="土耳其 - 安卡拉"/>
+	<message msgid="city25" msgstr="英国 - 伦敦"/>
+	<message msgid="city26" msgstr="英国 - 格林威治"/>
+	<message msgid="city27" msgstr="美国 - 纽约"/>
+	<message msgid="city28" msgstr="美国 - 华盛顿特区"/>
+	<message msgid="city29" msgstr="美国 - 洛杉矶"/>
+	<message msgid="city30" msgstr="越南 - 河内"/>
+	<message msgid="c1" msgstr="维也纳"/>
+	<message msgid="c2" msgstr="北京"/>
+	<message msgid="c3" msgstr="圣荷西"/>
+	<message msgid="c4" msgstr="布拉格"/>
+	<message msgid="c5" msgstr="哥本哈根"/>
+	<message msgid="c6" msgstr="赫尔辛基"/>
+	<message msgid="c7" msgstr="巴黎"/>
+	<message msgid="c8" msgstr="柏林"/>
+	<message msgid="c9" msgstr="雅典"/>
+	<message msgid="c10" msgstr="新德里"/>
+	<message msgid="c11" msgstr="雅加达"/>
+	<message msgid="c12" msgstr="罗马"/>
+	<message msgid="c13" msgstr="东京"/>
+	<message msgid="c14" msgstr="吉隆坡"/>
+	<message msgid="c15" msgstr="阿姆斯特丹"/>
+	<message msgid="c16" msgstr="奥斯陆"/>
+	<message msgid="c17" msgstr="莫斯科"/>
+	<message msgid="c18" msgstr="新加坡"/>
+	<message msgid="c19" msgstr="马德里"/>
+	<message msgid="c20" msgstr="斯德哥尔摩"/>
+	<message msgid="c21" msgstr="伯恩"/>
+	<message msgid="c22" msgstr="台北"/>
+	<message msgid="c23" msgstr="曼谷"/>
+	<message msgid="c24" msgstr="安卡拉"/>
+	<message msgid="c25" msgstr="伦敦"/>
+	<message msgid="c26" msgstr="格林威治"/>
+	<message msgid="c27" msgstr="纽约"/>
+	<message msgid="c28" msgstr="华盛顿特区"/>
+	<message msgid="c29" msgstr="洛杉矶"/>
+	<message msgid="c30" msgstr="河内"/>
+	<message msgid="You must input 0~23 hours!!" msgstr="您必须输入 0~23 小时！！"/>
+	<message msgid="You must input 0~59 minutes!!" msgstr="您必须输入 0~59 分钟！！"/>
+	<message msgid="You must input 0~60 seconds!!" msgstr="您必须输入 0~60 秒！！"/>
+	<message msgid="You must input 1970~2037 years!!" msgstr="您必须输入 1970~2037 年！！"/>
+	<message msgid="You must input 1~12 month!!" msgstr="您必须输入 1~12 月！！"/>
+	<message msgid="You must input 1~31 days!" msgstr="您必须输入 1~31 日！！"/>
+	<message msgid="You must input 1~30 days!" msgstr="您必须输入 1~30 日！！"/>
+	<message msgid="You must input 1~29 days!" msgstr="您必须输入 1~29 日！！"/>
+	<message msgid="You must input 1~28 days!" msgstr="您必须输入 1~28 日！！"/>
+	<message msgid="Please specify the file name." msgstr="请指定程序名称。"/>
+	<message msgid="Firmware Upgrade: Please specify a file." msgstr="软件升级：请指定程序。"/>
+	<message msgid="Giving up :( Cannot create an XMLHTTP instance" msgstr="放弃：（无法建立 XMLHTTP 例项"/>
+	<message msgid="There was a problem with the request." msgstr="对于要求出现问题。"/>
+	<message msgid="main Ready" msgstr="准备就绪"/>
+<message msgid="main ConfigurationSuccess" msgstr="设置更新成功"/>
+<message msgid="main ConfigurationProceeding" msgstr="正在进行设置更新。请稍候..."/>
+<message msgid="main firmware download in progress" msgstr="软件升级进行中。 请稍候..."/>
+<message msgid="main firmware upgrade is proceeding" msgstr="正在进行软件升级 请稍候并勿将装置断电。"/>
+<!-- index.asp 0624 added -->
+<message msgid="no_internet" msgstr="请连线到网络确认天气"/>
+<message msgid="check_password" msgstr="错误：不正确的密码！请重新输入"/>
+<message msgid="check_username" msgstr="错误：不正确的用户名！请重新输入"/>
+<message msgid="login_err" msgstr="目前已经有管理者登录设置中"/>
+<message msgid="time_zone" msgstr="更改时区"/>
+<message msgid="Change_Unit" msgstr="更改单位"/>
+<message msgid="Change_location" msgstr="更改所在地"/>
+<message msgid="finish" msgstr="完成"/>
+<message msgid="Do you wish to continue with the upgrade process ?" msgstr="请问您是否要继续更新程序?"/>
+<message msgid="Do you really want to restart the device ?" msgstr="请问您是否要重新启动设备?"/>
+<message msgid="Not a valid firmware." msgstr="错误的软件程序"/>
+
+<message msgid="Do you wish to continue with this process ?" msgstr="请问您是否要继续进行此程序?" />
+
+<message msgid="management manNTPUTC-11Samoa" msgstr="UTC-11:00 中途岛、萨摩亚群岛" />
+<message msgid="management manNTPUTC-10Hawaii" msgstr="UTC-10:00 夏威夷" />
+<message msgid="management manNTPUTC-09Alaska" msgstr="UTC-09:00 阿拉斯加" />
+<message msgid="management manNTPUTC-08Pacific" msgstr="UTC-08:00 太平洋时区" />
+<message msgid="management manNTPUTC-07Arizona" msgstr="UTC-07:00 亚利桑那州" />
+<message msgid="management manNTPUTC-07Mountain" msgstr="UTC-07:00 山区时区" />
+<message msgid="management manNTPUTC-06Central" msgstr="UTC-06:00 中部时区" />
+<message msgid="management manNTPUTC-05Eastern" msgstr="UTC-05:00 东部时区" />
+<message msgid="management manNTPUTC-03Greenland" msgstr="UTC-03:00 格陵兰" />
+<message msgid="management manNTPUTC-02Mid-Atlantic" msgstr="UTC-02:00 大西洋中部" />
+<message msgid="management manNTPUTC-01Azores" msgstr="UTC-01:00 亚速群岛" />
+<message msgid="management manNTPUTCFrance" msgstr="UTC+01:00 法国、德国、义大利" />
+<message msgid="management manNTPUTCThailand" msgstr="UTC+07:00 泰国、俄罗斯" />
+<message msgid="management manNTPUTCSolomonIslands" msgstr="UTC+11:00 所罗门群岛" />
+<message msgid="management manNTPUTCFiji" msgstr="UTC+12:00 斐济" />
+
+<!--WR71210IRA NTP Time Zone-->
+	<message msgid="management manNTPUTC-12Kwajalein" msgstr="UTC-12:00 瓜加林岛"/>
+	<message msgid="management manNTPUTC-06Mexico" msgstr="UTC-06:00 墨西哥"/>
+	<message msgid="management manNTPUTC-05Colombia" msgstr="UTC-05:00 哥伦比亚、巴拿马"/>
+	<message msgid="management manNTPUTC-04Bolivia" msgstr="UTC-04:00 玻利维亚、委内瑞拉"/>
+	<message msgid="management manNTPUTC-04Atlantic" msgstr="UTC-04:00 大西洋时区"/>
+	<message msgid="management manNTPUTC-04Brazil" msgstr="UTC-04:00 巴西西部"/>
+	<message msgid="management manNTPUTC-03Newfoundland" msgstr="UTC-03:30 纽芬兰"/>
+	<message msgid="management manNTPUTC-03Brazil" msgstr="UTC-03:00 巴西东部"/>
+	<message msgid="management manNTPUTC-03Guyana" msgstr="UTC-03:00 圭亚那"/>
+	<message msgid="management manNTPUTCGambia" msgstr="UTC+00:00 甘比亚、赖比瑞亚、摩洛哥"/>
+	<message msgid="management manNTPUTCEngland" msgstr="UTC+00:00 英格兰"/>
+	<message msgid="management manNTPUTCTunisia" msgstr="UTC+01:00 突尼斯"/>
+	<message msgid="management manNTPUTCSouthAfrica" msgstr="UTC+02:00 南非"/>
+	<message msgid="management manNTPUTCGreece" msgstr="UTC+02:00 希腊、乌克兰、罗马尼亚、土耳其"/>
+	<message msgid="management manNTPUTCIraq" msgstr="UTC+03:00 伊拉克、约旦、科威特"/>
+	<message msgid="management manNTPUTCArmenia" msgstr="UTC+04:00 亚美尼亚"/>
+	<message msgid="management manNTPUTCPakistan" msgstr="UTC+05:00 巴基斯坦、俄罗斯"/>
+	<message msgid="management manNTPUTCBombay" msgstr="UTC+05:30 孟买、加尔各答、马德里、新德里"/>
+	<message msgid="management manNTPUTCBangladesh" msgstr="UTC+06:00 孟加拉、俄罗斯"/>
+	<message msgid="management manNTPUTCTaiwan" msgstr="UTC+08:00 台湾、中国、香港、西澳、新加坡"/>
+	<message msgid="management manNTPUTCJapan" msgstr="UTC+09:00 日本、韩国"/>
+	<message msgid="management manNTPUTCSouthAustralia" msgstr="UTC+09:30 南澳"/>
+	<message msgid="management manNTPUTCGuam" msgstr="UTC+10:00 关岛、俄罗斯"/>
+	<message msgid="management manNTPUTCAustralia" msgstr="UTC+10:00 澳洲"/>
+	<message msgid="management manNTPUTCNewZealand" msgstr="UTC+12:00 纽西兰"/>
+	<message msgid="Retrieve new firmware information now. Please wait . . ." msgstr="正在检索新的软件信息。请稍候..."/>
+	<message msgid="No newer firmware exists. The firmware on your device is already the latest version." msgstr="装置上的软件已是最新版本。"/>
+	<message msgid="IP adress format error." msgstr="IP地址格式错误." />
+	<message msgid="Please set port between 1~65535" msgstr="请设置端口范围为1~65535" />
+<message msgid="Please upgrade your firmware with ethernet" msgstr="请使用以太网方式升级固件" />
+
+<!-- checkupload_config.asp -->
+<message msgid="configuration size is too large to write down" msgstr="配置文件过大无法上传." />
+<message msgid="Port has been occupied" msgstr="端口被占用"/>
+</po>

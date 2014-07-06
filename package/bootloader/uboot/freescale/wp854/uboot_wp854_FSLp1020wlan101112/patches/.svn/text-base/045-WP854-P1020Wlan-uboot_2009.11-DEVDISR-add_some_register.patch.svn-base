@@ -1,0 +1,14 @@
+--- u-boot-freescale-p1020-sku/include/asm-ppc/immap_85xx.h	2012-07-11 19:41:34.467329687 -0700
++++ u-boot-liteon-wp854-openwrt/include/asm-ppc/immap_85xx.h	2011-11-08 23:26:37.678802000 -0800
+@@ -1811,6 +1811,11 @@
+ 
+ 	u8	res6[12];
+ 	u32	devdisr;	/* Device disable control */
++#define MPC85xx_DEVDISR_TDM		0x10000000
++#define MPC85xx_DEVDISR_USB1		0x00800000
++#define MPC85xx_DEVDISR_USB2		0x00400000
++#define MPC85xx_DEVDISR_SPI		       0x00000008
++#define MPC85xx_DEVDISR_SDHC		0x00200000
+ #define MPC85xx_DEVDISR_PCI1		0x80000000
+ #define MPC85xx_DEVDISR_PCI2		0x40000000
+ #define MPC85xx_DEVDISR_PCIE		0x20000000

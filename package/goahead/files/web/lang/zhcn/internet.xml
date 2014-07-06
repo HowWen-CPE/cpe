@@ -1,0 +1,598 @@
+﻿<po>
+	<message msgid="routing title" msgstr="静态路由设置"/>
+	<message msgid="routing add rule" msgstr="新增路由规则"/>
+	<message msgid="routing routing dest" msgstr="目的地 IP 地址"/>
+	<message msgid="routing range" msgstr="范围"/>
+	<message msgid="routing netmask" msgstr="IP 子网掩码"/>
+	<message msgid="routing gateway" msgstr="网关 IP 地址"/>
+	<message msgid="routing interface" msgstr="接口"/>
+	<message msgid="routing custom" msgstr="自订"/>
+	<message msgid="routing comment" msgstr="路由名称"/>
+	<message msgid="routing submit" msgstr="应用"/>
+	<message msgid="routing reset" msgstr="重设"/>
+	<message msgid="routing Number" msgstr="编号"/>
+	<message msgid="routing del title" msgstr="系统目前的路由表："/>
+	<message msgid="routing del dest" msgstr="目的地"/>
+	<message msgid="routing del netmask" msgstr="子网掩码"/>
+	<message msgid="routing del gateway" msgstr="网关"/>
+	<message msgid="routing del flags" msgstr="旗标"/>
+	<message msgid="routing del metric" msgstr="权值"/>
+	<message msgid="routing del Delete" msgstr="删除"/>
+	<message msgid="routing del ref" msgstr="参考"/>
+	<message msgid="routing del use" msgstr="使用量"/>
+	<message msgid="routing del interface" msgstr="接口"/>
+	<message msgid="routing del comment" msgstr="注解"/>
+	<message msgid="routing del" msgstr="删除"/>
+	<message msgid="routing del reset" msgstr="重设"/>
+	<message msgid="routing host" msgstr="主机"/>
+	<message msgid="routing net" msgstr="网络"/>
+	<message msgid="routing LAN" msgstr="区域网络"/>
+	<message msgid="routing WAN" msgstr="广域网络"/>
+	<message msgid="routing Metric" msgstr="权值"/>
+	<message msgid="routing AddRule" msgstr="新增规则"/>
+	<message msgid="routing table" msgstr="应用规则摘要"/>
+	<message msgid="routing Active" msgstr="启动"/>
+	<message msgid="rip title" msgstr="RIP 设置"/>
+	<message msgid="rip rip" msgstr="RIP :"/>
+	<message msgid="rip None" msgstr="无"/>
+	<message msgid="rip RIPv1" msgstr="RIPv1"/>
+	<message msgid="rip RIPv2" msgstr="RIPv2"/>
+	<message msgid="rip Apply" msgstr="应用"/>
+	<message msgid="rip Reset" msgstr="重设"/>
+	<message msgid="upnp title" msgstr="UPnP 设置"/>
+	<message msgid="upnp DeviceName" msgstr="设备名称：互联网共享网关"/>
+	<message msgid="upnp Enb" msgstr="启用通用随插即用 (UPnP) 功能"/>
+	<message msgid="upnp Apply" msgstr="应用"/>
+	<message msgid="upnp Reset" msgstr="重设"/>
+	<message msgid="LanDhcp title" msgstr="区域网络 DHCP 设置"/>
+	<message msgid="LanDhcp Enable" msgstr="启用 DHCP 服务器"/>
+	<message msgid="LanDhcp IP" msgstr="IP 范围起始地址"/>
+	<message msgid="LanDhcp PoolSize" msgstr="范围大小"/>
+	<message msgid="LanDhcp Mode" msgstr="DHCP 模式" />
+	<message msgid="LanDhcp serverAddr" msgstr="远程 DHCP 服务器" />
+	<message msgid="LanDhcp None" msgstr="无" />
+	<message msgid="LanDhcp Server" msgstr="DHCP 服务器" />
+	<message msgid="LanDhcp Relay" msgstr="DHCP 中继" />
+	<message msgid="DHCP Mode note1_0" msgstr="注:" />
+	<message msgid="DHCP Mode note1_1" msgstr="DHCP中继：在这种模式下，NAT功能应禁用，否则DHCP中继不会生效。" />
+	<message msgid="lanDhcp Apply" msgstr="应用"/>
+	<message msgid="lanDhcp Reset" msgstr="重设"/>
+	<message msgid="lanAdv title" msgstr="区域网络静态 DHCP 表"/>
+	<message msgid="lanAdv MAC" msgstr="MAC 地址"/>
+	<message msgid="lanAdv IP" msgstr="IP 地址"/>
+	<message msgid="lanAdv DNS" msgstr="DNS 服务器"/>
+	<message msgid="lanAdvDNS title" msgstr="由 DHCP 服务器指派的 DNS 服务器"/>
+	<message msgid="lanAdvDNS Server1" msgstr="第一个 DNS 服务器："/>
+	<message msgid="lanAdv DNSServer1ISP" msgstr="从 ISP 自动取得"/>
+	<message msgid="lanAdv DNSServer1Defined" msgstr="使用者定义"/>
+	<message msgid="lanAdv DNSServer1Relay" msgstr="DNS服务器中继"/>
+	<message msgid="lanAdv DNSServer1None" msgstr="无"/>
+	<message msgid="lanAdv DNSServer2" msgstr="第二个 DNS 服务器："/>
+	<message msgid="lanAdv DNSServer2ISP" msgstr="从 ISP 自动取得"/>
+	<message msgid="lanAdv DNSServer2Defined" msgstr="使用者定义"/>
+	<message msgid="lanAdv DNSServer2Relay" msgstr="DNS服务器中继"/>
+	<message msgid="lanAdv DNSServer2None" msgstr="无"/>
+	<message msgid="lanAdv Apply" msgstr="应用"/>
+	<message msgid="lanAdv Reset" msgstr="重设"/>
+	<message msgid="ipAlias title" msgstr="IP 别名1"/>
+	<message msgid="ipAlias enable" msgstr="IP 别名"/>
+	<message msgid="ipAlias Address" msgstr="IP 地址："/>
+	<message msgid="ipAlias Subnet" msgstr="IP 子网掩码："/>
+	<message msgid="ipAlias Apply" msgstr="应用"/>
+	<message msgid="ipAlias Reset" msgstr="重设"/>
+	<!--for lan.asp-->
+	<message msgid="lan IP_Config" msgstr="局域网IP配置"/>
+	<message msgid="lan Get_From_DHCP" msgstr="从DHCP服务器获取"/>
+	<message msgid="lan Fixed_IP" msgstr="指定IP地址"/>
+	<message msgid="lan Address" msgstr="IP 地址："/>
+	<message msgid="lan Subnet" msgstr="IP 子网掩码："/>
+	<message msgid="lan Gateway" msgstr="IP 网关："/>
+	<message msgid="lan DNS Assignment" msgstr="域名指派"/>
+	<message msgid="lan First DNS Server" msgstr="首选DNS服务器："/>
+	<message msgid="lan Second DNS Server" msgstr="备选DNS服务器："/>
+	<message msgid="lan Apply" msgstr="应用"/>
+	<message msgid="lan Reset" msgstr="取消"/>
+	<message msgid="lan DNS ISP" msgstr="从 ISP 自动取得"/>
+	<message msgid="lan DNS User" msgstr="使用者定义"/>
+	<message msgid="lan DNS None" msgstr="无"/>
+	
+	<message msgid="Dhcpinfo title" msgstr="DHCP 用户端表格"/>
+	<message msgid="Dhcpinfo Table" msgstr="表格清单"/>
+	<message msgid="Dhcpinfo TableMAC" msgstr="MAC 地址"/>
+	<message msgid="Dhcpinfo TableIP" msgstr="IP 地址"/>
+	<message msgid="Dhcpinfo TableExp" msgstr="有效期限"/>
+	<message msgid="dhcpClient Refresh" msgstr="刷新"/>
+	<message msgid="wan title" msgstr="接取国际网络的 ISP 参数"/>
+	<message msgid="wan Encapsulation" msgstr="封装："/>
+	<message msgid="wan Ethernet" msgstr="以太网"/>
+	<message msgid="wan PPPOE" msgstr="PPPoE"/>
+	<message msgid="wan PPTP" msgstr="PPTP"/>
+	<message msgid="wan L2TP" msgstr="L2TP"/>
+	<message msgid="wPppoe User" msgstr="使用者名称："/>
+	<message msgid="wPppoe Password" msgstr="密码："/>
+	<message msgid="wPppoe Pass2" msgstr="请重新输入一次密码以供确认 ："/>
+	<message msgid="wPppoe Mtu" msgstr="MTU 大小："/>
+	<message msgid="wPppoe Nailedup" msgstr="固定连线"/>
+	<message msgid="wPppoe IdleTime" msgstr="超时等候时间 (秒)"/>
+	<message msgid="wPppoe IdleTimesec" msgstr="秒(范围：300-36000)"/>
+	<message msgid="wan title2" msgstr="广域网络 IP 地址指派"/>
+	<message msgid="wPppoe WanIPMode" msgstr="自动从 ISP 取得"/>
+	<message msgid="wPppoe WanIPMode1" msgstr="使用固定 IP 地址"/>
+	<message msgid="wPppoe WanIp" msgstr="我的广域网络 IP 地址："/>
+	<message msgid="wPptp User" msgstr="使用者名称："/>
+	<message msgid="wPptp Password" msgstr="密码："/>
+	<message msgid="wPptp Pass2" msgstr="重新输入一次以供确认 ："/>
+	<message msgid="wPptp Nailup" msgstr="固定连线"/>
+	<message msgid="wPptp Mppe" msgstr="MPPE 加密"/>
+	<message msgid="wPptp IdleTime" msgstr="超时等候时间 (秒)"/>
+	<message msgid="wPptp title" msgstr="PPTP 设置"/>
+	<message msgid="wPptp Server" msgstr="服务器 IP 地址"/>
+	<message msgid="wPptp AddrMode" msgstr="自动从 ISP 取得"/>
+	<message msgid="wPptp AddrMode1" msgstr="使用固定 IP 地址"/>
+	<message msgid="wPptp Ip" msgstr="IP 地址："/>
+	<message msgid="wPptp Netmask" msgstr="IP 子网掩码："/>
+	<message msgid="wPptp Gateway" msgstr="网关 IP 地址："/>
+	<message msgid="wPptp title1" msgstr="广域网络 IP 地址指派"/>
+	<message msgid="wPptp WanIPMode1" msgstr="自动从 ISP 取得"/>
+	<message msgid="wPptp WanIPMode2" msgstr="使用固定 IP 地址"/>
+	<message msgid="wPptp WanIp" msgstr="我的广域网络 IP 地址："/>
+	<message msgid="wPptp IdleTimesec" msgstr="秒(范围：300-36000)"/>
+	<message msgid="wL2tp User" msgstr="使用者名称："/>
+	<message msgid="wL2tp Password" msgstr="密码："/>
+	<message msgid="wL2tp Nailedup" msgstr="固定连线"/>
+	<message msgid="wL2tp IdleTime" msgstr="超时等候时间 (秒)"/>
+	<message msgid="wL2tp IdleTimesec" msgstr="秒(范围：300-36000)"/>
+	<message msgid="wL2tp Pass2" msgstr="请重新输入一次密码以供确认 ："/>
+	<message msgid="L2TP title" msgstr="L2TP 设置："/>
+	<message msgid="wL2tp Server" msgstr="服务器 IP 地址 ："/>
+	<message msgid="wL2tp AddrMode1" msgstr="自动从 ISP 取得"/>
+	<message msgid="wL2tp AddrMode2" msgstr="使用固定 IP 地址"/>
+	<message msgid="wL2tp Ip" msgstr="IP 地址："/>
+	<message msgid="wL2tp Netmask" msgstr="IP 子网掩码："/>
+	<message msgid="wL2tp Gateway" msgstr="网关 IP 地址："/>
+	<message msgid="ethernet title" msgstr="广域网络 IP 地址指派"/>
+	<message msgid="ethernet d1" msgstr="自动从 ISP 取得 (预设)"/>
+	<message msgid="ethernet d2" msgstr="使用固定 IP 地址"/>
+	<message msgid="wStatic Ip" msgstr="IP 地址："/>
+	<message msgid="wStatic Netmask" msgstr="IP 子网掩码："/>
+	<message msgid="wStatic Gateway" msgstr="网关 IP 地址："/>
+	<message msgid="wan title3" msgstr="广域网络 DNS 指派"/>
+	<message msgid="wan DNS" msgstr="第一个 DNS 服务器："/>
+	<message msgid="wan DNSISP" msgstr="从 ISP 自动取得"/>
+	<message msgid="wan DNSUSER" msgstr="使用者定义"/>
+	<message msgid="wan DNSNONE" msgstr="无"/>
+	<message msgid="wan DNS2" msgstr="第二个 DNS 服务器："/>
+	<message msgid="wan DNS2ISP" msgstr="从 ISP 自动取得"/>
+	<message msgid="wan DNS2USER" msgstr="使用者定义"/>
+	<message msgid="wan DNS2NONE" msgstr="无"/>
+	<message msgid="wan title4" msgstr="广域网络 MAC 地址"/>
+	<message msgid="wan macop1" msgstr="原厂预设值"/>
+	<message msgid="wan macop2" msgstr="仿制电脑的 MAC 地址 - IP 地址"/>
+	<message msgid="wan macop3" msgstr="设置广域网络 MAC 地址"/>
+	<message msgid="wan Apply" msgstr="应用"/>
+	<message msgid="wan Reset" msgstr="重设"/>
+	<message msgid="snooping title" msgstr="IGMP 窥探设置"/>
+	<message msgid="snooping Enable" msgstr="启用 IGMP 窥探"/>
+	<message msgid="snooping LAN1" msgstr="区域网络端口 1"/>
+	<message msgid="snooping LAN2" msgstr="区域网络端口 2"/>
+	<message msgid="snooping LAN3" msgstr="区域网络端口 3"/>
+	<message msgid="snooping LAN4" msgstr="区域网络端口 4"/>
+	<message msgid="snooping Apply" msgstr="应用"/>
+	<message msgid="snooping Reset" msgstr="重设"/>
+	<message msgid="routing dynamic Title" msgstr="动态路由设置"/>
+	<message msgid="routing dynamic Title2" msgstr="动态路由协议"/>
+	<message msgid="routing dynamic rip disable" msgstr="停用"/>
+	<message msgid="routing dynamic rip enable" msgstr="启用"/>
+	<message msgid="routing dynamic rip apply" msgstr="应用"/>
+	<message msgid="routing dynamic rip reset" msgstr="重设"/>
+	<message msgid="qos title" msgstr="服务品质设置"/>
+	<message msgid="qos intro" msgstr="您可以设置规则，为特定应用程序提供服务品质保证。"/>
+	<message msgid="qos setup" msgstr="QoS 设置"/>
+	<message msgid="qos str" msgstr="服务品质"/>
+	<message msgid="qos disable" msgstr="停用"/>
+	<message msgid="qos enable" msgstr="启用"/>
+	<message msgid="qos dscpmarkeronly" msgstr="仅标示 DSCP"/>
+	<message msgid="qos upload bandwidth" msgstr="上传带宽："/>
+	<message msgid="qos bandwidth custom" msgstr="使用者定义"/>
+	<message msgid="qos download bandwidth" msgstr="下载带宽："/>
+	<message msgid="qos setup submit" msgstr="送出"/>
+	<message msgid="qos setup reset" msgstr="重设"/>
+	<message msgid="qos group" msgstr="群组"/>
+	<message msgid="qos group attr" msgstr="属性"/>
+	<message msgid="qos group modify" msgstr="修改"/>
+	<message msgid="qos rule no" msgstr="编号"/>
+	<message msgid="qos rule name" msgstr="名称"/>
+	<message msgid="qos rule prio" msgstr="群组"/>
+	<message msgid="qos rule info" msgstr="资讯"/>
+	<message msgid="qos rule add" msgstr="新增"/>
+	<message msgid="qos rule del" msgstr="删除"/>
+	<message msgid="qos loaddefault" msgstr="载入预设值"/>
+	<message msgid="qos Rate" msgstr="速率："/>
+	<message msgid="qos Ceil" msgstr="上限："/>
+	<message msgid="qos AF Name" msgstr="群组名称"/>
+	<message msgid="qos AF Upload Bandwidth" msgstr="上传带宽百分比(%)"/>
+	<message msgid="qos classifier title" msgstr="分类器设置"/>
+	<message msgid="qos classifier name" msgstr="名称"/>
+	<message msgid="qos classifier group" msgstr="群组"/>
+	<message msgid="qos classifier mac" msgstr="MAC 地址"/>
+	<message msgid="qos classifier dip" msgstr="终点 IP 地址"/>
+	<message msgid="qos classifier sip" msgstr="来源 IP 地址"/>
+	<message msgid="qos classifier pktlen" msgstr="封包长度"/>
+	<message msgid="qos classifier dscp" msgstr="DSCP"/>
+	<message msgid="qos classifier proto" msgstr="通信协定"/>
+	<message msgid="qos classifier dport" msgstr="终点端口"/>
+	<message msgid="qos classifier sport" msgstr="来源端口"/>
+	<message msgid="qos classifier l7" msgstr="应用程序"/>
+	<message msgid="qos classifier remark" msgstr="重新标示 DSCP 为："/>
+	<message msgid="qos classifier auto" msgstr="自动"/>
+	<message msgid="bm title" msgstr="服务管理"/>
+	<message msgid="bm enable qos" msgstr="启用带宽管理"/>
+	<message msgid="bm enable auto" msgstr="启用流量自动分类程序"/>
+	<message msgid="bm apply" msgstr="应用"/>
+	<message msgid="bm reset" msgstr="重设"/>
+	<message msgid="adv title1" msgstr="管理带宽"/>
+	<message msgid="adv title2" msgstr="应用程序清单"/>
+	<message msgid="adv title3" msgstr="使用者定义服务"/>
+	<message msgid="adv up bw" msgstr="上传带宽"/>
+	<message msgid="adv up reserved" msgstr="((保留 10kbps)"/>
+	<message msgid="adv down bw" msgstr="下载带宽"/>
+	<message msgid="adv down reserved" msgstr="(保留 10kbps)"/>
+	<message msgid="adv app service" msgstr="服务"/>
+	<message msgid="adv app category" msgstr="类别"/>
+	<message msgid="adv app prio" msgstr="优先权"/>
+	<message msgid="adv app setting" msgstr="高级设置"/>
+	<message msgid="adv user enable" msgstr="启用"/>
+	<message msgid="adv user dir" msgstr="方向"/>
+	<message msgid="adv user name" msgstr="服务名称"/>
+	<message msgid="adv user category" msgstr="类别"/>
+	<message msgid="adv user modify" msgstr="修改"/>
+	<message msgid="adv user to lan" msgstr="至区域网络"/>
+	<message msgid="adv user to wan" msgstr="至广域网络"/>
+	<message msgid="adv user to wlan" msgstr="至无线区域网络"/>
+	<message msgid="adv select high" msgstr="高"/>
+	<message msgid="adv select mid" msgstr="中"/>
+	<message msgid="adv select low" msgstr="低"/>
+	<message msgid="adv apply" msgstr="应用"/>
+	<message msgid="adv reset" msgstr="重设"/>
+	<message msgid="app edit title" msgstr="规则设置"/>
+	<message msgid="app edit enable" msgstr="启用"/>
+	<message msgid="app edit dir" msgstr="方向"/>
+	<message msgid="app edit bandwidth" msgstr="带宽"/>
+	<message msgid="app edit dst port" msgstr="目的端口"/>
+	<message msgid="app edit src port" msgstr="来源端口"/>
+	<message msgid="app edit proto" msgstr="通信协定"/>
+	<message msgid="app edit max bw" msgstr="最大带宽"/>
+	<message msgid="app edit min bw" msgstr="最小带宽"/>
+	<message msgid="app edit cancel" msgstr="取消"/>
+	<message msgid="user edit title" msgstr="规则设置"/>
+	<message msgid="user edit bw" msgstr="带宽配额"/>
+	<message msgid="user edit max bw" msgstr="最大带宽"/>
+	<message msgid="user edit min bw" msgstr="最小带宽"/>
+	<message msgid="user edit dst addr" msgstr="目的地址"/>
+	<message msgid="user edit dst mask" msgstr="目的子网掩码"/>
+	<message msgid="user edit dst port" msgstr="目的端口"/>
+	<message msgid="user edit src addr" msgstr="来源地址"/>
+	<message msgid="user edit src mask" msgstr="来源子网掩码"/>
+	<message msgid="user edit src port" msgstr="来源端口"/>
+	<message msgid="user edit proto" msgstr="通信协定"/>
+	<message msgid="user edit proto define" msgstr="使用者定义"/>
+	<message msgid="user edit cancel" msgstr="取消"/>
+	<message msgid="moni title" msgstr="监视器"/>
+	<message msgid="Multicast_Setup" msgstr="多址传送设置"/>
+	<message msgid="Multicast" msgstr="多址传送"/>
+	<message msgid="Auto_bridge" msgstr="自动桥接"/>
+	<message msgid="Enable_Auto_bridge_mode" msgstr="启用自动桥接模式"/>
+	<message msgid="Dynamic_DNS_Setup" msgstr="动态 DNS 设置"/>
+	<message msgid="Enable_Dynamic_DNS" msgstr="启用动态 DNS"/>
+	<message msgid="Service_Provider" msgstr="服务提供者："/>
+	<message msgid="Host_Name" msgstr="主机名称："/>
+	<message msgid="Host Name can not be empty!" msgstr="主机名称不可空白！"/>
+	<message msgid="User Name can not be empty!" msgstr="使用者名称不可空白！"/>
+	<message msgid="Password can not be empty!" msgstr="密码不可空白！"/>
+	<message msgid="Please select at least one port when snooping enabled!" msgstr="启用 Snooping 时，请至少选取一个连接端口！"/>
+	<message msgid="Error. IP address is empty." msgstr="错误! 未输入 IP 地址。"/>
+	<message msgid="Error. IP address is not valid." msgstr="错误。 IP地址无效。" />
+	<message msgid="It should be a [0-9] number." msgstr="此应为 [0-9] 的数字。"/>
+	<message msgid="IP adress format error." msgstr="IP 地址格式错误。"/>
+	<message msgid="IP Alias address should not be identical to LAN IP Address" msgstr="IP 别名地址不得与 LAN 的 IP 地址相同"/>
+	<message msgid="LAN is Fixed IP, please set DNS Assignment to User-Defined or None." msgstr="LAN 为固定 IP，请将 DNS 指派设置为「使用者定义」(User-Defined) 或「无」(None)。"/>
+	<message msgid="First DNS Server should not be empty with User-Defined." msgstr="第一个 DNS 服务器在使用者定义时不可空白。"/>
+	<message msgid="First DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="第一个 DNS 服务器不得为 0.0.0.0，请提供 DNS IP 地址。"/>
+	<message msgid="Second DNS Server should not be empty with User-Defined." msgstr="第二个 DNS 服务器在使用者定义时不可空白。"/>
+	<message msgid="Second DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="第二个 DNS 服务器不得为 0.0.0.0，请提供 DNS IP 地址。"/>
+	<message msgid="Error. MAC address is empty." msgstr="错误，未输入 MAC 地址。"/>
+	<message msgid="Error. IP address is broadcast address." msgstr="错误，IP地址是广播地址。" />
+	<message msgid="Error. Class E IP address cannot be used." msgstr="错误，E类IP地址不能使用。" />
+	<message msgid="Error. IP address is multicast address." msgstr="错误，IP地址是多播地址。" />
+	<message msgid="Please enter a valid MAC address for the specified IP address." msgstr="请为指定的IP地址输入一个有效的MAC地址。" />
+	<message msgid="It should be a [0-9] number." msgstr="此应为 [0-9] 的数字。"/>
+	<message msgid="IP adress format error." msgstr="IP 地址格式错误。"/>
+	<message msgid="Please enable DHCP Server firstly before using LAN Static DHCP Table or DNS Server." msgstr="开始使用 LAN 静态 DHCP 表格或 DNS 服务器之前，请先启用 DHCP 服务器。"/>
+	<message msgid="Please enable DHCP Server before using LAN Static DHCP Table." msgstr="开始使用 LAN 静态 DHCP 表格之前，请启用 DHCP 服务器。"/>
+	<message msgid="Please fill the MAC Address in correct format (XX:XX:XX:XX:XX:XX) with hex value !" msgstr="请以正确的十六进位数字格式 (XX:XX:XX:XX:XX:XX) 填写 MAC 地址！"/>
+	<message msgid="Broadcast or Multicast MAC Address not support!" msgstr="不支持广播或组播MAC地址！" />
+  <message msgid="Invalid IP address! It should not be the same as current LAN IP address." msgstr="无效的IP地址！不应该与当前的LAN IP地址相同。" />
+	<message msgid="First DNS Server should not be empty with User-Defined." msgstr="第一个 DNS 服务器在使用者定义时不可空白。"/>
+	<message msgid="First DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="第一个 DNS 服务器不得为 0.0.0.0，请提供 DNS IP 地址。"/>
+	<message msgid="Second DNS Server should not be empty with User-Defined." msgstr="第二个 DNS 服务器在使用者定义时不可空白。"/>
+	<message msgid="Second DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="第二个 DNS 服务器不得为 0.0.0.0，请提供 DNS IP 地址。"/>
+	<message msgid="The value of bandwitdth can not accept empty." msgstr="带宽的数值不能留空。"/>
+	<message msgid="The value of bandwitdth is not valid value." msgstr="带宽的数值并非有效数值。"/>
+	<message msgid="The value of service name can not accept empty." msgstr="服务名称的数值不能留空。"/>
+	<message msgid="The value of service name can not accept , and ;  ." msgstr="服务名称的数值无法接受，且； 。"/>
+	<message msgid="The value of bandwidth can not accept empty." msgstr="带宽的数值不能留空。"/>
+	<message msgid="The value of bandwidth is not valid value." msgstr="带宽的数值并非有效数值。"/>
+	<message msgid="The value of IP can not accept empty." msgstr="IP 的数值不能留空。"/>
+	<message msgid="The value of IP is not valid value." msgstr="IP 的数值并非有效数值。"/>
+	<message msgid="The value of bandwidth can not accept empty." msgstr="带宽的数值不能留空。"/>
+	<message msgid="The value of bandwidth is not valid value." msgstr="带宽的数值并非有效数值。"/>
+	<message msgid="The value of port can not accept empty." msgstr="连接端口的数值不能留空。"/>
+	<message msgid="The value of port is not valid value." msgstr="连接端口的数值并非有效数值。"/>
+	<message msgid="The value of netmask can not accept empty." msgstr="网络遮罩的数值不能留空。"/>
+	<message msgid="Subnet Mask error" msgstr="子网掩码错误。"/>
+	<message msgid="The value of protocol can not accept empty." msgstr="通信协定的数值不能留空。"/>
+	<message msgid="The value of protocol is not valid value." msgstr="通信协定的数值并非有效数值。"/>
+	<message msgid="The destination has wrong format.Please enter a value between [1-223].xxx.xxx.xxx" msgstr="目的地有错误的格式，输入值的格式 [1-223].xxx.xxx.xxx"/>
+	<message msgid="The netmask has wrong format." msgstr="网络遮罩有错误的格式。"/>
+	<message msgid="please input the destination." msgstr="请输入目的地。"/>
+	<message msgid="Please specify route name." msgstr="请指定路由名称。" />
+	<message msgid="Name error.The entered value only support 1-20 letters digital or underline, and start with letter." msgstr="名称错误。输入的值只支持1-20个字母数字或下划线，且以字母开头。" />
+	<message msgid="Duplicate route name not allowed to be set!" msgstr="重复路由名称不允许设置！" />
+	<message msgid="Invalid metric value!" msgstr="无效权值！" /> 
+	<message msgid="Metric value should be from 1 to 16!" msgstr="权值范围1到16！" /> 
+	<message msgid="Error. IP address is loopback address." msgstr="错误。IP地址是回环地址。" />
+	<message msgid="please input right destination." msgstr="请输入正确的目的地。" />
+	<message msgid="please input the netmask." msgstr="请输入网络遮罩。"/>
+	<message msgid="please input right netmask." msgstr="请输入正确的网络遮罩。" />
+	<message msgid="please input custom interface name." msgstr="请输入自订接口名称。"/>
+	<message msgid="Static Route table is full (8 entries)!" msgstr="静态路由表格已满（8 个项目）！"/>
+	<message msgid="Error. IP address is empty." msgstr="错误! 未输入 IP 地址。"/>
+	<message msgid="It should be a [0-9] number." msgstr="此应为 [0-9] 的数字。"/>
+	<message msgid="IP adress format error." msgstr="IP 地址格式错误。"/>
+	<message msgid="WAN is Fixed IP, please set DNS Assignment to User-Defined or None." msgstr="WAN 为固定 IP，请将 DNS 指派设置为「使用者定义」(User-Defined) 或「无」(None)。"/>
+	<message msgid="PPPoE user name should not be empty!" msgstr="PPPoE 使用者名称不可空白！"/>
+	<message msgid="PPPoE password should not be empty!" msgstr="PPPoE 密码不可空白！"/>
+	<message msgid="Please retype password to confirm!" msgstr="请重新输入密码以供确认！"/>
+	<message msgid="Password mismatched!" msgstr="密码不符！"/>
+	<message msgid="Please set MTU Size between 1400 ~ 1492 !" msgstr="请将 MTU 大小设置在 1400 ~ 1492 之间！"/>
+	<message msgid="It should be a [0-9] number with MTU Size." msgstr="此 MTU 大小应为 [0-9] 的数字。"/>
+	<message msgid="Please specify Idle Time" msgstr="请指定超时时间"/>
+	<message msgid="L2TP user name should not be empty!" msgstr="L2TP 使用者名称不可空白！"/>
+	<message msgid="L2TP password should not be empty!" msgstr="L2TP 密码不可空白！"/>
+	<message msgid="First DNS Server should not be empty with User-Defined." msgstr="第一个 DNS 服务器在使用者定义时不可空白。"/>
+	<message msgid="First DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="第一个 DNS 服务器不得为 0.0.0.0，请提供 DNS IP 地址。"/>
+	<message msgid="Second DNS Server should not be empty with User-Defined." msgstr="第二个 DNS 服务器在使用者定义时不可空白。"/>
+	<message msgid="Second DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="第二个 DNS 服务器不得为 0.0.0.0，请提供 DNS IP 地址。"/>
+	<message msgid="MAC Address should not be empty!" msgstr="MAC 地址不可空白！"/>
+	<message msgid="Please fill the MAC Address in correct format (XX:XX:XX:XX:XX:XX) with hex value !" msgstr="请以正确的十六进位数字格式 (XX:XX:XX:XX:XX:XX) 填写 MAC 地址！"/>
+  <message msgid="Please set Idle Timeout value between 300 ~ 36000 seconds." msgstr="请设置空闲超时值在300 ~ 36000秒之间。" />
+  <message msgid="The entered user name can not support \ character." msgstr="输入的用户名不支持 \ 字符。" />
+<!-- alert message -->
+<!-- alert message from c file-->
+<message msgid="Cannot get the WAN MAC Address" msgstr="无法取得广域网络 MAC 地址。" />
+<message msgid="IP address is identical to WAN" msgstr="IP 地址与 WAN 相同" />
+<message msgid="LAN2 IP address is identical to WAN" msgstr="LAN2 IP 地址与 WAN 相同" />
+<message msgid="Static Route rule setting fail." msgstr="静态路由规则设置失败。" />
+<message msgid="Static Route already exists." msgstr="静态路由已经存在。" />
+<!-- alert message from c file-->
+<message msgid="main Ready" msgstr="准备就绪"/>
+<message msgid="main ConfigurationSuccess" msgstr="设置更新成功"/>
+<message msgid="main ConfigurationProceeding" msgstr="正在进行设置更新。请稍候..."/>
+<message msgid="main firmware download in progress" msgstr="韧体升级进行中。 请稍候..."/>
+<message msgid="main firmware upgrade is proceeding" msgstr="正在进行韧体升级 请稍候并勿将设备断电。"/>
+
+<!-- ipv6 -->
+<message msgid="ipv6 time minutes" msgstr="(秒钟)" />
+
+<!-- WR71210IRA QoS-->
+	<message msgid="user edit dst addr1" msgstr="目的地地址开头"/>
+	<message msgid="user edit dst addr2" msgstr="目的地地址结尾"/>
+	<message msgid="user edit src addr1" msgstr="来源地址开头"/>
+	<message msgid="user edit src addr2" msgstr="来源地址结尾"/>
+	<message msgid="wan 3G title" msgstr="3G 设置"/>
+	<message msgid="wan 3G" msgstr="行动 3G"/>
+	<message msgid="wan 3G access point name" msgstr="APN 代码："/>
+	<message msgid="wan 3G pin" msgstr="PIN 代码："/>
+	<message msgid="wan 3G username" msgstr="使用者名称："/>
+	<message msgid="wan 3G password" msgstr="密码："/>
+	<message msgid="wan 3G dial number" msgstr="拨号号码："/>
+	<message msgid="wan 3G nailup" msgstr="固定连线"/>
+	<message msgid="wan 3G IdleTime" msgstr="超时等候时间 (秒) "/>
+	<message msgid="wan 3G IdleTimesec" msgstr="(秒) "/>
+	<message msgid="PIN Code length should be between 4~8!" msgstr="PIN 代码长度应介於 4~8 之间！"/>
+	<message msgid="Please specify APN Code" msgstr="请指定 APN 代码"/>
+	<message msgid="Please specify Dial Number" msgstr="请指定拨号号码"/>
+	<message msgid="Please set PPP Echo Interval between 3 ~ 50 !" msgstr="请将 PPP 回音间隔设置在 3 ~ 50 之间！"/>
+	<message msgid="It should be a [0-9] number with PPP Echo Interval." msgstr="PPP 回音间隔应为 [0-9] 的数字。"/>
+	<message msgid="Please set PPP Retry Threshold between 3 ~ 50 !" msgstr="请将 PPP 重试临界值设置在 3 ~ 50 之间！"/>
+	<message msgid="It should be a [0-9] number with PPP Retry Threshold." msgstr="PPP 重试临界值应为 [0-9] 的数字。"/>
+	<message msgid="Please set Max Idle Time between 60 ~ 3600 !" msgstr="请将最长超时时间设置在 60 ~ 3600 之间！"/>
+	<message msgid="It should be a [0-9] number with Max Idle Time." msgstr="最长超时时间应为 [0-9] 的数字。"/>
+	<message msgid="Please set Mobile WAN MTU between 592 ~ 1492 !" msgstr="请将行动 WAN MTU 设置在 592 ~ 1492 之间！"/>
+	<message msgid="It should be a [0-9] number with Mobile WAN MTU." msgstr="行动 WAN MTU 应为 [0-9] 的数字。"/>
+	<message msgid="wPppoe service name" msgstr="服务名称："/>
+	<message msgid="lan static dhcp table" msgstr="LAN 静态 DHCP 表"/>
+	<message msgid="wan BigPond" msgstr="Bigpond："/>
+	<message msgid="wan BigPond enable" msgstr="启用"/>
+	<message msgid="wan BigPond disable" msgstr="停用"/>
+	<message msgid="wan BigPond server" msgstr="服务器："/>
+	<message msgid="wan BigPond server queenland" msgstr="昆士兰 (61.9.208.13)"/>
+	<message msgid="wan BigPond server newSouthWales" msgstr="新南威尔斯 (61.9.192.13)"/>
+	<message msgid="wan BigPond server victoria" msgstr="维多利亚 (61.9.128.13)"/>
+	<message msgid="wan BigPond server southAus" msgstr="南澳 (61.9.224.13)"/>
+	<message msgid="wan BigPond server westernAus" msgstr="西澳 (61.9.240.13)"/>
+	<message msgid="wan BigPond username" msgstr="使用者名称："/>
+	<message msgid="wan BigPond password" msgstr="密码："/>
+	<message msgid="wan BigPond password2" msgstr="重新输入一次以供确认 ："/>
+	<message msgid="Bigpond user name should not be empty!" msgstr="Bigpond 使用者名称不可空白！"/>
+	<message msgid="Bigpond password should not be empty!" msgstr="Bigpond 密码不可空白！"/>
+	<message msgid="wan auto bridge none" msgstr="无"/>
+	<message msgid="enable auto ip change mode" msgstr="启用 Auto-IP-Change 模式"/>
+	<message msgid="auto ip note_0" msgstr="注："/>
+	<message msgid="auto ip note_1" msgstr="注：如果您选择启用 Auto-IP-Change 模式，则当 WAN IP 与 LAN IP 相冲时，LAN IP 会自动变更为 10.0.0.1。"/>
+	<message msgid="auto subnet configuration" msgstr="Auto-Subnet 设置"/>
+	<message msgid="ipv6 connection type setup" msgstr="IPv6 连线方式设置"/>
+	<message msgid="ipv6 connection type" msgstr="IPv6 连线方式："/>
+	<message msgid="ethernet" msgstr="以太网络"/>
+	<message msgid="link local only" msgstr="连结-仅本机"/>
+	<message msgid="lan addr setup" msgstr="LAN IPv6 地址设置"/>
+	<message msgid="lan local link addr" msgstr="LAN IPv6 连结-本机地址："/>
+	<message msgid="wan addr setup" msgstr="WAN IPv6 地址设置"/>
+	<message msgid="ipv6 wan address" msgstr="IPv6 地址："/>
+	<message msgid="ipv6 wan net size" msgstr="子网络前缀长度："/>
+	<message msgid="ipv6 wan gateway" msgstr="网关 IP 地址："/>
+	<message msgid="ipv6 wan primary dns" msgstr="第一 DNS 服务器："/>
+	<message msgid="ipv6 wan secondary dns" msgstr="第二 DNS 服务器："/>
+	<message msgid="ipv6 lan address" msgstr="LAN IPv6 地址："/>
+	<message msgid="autoconfiguration addr setup" msgstr="地址自动配置设置"/>
+	<message msgid="ipv6 dhcp enable" msgstr="启用无状态地址自动配置"/>
+	<message msgid="ipv6 dhcp life time" msgstr="路由器公告使用周期："/>
+	<message msgid="wan dhcpv6 type" msgstr="类型："/>
+	<message msgid="ipv6 dns id" msgstr="IPv6 DNS 设置"/>
+	<message msgid="dns type" msgstr="DNS 类型: "/>
+	<message msgid="dhcp ipv6 dns1" msgstr="第一 DNS 服务器："/>
+	<message msgid="dhcp ipv6 dns2" msgstr="第二 DNS 服务器："/>
+	<message msgid="ipv6 type" msgstr="类型："/>
+	<message msgid="ipv6 dhcp addrstart" msgstr="地址（起始）："/>
+	<message msgid="ipv6 dhcp addrend" msgstr="地址（结束）："/>				
+	<message msgid="general apply" msgstr="应用"/>
+	<message msgid="general reset" msgstr="取消"/>
+	<message msgid="Error. Invalid Subnet Mask." msgstr="错误。子网掩码无效。"/>
+	<message msgid="Invalid IP Alias address! It should not be located in the same subnet of current WAN IP address." msgstr="IP 别名地址无效！ 此地址不可与现有 WAN IP 位於同一子网络。"/>
+	<message msgid="Invalid DHCP start address! It should be located in the same subnet of current LAN IP address." msgstr="DHCP 起始地址无效！此地址应与现有 LAN IP 位於同一子网络。"/>
+	<message msgid="Invalid DHCP end address with pool size allocated! It should be located in the same subnet of current LAN IP address." msgstr="DHCP 结束地址与分配的集区大小无效！此地址应与现有 LAN IP 位於同一子网络。"/>
+	<message msgid="Invalid IP address! It should be located in the same subnet of current LAN IP address." msgstr="无效的IP地址！此地址应与现有LAN IP地址位于同一子网络。"/>
+	<message msgid="Invalid DHCP address range!" msgstr="DHCP 地址范围无效!"/>
+	<message msgid="Invalid Pool Size value!" msgstr="范围大小值无效！"/>
+	
+	<message msgid="The gateway has wrong format." msgstr="网关格式错误。"/>
+	<message msgid="please input the gateway." msgstr="请输入网关。"/>
+	<message msgid="routing del interface" msgstr="接口"/>
+	<message msgid="Input maximum rate is greater than uplink rate." msgstr="输入的最大传送速率大於上行速率。"/>
+	<message msgid="Input maximum rate is greater than total downlink rate." msgstr="输入的最大传送速率大於总下行速率。"/>
+	<message msgid="Input minimum rate is greater than downlink rate." msgstr="输入的最小传送速率大於下行速率。"/>
+	<message msgid="Input minimum rate is greater than uplink rate." msgstr="输入的最小传送速率大於上行速率。"/>
+	<!--new add-->
+<message msgid="Please set value between 64~32768" msgstr="Please set value between 64~32768" />
+<message msgid="lan fallback ip" msgstr="后备IP" />
+<message msgid="lan fallback mask" msgstr="后备掩码" />
+
+<message msgid="ping host" msgstr="目标宿主：" />
+<message msgid="ping package" msgstr="包个数：" />
+<message msgid="arpping host" msgstr="目标宿主：" />
+<message msgid="arpping package" msgstr="包个数：" />
+<message msgid="traceroute host" msgstr="目标宿主：" />
+<message msgid="traceroute hop" msgstr="跳数：" />
+<message msgid="subnet is invalid" msgstr="子网无效." />
+<message msgid="LAN is Fixed IP, please set Gateway IP Address." msgstr="局域网是固定IP，请设置网关IP地址。" />
+<message msgid="- Switch LAN IP MODE to STATIC" msgstr="- 局域网IP模式切换到静态" />
+<message msgid="- Switch LAN IP MODE to DHCP"   msgstr="- 局域网IP模式切换到DHCP" />
+<message msgid="- May loose the access to WEB UI" msgstr="- 可能会失去访问WEB UI" />
+<!-- stp.asp --> 
+<message msgid="stp" msgstr="生成树协议(STP)" />
+<message msgid="stp setup" msgstr="生成树协议设置" />
+<message msgid="stp set 1" msgstr="开启" />
+<message msgid="stp set 0" msgstr="关闭" />
+<message msgid="stp Apply" msgstr="应用" />
+<message msgid="stp Reset" msgstr="重设" />
+<!-- route_table.asp --> 
+<message msgid="route_table" msgstr="路由表" />
+<!-- vpn_ipsec.asp --> 
+<message msgid="ipsec Rule" msgstr="IPsec 规则设置" />
+<message msgid="connect Name" msgstr="连接名称" />
+<message msgid="rule Enable" msgstr="规则使能" />
+<message msgid="vpn Mode" msgstr="VPN 模式" />
+<message msgid="local Mask" msgstr="本地子网掩码" />
+<message msgid="local Ip" msgstr="本地内部IP地址" />
+<message msgid="remote Gateway" msgstr="远程网关" />
+<message msgid="remote Sub Ip" msgstr="远程子网IP地址" />
+<message msgid="remote Mask" msgstr="远程子网掩码" />
+<message msgid="connect Init" msgstr="连接初始化" />
+<message msgid="key Mode" msgstr="IKE密钥模式" />
+<message msgid="preshare Key" msgstr="共享密钥" />
+<message msgid="dpd Enable" msgstr="DPD使能" />
+<message msgid="dpd Interval" msgstr="DPD间隔时间 (秒)" />
+<message msgid="dpd time" msgstr="DPD超时时间 (秒)" />
+<message msgid="advanced Opt" msgstr="高级选项" />
+<message msgid="ph1 Mode" msgstr="第一阶段模式" />
+<message msgid="ph1 Lifetime" msgstr="第一阶段使用期 (秒)" />
+<message msgid="ph1 Authen" msgstr="第一阶段认证" />
+<message msgid="ph1 Encryption" msgstr="第一阶段加密" />
+<message msgid="ph1 Group Key" msgstr="第一阶段组密钥管理" />
+<message msgid="ph2 Lifetime" msgstr="第二阶段使用期 (秒)" />
+<message msgid="ph2 Authen" msgstr="第二阶段认证" />
+<message msgid="ph2 Encryption" msgstr="第二阶段加密" />
+<message msgid="ph2 GroupKey" msgstr="第二阶段组密钥管理" />
+<message msgid="ipsec Table Add" msgstr="添加" />
+<message msgid="AppRuleSum" msgstr="IPsec 规则摘要" />
+<message msgid="Ipsec Conn Name" msgstr="连接名字" />
+<message msgid="Ipsec Rule Enable" msgstr="规则使能" />
+<message msgid="Ipsec Remote GW" msgstr="远程网关" />
+<message msgid="Ipsec SubIp Netmask" msgstr="远端子网IP/子网掩码" />
+<message msgid="Ipsec Phase1" msgstr="阶段1" />	
+<message msgid="Ipsec Phase2" msgstr="阶段2" />
+<message msgid="application TdModify" msgstr="修改" />
+<message msgid="It should be a [1-10] number." msgstr="请输入一个1到10之间的数字" />
+<message msgid="It should be a [1-15] number." msgstr="请输入一个1到15之间的数字" />
+<!--vpn_ipsec.asp alert-->
+<message msgid="Please disable l2tpOIPsec function on l2tp server setting." msgstr="请禁用l2tp服务器设置中的l2tpOIPsec功能。" />
+<message msgid="Lifetime value should be digit." msgstr="使用期值应该是数字。" />
+<message msgid="phase1 lifetime should be from 1200s to 86400s." msgstr="阶段1的使用期范围1200秒到86400秒。" />
+<message msgid="phase2 lifetime should be from 1200s to 86400s." msgstr="阶段2的使用期范围1200秒到86400秒。" />
+<message msgid="DPD Interval should be from 10s to 1200s." msgstr="DPD的时间间隔范围10秒到1200秒。" />
+<message msgid="DPD Timeout should be from 30s to 3600s." msgstr="DPD超时时间范围30秒到3600秒。" />
+<message msgid="Local internal ip address error!" msgstr="本地内部IP地址错误！" />
+<message msgid="Local netmask error!" msgstr="本地网络掩码错误！" />
+<message msgid="VPN mode error, there is already a rule with same VPN mode." msgstr="VPN模式错误，已经有相同的VPN模式规则。" />
+<message msgid="Connection name repeats." msgstr="连接名称重复。" />
+<message msgid="Name is required." msgstr="连接名称不能为空。" />
+<message msgid="Name error. The entered value only support 1-20 letters digits underline or dot, and start with letter." msgstr="名称错误，输入的值只支持1-20个字母数字下划线或点，并以字母开头。" />
+<message msgid="Remote Gateway is required." msgstr="远程网关不能为空。" />
+<message msgid="Remote Subnet IP is required." msgstr="远程子网IP不能为空。" />
+<message msgid="Remote Gateway ip address error!" msgstr="远程网关IP地址错误！" />
+<message msgid="Remote internal ip address error!" msgstr="远程的内部IP地址错误！" />
+<message msgid="Remote netmask error!" msgstr="远程网络掩码错误！" />
+<message msgid="Remote subnet IP should not the same as current LAN subnet IP!" msgstr="远程子网IP不应该与当前局域网子网IP相同！" />
+<message msgid="DPD Interval error!" msgstr="DPD间隔错误！" />
+<message msgid="DPD Timeout error!" msgstr="DPD超时错误！" />
+<message msgid="Preshared Key is required!" msgstr="预共享密钥不能為空！" />
+<message msgid="The setting rules exceed maximum!" msgstr="设置规则超过最大限制！" />
+<message msgid="Remote FQDN identifier repeats." msgstr="远端FQDN标识重复。" />
+<message msgid="Local FQDN identifier repeats." msgstr="本地FQDN标识重复。" />
+<message msgid="FQDN value error. The entered value only support 1-40 letters digits hyphen or dot, and start with letter or digital." msgstr="FQDN值错误。输入的值只支持1-40字母数字连字符或点，且以字母或数字开头。" />
+<message msgid="Remote identifier IP address format is error!" msgstr="远端标识IP地址格式错误！" />
+<message msgid="Local identifier IP address format is error!" msgstr="本地标识IP地址格式错误！" />
+<message msgid="Remote ID Type" msgstr="远端ID类型" />
+<message msgid="Remote Identifier" msgstr="远端标识" />
+<message msgid="Local ID Type" msgstr="本地ID类型" />
+<message msgid="Local Identifier" msgstr="本地标识" />
+<message msgid="Remote WAN IP" msgstr="远端WAN(以太网) IP" />
+<message msgid="Local WAN IP" msgstr="本地WAN(以太网) IP" />
+<message msgid="IPsec net2net_mode" msgstr="站点到站点" />
+<message msgid="IPsec rw_mode" msgstr="远端用户" />
+<message msgid="IPsec main_mode" msgstr="主模式" />
+<message msgid="IPsec aggre_mode" msgstr="野蛮模式" />
+<message msgid="IPsec note1_1" msgstr="站点到站点：在这种模式下，当设定的局域网IP地址与远端子网在同一网段时，相应的IPsec规则将被禁用。" />
+<message msgid="Enter letters digits or underline. Preshared Key length should be from 8 to 40!" msgstr="输入字母数字或下划线。预共享密钥的长度应为8至40位！" />
+<message msgid="'Preshared Key length should be from 8 to 40 digits letters or underline." msgstr="预共享密钥的长度应为8至40位字母数字或下划线。" />
+<message msgid="Connection Name has illegal ascii code!" msgstr="连接名称有非法ascii码！" />
+<message msgid="Connection Name is not allowed to contain any space character!" msgstr="连接名称不得包含任何空格字符！" />
+<message msgid="Connection Name has illegal hexadecimal digits!" msgstr="连接名称有非法十六进制数字！" />
+<message msgid="Connection Name contains illegal characters" msgstr="连接名称包含非法字符" />
+<message msgid="LAN and WAN is in the same network segment,error." msgstr="LAN和WAN在同一网段，错误。" />
+<message msgid="WAN is Fixed IP, please set Gateway IP Address." msgstr="广域网是固定IP，请设置网关地址。" />
+<message msgid="Please check WAN IP or gateway!" msgstr="请检查广域网地址或网关地址！" />
+<message msgid="Invalid Lan IP Address." msgstr="无效的LAN IP地址。" />
+<message msgid="WAN is Fixed IP, please set First DNS Server to User-Defined, Second DNS Server User-Defined or None." msgstr="WAN是固定IP，请设置第一个DNS服务器为用户定义，第二个DNS服务器为用户定义或无。" />
+<message msgid="IP Address has already been assigned to other host." msgstr="IP地址已经被分配到其它主机。" />
+<message msgid="Mac Address already exists." msgstr="MAC地址已经存在。" />
+<message msgid="IP Address already exists." msgstr="IP地址已经存在。" />
+<message msgid="Custom Server" msgstr="客户服务：（可选）" />
+<!--ddns.asp alert-->
+<message msgid="Host Name error.Enter Letters,Digits,Hyphen or Period." msgstr="主机名错误。请输入字母，数字，連字符或句點符。" />
+<message msgid="Host Name error.Legal host name suffix includes one or two Period characters." msgstr="主机名错误。合法的主机名包含一个或两个句点符。" />
+<message msgid="Host Name error.Legal Host Name can not begin with character Hyphen and end with character Hyphen." msgstr="主机名错误。合法的主机名不能以连字符开头也不能以连字符结尾。" />
+<message msgid="User Name error. Chatacter Hyphen is not supported in this field." msgstr="用户名错误。不支持空格和短横线字符。" />
+<message msgid="Password error. Chatacter Hyphen is not supported in this field." msgstr="密码错误。不支持空格和短横线字符。" />
+<message msgid="Custom Server error. Chatacter Hyphen is not supported in this field." msgstr="客户服务错误。不支持空格和短横线字符。" />
+</po>

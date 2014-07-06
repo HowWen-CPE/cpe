@@ -1,0 +1,5 @@
+1)lib_bootstrap Code from:
+QCA SDK10.1.436 => Arx-Kamikaze-5d8753b8e92c16d570386e0b29536534134fdf88.zip ==> package/uboot-ifxmips/files/lib_bootstrap
+
+2)Purpose:
+patch "u-boot-1.1.4.diff" to code "lib_bootstrap"

@@ -1,0 +1,28 @@
+From af8b62a4ec6fcc85eb22b63eb1c27c1dab62bf37 Mon Sep 17 00:00:00 2001
+From: Mingkai Hu <Mingkai.hu@freescale.com>
+Date: Tue, 13 Oct 2009 10:46:40 +0800
+Subject: [PATCH 02/13] ppc/85xx: make boot from NAND full relocation to RAM
+
+Take advantage of the latest full relocation commit of PPC platform
+for boot from NAND.
+
+Signed-off-by: Mingkai Hu <Mingkai.hu@freescale.com>
+---
+ cpu/mpc85xx/u-boot-nand.lds |    1 -
+ 1 files changed, 0 insertions(+), 1 deletions(-)
+
+diff --git a/cpu/mpc85xx/u-boot-nand.lds b/cpu/mpc85xx/u-boot-nand.lds
+index a0fc8f1..b4c63e2 100644
+--- a/cpu/mpc85xx/u-boot-nand.lds
++++ b/cpu/mpc85xx/u-boot-nand.lds
+@@ -58,7 +58,6 @@ SECTIONS
+   .text      :
+   {
+     *(.text)
+-    *(.fixup)
+     *(.got1)
+    } :text
+     _etext = .;
+-- 
+1.6.4
+

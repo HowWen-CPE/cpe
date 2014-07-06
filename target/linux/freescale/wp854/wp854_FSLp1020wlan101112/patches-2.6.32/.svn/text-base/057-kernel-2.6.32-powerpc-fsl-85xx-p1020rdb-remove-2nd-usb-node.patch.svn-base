@@ -1,0 +1,38 @@
+From 83945bb947418c72b7888b2741f3c5b7900bf6d3 Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Mon, 14 Dec 2009 11:41:18 +0530
+Subject: [PATCH 1/1] powerpc/fsl: 85xx: p1020rdb: remove 2nd usb node
+
+This node is removed from the dts, as it will be
+patched by the u-boot when muxed usb2 fix is in
+uboot.
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ arch/powerpc/boot/dts/p1020rdb.dts |   10 ----------
+ 1 files changed, 0 insertions(+), 10 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p1020rdb.dts b/arch/powerpc/boot/dts/p1020rdb.dts
+index f03b65a..b1bd5af 100644
+--- a/arch/powerpc/boot/dts/p1020rdb.dts
++++ b/arch/powerpc/boot/dts/p1020rdb.dts
+@@ -513,16 +513,6 @@
+ 			phy_type = "ulpi";
+ 		};
+ 
+-		usb@23000 {
+-			#address-cells = <1>;
+-			#size-cells = <0>;
+-			compatible = "fsl-usb2-dr";
+-			reg = <0x23000 0x1000>;
+-			interrupt-parent = <&mpic>;
+-			interrupts = <46 0x2>;
+-			phy_type = "ulpi";
+-		};
+-
+ 		sdhci@2e000 {
+ 			compatible = "fsl,p1020-esdhc", "fsl,esdhc";
+ 			reg = <0x2e000 0x1000>;
+-- 
+1.5.6.5
+

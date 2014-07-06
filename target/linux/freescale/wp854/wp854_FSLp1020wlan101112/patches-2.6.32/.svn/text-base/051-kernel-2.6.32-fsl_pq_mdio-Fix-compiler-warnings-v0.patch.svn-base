@@ -1,0 +1,73 @@
+From 6efcfd270c1b55da4da124a59470891ae37d0799 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Mon, 30 Nov 2009 21:11:30 +0530
+Subject: [PATCH] fsl_pq_mdio: Fixed some compiler warnings and reworked the register mapping logic.
+
+This work is a ported version of the patch from with commit id
+2951d64e70652bb11636a5a1f1f2ea295a043f94 on
+/pub/scm/linux/kernel/git/davem/net-next-2.6.git tree
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/fsl_pq_mdio.c |   30 ++++++++++++------------------
+ 1 files changed, 12 insertions(+), 18 deletions(-)
+
+diff --git a/drivers/net/fsl_pq_mdio.c b/drivers/net/fsl_pq_mdio.c
+index 4d78d22..798b143 100644
+--- a/drivers/net/fsl_pq_mdio.c
++++ b/drivers/net/fsl_pq_mdio.c
+@@ -262,10 +262,11 @@ static int fsl_pq_mdio_probe(struct of_device *ofdev,
+ 	struct device_node *np = ofdev->node;
+ 	struct device_node *tbi;
+ 	struct fsl_pq_mdio __iomem *regs = NULL;
++	void __iomem *map;
+ 	u32 __iomem *tbipa;
+ 	struct mii_bus *new_bus;
+ 	int tbiaddr = -1;
+-	u64 addr = 0, size = 0, ioremap_miimcfg = 0;
++	u64 addr = 0, size = 0;
+ 	int err = 0;
+ 
+ 	new_bus = mdiobus_alloc();
+@@ -279,28 +280,21 @@ static int fsl_pq_mdio_probe(struct of_device *ofdev,
+ 	fsl_pq_mdio_bus_name(new_bus->id, np);
+ 
+ 	/* Set the PHY base address */
+-	if (of_device_is_compatible(np,"fsl,gianfar-mdio") ||
+-		of_device_is_compatible(np, "fsl,gianfar-tbi") ||
+-		of_device_is_compatible(np, "fsl,ucc-mdio") ||
+-		of_device_is_compatible(np,"ucc_geth_phy" )) {
+-		addr = of_translate_address(np, of_get_address(np, 0, &size, NULL));
+-		ioremap_miimcfg =  container_of(addr, struct fsl_pq_mdio, miimcfg);
+-		regs = ioremap(ioremap_miimcfg, size +
+-				offsetof(struct fsl_pq_mdio, miimcfg));
+-	} else if (of_device_is_compatible(np,"fsl,etsec2-mdio") ||
+-			of_device_is_compatible(np, "fsl,etsec2-tbi")) {
+-		addr = of_translate_address(np, of_get_address(np, 0, &size, NULL));
+-		regs = ioremap(addr, size);
+-	} else {
+-		err = -EINVAL;
+-		goto err_free_bus;
+-	}
++	addr = of_translate_address(np, of_get_address(np, 0, &size, NULL));
++	map = ioremap(addr, size);
+ 
+-	if (NULL == regs) {
++	if (!map) {
+ 		err = -ENOMEM;
+ 		goto err_free_bus;
+ 	}
+ 
++	if (of_device_is_compatible(np, "fsl,gianfar-mdio") ||
++			of_device_is_compatible(np, "fsl,gianfar-tbi") ||
++			of_device_is_compatible(np, "fsl,ucc-mdio") ||
++			of_device_is_compatible(np, "ucc_geth_phy"))
++		 map -= offsetof(struct fsl_pq_mdio, miimcfg);
++	regs = map;
++
+ 	new_bus->priv = (void __force *)regs;
+ 
+ 	new_bus->irq = kcalloc(PHY_MAX_ADDR, sizeof(int), GFP_KERNEL);
+-- 
+1.5.2.2
+

@@ -1,0 +1,16 @@
+--- a/Makefile
++++ b/Makefile
+@@ -3,13 +3,6 @@ PATCHLEVEL = 6
+ SUBLEVEL = 31
+ NAME = Man-Eating Seals of Antiquity
+ 
+-ifndef EXTRAVERSION
+-EXTRAVERSION=-$(shell if test -e ./ath_version.mk ; then \
+-                cat ./ath_version.mk | sed s/EXTRAVERSION=//g; fi)
+-ifeq ($(EXTRAVERSION),-)
+-EXTRAVERSION=
+-endif
+-endif
+ 
+ # *DOCUMENTATION*
+ # To see a list of typical targets execute "make help"

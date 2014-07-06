@@ -1,0 +1,265 @@
+diff -ru linux-2.6.36-ra4110-old/net/bridge/br_device.c linux-2.6.36-ra4110/net/bridge/br_device.c
+--- linux-2.6.36-ra4110-old/net/bridge/br_device.c	2012-12-10 16:32:07.000000000 +0800
++++ linux-2.6.36-ra4110/net/bridge/br_device.c	2013-01-04 10:01:45.110192317 +0800
+@@ -31,6 +31,10 @@
+ 	struct net_bridge_mdb_entry *mdst;
+ 	struct br_cpu_netstats *brstats = this_cpu_ptr(br->stats);
+ 
++#ifdef CONFIG_BRIDGE_IGMP_SNOOPING	
++	BR_INPUT_SKB_CB(skb)->brdev = dev;
++#endif
++
+ #ifdef CONFIG_BRIDGE_NETFILTER
+ 	if (skb->nf_bridge && (skb->nf_bridge->mask & BRNF_BRIDGED_DNAT)) {
+ 		br_nf_pre_routing_finish_bridge_slow(skb);
+@@ -51,7 +55,22 @@
+ 	rcu_read_lock();
+ 	if (is_multicast_ether_addr(dest)) {
+ 		if (unlikely(netpoll_tx_running(dev))) {
++#ifdef CONFIG_BRIDGE_IGMP_SNOOPING
++	{
++		if (br_multicast_rcv(br, NULL, skb)) {
++			kfree_skb(skb);
++			goto out;
++		}
++
++		mdst = br_mdb_get(br, skb);
++		if (mdst || BR_INPUT_SKB_CB_MROUTERS_ONLY(skb))
++			br_multicast_deliver(mdst, skb);
++		else
+ 			br_flood_deliver(br, skb);
++	}
++#else
++			br_flood_deliver(br, skb);
++#endif
+ 			goto out;
+ 		}
+ 		if (br_multicast_rcv(br, NULL, skb)) {
+@@ -92,6 +111,7 @@
+ 
+ static int br_dev_stop(struct net_device *dev)
+ {
++
+ 	struct net_bridge *br = netdev_priv(dev);
+ 
+ 	br_stp_disable_bridge(br);
+diff -ru linux-2.6.36-ra4110-old/net/bridge/br_forward.c linux-2.6.36-ra4110/net/bridge/br_forward.c
+--- linux-2.6.36-ra4110-old/net/bridge/br_forward.c	2012-12-10 16:32:07.000000000 +0800
++++ linux-2.6.36-ra4110/net/bridge/br_forward.c	2013-01-04 10:08:14.738942291 +0800
+@@ -57,6 +57,10 @@
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_BRIDGE_IGMP_SNOOPING
++EXPORT_SYMBOL(br_dev_queue_push_xmit);
++#endif
++
+ int br_forward_finish(struct sk_buff *skb)
+ {
+ 	return NF_HOOK(NFPROTO_BRIDGE, NF_BR_POST_ROUTING, skb, NULL, skb->dev,
+Only in linux-2.6.36-ra4110/net/bridge/: br_private.c
+diff -ru linux-2.6.36-ra4110-old/net/bridge/br_private.h linux-2.6.36-ra4110/net/bridge/br_private.h
+--- linux-2.6.36-ra4110-old/net/bridge/br_private.h	2012-12-10 16:32:07.000000000 +0800
++++ linux-2.6.36-ra4110/net/bridge/br_private.h	2013-01-04 10:25:28.290192095 +0800
+@@ -13,6 +13,7 @@
+ #ifndef _BR_PRIVATE_H
+ #define _BR_PRIVATE_H
+ 
++#include <linux/version.h>
+ #include <linux/netdevice.h>
+ #include <linux/if_bridge.h>
+ #include <linux/netpoll.h>
+@@ -32,6 +33,12 @@
+ /* Path to usermode spanning tree program */
+ #define BR_STP_PROG	"/sbin/bridge-stp"
+ 
++#ifndef CONFIG_BRIDGE_IGMP_SNOOPING
++#undef MULTICAST_TO_UNITCAST
++#else
++#define MULTICAST_TO_UNITCAST
++#endif
++
+ typedef struct bridge_id bridge_id;
+ typedef struct mac_addr mac_addr;
+ typedef __u16 port_id;
+@@ -90,6 +97,10 @@
+ 	struct rcu_head			rcu;
+ 	struct timer_list		timer;
+ 	struct timer_list		query_timer;
++#ifdef MULTICAST_TO_UNITCAST	
++	struct hlist_head		gmemlist;
++	u32				total_gmem;
++#endif
+ 	struct br_ip			addr;
+ 	u32				queries_sent;
+ };
+@@ -105,6 +116,23 @@
+ 	u32				ver;
+ };
+ 
++#ifdef MULTICAST_TO_UNITCAST
++struct net_group_member {
++	struct net_bridge_mdb_entry *mdb;
++	struct hlist_node	gmemlist;
++	struct timer_list		timer;
++	struct net_bridge_port *port;
++	struct rcu_head			rcu;
++	__be32			sip;
++	__be32			dip;
++	struct mac_addr 	smac;
++	struct mac_addr 	dmac;
++};
++#else
++struct net_group_member {
++};
++#endif
++
+ struct net_bridge_port
+ {
+ 	struct net_bridge		*br;
+@@ -211,7 +239,9 @@
+ 	unsigned char			multicast_router;
+ 
+ 	u8				multicast_disabled:1;
+-
++#ifdef MULTICAST_TO_UNITCAST	
++	u8				m2u_disabled:1;
++#endif
+ 	u32				hash_elasticity;
+ 	u32				hash_max;
+ 
+diff -ru linux-2.6.36-ra4110-old/net/bridge/br_stp_if.c linux-2.6.36-ra4110/net/bridge/br_stp_if.c
+--- linux-2.6.36-ra4110-old/net/bridge/br_stp_if.c	2012-12-10 16:32:07.000000000 +0800
++++ linux-2.6.36-ra4110/net/bridge/br_stp_if.c	2013-01-04 10:28:51.022193953 +0800
+@@ -78,6 +78,9 @@
+ 	del_timer_sync(&br->topology_change_timer);
+ 	del_timer_sync(&br->tcn_timer);
+ 	del_timer_sync(&br->gc_timer);
++#ifdef CONFIG_BRIDGE_IGMP_SNOOPING
++	br_multicast_disable_port(p);
++#endif
+ }
+ 
+ /* called under bridge lock */
+diff -ru linux-2.6.36-ra4110-old/net/bridge/br_sysfs_br.c linux-2.6.36-ra4110/net/bridge/br_sysfs_br.c
+--- linux-2.6.36-ra4110-old/net/bridge/br_sysfs_br.c	2012-12-10 16:32:07.000000000 +0800
++++ linux-2.6.36-ra4110/net/bridge/br_sysfs_br.c	2013-01-04 10:36:45.122192501 +0800
+@@ -379,6 +379,26 @@
+ static DEVICE_ATTR(multicast_snooping, S_IRUGO | S_IWUSR,
+ 		   show_multicast_snooping, store_multicast_snooping);
+ 
++#ifdef MULTICAST_TO_UNITCAST	
++static ssize_t show_multicast_direct(struct device *d,
++				       struct device_attribute *attr,
++				       char *buf)
++{
++	struct net_bridge *br = to_bridge(d);
++	return sprintf(buf, "%d\n", !br->m2u_disabled);
++}
++
++static ssize_t store_multicast_direct(struct device *d,
++					struct device_attribute *attr,
++					const char *buf, size_t len)
++{
++	//return store_bridge_parm(d, buf, len, br_multicast_toggle_m2u);
++}
++static DEVICE_ATTR(multicast_direct, S_IRUGO | S_IWUSR,
++		   show_multicast_direct, store_multicast_direct);
++
++#endif
++
+ static ssize_t show_hash_elasticity(struct device *d,
+ 				    struct device_attribute *attr, char *buf)
+ {
+@@ -701,6 +721,9 @@
+ #ifdef CONFIG_BRIDGE_IGMP_SNOOPING
+ 	&dev_attr_multicast_router.attr,
+ 	&dev_attr_multicast_snooping.attr,
++#ifdef MULTICAST_TO_UNITCAST	
++	&dev_attr_multicast_direct.attr,
++#endif
+ 	&dev_attr_hash_elasticity.attr,
+ 	&dev_attr_hash_max.attr,
+ 	&dev_attr_multicast_last_member_count.attr,
+diff -ru linux-2.6.36-ra4110-old/net/bridge/br_sysfs_if.c linux-2.6.36-ra4110/net/bridge/br_sysfs_if.c
+--- linux-2.6.36-ra4110-old/net/bridge/br_sysfs_if.c	2012-12-10 16:32:07.000000000 +0800
++++ linux-2.6.36-ra4110/net/bridge/br_sysfs_if.c	2013-01-04 10:39:29.542193894 +0800
+@@ -152,7 +152,7 @@
+ {
+ 	if (v)
+ 		p->flags |= BR_HAIRPIN_MODE;
+-	else
++else
+ 		p->flags &= ~BR_HAIRPIN_MODE;
+ 	return 0;
+ }
+diff -ru linux-2.6.36-ra4110-old/net/bridge/netfilter/Kconfig linux-2.6.36-ra4110/net/bridge/netfilter/Kconfig
+--- linux-2.6.36-ra4110-old/net/bridge/netfilter/Kconfig	2012-12-10 16:32:07.000000000 +0800
++++ linux-2.6.36-ra4110/net/bridge/netfilter/Kconfig	2013-01-04 10:43:56.110193316 +0800
+@@ -180,6 +180,49 @@
+ #
+ # watchers
+ #
++
++config BRIDGE_EBT_DSCP
++	tristate "ebt: dscp target support"
++	help
++	  This option adds the dscp target, which allows altering the tos info
++	  of frames.
++
++	  To compile it as a module, choose M here.  If unsure, say N.	  
++
++config BRIDGE_EBT_SET_VLAN
++        tristate "ebt:set vlan filter support"
++        help
++	  This option adds the
++
++          To compile it as a module, choose M here.  If unsure, say N.
++
++config BRIDGE_EBT_MUL_2_UNI
++        tristate "ebt: multicast to unicast filter support"
++        help
++	  This option adds the
++
++          To compile it as a module, choose M here.  If unsure, say N.
++
++config BRIDGE_EBT_LENGTH
++        tristate "ebt: length filter support"
++        help
++ 	 This option adds the
++
++          To compile it as a module, choose M here.  If unsure, say N.
++
++config BRIDGE_EBT_PORT_MGROUP
++        tristate "ebt: port multicast group filter support"
++        help
++ 	 This option adds the
++
++          To compile it as a module, choose M here.  If unsure, say N.
++config BRIDGE_EBT_CLASSIFY
++        tristate "ebt: classify filter support"
++        help
++          This option adds the classify match 
++
++          To compile it as a module, choose M here.  If unsure, say N.
++
+ config BRIDGE_EBT_LOG
+ 	tristate "ebt: log support"
+ 	help
+diff -ru linux-2.6.36-ra4110-old/net/bridge/netfilter/Makefile linux-2.6.36-ra4110/net/bridge/netfilter/Makefile
+--- linux-2.6.36-ra4110-old/net/bridge/netfilter/Makefile	2012-12-10 16:32:07.000000000 +0800
++++ linux-2.6.36-ra4110/net/bridge/netfilter/Makefile	2013-01-04 10:44:54.566192906 +0800
+@@ -28,6 +28,13 @@
+ obj-$(CONFIG_BRIDGE_EBT_REDIRECT) += ebt_redirect.o
+ obj-$(CONFIG_BRIDGE_EBT_SNAT) += ebt_snat.o
+ 
++obj-$(CONFIG_BRIDGE_EBT_DSCP) += ebt_DSCP.o
++obj-$(CONFIG_BRIDGE_EBT_CLASSIFY) += ebt_classify.o
++obj-$(CONFIG_BRIDGE_EBT_MUL_2_UNI)+= ebt_mul_2_unicast.o
++obj-$(CONFIG_BRIDGE_EBT_SET_VLAN) += ebt_set_vlan.o
++obj-$(CONFIG_BRIDGE_EBT_LENGTH) += ebt_length.o
++obj-$(CONFIG_BRIDGE_EBT_PORT_MGROUP) += ebt_port_mgroup.o
++
+ # watchers
+ obj-$(CONFIG_BRIDGE_EBT_LOG) += ebt_log.o
+ obj-$(CONFIG_BRIDGE_EBT_ULOG) += ebt_ulog.o

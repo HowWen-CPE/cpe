@@ -1,0 +1,42 @@
+From 99639c43cd318af2cdfe3dd6b2650d92c9c6d7e4 Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Fri, 23 Oct 2009 17:40:34 +0530
+Subject: [PATCH v0] Workaround for AHB2MAG IRQ Bypass
+
+This is a workaround for the hardware bug found on the P2020 Rev 1.0.
+The DCR[DMA__AHB2MAG_IRQ_BYPASS]is not set automatically upon SoC reset.
+This patch sets the bit.
+
+Signed-off-by: Vishnu Suresh <Vishnu@freescale.com>
+Signed-off-by: Dipen Dudhat <dipen.dudhat@freescale.com>
+---
+ drivers/mmc/fsl_esdhc.c |    6 +++++-
+ 1 files changed, 5 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/mmc/fsl_esdhc.c b/drivers/mmc/fsl_esdhc.c
+index 18f92d0..1cf17d6 100644
+--- a/drivers/mmc/fsl_esdhc.c
++++ b/drivers/mmc/fsl_esdhc.c
+@@ -369,7 +369,7 @@ static int esdhc_init(struct mmc *mmc)
+ 	int timeout = 1000;
+ 
+ 	/* Enable cache snooping */
+-	out_be32(&regs->scr, 0x00000040);
++	setbits_be32(&regs->scr, 0x00000040);
+ 
+ 	out_be32(&regs->sysctl, SYSCTL_HCKEN | SYSCTL_IPGEN);
+ 
+@@ -424,6 +424,10 @@ static int esdhc_initialize(bd_t *bis)
+ 
+ 	mmc_register(mmc);
+ 
++#ifdef CONFIG_P2020
++	/* Enable AHB2MAG IRQ Bypass */
++	setbits_be32(&regs->scr, 0x00000020);
++#endif
+ 	return 0;
+ }
+ 
+-- 
+1.5.6.5
+

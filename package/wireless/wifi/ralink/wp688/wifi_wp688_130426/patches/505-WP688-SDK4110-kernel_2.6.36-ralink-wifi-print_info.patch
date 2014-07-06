@@ -1,0 +1,11 @@
+--- linux-2.6.36-ra4110-orig/rt2860v2/common/rtmp_init.c	2013-05-06 14:49:35.037508662 +0800
++++ linux-2.6.36-ra4110-new/rt2860v2/common/rtmp_init.c	2013-05-06 14:52:17.061371643 +0800
+@@ -4152,7 +4152,7 @@
+ 	{
+ 		pObj->pRscObj = pRsc;
+ 		insertTailList(pRscList, (LIST_ENTRY *)pObj);
+-		DBGPRINT(RT_DEBUG_ERROR, ("%s: add timer obj %lx!\n", __FUNCTION__, (ULONG)pRsc));
++		DBGPRINT(RT_DEBUG_INFO, ("%s: add timer obj %lx!\n", __FUNCTION__, (ULONG)pRsc));
+ 	}
+ }
+ 

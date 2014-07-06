@@ -1,0 +1,14 @@
+--- a/net/bootp.c
++++ b/net/bootp.c
+@@ -818,6 +818,11 @@ static void DhcpSendRequestPkt(Bootp_t *
+ 	 */
+ 	NetCopyIP(&OfferedIP, &bp->bp_yiaddr);
+ 	extlen = DhcpExtended(bp->bp_vend, DHCP_REQUEST, NetDHCPServerIP, OfferedIP);
++       //clean the client ip to compatible tftp32 DHCP server--JackLuo 2013.8.1--
++       NetWriteIP(&bp->bp_ciaddr,0); 
++       NetWriteIP(&bp->bp_yiaddr,0); 
++       NetWriteIP(&bp->bp_siaddr,0); 
++       NetWriteIP(&bp->bp_giaddr,0); 
+ 
+ 	pktlen = BOOTP_SIZE - sizeof(bp->bp_vend) + extlen;
+ 	iplen = BOOTP_HDR_SIZE - sizeof(bp->bp_vend) + extlen;

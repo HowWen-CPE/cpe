@@ -1,0 +1,65 @@
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/hal/linux/ah_osdep.h
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/hal/linux/ah_osdep.h	2013-08-27 07:05:20.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/hal/linux/ah_osdep.h	2014-03-20 15:22:34.518663146 +0800
+@@ -111,6 +111,9 @@
+ #ifndef __i386__
+ #ifndef _STDARG_H
+ typedef void *va_list;
++/*daniel add begin*/
++#define _VA_LIST
++/*daniel add end*/
+ #endif
+ #endif
+ 
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/include/ieee80211.h
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/include/ieee80211.h	2014-03-20 15:04:32.579638433 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/include/ieee80211.h	2014-03-20 15:22:53.234825292 +0800
+@@ -1433,7 +1433,9 @@
+     u_int16_t   offset;             /* TUs of from TBTT of quiet start*/
+ } __packed;
+ 
+-#if ATH_SUPPORT_IBSS_DFS
++/*daniel modify begin*/
++//#if ATH_SUPPORT_IBSS_DFS
++/*daniel modify end*/
+ struct map_field {
+ #if _BYTE_ORDER == _BIG_ENDIAN
+         u_int8_t       reserved:3,
+@@ -1487,7 +1489,9 @@
+     u_int8_t    rec_interval;       /* dfs_recover_interval*/
+     struct channel_map_field    ch_map_list[IEEE80211_CHAN_MAX+1];    /* channel map filed */ //need to be max
+ } __packed;
+-#endif /* ATH_SUPPORT_IBSS_DFS */
++/*daniel modify begin*/
++//#endif /* ATH_SUPPORT_IBSS_DFS */
++/*daniel modify end*/
+ 
+ struct ieee80211_channelswitch_ie {
+     u_int8_t    ie;                 /* IEEE80211_ELEMID_CHANSWITCHANN */
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/include/ieee80211_api.h
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/include/ieee80211_api.h	2013-08-27 07:05:20.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/include/ieee80211_api.h	2014-03-20 15:23:09.805174166 +0800
+@@ -642,6 +642,20 @@
+                                       ieee80211_ssid        *ssid_list,
+                                       int                   peer_count);
+ 
++/*daniel add begin*/
++void liteon_wlan_set_default_scan_parameters(wlan_if_t             vaphandle, 
++                                      ieee80211_scan_params *scan_params, 
++                                      enum ieee80211_opmode opmode,
++                                      bool                  active_scan_flag, 
++                                      bool                  high_priority_flag,
++                                      bool                  connected_flag,
++                                      bool                  external_scan_flag,
++                                      u_int32_t             num_ssid,
++                                      ieee80211_ssid        *ssid_list,
++                                      int                   peer_count);
++
++
++/*daniel add end*/
+ /**
+  * sets the scan's priority parameters.
+  * @param vaphandle      : handle to the vap .

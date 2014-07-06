@@ -1,0 +1,281 @@
+Index: uboot_MTK4110/drivers/spi_flash.c
+===================================================================
+--- uboot_MTK4110.orig/drivers/spi_flash.c	2012-11-28 15:36:34.000000000 +0800
++++ uboot_MTK4110/drivers/spi_flash.c	2013-07-03 14:03:25.377004021 +0800
+@@ -1286,8 +1286,49 @@
+ 	}
+ 	else if (!strncmp(argv[0], "cp.uboot", 9)) {
+ 		dest = 0;
++#ifdef LITEON_SRC_VALID
++		printf("\n Copy uboot[%d byte] to SPI Flash[0x%08X].... \n", count, CFG_BOOTLOADER_ADDR);
++#else
+ 		printf("\n Copy uboot[%d byte] to SPI Flash[0x%08X].... \n", count, dest);
++#endif //LITEON_SRC_VALID
+ 	}
++#ifdef LITEON_SRC_VALID
++	else if(!strncmp(argv[0], "cp.rf", 5)) {
++		dest = CFG_FACTORY_ADDR - CFG_FLASH_BASE;
++		printf("\nCopy RF calibration[%d byte] to SPI Flash[0x%08X]....\n", count, CFG_FACTORY_ADDR);
++	}
++	else if(!strncmp(argv[0], "cp.flashcode", 12)) {
++		dest = 0;
++		printf("\n Copy flashcode[%d byte] to SPI Flash[0x%08X].... \n", count, CFG_BOOTLOADER_ADDR);
++	}
++	else if(!strncmp(argv[0], "cp.any", 6)) {
++
++		ulong flash_addr;
++		ulong flash_size =  spi_chip_info->sector_size * spi_chip_info->n_sectors;
++		
++		if (argc != 3) {
++			printf ("Usage:\ncp.any mem_addr flash_addr\n");
++			return 1;
++		}
++		
++		addr = simple_strtoul(argv[1], NULL, 16);
++		flash_addr = simple_strtoul(argv[2], NULL, 16);
++
++		if (flash_addr <= (CFG_BOOTLOADER_ADDR +  CFG_BOOTLOADER_SIZE)){
++			printf("Error: Boot loader partition will be covered, gave up the operation!!!\n");
++			return 1;
++		}
++		if ( (flash_addr + count) > (CFG_FLASH_BASE + flash_size)){
++			printf("\nThe range is out of flash!!!\n");
++			return 1;
++		}
++		
++
++		dest = flash_addr - CFG_FLASH_BASE;
++		
++		printf("\n Copy flashcode[%d byte] to SPI Flash[0x%08X].... \n", count, flash_addr);
++	}
++#endif //LITEON_SRC_VALID
+ 	else {
+ 		printf ("Usage:\n%s\n", cmdtp->usage);
+ 		return 1;
+@@ -1298,10 +1339,11 @@
+ }
+ 
+ U_BOOT_CMD(
+-	cp,	2,	1,	do_mem_cp,
++	cp,	3,	1,	do_mem_cp,
+ 	"cp      - memory copy\n",
+ 	"\ncp.uboot\n    - copy uboot block\n"
+ 	"cp.linux\n    - copy linux kernel block\n"
++	//"cp.any mem_addr flash_addr\n  - copy load contents to flash_addr\n"
+ );
+ 
+ int do_flerase (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
+@@ -1317,37 +1359,111 @@
+ 	if (strcmp(argv[1], "linux") == 0) 
+ 	{
+ 		printf("\n Erase linux kernel block !!\n");
++#ifdef LITEON_SRC_VALID
++		printf("From 0x%X length 0x%X\n", CFG_KERN_ADDR,
++				size - (CFG_BOOTLOADER_SIZE + CFG_CONFIG_SIZE + CFG_FACTORY_SIZE + CFG_NVRAM_SIZE + CFG_BOARD_DATA_SIZE));
++		raspi_unprotect();
++		rcode = raspi_erase(CFG_KERN_ADDR - CFG_FLASH_BASE,
++				size - (CFG_BOOTLOADER_SIZE + CFG_CONFIG_SIZE + CFG_FACTORY_SIZE + CFG_NVRAM_SIZE + CFG_BOARD_DATA_SIZE));
++#else
+ 		printf("From 0x%X length 0x%X\n", CFG_KERN_ADDR - CFG_FLASH_BASE,
+ 				size - (CFG_BOOTLOADER_SIZE + CFG_CONFIG_SIZE + CFG_FACTORY_SIZE));
+ 		raspi_unprotect();
+ 		rcode = raspi_erase(CFG_KERN_ADDR - CFG_FLASH_BASE,
+ 				size - (CFG_BOOTLOADER_SIZE + CFG_CONFIG_SIZE + CFG_FACTORY_SIZE));
++#endif //LITEON_SRC_VALID
+ 		return rcode;
+ 	}
+ 	else if (strcmp(argv[1], "uboot") == 0) 
+ 	{
+ 		printf("\n Erase u-boot block !!\n");
++#ifdef LITEON_SRC_VALID
++		printf("From 0x%X length 0x%X\n", CFG_BOOTLOADER_ADDR, CFG_BOOTLOADER_SIZE);
++#else
+ 		printf("From 0x%X length 0x%X\n", 0, CFG_BOOTLOADER_SIZE);
++#endif //LITEON_SRC_VALID
+ 		raspi_unprotect();
+ 		rcode = raspi_erase(0, CFG_BOOTLOADER_SIZE);
+ 		return rcode;
+ 	}
++#ifdef LITEON_SRC_VALID
++	else if (strncmp(argv[1], "rf", 2) == 0)
++	{
++		printf("\n Erase RF calibration block!!\n");
++		printf("From 0x%X length 0x%X\n", CFG_FACTORY_ADDR , CFG_FACTORY_SIZE);
++		raspi_unprotect();
++		rcode = raspi_erase(CFG_FACTORY_ADDR - CFG_FLASH_BASE, CFG_FACTORY_SIZE);
++		return rcode;
++	}
++	else if (strncmp(argv[1], "any", 3) == 0)
++	{
++		ulong addr_first, len;
++		char *ep;
++		
++	        if (argc != 4) {
++			printf ("Usage:\nerase any <start_addr> +<length>\n");
++			return 1;
++		}
++		
++		addr_first = simple_strtoul(argv[2], NULL, 16);
++
++		if (argv[3] && *argv[3] == '+'){
++			ep = argv[3] +1;
++		}else{
++			printf ("Usage:\nerase any <start_addr> +<length>\n");
++			return 1;
++		}
++		
++		len  = simple_strtoul(ep, NULL, 16);
++
++		/*check if the range is out of flash*/
++	        if ((addr_first < CFG_BOOTLOADER_ADDR) ||((addr_first + len) > (CFG_BOOTLOADER_ADDR + size))){
++			printf("\nThe erased range is out of flash\n");
++			return 1;
++	        }
++			
++		if ((addr_first >= CFG_BOOTLOADER_ADDR) &&  (addr_first < (CFG_BOOTLOADER_ADDR + CFG_BOOTLOADER_SIZE))){
++			printf("\nNote: The erased range falls whithin Boot loader partiton, gave up the operation!!!\n");
++			return 1;
++		}
++
++		if (0 != (addr_first - CFG_BOOTLOADER_ADDR)%(spi_chip_info->sector_size)){
++			printf("Error: start address not on sector boundary\n");
++		}
++
++		if (0 != len%(spi_chip_info->sector_size)){
++			len = (len/(spi_chip_info->sector_size)) + spi_chip_info->sector_size;
++		}
++		
++
++		printf("From 0x%X to 0x%X\n", addr_first , addr_first + len -1);
++                raspi_unprotect();
++		rcode = raspi_erase((addr_first - CFG_BOOTLOADER_ADDR), len);
++		
++		return rcode;
++	}
++#endif //LITEON_SRC_VALID
+ 	else if (strcmp(argv[1], "all") == 0) {
++#ifdef LITEON_SRC_VALID
++		printf("\n Erase all blocks!!\n");
++		printf("From 0x%X length 0x%X\n", CFG_BOOTLOADER_ADDR, size);
++#endif //LITEON_SRC_VALID
+ 		raspi_unprotect();
+ 		rcode = raspi_erase(0, size);
+ 		return rcode;
+ 	}
+-
++	else
+ 	printf ("Usage:\n%s\n", cmdtp->usage);
+ 	return 1;
+ }
+ 
+ U_BOOT_CMD(
+-	erase,	2,	1,	do_flerase,
++	erase,	4,	1,	do_flerase,
+ 	"erase   - erase SPI FLASH memory\n",
+ 	"\nerase all\n    - erase all FLASH banks\n"
+ 	"erase uboot\n    - erase uboot block\n"
+ 	"erase linux\n    - erase linux kernel block\n"
++	//"erase any <start_addr> +<length>\n  - erase flash but not include boot partition\n"
+ );
+ 
+ //#define SPI_FLASH_DBG_CMD 
+@@ -1428,4 +1544,99 @@
+ #endif
+ #endif // RALINK_CMDLINE //
+ 
++/*added by sean. 2012.10.19*/
++#ifdef LITEON_SRC_VALID
++#ifdef CONFIG_LITEON_HW_DIAGNOSE
++#define CFG_DEF_LOAD_ADDR "0x80100000"
++
++extern int do_tftpb (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
++extern int do_dump(cmd_tbl_t * cmdtp, int flag, int argc, char *argv[]);
++
++int do_flash_diag ( cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
++{
++	u32 i, count = simple_strtoul(argv[3], NULL, 10);
++	char *cmd_tftp_argv[3] = {"tftpboot", CFG_DEF_LOAD_ADDR, argv[2]};
++	int size;
++	char size_str[10];
++	unsigned int flash_source, mem_dest;
++	char *cmd_dump_argv[7] = {"dump", "-b", NULL, "-l", NULL, NULL, NULL};
++	char 	file_name [128] ={'0'};
++	char mem_addr[11] ={'0'};
++
++	if (argc != 4 || count > 50) {
++		printf ("Usage:\n%s\n", cmdtp->usage);
++		return 1;
++	}
++
++	flash_source = CFG_KERN_ADDR - CFG_FLASH_BASE;
++	mem_dest = (unsigned int)CFG_LOAD_ADDR;
++
++	for (i = 0; i < count; i++) {
++		/*First, download file from server*/
++		printf("%d: Download board<=====================server\n", i + 1);
++		do_tftpb (NULL, 1, 3, cmd_tftp_argv);
++
++		/*get size of file*/
++		size = NetBootFileXferSize;
++		sprintf(size_str, "0x%x", size);
++		cmd_dump_argv[4] = size_str;
++
++		if (size > (CFG_FLASH_SIZE - (CFG_BOOTLOADER_SIZE + CFG_CONFIG_SIZE + CFG_FACTORY_SIZE + CFG_NVRAM_SIZE + CFG_BOARD_DATA_SIZE) - 0x1000)) {
++			printf("Error:The file is too large, max size is %xMByte!!!\n", (CFG_FLASH_SIZE - (CFG_BOOTLOADER_SIZE + CFG_CONFIG_SIZE + CFG_FACTORY_SIZE + CFG_NVRAM_SIZE + CFG_BOARD_DATA_SIZE) - 0x1000) >> 20);
++			return 1;
++		}
++
++		/*Second, write to flash from memory pointed by dest*/
++		raspi_unprotect();
++		printf("\n Erase  block!!\n");
++		printf("From 0x%X length 0x%X\n", CFG_KERN_ADDR  , CFG_FLASH_SIZE - (CFG_BOOTLOADER_SIZE + CFG_CONFIG_SIZE + CFG_FACTORY_SIZE + CFG_NVRAM_SIZE + CFG_BOARD_DATA_SIZE));
++		raspi_erase(CFG_KERN_ADDR - CFG_FLASH_BASE, CFG_FLASH_SIZE - (CFG_BOOTLOADER_SIZE + CFG_CONFIG_SIZE + CFG_FACTORY_SIZE + CFG_NVRAM_SIZE + CFG_BOARD_DATA_SIZE));
++		raspi_write((char *)CFG_LOAD_ADDR, flash_source, size);
++
++
++		/*
++		  *Third, read from flash
++		  *enable to locate different place each time
++		  */
++		mem_dest = mem_dest + 0x1;
++		raspi_read((char *)mem_dest, flash_source, size);
++
++		/*
++		  *Fourth, upload contents of memory to server
++		  *cmd_dump_agrv[2]	base_addr
++		  *cmd_dump_agrv[4]	size
++		  *cmd_dump_agrv[5]	server IP
++		  *cmd_dump_agrv[6]	file name
++		 */
++		sprintf(mem_addr, "0x%x", mem_dest);
++		cmd_dump_argv[2] = mem_addr;
++	
++		cmd_dump_argv[5] = argv[1];
++	
++		/*create different name to upload file*/
++		sprintf(file_name, "%s_%2d", argv[2], i + 1);
++		cmd_dump_argv[6] = file_name;
++		
++		/*upload board content to server*/
++		printf("%d: Upload board=====================>server\n", i + 1);
++		if (do_dump(NULL, 1, 7, cmd_dump_argv) < 0) {
++			printf("Error : dump failed!!!\n");
++			return 1;
++		}
++	}
++
++	return 0;
++}
++
++U_BOOT_CMD(
++	flash_diag,    4,    1,    do_flash_diag,
++	"flash_diag      - flash diagnose\n",
++	"<serverip> <file_name> <test_times>\n"
++	"Note:\n"
++	"	test_times <= 50\n"
++);
++/*end sean*/
++
++#endif
++#endif //LITEON_SRC_VALID
+ #endif

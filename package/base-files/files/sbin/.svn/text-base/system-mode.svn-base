@@ -1,0 +1,14 @@
+#!/bin/sh
+
+board_type="$(nvram show board_model_rule 0 bd_model)"
+/etc/init.d/network-wan stop
+/etc/init.d/network-lan stop
+ezp-wl0-mode $@
+/etc/init.d/network-lan start
+/etc/init.d/network-wan start
+#enable stp only in ap mode
+if [ $@ == "ap" ]; then
+    brctl stp br-lan0 on
+else
+    brctl stp br-lan0 off
+fi

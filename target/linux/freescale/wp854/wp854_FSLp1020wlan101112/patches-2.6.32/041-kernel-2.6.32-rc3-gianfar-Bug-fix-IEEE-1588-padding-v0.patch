@@ -1,0 +1,37 @@
+From 0688dc7399a4e1fcca977836b86ce91f991bbf2a Mon Sep 17 00:00:00 2001
+From: Vishnu Suresh <Vishnu@freescale.com>
+Date: Wed, 4 Nov 2009 19:33:39 +0530
+Subject: [PATCH] gianfar: Bug fix IEEE 1588 padding
+
+The initial padding value used in the gfar_probe is incorrect
+when IEEE 1588 is enabled, this was causing issues in the
+intial setup and even ping was not happening.
+
+Corrected this with proper padding value while initialization.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Signed-off-by: Vishnu Suresh <Vishnu@freescale.com>
+Signed-off-by: Maneesh Gupta <maneesh.gupta@freescale.com>
+---
+ drivers/net/gianfar.c |    4 +++-
+ 1 files changed, 3 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index f7e82e8..d3da433 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -746,8 +746,10 @@ static int gfar_probe(struct of_device *ofdev,
+ 	else
+ 		priv->padding = 0;
+ 
+-	if (dev->features & NETIF_F_IP_CSUM  || priv->ptimer_present)
++	if (dev->features & NETIF_F_IP_CSUM  || priv->ptimer_present) {
++		priv->padding = 0x8;
+ 		dev->hard_header_len += GMAC_FCB_LEN;
++	}
+ 
+ 	/* Program the isrg regs only if number of grps > 1 */
+ 	if (priv->num_grps > 1) {
+-- 
+1.5.6.5
+

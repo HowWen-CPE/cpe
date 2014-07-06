@@ -1,0 +1,39 @@
+#!/bin/sh /etc/rc.common
+
+START=20
+boot () {
+
+# enable ethernet vlan device
+    #ifconfig eth0 up
+    #ifconfig eth1 up
+    #/sbin/wp838_hack_eth0 enable
+
+# get based mac address from boarddata
+    macaddr=$(boarddata get mac)
+    echo "Based MAC Address: ${macaddr}"
+
+    mac1=${macaddr:0:2}
+    mac2=${macaddr:3:2}
+    mac3=${macaddr:6:2}
+    mac4=${macaddr:9:2}
+    mac5=${macaddr:12:2}
+    mac6=${macaddr:15:2}
+    mac7=${macaddr:15:1}
+    mac8=`expr ${macaddr:16:1} + 1`
+    macaddr1="${mac1}:${mac2}:${mac3}:${mac4}:${mac5}:${mac7}${mac8}"
+    echo "Extended MAC Address: ${macaddr1}"
+
+# set ethernet mac address for lan port
+    #ethdev=$(nvram show lan_wan_mode_rule 0 lan_ifnames)
+    #$DEBUG ip link set dev $ethdev address $macaddr
+    $DEBUG ip link set dev eth0 address $macaddr
+# set ethernet mac address for wan port
+    #eth1dev=$(nvram show lan_wan_mode_rule 0 wan_ifnames)
+    #$DEBUG ip link set dev $eth1dev address $macaddr1
+    $DEBUG ip link set dev eth1 address $macaddr1
+
+
+#WLAN Process
+    /etc/wl/wlan-init
+    sleep 5
+}

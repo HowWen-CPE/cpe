@@ -1,0 +1,610 @@
+--- a/common/cmd_ubi.c	2012-08-29 19:35:36.000000000 -0700
++++ b/common/cmd_ubi.c	2012-08-29 19:37:01.000000000 -0700
+@@ -23,6 +23,12 @@
+ #include <asm/errno.h>
+ #include <jffs2/load_kernel.h>
+ 
++#ifdef CONFIG_CMD_UBIFS
++/*Liteon add*/
++#include <nand.h>
++#include <malloc.h>
++#endif
++
+ #define DEV_TYPE_NONE		0
+ #define DEV_TYPE_NAND		1
+ #define DEV_TYPE_ONENAND	2
+@@ -80,6 +86,7 @@
+ 	}
+ }
+ 
++
+ static void display_ubi_info(struct ubi_device *ubi)
+ {
+ 	ubi_msg("MTD device name:            \"%s\"", ubi->mtd->name);
+@@ -436,7 +443,7 @@
+ 	return 0;
+ }
+ 
+-static int do_ubi(cmd_tbl_t * cmdtp, int flag, int argc, char *argv[])
++int do_ubi(cmd_tbl_t * cmdtp, int flag, int argc, char *argv[])
+ {
+ 	size_t size = 0;
+ 	ulong addr = 0;
+@@ -451,7 +458,7 @@
+ 		printf("Error initializing mtdparts!\n");
+ 		return 1;
+ 	}
+-
++		
+ 	if (strcmp(argv[1], "part") == 0) {
+ 		char mtd_dev[16];
+ 		struct mtd_device *dev;
+@@ -519,12 +526,14 @@
+ 
+ 		return 0;
+ 	}
++	
+ 
+ 	if ((strcmp(argv[1], "part") != 0) && (!ubi_dev.selected)) {
+ 		printf("Error, no UBI device/partition selected!\n");
+ 		return 1;
+ 	}
+ 
++
+ 	if (strcmp(argv[1], "info") == 0) {
+ 		int layout = 0;
+ 		if (argc > 2 && !strncmp(argv[2], "l", 1))
+@@ -602,6 +611,8 @@
+ 	return -1;
+ }
+ 
++
++
+ U_BOOT_CMD(ubi, 6, 1, do_ubi,
+ 	"ubi commands",
+ 	"part [part] [offset]\n"
+@@ -622,3 +633,544 @@
+ 	" size: specified in bytes\n"
+ 	" type: s[tatic] or d[ynamic] (default=dynamic)"
+ );
++
++
++#ifdef CONFIG_CMD_UBIFS
++/*Liteon add, ubi volume check*/
++static int liteon_ubi_part(char *part_name)
++{
++	char mtd_dev[16];
++	struct mtd_device *dev;
++	struct part_info *part;
++	const char *vid_header_offset = NULL;
++	u8 pnum;
++	int err = 0;
++
++	/* todo: get dev number for NAND... */
++	ubi_dev.nr = 0;
++
++	/*
++	 * Call ubi_exit() before re-initializing the UBI subsystem
++	 */
++	if (ubi_initialized) {
++		ubi_exit();
++		del_mtd_partitions(ubi_dev.mtd_info);
++	}
++
++	/*
++	  * Search the mtd device number where this partition
++	  * is located
++	  */
++	if (find_dev_and_part(part_name, &dev, &pnum, &part)) {
++		printf("Partition %s not found!\n", part_name);
++		return 1;
++	}
++
++	sprintf(mtd_dev, "%s%d", MTD_DEV_TYPE(dev->id->type), dev->id->num);
++	ubi_dev.mtd_info = get_mtd_device_nm(mtd_dev);
++	if (IS_ERR(ubi_dev.mtd_info)) {
++		printf("Partition %s not found on device %s!\n", part_name, mtd_dev);
++		return 1;
++	}
++
++	ubi_dev.selected = 1;
++	
++	strcpy(ubi_dev.part_name, part_name);
++	err = ubi_dev_scan(ubi_dev.mtd_info, ubi_dev.part_name,
++			vid_header_offset);
++	if (err) {
++		printf("UBI init error %d\n", err);
++		ubi_dev.selected = 0;
++		return err;
++	}
++
++	ubi = ubi_devices[0];
++        return 0;
++
++}
++
++extern int do_ubifs_mount(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
++extern int do_ubifs_load(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
++
++static int liteon_ubifs_mount(const char *vol_name)
++{
++	char *argv[] = {"ubifsmount", (char *)vol_name};
++	int err;
++
++	err = do_ubifs_mount(NULL, 0, 2, argv);
++	if (err) {
++		printf("ubifsmount failed.\n");
++	}
++
++	return err;
++}
++
++static int liteon_ubifs_read(const char *file_name, const char *addr)
++{
++	int err;
++	char *argv[] = {"ubifsload", (char*)addr, (char*)file_name};
++	
++        err = do_ubifs_load(NULL, 0, 3, argv);
++		
++	if (err)
++		printf("ubifsload failed\n");
++	
++	return err;
++}
++
++
++extern u32 liteon_ubifs_get_size(char *filename, u32 size);
++
++
++int select_boot_file(const char* file_addr, const char* file_name)
++{
++       // char  *info;
++	int addr_len = strlen("_addr") + strlen(file_name);
++	//int info_len = addr_len + 1 + strlen(file_addr); /*'1' stands for length of '='*/
++	char *filename_addr;
++
++
++	filename_addr = malloc(addr_len + 1);/*'1' stands for length of '\0'*/
++	if(NULL == filename_addr){
++		printf("%s: malloc length %d failed\n",__func__, addr_len );
++		return -1;
++	}
++
++	sprintf(filename_addr, "%s%s", file_name, "_addr");
++#if 0
++	info = malloc (info_len + 1);/*'1' stands for length of '\0'*/
++	if(NULL == info){
++		printf("%s: malloc length %d failed\n",__func__, info_len );
++		free(filename_addr);
++		return -1;
++	}
++	
++	sprintf (info, "%s", file_addr);
++#endif
++	
++	setenv(filename_addr, file_addr);
++
++
++	free(filename_addr);
++	//free(info);
++	return 0;
++}
++
++int liteon_mem_cmp (const void * cs,const void * ct,size_t count)
++{
++	ulong	addr1, addr2, ngood;
++	int	size =1;
++	int     rcode = 0;
++
++	addr1 = simple_strtoul(cs, NULL, 16);
++	addr2 = simple_strtoul(ct, NULL, 16);
++
++	ngood = 0;
++
++	while (count-- > 0) {
++			u_char byte1 = *(u_char *)addr1;
++			u_char byte2 = *(u_char *)addr2;
++			if (byte1 != byte2) {
++				printf("byte at 0x%08lx (0x%02x) "
++					"!= byte at 0x%08lx (0x%02x)\n",
++					addr1, byte1, addr2, byte2);
++				rcode = 1;
++				break;
++			}
++		ngood++;
++		addr1 += size;
++		addr2 += size;
++	}
++
++	//printf("Total of %ld %s%s were the same\n", ngood, "byte", ngood == 1 ? "" : "s");
++	
++	return rcode;
++}
++
++
++extern void md5 (unsigned char *input, int len, unsigned char output[16]);
++
++
++static u8 itoc(u8 digital, u8 *md5_sum)
++{	   
++	if (digital >= 0 && digital <= 9)
++		*md5_sum = digital +(u8)48;
++	else if (digital>= 0xa && digital <= 0xf)
++		*md5_sum = digital +(u8)87;
++
++	return *md5_sum;
++}
++
++static int liteon_md5sum(unsigned char * address, u32 length, u8 *md5_sum)
++{
++	unsigned long addr, len;
++	char len_buf[11];
++	unsigned int i, j;
++	u8 output[16];
++        u8 tmp_high, tmp_low;
++		
++	addr = simple_strtoul(address, NULL, 16);
++	sprintf(len_buf, "%x", length);
++	len = simple_strtoul(len_buf, NULL, 16);
++	
++	md5((unsigned char *) addr, len, output);
++
++	//printf("md5 for %08lx ... %08lx ==> ", addr, addr + len - 1);
++	for (i = 0, j=0; i < 16; i++, j += 2) {
++	
++		tmp_high = (output[i] >> 4) & 0x0f;
++                tmp_low = output[i] & 0x0f;
++		
++	       	itoc(tmp_high, &md5_sum[j]);
++		itoc(tmp_low, &md5_sum[j+1]);
++	}
++	//printf("\n");
++	
++	md5_sum[33] = '\0';
++	//printf("********************md5_sum:%s***********************\n", md5_sum);
++	
++	return 0;
++}
++
++
++int do_ubi_vol_check(cmd_tbl_t * cmdtp, int flag, int argc, char *argv[])
++{
++	char ram_addr[2][11];
++	char *part_name[2]={NULL, NULL}, *volume_name[2]={NULL, NULL}, *file_name[2]={NULL, NULL};
++	int judge = 0;
++	int pnum, i, j = 1, k = 2, err = 0;
++	int volume_name_len[2],  name_len[2], part_name_len[2], file_name_len[2];
++	char *vol_pos[2], *file_pos[2];
++	u32 size[2];
++	u8 md5_sum[33];
++	char *md5_file[2] ={NULL, NULL};
++	char md5_ram_addr[2][11], file_size[2][11], md5_addr_string[11];
++	unsigned long ram_addr_hex, size_hex, 	first_ram_addr_hex, first_file_size_hex, second_ram_addr_hex;
++	int first_check_flag = -1, second_check_flag = -1;
++
++	if (argc > 6 || argc < 5) {
++		cmd_usage(cmdtp);
++		return 1;
++	}
++
++
++	/*get the volume name and the MTD part name from src and backup area*/
++	for ( pnum = 0; pnum < 2; pnum++) {
++		vol_pos[pnum] = strchr(argv[j], ':');
++		file_pos[pnum] = strrchr(argv[j], ':');
++		
++		name_len[pnum] = strlen(argv[j]) ;
++		part_name_len[pnum] = (vol_pos[pnum] - argv[j]) ;
++		volume_name_len[pnum] = (file_pos[pnum] - 1) - (vol_pos[pnum] + 1) +1 ;
++		file_name_len[pnum] = name_len[pnum] - part_name_len[pnum] -volume_name_len[pnum] - 2;
++		
++
++		//printf("part_name_len[%d] volume_name_len[%d] file_name_len[%d]\n",
++			//part_name_len[pnum],volume_name_len[pnum],file_name_len[pnum]);
++		
++		/*get the MTD part name*/
++		part_name[pnum] = malloc(part_name_len[pnum] + 1);
++
++		if (part_name[pnum] == NULL){
++			printf("pnum[%d] malloc part_name failed\n",pnum);
++			
++			if (pnum != 0){
++				free(part_name[pnum-1] );
++			        free(volume_name[pnum-1]);
++				free(file_name[pnum-1] );
++			}
++			return -1;
++		}
++		
++		memset(part_name[pnum],0, part_name_len[pnum]);
++		strncpy(part_name[pnum], argv[j], part_name_len[pnum]);
++		*(part_name[pnum] + part_name_len[pnum]) = '\0';
++
++    		//printf("get the MTD part name %s[%d]:%d \n", part_name[pnum], pnum, part_name_len[pnum]);
++		/*get the volume name*/
++		vol_pos[pnum]++;
++		volume_name[pnum] = malloc(volume_name_len[pnum] + 1);
++		if (volume_name[pnum] == NULL){
++			printf("volume[%d] malloc volume_name failed\n",pnum);
++			if (pnum == 0)
++				free(part_name[pnum]);
++			else{
++				free(part_name[pnum]);
++				free(part_name[pnum-1]);
++			        free(volume_name[pnum-1]);
++				free(file_name[pnum-1]);
++			}
++			
++			return -1;
++		}
++		
++		memset(volume_name[pnum],0, volume_name_len[pnum]);
++		strncpy(volume_name[pnum], vol_pos[pnum], volume_name_len[pnum]);
++		*(volume_name[pnum] + volume_name_len[pnum]) = '\0';
++
++    		//printf("get the volume name %s[%d]:%d \n", volume_name[pnum], pnum, volume_name_len[pnum]);
++		/*get the file name*/
++		file_pos[pnum]++;
++		file_name[pnum] = malloc(file_name_len[pnum] + 1);
++		if (file_name[pnum] == NULL){
++			printf("UBI_VOL_CHECK: file[%d] malloc file_name failed\n",pnum);
++
++			if (pnum == 0){
++				free(part_name[pnum]);
++				free(volume_name[pnum]);
++			}
++			else{
++				free(part_name[pnum-1]);
++			        free(volume_name[pnum-1]);
++				free(file_name[pnum-1]);
++				free(part_name[pnum]);
++				free(volume_name[pnum]);
++			}
++			
++			return -1;
++		}
++		
++		memset(file_name[pnum],0, file_name_len[pnum]);
++		strncpy(file_name[pnum], file_pos[pnum], file_name_len[pnum]);
++		*(file_name[pnum] + file_name_len[pnum]) = '\0';
++				
++		//printf("part_name:%s   volume_name:%s  file_name:%s\n",
++			//part_name[pnum],volume_name[pnum],file_name[pnum]);
++
++		j += 2;
++	}
++	
++
++        if (mtdparts_init() != 0) {
++			printf("UBI_VOL_CHECK: Error initializing mtdparts!\n");			
++			return -1;
++	}
++
++        /*get the address of ram, k is a para num corresponding to addr in argv[]*/
++	strcpy(ram_addr[0], argv[2]);	
++	strcpy(ram_addr[1], argv[4]);	
++	
++	/*Let's get the contents of @part_name*/
++	for ( pnum = 0; pnum< 2; pnum++) {
++		
++
++		/*first, init ubi device*/
++		err = liteon_ubi_part(part_name[pnum]);
++		if (err) {
++			printf("UBI_VOL_CHECK: part %s error.\n", part_name[pnum]);
++			if (pnum == 0){
++				continue;
++			}else if ((pnum == 1) && (first_check_flag == 1)){
++				goto first_boot;
++			}else
++				goto none_boot;
++		
++		}
++
++		err = liteon_ubifs_mount(volume_name[pnum]);
++		if (err) {
++			
++			printf("UBI_VOL_CHECK: mount %s error.\n", volume_name[pnum]);
++			if (pnum == 0){
++				continue;
++			}else if ((pnum == 1) && (first_check_flag == 1)){
++				goto first_boot;
++			} else 
++				goto none_boot;
++
++		}
++
++              if (1 == pnum){
++			  	
++	      		second_ram_addr_hex = simple_strtoul(ram_addr[1], NULL, 16);
++			/*check conflict between ram1 and ram0*/
++			if (second_ram_addr_hex <= (first_ram_addr_hex + first_file_size_hex + sizeof(md5_sum))){
++				second_ram_addr_hex = (first_ram_addr_hex + first_file_size_hex + sizeof(md5_sum)) + 1;
++				sprintf(ram_addr[1], "%x", second_ram_addr_hex);
++
++				printf("UBI_VOL_CHECK: warnning : address conflict, modify ram2 %s => %s\n", 
++					argv[4], ram_addr[1]);
++			}
++              }
++               
++		
++	
++		/*read data fromfile_name[pnum] */
++		err = liteon_ubifs_read(file_name[pnum], ram_addr[pnum]);
++		if (err) {
++			
++			printf("UBI_VOL_CHECK: read  %s error.\n", file_name[pnum]);
++			if (pnum == 0){
++				continue;
++			}else if ((pnum == 1) && (first_check_flag == 1)){
++				goto first_boot;
++			}else
++				goto none_boot;
++		}
++
++	
++		/*if size is zero then read whole file*/
++		size[pnum] = 0;
++		size[pnum] = liteon_ubifs_get_size(file_name[pnum], size[pnum]);
++
++		//printf("file size: %d, %d\n", size[pnum], pnum);
++		
++		/*get md5 file name*/
++		md5_file[pnum] = malloc(file_name_len[pnum] + strlen(".md5"));
++		if (md5_file[pnum] == NULL) {
++			printf("UBI_VOL_CHECK: md5_file: malloc [%d] failed\n", pnum);
++
++			if (pnum == 0)
++				continue;
++			else 
++				goto first_boot;
++			
++		}
++		strcpy(md5_file[pnum], file_name[pnum]);
++		strcat(md5_file[pnum], ".md5");
++
++		/*convert file size to string*/
++		sprintf(file_size[pnum], "%x", size[pnum]);
++		
++		ram_addr_hex = simple_strtoul(ram_addr[pnum], NULL, 16);
++		size_hex = simple_strtoul(file_size[pnum], NULL, 16);
++		
++		sprintf(md5_ram_addr[pnum], "%x",ram_addr_hex + size_hex);
++
++                /*backup first_ram_addr_hex and first_size_hex for check address conflict*/
++		if (pnum == 0) {
++			first_file_size_hex = size_hex;
++			first_ram_addr_hex = ram_addr_hex;
++		}
++
++		/*Read md5 file*/
++                err = liteon_ubifs_read(md5_file[pnum], md5_ram_addr[pnum]);
++		if (err) {
++			
++			printf("UBI_VOL_CHECK: read  %s error.\n", md5_file[pnum]);
++			if (pnum == 0){
++				continue;
++			}else if ((pnum == 1) && (first_check_flag == 1)){
++				goto first_boot;
++			}else
++				goto none_boot;
++		}
++
++		/*compute image file md5 value*/
++		liteon_md5sum(ram_addr[pnum], size[pnum], md5_sum);
++
++		sprintf(md5_addr_string, "%x", md5_sum);
++		
++		/*compare md5 value between md5 file and computed*/
++      		judge= liteon_mem_cmp(md5_ram_addr[pnum], md5_addr_string, 32);
++		if (judge == 0) {
++	                if(pnum == 0) {
++				first_check_flag = 1;
++	                }
++			else if((pnum == 1) && (first_check_flag == -1)){
++				//printf("\n------second check sucess and the first check failed------\n\n");
++				goto second_boot;
++			}else{
++				//printf("\n------both check sucess------\n\n");
++				goto first_boot;
++			}
++		}else{
++			if (pnum == 0)
++				continue;
++			else if ((pnum == 1) && (first_check_flag == 1)){
++				//printf("\n------first check sucess and the second check failed------\n\n");
++				goto first_boot;
++			} else {
++				//printf("\n!!!!!!!!!!!!both check failed!!!!!!!!!!\n\n");
++				goto none_boot;
++			}
++		}
++
++	}	
++
++     
++first_boot:
++	printf("UBI_VOL_CHECK: first boot\n");
++	select_boot_file(ram_addr[0], file_name[0]);
++	goto none_boot;
++second_boot:
++	printf("UBI_VOL_CHECK: second boot\n");
++	select_boot_file(ram_addr[1], file_name[1]);
++none_boot:
++	if (first_check_flag == -1 && second_check_flag == -1)
++		printf("UBI_VOL_CHECK: none boot\n");
++	
++	for (i = 0; i < 2; i++){
++		if(part_name[i] != NULL)
++			free(part_name[i]);
++		
++		if(volume_name[i] != NULL)
++			free(volume_name[i]);
++		
++		if(file_name[i] != NULL)
++			free(file_name[i]);
++		
++		if(md5_file[i] != NULL)
++			free(md5_file[i]);
++	}
++	return 0;
++
++}
++
++U_BOOT_CMD(ubi_vol_check, 5, 1, do_ubi_vol_check,
++	"ubi_vol_check commands",
++	"<pname:volname:filename> <addr1> <bakpname:bakvolname:bakfilename> <bakaddr>\n"
++	"-check the file  between main parttition and backup parttition\n"
++	"to select uncorrupted image file\n"
++	"eg, ubi_vol_check nk:nk:uImage 1000000 bakupnk:backupnk:uImage 4000000\n"
++);
++
++int do_customize_bootcmd(cmd_tbl_t * cmdtp, int flag, int argc, char *argv[])
++{
++	char *kernel_env;
++	char *bootcmd_env;
++	int bootcmd_len;
++	char *bootcmd_info;
++	char *space_pos;
++
++
++	if(argc != 2){
++		cmd_usage(cmdtp);
++		return 1;
++	}
++
++	kernel_env = getenv(argv[1]);
++	if(kernel_env == NULL) {
++		printf("error:cannot find kernel env\n");
++		return 1;
++	}
++	
++	bootcmd_env = getenv("bootcmd");
++	if(bootcmd_env == NULL) {
++		printf("error:cannot find bootcmd env\n");
++		return 1;
++	}
++
++	bootcmd_len = strlen(bootcmd_env);
++	bootcmd_info = malloc(bootcmd_len + 1);/*'1' stands for length of '\0'*/
++	if(NULL == bootcmd_info){
++		printf("%s: malloc length %d failed\n",__func__, bootcmd_len );
++		return -1;
++	}
++
++	space_pos = strchr(bootcmd_env, ' ');
++	space_pos = strchr(space_pos + 1, ' ');
++	//printf(">>>>>space_pos:%s bootcmd_env:%s<<<<<<<<\n", space_pos, bootcmd_env);
++	sprintf(bootcmd_info, "%s %s%s", "bootm",kernel_env,space_pos);
++	setenv("bootcmd", bootcmd_info);
++	
++	return 0;
++}
++
++U_BOOT_CMD(customize_bootcmd, 2, 1, do_customize_bootcmd,
++	"customize_bootcmd commands",
++	"<boot_img_env>\n"
++	"-customize bootcmd command\n"
++);
++#endif
++

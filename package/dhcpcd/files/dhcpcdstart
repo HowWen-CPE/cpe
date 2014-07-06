@@ -1,0 +1,12 @@
+#!/bin/sh
+
+pidfile=/var/run/dhcpcd-$4.pid
+
+dhcpcd $* -t 5
+#fork a sub routine
+[ -r $pidfile ] || {
+   while [ ! -r $pidfile ]; do
+	   dhcpcd $* -t 5 ;
+	   sleep 3;
+   done;   
+}

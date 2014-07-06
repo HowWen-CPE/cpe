@@ -1,0 +1,28 @@
+From 4075d9bf8361c0a438ae0472f40d23c43aa67a4b Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Mon, 30 Nov 2009 20:32:44 +0530
+Subject: [PATCH] gianfar: Fixed issue in alloc_bds when CONFIG_GIANFAR_L2SRAM is deselected.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/gianfar.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index 6af5a3f..3bd3e7f 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -1625,8 +1625,8 @@ unsigned long alloc_bds(struct gfar_private *priv, dma_addr_t *addr)
+ 	vaddr =  (unsigned long) mpc85xx_cache_sram_alloc(region_size,
+ 					(phys_addr_t *)addr, ALIGNMENT);
+ #else
+-	region_size = sizeof(struct txbd8) + priv->total_tx_ring_size +
+-			sizeof(struct rxbd8) + priv->total_rx_ring_size;
++	region_size = sizeof(struct txbd8) * priv->total_tx_ring_size +
++			sizeof(struct rxbd8) * priv->total_rx_ring_size;
+ 	vaddr = (unsigned long) dma_alloc_coherent(&priv->ofdev->dev,
+ 				region_size, addr, GFP_KERNEL);
+ #endif
+-- 
+1.5.2.2
+

@@ -1,0 +1,38 @@
+--- uboot-ra4110-old/config.mk	2012-11-28 15:36:34.000000000 +0800
++++ uboot-ra4110/config.mk	2013-01-06 14:38:17.000000000 +0800
+@@ -20,7 +20,8 @@
+ # PCI pin config to GPIO mode
+ #----------------------------------------
+ #PCI_MODE = PCI_FUNC
+-#UARTF_MODE = UARTF_FUNC
++#Sean modify, add UARTF_MODE define. NOV 2012, 19
++UARTF_MODE = UARTF_FUNC
+ 
+ ######## RT2880 test function option configuration ##########################
+ RALINK_DDR_CONTROLLER_OPTIMIZATION = OFF
+@@ -130,9 +131,14 @@
+ #
+ # Include the make variables (CC, etc...)
+ #
+-AS	= $(CROSS_COMPILE)as
+ LD	= $(CROSS_COMPILE)ld
+-CC	= $(CROSS_COMPILE)gcc
++ifneq ($(LITEON_FLAGS),)
++AS	= $(CROSS_COMPILE)as -D$(LITEON_FLAGS)
++CC      = $(CROSS_COMPILE)gcc -D$(LITEON_FLAGS)
++else
++AS	= $(CROSS_COMPILE)as
++CC      = $(CROSS_COMPILE)gcc
++endif
+ CPP	= $(CC) -E
+ AR	= $(CROSS_COMPILE)ar
+ NM	= $(CROSS_COMPILE)nm
+@@ -142,7 +148,7 @@
+ RANLIB	= $(CROSS_COMPILE)RANLIB
+ 
+ RELFLAGS= $(PLATFORM_RELFLAGS)
+-DBGFLAGS= -gdwarf-2 -DDEBUG
++#DBGFLAGS= -gdwarf-2 -DDEBUG
+ OPTFLAGS= -Os #-fomit-frame-pointer
+ ifndef LDSCRIPT
+ #LDSCRIPT := $(TOPDIR)/board/$(BOARDDIR)/u-boot.lds.debug

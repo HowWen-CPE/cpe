@@ -1,0 +1,97 @@
+From 8f0504071920f634584e86855ace2325af669c22 Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Wed, 7 Oct 2009 12:54:23 +0530
+Subject: [PATCH v2 1/7] powerpc/fsl: 85xx: p2020rdb: add host-pci(e) bridge only for RC
+
+This patch is derived from the original work for mpc8536 done
+by Jason Jin and Mingkai Hu.
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+v2: No change
+
+ arch/powerpc/platforms/85xx/mpc85xx_rdb.c |   60 ++++++++++++++++++++++++++++-
+ 1 files changed, 59 insertions(+), 1 deletions(-)
+
+diff --git a/arch/powerpc/platforms/85xx/mpc85xx_rdb.c b/arch/powerpc/platforms/85xx/mpc85xx_rdb.c
+index c8468de..c888c7b 100644
+--- a/arch/powerpc/platforms/85xx/mpc85xx_rdb.c
++++ b/arch/powerpc/platforms/85xx/mpc85xx_rdb.c
+@@ -70,6 +70,59 @@ void __init mpc85xx_rdb_pic_init(void)
+ 
+ }
+ 
++#if defined(CONFIG_PCI)
++/* Host/agent status can be read from porbmsr in the global utilities*/
++static int get_pcie_host_agent(void)
++{
++	struct device_node *np;
++	void __iomem *guts_regs;
++	u32 host_agent;
++
++	np = of_find_compatible_node(NULL, NULL, "fsl,p2020-guts");
++	if (!np) {
++		printk(KERN_ERR "Could not find global-utilities node\n");
++		return 0;
++	}
++
++	guts_regs = of_iomap(np, 0);
++	of_node_put(np);
++
++	if (!guts_regs) {
++		printk(KERN_ERR "Failed to map global-utilities register space\n");
++		return 0;
++	}
++	host_agent = (in_be32(guts_regs + 4) & 0x00070000) >> 16 ;
++
++	iounmap(guts_regs);
++	return host_agent;
++}
++
++/*
++ * To judge if the PCI(e) controller is host/agent mode through
++ * the PORBMSR register.
++ * 	0: agent mode
++ * 	1: host mode
++ */
++static int is_pcie_host(u32 host_agent, resource_size_t res)
++{
++	if ((res & 0xfffff) == 0xa000) {
++		switch (host_agent) {
++		case 0:
++		case 1:
++		case 4:
++		case 5:
++			return 0;
++		case 2:
++		case 3:
++		case 6:
++		default:
++			return 1;
++		}
++	} else
++		return (host_agent % 2) ? 1 : 0;
++}
++#endif
++
+ /*
+  * Setup the architecture
+  */
+@@ -87,8 +140,13 @@ static void __init mpc85xx_rdb_setup_arch(void)
+ 
+ #ifdef CONFIG_PCI
+ 	for_each_node_by_type(np, "pci") {
+-		if (of_device_is_compatible(np, "fsl,mpc8548-pcie"))
++		if (of_device_is_compatible(np, "fsl,mpc8548-pcie")) {
++			struct resource rsrc;
++			of_address_to_resource(np, 0, &rsrc);
++			if (!is_pcie_host(get_pcie_host_agent(), rsrc.start))
++				continue;
+ 			fsl_add_bridge(np, 0);
++		}
+ 	}
+ 
+ #endif
+-- 
+1.5.6.5
+

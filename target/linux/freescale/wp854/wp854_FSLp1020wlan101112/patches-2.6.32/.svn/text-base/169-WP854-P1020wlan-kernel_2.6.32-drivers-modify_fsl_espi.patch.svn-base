@@ -1,0 +1,18 @@
+--- linux-2.6.32-freescale-p1020-sku/drivers/spi/fsl_espi.c	2012-07-13 03:19:08.821641023 -0700
++++ linux-liteon-wp854-openwrt/drivers/spi/fsl_espi.c	2012-07-13 03:21:19.837675725 -0700
+@@ -627,8 +627,15 @@
+ 		(mpc85xx_spi_bdinfo + n)->platform_data = spi_eeprom_pdata;
+ 		snprintf(spi_eeprom_pdata->name, 10, "SPIFLASH%d", n);
+ 		spi_eeprom_pdata->type = kzalloc(10, GFP_KERNEL);
++        
++              /*modify by sirian. 2011-03-10*/
++              #if 0
+ 		strncpy(spi_eeprom_pdata->type, "s25sl128b",
+ 			strlen("s25sl128b"));
++              #else
++              strncpy(spi_eeprom_pdata->type, "MX25L6406E",
++			strlen("MX25L6406E"));
++              #endif
+ 
+ 		nr_parts = 0;
+ 		dp = NULL;

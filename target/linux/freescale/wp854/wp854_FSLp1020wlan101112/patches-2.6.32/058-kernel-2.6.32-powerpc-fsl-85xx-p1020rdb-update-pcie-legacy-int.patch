@@ -1,0 +1,51 @@
+From 06fcef3472750f61f3cb7da188696336973bb528 Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Mon, 14 Dec 2009 11:45:53 +0530
+Subject: [PATCH 1/1] powerpc/fsl: 85xx: p1020rdb: update pcie legacy int entries
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ arch/powerpc/boot/dts/p1020rdb.dts |   20 ++++++++++++++++++--
+ 1 files changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p1020rdb.dts b/arch/powerpc/boot/dts/p1020rdb.dts
+index b1bd5af..cf19e33 100644
+--- a/arch/powerpc/boot/dts/p1020rdb.dts
++++ b/arch/powerpc/boot/dts/p1020rdb.dts
+@@ -601,7 +601,15 @@
+ 			  0x1000000 0x0 0x00000000 0 0xffc30000 0x0 0x10000>;
+ 		clock-frequency = <33333333>;
+ 		interrupt-parent = <&mpic>;
+-		interrupts = <16 2>;
++		interrupts = <25 2>;
++		interrupt-map-mask = <0xf800 0x0 0x0 0x7>;
++		interrupt-map = <
++			/* IDSEL 0x0 */
++			0000 0x0 0x0 0x1 &mpic 0x4 0x1
++			0000 0x0 0x0 0x2 &mpic 0x5 0x1
++			0000 0x0 0x0 0x3 &mpic 0x6 0x1
++			0000 0x0 0x0 0x4 &mpic 0x7 0x1
++			>;
+ 		pcie@0 {
+ 			reg = <0x0 0x0 0x0 0x0 0x0>;
+ 			#size-cells = <2>;
+@@ -629,7 +637,15 @@
+ 			  0x1000000 0x0 0x00000000 0 0xffc20000 0x0 0x10000>;
+ 		clock-frequency = <33333333>;
+ 		interrupt-parent = <&mpic>;
+-		interrupts = <16 2>;
++		interrupts = <26 2>;
++		interrupt-map-mask = <0xf800 0x0 0x0 0x7>;
++		interrupt-map = <
++			/* IDSEL 0x0 */
++			0000 0x0 0x0 0x1 &mpic 0x0 0x1
++			0000 0x0 0x0 0x2 &mpic 0x1 0x1
++			0000 0x0 0x0 0x3 &mpic 0x2 0x1
++			0000 0x0 0x0 0x4 &mpic 0x3 0x1
++			>;
+ 		pcie@0 {
+ 			reg = <0x0 0x0 0x0 0x0 0x0>;
+ 			#size-cells = <2>;
+-- 
+1.5.6.5
+

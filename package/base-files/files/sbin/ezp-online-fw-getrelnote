@@ -1,0 +1,23 @@
+#!/bin/sh
+rule_set="0"
+method="$(nvram show fw_upgrade_rule ${rule_set} method)"
+server_ipaddr="$(nvram show fw_upgrade_rule ${rule_set} server)"
+filepath="$(nvram show fw_upgrade_rule ${rule_set} path)"
+username="$(nvram show fw_upgrade_rule ${rule_set} username)"
+passwd="$(nvram show fw_upgrade_rule ${rule_set} passwd)"
+relnote="$(nvram show fw_info_rule ${rule_set} relnote)"
+if [ "${method}" = "ftpget" ]; then
+    [ -z "${server_ipaddr}" -o -z "${inf_file}" -o -z "${username}" ] && {
+        echo "missing server address, info file or user"
+        exit "1"
+    }
+    ftpget -u ${username} -p ${passwd} ${server_ipaddr} /tmp/zyfw_release_note ${filepath}/${relnote}
+    res="$?"
+    [ "$res" = "0" -a -f "/tmp/zyfw_release_note" ] || {
+        echo "get release note fail"
+        exit "1"
+    }
+    nvram replace attr fw_info_rule ${rule_set} relnote_ok "1"
+    echo "get release note success"
+    echo "0"
+fi

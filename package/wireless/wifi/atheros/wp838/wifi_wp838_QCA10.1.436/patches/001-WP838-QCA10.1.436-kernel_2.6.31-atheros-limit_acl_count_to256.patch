@@ -1,0 +1,59 @@
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/umac/acl/ieee80211_acl.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/umac/acl/ieee80211_acl.c	2013-11-01 10:36:09.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/acl/ieee80211_acl.c	2013-11-01 09:54:46.000000000 +0800
+@@ -81,6 +81,7 @@
+     int	                                 acl_policy;
+     TAILQ_HEAD(, ieee80211_acl_entry)    acl_list; /* list of all acl_entries */
+     ATH_LIST_HEAD(, ieee80211_acl_entry) acl_hash[ACL_HASHSIZE];
++	u_int16_t							 acl_cnt; /* ACL list count to limit the mac address count. Bevin@Liteon, 2013-11-1 */
+ };
+ 
+ /* 
+@@ -213,6 +214,12 @@
+         acl = vap->iv_acl;
+     }
+ 
++	/* Due to the "acfg_acl_getmac" function limits the ACL mac address getting count to 256, the adding count <= 256. Bevin@Liteon, 2013-11-1 ----->*/	
++	if( acl->acl_cnt >= 256 ) {
++		return EEXIST;
++	}
++	/* <----- Bevin@Liteon, 2013-11-1 */
++	
+     new = (struct ieee80211_acl_entry *) OS_MALLOC(acl->acl_osdev, 
+                                               sizeof(struct ieee80211_acl_entry), 0);
+     if (new == NULL) return ENOMEM;
+@@ -229,6 +236,9 @@
+     IEEE80211_ADDR_COPY(new->ae_macaddr, mac);
+     TAILQ_INSERT_TAIL(&acl->acl_list, new, ae_list);
+     LIST_INSERT_HEAD(&acl->acl_hash[hash], new, ae_hash);
++	/* Increase mac address count when mac add happens. Bevin@Liteon, 2013-11-1 -----> */
++	acl->acl_cnt++;
++	/* <----- Bevin@Liteon, 2013-11-1 */
+     spin_unlock_dpc(&acl->acl_lock);
+ 
+     return 0;
+@@ -252,8 +262,12 @@
+ 
+     spin_lock_dpc(&acl->acl_lock);
+     entry = _find_acl(acl, mac);
+-    if (entry != NULL)
++    if (entry != NULL) {
+         _acl_free(acl, entry);
++		/* Decrease mac address count when mac delete happens. Bevin@Liteon, 2013-11-1 -----> */
++		acl->acl_cnt--;
++		/* <----- Bevin@Liteon, 2013-11-1 */
++    }
+     spin_unlock_dpc(&acl->acl_lock);
+ 
+     return (entry == NULL ? ENOENT : 0);
+@@ -302,6 +316,9 @@
+     while (!TAILQ_EMPTY(&acl->acl_list)) {
+         entry = TAILQ_FIRST(&acl->acl_list);
+         _acl_free(acl, entry);
++		/* Decrease mac address count when each mac delete happens. Bevin@Liteon, 2013-11-1 -----> */
++		acl->acl_cnt--;
++		/* <----- Bevin@Liteon, 2013-11-1 */
+     }
+     spin_unlock_dpc(&acl->acl_lock);
+ }

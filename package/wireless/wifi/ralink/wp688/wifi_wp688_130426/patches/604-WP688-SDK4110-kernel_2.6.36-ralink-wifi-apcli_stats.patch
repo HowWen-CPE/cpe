@@ -1,0 +1,330 @@
+diff -urN a/rt2860v2/ap/ap_apcli_inf.c b/rt2860v2/ap/ap_apcli_inf.c
+--- a/rt2860v2/ap/ap_apcli_inf.c	2013-05-13 17:31:53.290472697 +0800
++++ b/rt2860v2/ap/ap_apcli_inf.c	2013-05-13 12:04:01.549729552 +0800
+@@ -56,6 +56,9 @@
+ #include "rt_os_net.h"
+ 
+ 
++NET_DEV_STATS *RT28xx_get_apcli_ether_stats(
++    IN  PNET_DEV net_dev);
++
+ /*
+ ========================================================================
+ Routine Description:
+@@ -86,6 +89,7 @@
+ 	netDevOpHook.stop = ApCli_VirtualIF_Close;
+ 	netDevOpHook.xmit = ApCli_VirtualIF_PacketSend;
+ 	netDevOpHook.ioctl = ApCli_VirtualIF_Ioctl;
++	netDevOpHook.get_stats = RT28xx_get_apcli_ether_stats;
+ 	RTMP_AP_IoctlHandle(pAd, NULL, CMD_RTPRIV_IOCTL_APC_INIT,
+ 						0, &netDevOpHook, 0);
+ }
+diff -urN a/rt2860v2/ap/ap_data.c b/rt2860v2/ap/ap_data.c
+--- a/rt2860v2/ap/ap_data.c	2013-05-13 17:31:53.290472697 +0800
++++ b/rt2860v2/ap/ap_data.c	2013-05-13 12:06:18.353723848 +0800
+@@ -1731,6 +1731,15 @@
+ 			pAd->WdsTab.WdsEntry[pMacEntry->MatchWDSTabIdx].WdsCounter.TransmittedByteCount+= pTxBlk->SrcBufLen;
+ 		}	
+ #endif /* WDS_SUPPORT */
++
++#ifdef APCLI_SUPPORT
++		if(pTxBlk->pMacEntry && IS_ENTRY_APCLI(pTxBlk->pMacEntry))
++		{
++			pAd->ApCfg.ApCliTab[0].TxCount ++;
++			pAd->ApCfg.ApCliTab[0].TransmittedByteCount += pTxBlk->SrcBufLen;
++		}
++#endif
++
+ #endif /* STATS_COUNT_SUPPORT */
+ 
+ 	/*FreeNumber = GET_TXRING_FREENO(pAd, QueIdx); */
+@@ -1957,6 +1966,15 @@
+ 			pAd->WdsTab.WdsEntry[pTxBlk->pMacEntry->MatchWDSTabIdx].WdsCounter.TransmittedByteCount+= pTxBlk->SrcBufLen;
+ 		}	
+ #endif /* WDS_SUPPORT */
++
++#ifdef APCLI_SUPPORT
++		if(pTxBlk->pMacEntry && IS_ENTRY_APCLI(pTxBlk->pMacEntry))
++		{
++			pAd->ApCfg.ApCliTab[0].TxCount ++;
++			pAd->ApCfg.ApCliTab[0].TransmittedByteCount += pTxBlk->SrcBufLen;
++		}
++#endif
++
+ #endif /* STATS_COUNT_SUPPORT */
+ 	}
+ 
+@@ -2304,6 +2322,13 @@
+ 			pAd->WdsTab.WdsEntry[pTxBlk->pMacEntry->MatchWDSTabIdx].WdsCounter.TransmittedByteCount+= pTxBlk->SrcBufLen;
+ 		}
+ #endif /* WDS_SUPPORT */
++#ifdef APCLI_SUPPORT
++		if(pTxBlk->pMacEntry && IS_ENTRY_APCLI(pTxBlk->pMacEntry))
++		{
++			pAd->ApCfg.ApCliTab[0].TxCount ++;
++			pAd->ApCfg.ApCliTab[0].TransmittedByteCount += pTxBlk->SrcBufLen;
++		}
++#endif
+ #endif /* STATS_COUNT_SUPPORT */
+ 
+ 	/*
+@@ -2579,6 +2604,15 @@
+ 			pAd->WdsTab.WdsEntry[pTxBlk->pMacEntry->MatchWDSTabIdx].WdsCounter.TransmittedByteCount+= pTxBlk->SrcBufLen;
+ 		}
+ #endif /* WDS_SUPPORT */
++
++#ifdef APCLI_SUPPORT
++		if(pTxBlk->pMacEntry && IS_ENTRY_APCLI(pTxBlk->pMacEntry))
++		{
++			pAd->ApCfg.ApCliTab[0].TxCount ++;
++			pAd->ApCfg.ApCliTab[0].TransmittedByteCount += pTxBlk->SrcBufLen;
++		}
++#endif
++
+ #endif /* STATS_COUNT_SUPPORT */
+ 
+ 	/*
+@@ -2933,6 +2967,14 @@
+ 		}
+ #endif /* WDS_SUPPORT */
+ 
++#ifdef APCLI_SUPPORT
++		if(pTxBlk->pMacEntry && IS_ENTRY_APCLI(pTxBlk->pMacEntry))
++		{
++			pAd->ApCfg.ApCliTab[0].TxCount ++;
++			pAd->ApCfg.ApCliTab[0].TransmittedByteCount += pTxBlk->SrcBufLen;
++		}
++#endif
++
+ #endif /* STATS_COUNT_SUPPORT */
+ 	}
+ 
+@@ -4349,6 +4391,9 @@
+                     FromWhichBSSID = pEntry->MatchAPCLITabIdx + MIN_NET_DEVICE_FOR_APCLI;
+                     RX_BLK_SET_FLAG(pRxBlk, fRX_APCLI);
+         			
++					pAd->ApCfg.ApCliTab[ApCliIdx].RxCount++;
++					pAd->ApCfg.ApCliTab[ApCliIdx].ReceivedByteCount += pRxWI->MPDUtotalByteCount;
++					
+                     // Process broadcast packets
+                     if (pRxD->Mcast || pRxD->Bcast)
+                     {
+@@ -4391,6 +4436,9 @@
+ 
+ 			FromWhichBSSID = pEntry->MatchAPCLITabIdx + MIN_NET_DEVICE_FOR_APCLI;
+ 			RX_BLK_SET_FLAG(pRxBlk, fRX_APCLI);
++			
++			pAd->ApCfg.ApCliTab[pEntry->MatchAPCLITabIdx].RxCount++;
++			pAd->ApCfg.ApCliTab[pEntry->MatchAPCLITabIdx].ReceivedByteCount += pRxWI->MPDUtotalByteCount;
+ 
+ 			/* Process broadcast packets */
+ 			if (pRxD->Mcast || pRxD->Bcast)
+@@ -4738,7 +4786,13 @@
+ 		pAd->ApCfg.MBSSID[pRxWI->BSSID].RxDropCount ++;
+ 		pAd->ApCfg.MBSSID[pRxWI->BSSID].RxErrorCount ++;
+ 	}
+-
++#ifdef APCLI_SUPPORT
++	if (pFmeCtrl->FrDs == 1 && pRxD->U2M )
++	{
++		pAd->ApCfg.ApCliTab[0].RxDropCount ++;
++		pAd->ApCfg.ApCliTab[0].RxErrorCount ++;
++	}
++#endif
+ 	/* release packet */
+ 	RELEASE_NDIS_PACKET(pAd, pRxPacket, NDIS_STATUS_FAILURE);
+ 	return;
+@@ -5008,6 +5062,14 @@
+ 			}
+ #endif /* STATS_COUNT_SUPPORT */
+ #endif /* WDS_SUPPORT */
++
++#ifdef APCLI_SUPPORT
++			if (pHeader->FC.FrDs == 1 && pRxD->U2M)
++			{
++				pAd->ApCfg.ApCliTab[0].RxDropCount ++;
++				pAd->ApCfg.ApCliTab[0].RxErrorCount ++;
++			}
++#endif		
+ 			/* discard this frame */
+ 			RELEASE_NDIS_PACKET(pAd, pRxPacket, NDIS_STATUS_FAILURE);
+ 			continue;
+@@ -5191,6 +5253,13 @@
+ #endif /* STATS_COUNT_SUPPORT */
+ #endif /* WDS_SUPPORT */
+ 
++#ifdef APCLI_SUPPORT
++		if (pHeader->FC.FrDs == 1 && pRxD->U2M)
++		{
++			pAd->ApCfg.ApCliTab[0].RxDropCount ++;
++			pAd->ApCfg.ApCliTab[0].RxErrorCount ++;
++		}
++#endif
+ 		RELEASE_NDIS_PACKET(pAd, pRxPacket, NDIS_STATUS_FAILURE);
+ 		return bReschedule;
+ 	}
+diff -urN a/rt2860v2/common/cmm_cfg.c b/rt2860v2/common/cmm_cfg.c
+--- a/rt2860v2/common/cmm_cfg.c	2013-05-13 17:31:53.277972724 +0800
++++ b/rt2860v2/common/cmm_cfg.c	2013-05-13 12:34:37.325723107 +0800
+@@ -1269,6 +1269,53 @@
+ #endif
+ 			}
+ 			break;
++		case CMD_RTPRIV_IOCTL_APCLI_STATS_GET:
++			/* get statistics */
++			{			
++				RT_CMD_STATS *pStats = (RT_CMD_STATS *)pData;
++				pStats->pStats = pAd->stats;
++				INT index;
++				for(index = 0; index < MAX_APCLI_NUM; index++)
++				{
++					if (pAd->ApCfg.ApCliTab[index].dev == (PNET_DEV)(pStats->pNetDev))
++					{
++						break;	
++					}
++				}
++
++				if(index > MAX_APCLI_NUM)
++				{
++					//reset counters
++					pStats->rx_packets = 0;
++					pStats->tx_packets = 0;
++					pStats->rx_bytes = 0;
++					pStats->tx_bytes = 0;
++					pStats->rx_errors = 0;
++					pStats->tx_errors = 0;
++					pStats->multicast = 0;	 /* multicast packets received*/
++					pStats->collisions = 0;  /* Collision packets*/
++					pStats->rx_over_errors = 0; /* receiver ring buff overflow*/
++					pStats->rx_crc_errors = 0; /* recved pkt with crc error*/
++					pStats->rx_frame_errors = 0; /* recv'd frame alignment error*/
++					pStats->rx_fifo_errors = 0; /* recv'r fifo overrun*/   
++					DBGPRINT(RT_DEBUG_ERROR, ("CMD_RTPRIV_IOCTL_APCLI_STATS_GET: can not find apcli \n"));
++					return NDIS_STATUS_FAILURE;
++				}
++								
++				pStats->rx_packets = pAd->ApCfg.ApCliTab[index].RxCount;
++				pStats->tx_packets = pAd->ApCfg.ApCliTab[index].TxCount;
++				pStats->rx_bytes = pAd->ApCfg.ApCliTab[index].ReceivedByteCount;
++				pStats->tx_bytes = pAd->ApCfg.ApCliTab[index].TransmittedByteCount;
++				pStats->rx_errors = pAd->ApCfg.ApCliTab[index].RxErrorCount;
++				pStats->tx_errors = pAd->ApCfg.ApCliTab[index].TxErrorCount;
++				pStats->multicast = pAd->ApCfg.ApCliTab[index].mcPktsRx; /* multicast packets received */
++				pStats->collisions = 0;  /* Collision packets*/
++				pStats->rx_over_errors = 0; 				  /* receiver ring buff overflow*/
++				pStats->rx_crc_errors = 0;/* recved pkt with crc error*/
++				pStats->rx_frame_errors = 0;		  /* recv'd frame alignment error*/
++				pStats->rx_fifo_errors = 0; 				  /* recv'r fifo overrun*/
++			}
++			break;
+ 
+ 		case CMD_RTPRIV_IOCTL_INF_IW_STATUS_GET:
+ 		/* get wireless statistics */
+diff -urN a/rt2860v2/include/rtmp_cmd.h b/rt2860v2/include/rtmp_cmd.h
+--- a/rt2860v2/include/rtmp_cmd.h	2013-05-13 17:31:53.286473053 +0800
++++ b/rt2860v2/include/rtmp_cmd.h	2013-05-13 12:35:40.265723296 +0800
+@@ -273,6 +273,8 @@
+ 	CMD_RTPRIV_IOCTL_WDS_REMOVE,
+ 	CMD_RTPRIV_IOCTL_WDS_STATS_GET,
+ 
++	CMD_RTPRIV_IOCTL_APCLI_STATS_GET,
++
+ 	CMD_RTPRIV_IOCTL_MAC_ADDR_GET,
+ 
+ #ifdef RT_CFG80211_SUPPORT
+diff -urN a/rt2860v2/include/rtmp.h b/rt2860v2/include/rtmp.h
+--- a/rt2860v2/include/rtmp.h	2013-05-13 17:31:53.286473053 +0800
++++ b/rt2860v2/include/rtmp.h	2013-05-13 17:34:59.357770061 +0800
+@@ -3033,6 +3033,22 @@
+     UCHAR  Addr_Mode; /*0-3 address(default) 1-4 address*/
+ 	BOOLEAN  Rx_Addr_Mode; /*FALSE:3 address; TURE:4 address*/
+ #endif
++	/*STATISTICS  Stat;*/
++	ULONG TxCount;
++	ULONG RxCount;
++	ULONG ReceivedByteCount;
++	ULONG TransmittedByteCount;
++	ULONG RxErrorCount;
++	ULONG RxDropCount;
++
++	ULONG TxErrorCount;
++	ULONG TxDropCount;
++	ULONG ucPktsTx;
++	ULONG ucPktsRx;
++	ULONG mcPktsTx;
++	ULONG mcPktsRx;
++	ULONG bcPktsTx;
++	ULONG bcPktsRx;
+ } APCLI_STRUCT, *PAPCLI_STRUCT;
+ 
+ typedef struct _AP_ADMIN_CONFIG {
+diff -urN a/rt2860v2/os/linux/rt_main_dev.c b/rt2860v2/os/linux/rt_main_dev.c
+--- a/rt2860v2/os/linux/rt_main_dev.c	2013-05-13 17:31:53.294472832 +0800
++++ b/rt2860v2/os/linux/rt_main_dev.c	2013-05-13 12:36:05.793723634 +0800
+@@ -940,6 +940,66 @@
+ }
+ #endif /* WDS_SUPPORT */
+ 
++NET_DEV_STATS *RT28xx_get_apcli_ether_stats(
++    IN  PNET_DEV net_dev){
+ 
++   VOID *pAd = NULL;
++   struct net_device_stats *pStats;
+ 
++   if (net_dev)
++	   GET_PAD_FROM_NET_DEV(pAd, net_dev); 
++
++   if (pAd)
++   {
++	   RT_CMD_STATS DrvStats, *pDrvStats = &DrvStats;
++
++
++	   //assign net device for RTMP_DRIVER_INF_STATS_GET()
++	   pDrvStats->pNetDev = net_dev;
++
++	   if (RTMP_COM_IoctlHandle(pAd, NULL, CMD_RTPRIV_IOCTL_APCLI_STATS_GET,
++						   0, pDrvStats, RT_DEV_PRIV_FLAGS_GET(net_dev)) != NDIS_STATUS_SUCCESS)
++					   return NULL;
++
++
++	   pStats = (struct net_device_stats *)(pDrvStats->pStats);
++	   pStats->rx_packets = pDrvStats->rx_packets;
++	   pStats->tx_packets = pDrvStats->tx_packets;
++
++	   pStats->rx_bytes = pDrvStats->rx_bytes;
++	   pStats->tx_bytes = pDrvStats->tx_bytes;
++
++	   pStats->rx_errors = pDrvStats->rx_errors;
++	   pStats->tx_errors = pDrvStats->tx_errors;
++
++	   pStats->rx_dropped = 0;
++	   pStats->tx_dropped = 0;
++
++	   pStats->multicast = pDrvStats->multicast;
++	   pStats->collisions = pDrvStats->collisions;
++
++	   pStats->rx_length_errors = 0;
++	   pStats->rx_over_errors = pDrvStats->rx_over_errors;
++	   pStats->rx_crc_errors = 0;
++	   pStats->rx_frame_errors = pDrvStats->rx_frame_errors;
++	   pStats->rx_fifo_errors = pDrvStats->rx_fifo_errors;
++	   pStats->rx_missed_errors = 0;						
++
++	   /* detailed tx_errors */
++	   pStats->tx_aborted_errors = 0;
++	   pStats->tx_carrier_errors = 0;
++	   pStats->tx_fifo_errors = 0;
++	   pStats->tx_heartbeat_errors = 0;
++	   pStats->tx_window_errors = 0;
++
++	   /* for cslip etc */
++	   pStats->rx_compressed = 0;
++	   pStats->tx_compressed = 0;
++	   
++	   return pStats;
++   }
++   else
++	   return NULL;
++
++}
+ 

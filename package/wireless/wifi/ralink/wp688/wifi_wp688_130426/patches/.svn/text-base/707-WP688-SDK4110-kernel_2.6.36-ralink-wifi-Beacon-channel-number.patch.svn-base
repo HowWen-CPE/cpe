@@ -1,0 +1,15 @@
+--- a/rt2860v2/common/rt_channel.c
++++ b/rt2860v2/common/rt_channel.c
+@@ -1807,9 +1807,9 @@ VOID BuildBeaconChList(
+ 			(pChDesp[i].Geography == pAd->CommonCfg.Geography))
+ 		{
+ 			MakeOutgoingFrame(pBuf + *pBufLen,		&TmpLen,
+-								1,					&pChDesp[i].FirstChannel,
+-								1,					&pChDesp[i].NumOfCh,
+-								1,					&pChDesp[i].MaxTxPwr,
++								1,					&pAd->ChannelList[0].Channel,
++								1,					&pAd->ChannelListNum,
++								1,					&pAd->ChannelList[0].MaxTxPwr,
+ 								END_OF_ARGS);
+ 			*pBufLen += TmpLen;
+ 		}

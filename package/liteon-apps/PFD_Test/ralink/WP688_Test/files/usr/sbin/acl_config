@@ -1,0 +1,5 @@
+#!/bin/sh
+#Add your mac address to the double quotation marks with semicolons.
+#If you need to configure multiple interface, you can add new lines in the same way.
+
+nvram set rai0_acl_add_entry=""

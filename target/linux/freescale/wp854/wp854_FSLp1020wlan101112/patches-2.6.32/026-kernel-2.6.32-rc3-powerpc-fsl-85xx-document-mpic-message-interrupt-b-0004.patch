@@ -1,0 +1,50 @@
+From e667273a148f673d7a1ebf5dd1da23e685c05d41 Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Fri, 9 Oct 2009 13:06:01 +0530
+Subject: [PATCH v2 4/7] powerpc/fsl: 85xx: document mpic message interrupt binds
+
+Originally written by Jason Jin and Mingkai Hu for mpc8536
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+v2: Removed cell-index as per Scott
+
+ Documentation/powerpc/dts-bindings/fsl/msg.txt |   26 ++++++++++++++++++++++++
+ 1 files changed, 26 insertions(+), 0 deletions(-)
+ create mode 100644 Documentation/powerpc/dts-bindings/fsl/msg.txt
+
+diff --git a/Documentation/powerpc/dts-bindings/fsl/msg.txt b/Documentation/powerpc/dts-bindings/fsl/msg.txt
+new file mode 100644
+index 0000000..958fb05
+--- /dev/null
++++ b/Documentation/powerpc/dts-bindings/fsl/msg.txt
+@@ -0,0 +1,26 @@
++* Freescale Message Interrupt Module
++
++Reguired properities:
++- compatible : should be
++  "fsl,<chip>-msg", "fsl,mpic-msg" for 85xx/86xx message interrupt module.
++- reg : should contain message registers location and length.
++- interrupts : should contain 4 interrupts for 4 message interrupt source.
++- interrupt-parent: the phandle for the interrupt source. Only the mpic have
++  message interrupt source.
++
++Example:
++        message@41400 {
++		compatible = "fsl,p2020rdb-msg","fsl,mpic-msg";
++		reg = <0x41400 0x200>;
++		interrupts = <0xb0 2 0xb1 2 0xb2 2 0xb3 2>;
++		interrupt-parent = < &mpic >;
++	};
++
++        message@42400 {
++		compatible = "fsl,p2020rdb-msg","fsl,mpic-msg";
++		reg = <0x42400 0x200>;
++		interrupts = <0xb4 2 0xb5 2 0xb6 2 0xb7 2>;
++		interrupt-parent = < &mpic >;
++	};
++
++The above examples shows two message interrupt modules on P2020RDB.
+-- 
+1.5.6.5
+

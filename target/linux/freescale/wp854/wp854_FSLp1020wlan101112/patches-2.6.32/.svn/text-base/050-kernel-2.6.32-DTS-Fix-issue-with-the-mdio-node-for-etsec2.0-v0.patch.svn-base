@@ -1,0 +1,39 @@
+From 5046c4115617f2f7b3ff12e0b4b5b8b4a4877361 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Mon, 30 Nov 2009 20:35:55 +0530
+Subject: [PATCH] DTS: Fix issue with the mdio node for etsec2.0
+
+This patch fixes the dts entry for etsec2.0 mdio node.
+The reg property of the mdio node should also pass the
+tbipa address to the mdio driver.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ arch/powerpc/boot/dts/p1020rdb.dts |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p1020rdb.dts b/arch/powerpc/boot/dts/p1020rdb.dts
+index a2436b3..837c7c6 100644
+--- a/arch/powerpc/boot/dts/p1020rdb.dts
++++ b/arch/powerpc/boot/dts/p1020rdb.dts
+@@ -384,7 +384,7 @@
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 			compatible = "fsl,etsec2-mdio";
+-			reg = <0x24000 0x1000>;
++			reg = <0x24000 0x1000 0xb0030 0x4>;
+ 
+ 			phy0: ethernet-phy@0 {
+ 				interrupt-parent = <&mpic>;
+@@ -402,7 +402,7 @@
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 			compatible = "fsl,etsec2-tbi";
+-			reg = <0x25000 0x1000>;
++			reg = <0x25000 0x1000 0xb1030 0x4>;
+ 			tbi0: tbi-phy@11 {
+ 				reg = <0x11>;
+ 				device_type = "tbi-phy";
+-- 
+1.5.2.2
+

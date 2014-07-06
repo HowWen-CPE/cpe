@@ -1,0 +1,18 @@
+--- linux-2.6.32-freescale-p1020-sku/drivers/rtc/Kconfig	2012-07-13 03:19:18.753535999 -0700
++++ linux-liteon-wp854-openwrt/drivers/rtc/Kconfig	2012-07-13 03:21:27.889582698 -0700
+@@ -242,6 +242,15 @@
+ 	  If you say Y here you will get support for the
+ 	  watchdog timer in the ST M41T60 and M41T80 RTC chips series.
+ 
++config RTC_DRV_BQ32K
++	tristate "TI BQ32000"
++	help
++	  If you say Y here you will get support for the TI
++	  BQ32000 I2C RTC chip.
++
++	  This driver can also be built as a module. If so, the module
++	  will be called rtc-bq32k.
++
+ config RTC_DRV_DM355EVM
+ 	tristate "TI DaVinci DM355 EVM RTC"
+ 	depends on MFD_DM355EVM_MSP

@@ -1,0 +1,17 @@
+--- a/programs/setup/Makefile	2014-02-24 13:49:03.000000000 +0800
++++ b/programs/setup/Makefile	2014-02-24 13:49:36.000000000 +0800
+@@ -36,11 +36,11 @@
+ 	# check the directories we need exist (ie., make install DESTDIR=/tmp/IPsec)
+ 	@mkdir -p $(RCDIR) $(BINDIR)
+ 	# install and link everything
+-	@$(INSTALL) $(INSTBINFLAGS) setup $(RCDIR)/ipsec
+-	@ln -s $(FINALRCDIR)/ipsec $(BINDIR)/setup
++	@$(INSTALL) $(INSTBINFLAGS) setup $(RCDIR)/setup
++	@ln -s $(FINALRCDIR)/setup $(BINDIR)/setup
+ 
+ install_file_list::
+-	@echo $(RCDIR)/ipsec
++	@echo $(RCDIR)/setup
+ 	@echo $(BINDIR)/setup
+ 
+ cleanall::

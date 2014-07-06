@@ -1,0 +1,31 @@
+#!/bin/sh
+
+local ledtgt="$1"
+local ledact="$2"
+local wlanled="$(nvram show wl_led_status_rule 0 wl)"
+local wpsled="$(nvram show wl_led_status_rule 0 wps)"
+[ "$ledact" = "on" ] && ledact="1" 
+[ "$ledact" = "off" ] && ledact="0"
+# if state no change, we do nothing 
+[ "$ledtgt" = "wlan" -a "$wlanled" = "$ledact" ] && exit
+# if we want to turn off wps and wifi is on, then do nothing
+[ "$ledtgt" = "wps" -a "$ledact" = "0" -a "$(nvram show wl_basic_rule 0 enable)" = "1" ] && exit
+# if we want to ruen on wps and wifi is off, then do nothing
+[ "$ledtgt" = "wps" -a "$ledact" = "1" -a "$(nvram show wl_basic_rule 0 enable)" = "0" ] && exit
+#[ "$ledtgt" = "wps" -a "$ledact" != "0" ] && exit
+case "$ledact" in
+traffic)
+    #gpioctl led 14 2 1 1 0 1 > /dev/null
+    echo "traffic"
+;;
+on|1)
+    #gpioctl led 14 1 0 0 0 0
+    nvram replace attr wl_led_status_rule 0 wl $ledact
+;;
+off|0)
+    #gpioctl led 14 0 1 0 0 0
+    nvram replace attr wl_led_status_rule 0 wl $ledact
+;;
+*)
+;;
+esac

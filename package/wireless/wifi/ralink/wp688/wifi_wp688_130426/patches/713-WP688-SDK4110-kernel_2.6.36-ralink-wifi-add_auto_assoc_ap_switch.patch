@@ -1,0 +1,161 @@
+Index: mt7620_wifi2716_all_dpa_20130426/rt2860v2/ap/ap_cfg.c
+===================================================================
+--- mt7620_wifi2716_all_dpa_20130426.orig/rt2860v2/ap/ap_cfg.c	2013-10-08 16:16:02.225548809 +0800
++++ mt7620_wifi2716_all_dpa_20130426/rt2860v2/ap/ap_cfg.c	2013-10-08 16:16:02.256930384 +0800
+@@ -815,6 +815,13 @@
+ 	{"CutTxPower",				Set_CutTxPower_Proc},  // Accurately cut down Tx Power
+ #endif
+ /*<-----daniel@liteon,2013-4-28*/
++
++/*add for closing the function that random select Ap when ssid is not specified, daniel@liteon,2013-9-26----->*/	
++#ifdef LITEON_SRC_VALID
++	{"AutoAssocAP",					Set_AutoAssocAP_Proc},
++#endif 
++/*<-----daniel@liteon,2013-9-26*/
++
+ 	{"BGProtection",				Set_BGProtection_Proc},
+ 	{"DisableOLBC", 				Set_OLBCDetection_Proc},
+ 	{"TxPreamble",				Set_TxPreamble_Proc},
+Index: mt7620_wifi2716_all_dpa_20130426/rt2860v2/ap/apcli_sync.c
+===================================================================
+--- mt7620_wifi2716_all_dpa_20130426.orig/rt2860v2/ap/apcli_sync.c	2013-10-08 16:16:02.004899942 +0800
++++ mt7620_wifi2716_all_dpa_20130426/rt2860v2/ap/apcli_sync.c	2013-10-08 16:17:15.437513754 +0800
+@@ -160,7 +160,12 @@
+ 	pApCliEntry->ApCliMlmeAux.ExtRateLen = pAd->CommonCfg.ExtRateLen;
+ 	NdisMoveMemory(pApCliEntry->ApCliMlmeAux.ExtRate, pAd->CommonCfg.ExtRate, pAd->CommonCfg.ExtRateLen);
+ 
+-	RTMPSetTimer(&(pApCliEntry->ApCliMlmeAux.ProbeTimer), PROBE_TIMEOUT);
++	/*If Disable auto association, large scan interval can decrease CPU load, sirian@liteon, 2013-09-30----->*/
++	if ((pApCliEntry->CfgSsidLen == 0) && (pAd->CommonCfg.bAutoAssocAP ==FALSE))
++		RTMPSetTimer(&(pApCliEntry->ApCliMlmeAux.ProbeTimer), 5000);	
++	else
++		RTMPSetTimer(&(pApCliEntry->ApCliMlmeAux.ProbeTimer), PROBE_TIMEOUT);
++	/*<-----sirian@liteon, 2013-09-30*/
+ 
+ 	ApCliEnqueueProbeRequest(pAd, Info->SsidLen, (PCHAR) Info->Ssid, ifIndex);
+ 
+@@ -1151,9 +1156,23 @@
+ 
+ 		/* user doesn't indicate any bssid or ssid. AP-Clinet will auto pick a AP to join by most strong siganl strength. */
+ 		else if (bssidEmptyFlag && ssidEmptyFlag)
++			
++		/*add for opening or closing the function that AP-Clinet will auto pick a AP to join by most strong signal strength, daniel@liteon,2013-9-26----->*/
++		#ifdef LITEON_SRC_VALID
++		{
++			if (pAd->CommonCfg.bAutoAssocAP==TRUE)
++		#endif
++		/*<-----daniel@liteon,2013-9-26*/
+ 			matchFlag = TRUE;
+ 
+-
++		/*add for opening or closing the function that AP-Clinet will auto pick a AP to join by most strong signal strength, daniel@liteon,2013-9-26----->*/
++		#ifdef LITEON_SRC_VALID	
++			else if (pAd->CommonCfg.bAutoAssocAP==FALSE)
++			matchFlag = FALSE;
++		}
++		#endif
++		/*<-----daniel@liteon,2013-9-26*/
++		
+		/* 
+		  * Parse the AP's Bss Cipher which is associated with current AP-Client 
+		  * and save to pApCliEntry->AssocAPInfo, 
+Index: mt7620_wifi2716_all_dpa_20130426/rt2860v2/common/cmm_info.c
+===================================================================
+--- mt7620_wifi2716_all_dpa_20130426.orig/rt2860v2/common/cmm_info.c	2013-10-08 16:16:02.228980170 +0800
++++ mt7620_wifi2716_all_dpa_20130426/rt2860v2/common/cmm_info.c	2013-10-08 16:16:02.261897443 +0800
+@@ -908,6 +908,41 @@
+ }
+ #endif
+ /*<-----daniel@liteon,2013-4-28*/
++
++/*add for opening or closing the function that AP-Clinet will auto pick a AP to join by most strong signal strength, daniel@liteon,2013-9-26----->*/
++#ifdef LITEON_SRC_VALID
++/* 
++    ==========================================================================
++    Description:
++        Auto Assoc AP,when there is no specified AP.
++    Return:
++        TRUE if all parameters are OK, FALSE otherwise
++    ==========================================================================
++*/
++INT	Set_AutoAssocAP_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg)
++{
++	ULONG Value;
++
++	Value = simple_strtol(arg, 0, 10);
++	if (Value == 0)
++	{		
++		pAd->CommonCfg.bAutoAssocAP  = FALSE;
++	}
++	else if (Value == 1)	
++		pAd->CommonCfg.bAutoAssocAP  = TRUE;
++	else
++		return FALSE; /*Invalid argument*/
++
++	DBGPRINT(RT_DEBUG_TRACE, ("Set_AutoAssocAP_Proc::(bAutoAssocAP=%d)\n",pAd->CommonCfg.bAutoAssocAP));
++
++	return TRUE;
++}
++#endif
++/*<-----daniel@liteon,2013-9-26*/
++
++
+ /* 
+     ==========================================================================
+     Description:
+Index: mt7620_wifi2716_all_dpa_20130426/rt2860v2/common/rtmp_init.c
+===================================================================
+--- mt7620_wifi2716_all_dpa_20130426.orig/rt2860v2/common/rtmp_init.c	2013-10-08 16:16:02.237037677 +0800
++++ mt7620_wifi2716_all_dpa_20130426/rt2860v2/common/rtmp_init.c	2013-10-08 16:16:02.261897443 +0800
+@@ -3223,6 +3223,13 @@
+ 	pAd->CommonCfg.CutTxPower = 0;
+ #endif
+ /*<-----daniel@liteon,2013-4-28*/
++
++	/*add for opening or closing the function that AP-Clinet will auto pick a AP to join by most strong signal strength, daniel@liteon,2013-9-26----->*/
++	#ifdef LITEON_SRC_VALID
++	pAd->CommonCfg.bAutoAssocAP = FALSE;
++	#endif
++	/*<-----daniel@liteon,2013-9-26*/
++
+ 	pAd->CommonCfg.TxPowerPercentage = 0xffffffff; /* AUTO*/
+ 	pAd->CommonCfg.TxPowerDefault = 0xffffffff; /* AUTO*/
+ 	pAd->CommonCfg.TxPreamble = Rt802_11PreambleAuto; /* use Long preamble on TX by defaut*/
+Index: mt7620_wifi2716_all_dpa_20130426/rt2860v2/include/rtmp.h
+===================================================================
+--- mt7620_wifi2716_all_dpa_20130426.orig/rt2860v2/include/rtmp.h	2013-10-08 16:16:02.240857569 +0800
++++ mt7620_wifi2716_all_dpa_20130426/rt2860v2/include/rtmp.h	2013-10-08 16:16:02.265210400 +0800
+@@ -1650,6 +1650,14 @@
+ 	ULONG CutTxPower;		/* in unit of mW */
+ 	#endif
+ 	/*<-----daniel@liteon,2013-4-28*/
++	
++	/*add for opening or closing the function that AP-Clinet will auto pick a AP to join by most strong signal strength, daniel@liteon,2013-9-26----->*/
++	#ifdef LITEON_SRC_VALID
++	BOOLEAN bAutoAssocAP;
++	#endif
++	/*<-----daniel@liteon,2013-9-26*/
++
++	
+ 	ULONG TxPowerPercentage;	/* 0~100 % */
+ 	ULONG TxPowerDefault;	/* keep for TxPowerPercentage */
+ 	UINT8 PwrConstraint;
+@@ -8357,6 +8365,16 @@
+ 	IN	PSTRING			arg);
+ #endif
+ /*<-----daniel@liteon,2013-4-28*/
++
++/*add for closing the function that random select Ap when ssid is not specified, daniel@liteon,2013-9-26----->*/
++#ifdef LITEON_SRC_VALID
++INT	Set_AutoAssocAP_Proc(
++	IN	PRTMP_ADAPTER	pAd,
++	IN	PSTRING			arg);
++#endif
++/*<-----daniel@liteon,2013-9-26*/
++
++
+ INT Set_BGProtection_Proc(
+ 	IN  PRTMP_ADAPTER		pAd, 
+ 	IN  PSTRING			arg);

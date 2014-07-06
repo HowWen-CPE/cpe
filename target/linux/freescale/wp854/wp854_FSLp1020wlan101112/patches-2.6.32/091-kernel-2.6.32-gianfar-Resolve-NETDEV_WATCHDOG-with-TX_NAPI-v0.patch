@@ -1,0 +1,71 @@
+From 93f5b4a2460282a68434566369d9befc5db8e610 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Wed, 17 Feb 2010 16:19:52 +0530
+Subject: [PATCH] gianfar: Resolve NETDEV_WATCHDOG with TX_NAPI
+
+Whne TX_NAPI is eanbled, the gfar_poll_tx( ) was still using
+spin_trylock_irqsave(), because of which there was a potential
+case where tx queue would not have been cleaned and eventually
+trigger a NETDEV_WATCHDOG.
+
+Replaced  spin_trylock_irqsave with spin_lock_irqsave( )
+
+Also, changed the DEFAULT_TX/RX_RING_SIZE to 128 and
+RECYCLE_MAX to 64
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/gianfar.c |   10 ++++------
+ drivers/net/gianfar.h |    6 +++---
+ 2 files changed, 7 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index afde621..47709d6 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -3747,14 +3747,12 @@ static int gfar_poll_tx(struct napi_struct *napi, int budget)
+ 		for (i = 0; i < priv->num_tx_queues; i++) {
+ 			if (tstat & mask) {
+ 				tx_queue = priv->tx_queue[i];
+-				if (spin_trylock_irqsave
+-					(&tx_queue->txlock, flags)) {
+-					tx_cleaned_per_queue =
++				spin_lock_irqsave(&tx_queue->txlock, flags);
++				tx_cleaned_per_queue =
+ 						gfar_clean_tx_ring(tx_queue,
+ 							budget_per_queue);
+-					spin_unlock_irqrestore
+-						(&tx_queue->txlock, flags);
+-				}
++				spin_unlock_irqrestore(&tx_queue->txlock,
++								flags);
+ 				tx_cleaned += tx_cleaned_per_queue;
+ 				tx_cleaned_per_queue = 0;
+ 			}
+diff --git a/drivers/net/gianfar.h b/drivers/net/gianfar.h
+index 10fa89d..752d48a 100644
+--- a/drivers/net/gianfar.h
++++ b/drivers/net/gianfar.h
+@@ -93,8 +93,8 @@ extern const char gfar_driver_version[];
+ 
+ /* These need to be powers of 2 for this driver */
+ #ifdef CONFIG_GFAR_SKBUFF_RECYCLING
+-#define DEFAULT_TX_RING_SIZE	64
+-#define DEFAULT_RX_RING_SIZE	64
++#define DEFAULT_TX_RING_SIZE	128
++#define DEFAULT_RX_RING_SIZE	128
+ #else
+ #define DEFAULT_TX_RING_SIZE	256
+ #define DEFAULT_RX_RING_SIZE	256
+@@ -1007,7 +1007,7 @@ struct gfar {
+ };
+ 
+ #ifdef CONFIG_GFAR_SKBUFF_RECYCLING
+-#define GFAR_DEFAULT_RECYCLE_MAX 32
++#define GFAR_DEFAULT_RECYCLE_MAX 64
+ #define GFAR_DEFAULT_RECYCLE_TRUESIZE (SKB_DATA_ALIGN(DEFAULT_RX_BUFFER_SIZE \
+ 		+ RXBUF_ALIGNMENT + NET_SKB_PAD) + sizeof(struct sk_buff))
+ 
+-- 
+1.5.6.3
+

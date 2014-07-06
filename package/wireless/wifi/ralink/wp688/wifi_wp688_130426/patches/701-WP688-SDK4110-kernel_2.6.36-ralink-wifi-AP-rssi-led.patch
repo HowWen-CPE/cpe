@@ -1,0 +1,66 @@
+--- mt7620_wifi2716_all_dpa_20130426-old/rt2860v2/common/cmm_data.c	2013-08-01 09:22:21.268339039 +0800
++++ mt7620_wifi2716_all_dpa_20130426/rt2860v2/common/cmm_data.c	2013-08-01 09:23:43.877352819 +0800
+@@ -4027,6 +4027,12 @@
+ #ifdef LED_CONTROL_SUPPORT
+ #ifdef APCLI_SUPPORT
+ 	PMAC_TABLE_ENTRY pEntry = &(pAd->MacTab.Content[0]);
++	RT_802_11_MAC_TABLE *pMacTab = NULL;
++	RT_802_11_MAC_ENTRY *pDst;
++	CHAR MaxRssi = -100;
++	CHAR RTMPRssi = -100;
++	INT i;
++	
+ 	if(RtmpOSNetDevIsUp((pAd)->ApCfg.ApCliTab[0].dev) == TRUE)
+ 	{
+ 		if (pAd->MacTab.Size > 0 && pEntry->Sst==SST_ASSOC)
+@@ -4039,6 +4045,50 @@
+ 			RTMPSetSignalLED(pAd, -100);
+ 		}
+ 	}
++/* Set RSSI LED when station(s) connected to AP. Sean@liteon, 2013-07-31----->*/
++#ifdef LITEON_SRC_VALID
++	else 
++	{
++		/* Allocate memory */
++		os_alloc_mem(NULL, (UCHAR **)&pMacTab, sizeof(RT_802_11_MAC_TABLE));
++		if (pMacTab == NULL)
++		{
++			DBGPRINT(RT_DEBUG_ERROR, ("%s: Allocate memory fail!!!\n", __FUNCTION__));
++			return;
++		}
++
++		NdisZeroMemory(pMacTab, sizeof(RT_802_11_MAC_TABLE));
++		pMacTab->Num = 0;
++		
++		for (i=0; i<MAX_LEN_OF_MAC_TABLE; i++)
++		{
++			pEntry = &(pAd->MacTab.Content[i]);
++
++			if (IS_ENTRY_CLIENT(pEntry) && (pEntry->Sst == SST_ASSOC)) 
++			{
++				pDst = &pMacTab->Entry[pMacTab->Num];
++
++				/* Fill in RSSI per entry*/
++				pDst->AvgRssi0 = pEntry->RssiSample.AvgRssi0;
++				pDst->AvgRssi1 = pEntry->RssiSample.AvgRssi1;
++				pDst->AvgRssi2 = pEntry->RssiSample.AvgRssi2;
++
++				RTMPRssi = RTMPMaxRssi(pAd, pDst->AvgRssi0, pDst->AvgRssi1, pDst->AvgRssi2);
++				
++				MaxRssi = ((MaxRssi >= RTMPRssi) ? MaxRssi : RTMPRssi);
++
++				pMacTab->Num += 1;
++			} 
++		}
++
++		RTMPSetSignalLED(pAd, MaxRssi);
++
++		/* Release memory */
++		if (pMacTab != NULL)
++			os_free_mem(NULL, pMacTab);
++	}
++#endif //LITEON_SRC_VALID
++/* <-----Sean@liteon, 2013-07-31 */
+ #endif
+ #endif
+ 

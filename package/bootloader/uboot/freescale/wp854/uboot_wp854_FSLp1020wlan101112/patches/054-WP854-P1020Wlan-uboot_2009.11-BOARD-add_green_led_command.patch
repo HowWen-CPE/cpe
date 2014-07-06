@@ -1,0 +1,144 @@
+--- u-boot-freescale-p1020-sku/board/freescale/p1020_sku/p1020_sku.c	2012-07-11 19:41:34.463244734 -0700
++++ u-boot-liteon-wp854-openwrt/board/freescale/p1020_sku/p1020_sku.c	2011-06-08 05:48:19.693181000 -0700
+@@ -107,7 +107,9 @@
+ #endif
+ 
+ 	clrbits_be32(&gur->pmuxcr, MPC85xx_PMUXCR_SD_DATA);
+-	setbits_be32(&gur->pmuxcr, MPC85xx_PMUXCR_TDM_ENA);
++
++	/* disable TDM_ENA for GPIO usage (GPIO4)*/
++	//setbits_be32(&gur->pmuxcr, MPC85xx_PMUXCR_TDM_ENA); 
+ 
+ #if 1
+ 	volatile ccsr_gpio_t *pgpio = (void *)(CONFIG_SYS_MPC85xx_GPIO_ADDR);
+@@ -122,7 +124,7 @@
+ 	  * GPIO12  Ethernet Switch Reset   
+ 	  * GPIO13  SLIC Reset 
+ 	  */
+-
++	
+ 	/* init DDR3 reset signal */
+ 	setbits_be32(&pgpio->gpdir, 0x023f0000);
+ 	setbits_be32(&pgpio->gpodr, 0x00200000);
+@@ -134,6 +136,9 @@
+ 
+ 	/* reset sgmii/rgmii phy & PCIe */
+ 	setbits_be32(&pgpio->gpdat, 0x021f0000);
++       /*modified by sirian. 2011-02-14*/
++       udelay(1000);
++	   
+ #endif
+ 
+ #ifdef CONFIG_SYS_CPLD_BASE
+@@ -169,10 +174,67 @@
+ 		NULL
+ );
+ 
++
++int set_gpioled_yellow(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
++{
++	volatile ccsr_gpio_t *pgpio = (void *)(CONFIG_SYS_MPC85xx_GPIO_ADDR);
++    
++	/* 
++	* LiteON's WP854 specific GPIO definition:
++	* GPIO4  System yellow LED
++	* GPIO5  System green LED
++	* GPIO7  WTD enable
++	* GPIO11 WTD active
++	* GPIO13 WLAN0 LED
++	* GPIO14 WLAN1 LED
++	*/
++	GPIOX_OUTPUT_LOW(&pgpio, GPIO_PWRLED_YELLOW);
++	GPIOX_OUTPUT_HIGH(&pgpio, GPIO_PWRLED_GREEN);
++
++	GPIOX_OUTPUT_HIGH(&pgpio, GPIO_WLANLED_0);
++	GPIOX_OUTPUT_HIGH(&pgpio, GPIO_WLANLED_1);
++
++	return 0;
++}
++
++U_BOOT_CMD(
++		gpioledy,	1,	1,	set_gpioled_yellow,
++		"Set gpio led: gpio led yellow",
++		NULL
++);
++
++int set_gpioled_green(cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
++{
++	volatile ccsr_gpio_t *pgpio = (void *)(CONFIG_SYS_MPC85xx_GPIO_ADDR);
++    
++	/* 
++	* LiteON's WP854 specific GPIO definition:
++	* GPIO4  System yellow LED
++	* GPIO5  System green LED
++	* GPIO7  WTD enable
++	* GPIO11 WTD active
++	* GPIO13 WLAN0 LED
++	* GPIO14 WLAN1 LED
++	*/
++	GPIOX_OUTPUT_LOW(&pgpio, GPIO_PWRLED_GREEN);
++	GPIOX_OUTPUT_HIGH(&pgpio, GPIO_PWRLED_YELLOW);
++
++	GPIOX_OUTPUT_LOW(&pgpio, GPIO_WLANLED_0);
++	GPIOX_OUTPUT_LOW(&pgpio, GPIO_WLANLED_1);
++
++	return 0;
++}
++
++U_BOOT_CMD(
++		gpioledg,	1,	1,	set_gpioled_green,
++		"Set gpio led: gpio led green",
++		NULL
++);
++
+ int checkboard (void)
+ {
+ 	volatile ccsr_gpio_t *pgpio = (void *)(CONFIG_SYS_MPC85xx_GPIO_ADDR);
+-	volatile cpld_data_t *cpld_data = (void *)(CONFIG_SYS_CPLD_BASE);
++	//volatile cpld_data_t *cpld_data = (void *)(CONFIG_SYS_CPLD_BASE); //sirian 2011-03-10
+ 	struct cpu_type *cpu = gd->cpu;;
+ 
+ 	printf("Board: %sSKU ", cpu->name);
+@@ -181,8 +243,8 @@
+ #endif
+ 	printf("\n");
+ 
+-	printf("CPLD:  V%d.0\n", cpld_data->cpld_rev & 0x0F);
+-	printf("PCBA:  V%d.0\n", cpld_data->pcba_rev & 0x0F);
++	//printf("CPLD:  V%d.0\n", cpld_data->cpld_rev & 0x0F);//sirian 2011-03-10
++	//printf("PCBA:  V%d.0\n", cpld_data->pcba_rev & 0x0F);//sirian 2011-03-10
+ 
+ 	udelay(10 * 1000);
+ 	/* reset DDR3 */
+@@ -192,8 +254,29 @@
+ 	/* refuse any ops to ddr enable signal */
+ 	clrbits_be32(&pgpio->gpdir, 0x20000000);
+ 
+-//	creat_squa_wave();
+-	
++	//creat_squa_wave();
++
++	/* 
++	* LiteON's WP854 specific GPIO definition:
++	* GPIO4  System yellow LED
++	* GPIO5  System green LED
++	* GPIO7  WTD enable
++	* GPIO11 WTD active
++	* GPIO13 WLAN0 LED
++	* GPIO14 WLAN1 LED
++	*/
++	GPIOX_LED_ON(&pgpio, GPIO_PWRLED_GREEN);
++	//GPIOX_LED_ON(&pgpio, GPIO_PWRLED_YELLOW);
++	//GPIOX_LED_ON(&pgpio, GPIO_WLANLED_0);
++	//GPIOX_LED_ON(&pgpio, GPIO_WLANLED_1);
++
++	GPIOX_OUTPUT_LOW(&pgpio, 1);
++	GPIOX_OUTPUT_LOW(&pgpio, 2);
++	GPIOX_OUTPUT_LOW(&pgpio, 3);
++	GPIOX_OUTPUT_LOW(&pgpio, 8);
++	GPIOX_OUTPUT_LOW(&pgpio, 9);
++	GPIOX_OUTPUT_LOW(&pgpio, 11);
++    
+ 	return 0;
+ }
+ 

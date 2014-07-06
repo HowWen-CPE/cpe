@@ -1,0 +1,45 @@
+From c42df721e29770a7cdddaca9a8fe2c3ae70696a2 Mon Sep 17 00:00:00 2001
+From: Poonam Aggrwal <poonam.aggrwal@freescale.com>
+Date: Fri, 23 Oct 2009 19:02:21 +0530
+Subject: [PATCH v0] eSPI and Intel E1000 support for P1/P2 RDB
+
+This patch enables the eSPI configuration to use
+the Spansion Flash on P1 and P2 RDB Platforms
+
+This also enables the Intel Pro/1000 PT Gb Ethernet
+PCI-E Network Adapter configuration support
+
+Signed-off-by: Poonam Aggrwal <poonam.aggrwal@freescale.com>
+---
+ include/configs/P1_P2_RDB.h |   15 +++++++++++++++
+ 1 files changed, 15 insertions(+), 0 deletions(-)
+
+diff --git a/include/configs/P1_P2_RDB.h b/include/configs/P1_P2_RDB.h
+index 52c06d6..e56cb7f 100644
+--- a/include/configs/P1_P2_RDB.h
++++ b/include/configs/P1_P2_RDB.h
+@@ -93,6 +93,21 @@
+ #define CONFIG_TSEC_ENET		/* tsec ethernet support */
+ #define CONFIG_ENV_OVERWRITE
+ 
++#define CONFIG_E1000		1	/* Defind e1000 pci Ethernet card*/
++
++/*
++ * eSPI - Enhanced SPI
++ */
++#define CONFIG_SPI_FLASH
++#define CONFIG_SPI_FLASH_SPANSION
++
++#define CONFIG_HARD_SPI
++#define CONFIG_FSL_ESPI
++
++#define CONFIG_CMD_SF
++#define CONFIG_SF_DEFAULT_SPEED 10000000
++#define CONFIG_SF_DEFAULT_MODE 0
++
+ #ifndef __ASSEMBLY__
+ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ #endif
+-- 
+1.5.6.5
+

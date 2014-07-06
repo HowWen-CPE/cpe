@@ -1,0 +1,15 @@
+#!/bin/sh
+
+nvram set wlan_mode=ap
+
+nvram set wifi0_rule_num=1
+nvram set ath0_ssid=Atheros_GPSDK_2.4G
+nvram set ath0_ap_ch_mode=11NGHT20
+nvram set ath0_ap_primary_ch=6
+
+nvram set wifi1_rule_num=1
+nvram set ath1_ssid_2=Atheros_GPSDK_5G
+nvram set ath1_ap_ch_mode_2=11NAHT20
+nvram set ath1_ap_primary_ch=36
+
+nvram commit

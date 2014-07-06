@@ -1,0 +1,18 @@
+--- linux-2.6.31/drivers/net/ethernet/phys/athrf1_phy.c	2014-06-24 14:26:26.807371817 -0700
++++ linux-2.6.31-new/drivers/net/ethernet/phys/athrf1_phy.c	2014-06-24 14:25:32.671369654 -0700
+@@ -359,7 +359,14 @@ athr_phy_speed(int ethUnit,int phyUnit)
+             return ATHR_PHY_SPEED_1000T;
+             
+         default:
+-            printk("Unkown speed read!\n");
++            /* BEGIN: Modified by Peter, 2014/6/25   PN:98 */
++            /* switch PHY address to ATHR_PHY0_ADDR or ATHR_PHY4_ADDR, when get speed error*/
++             printk("Unknown speed read when PHY addr=%d!\n", ATHR_PHYADDR(phyUnit));
++            if(ATHR_PHYADDR(phyUnit) == ATHR_PHY0_ADDR)
++            {
++                athrPhyInfo[phyUnit].phyAddr = ATHR_PHY4_ADDR;
++            }
++            /* END:   Modified by Peter, 2014/6/25   PN:98 */
+         }
+     }
+     if (last_phy_speed != phyHwStatus)

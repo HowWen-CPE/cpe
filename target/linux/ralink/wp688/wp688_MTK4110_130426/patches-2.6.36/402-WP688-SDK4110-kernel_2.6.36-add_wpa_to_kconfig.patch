@@ -1,0 +1,15 @@
+Index: linux-2.6.36_MTK4110/drivers/net/wireless/rt2860v2_ap/Kconfig
+===================================================================
+--- linux-2.6.36_MTK4110.orig/drivers/net/wireless/rt2860v2_ap/Kconfig	2013-05-22 12:21:31.397610709 +0800
++++ linux-2.6.36_MTK4110/drivers/net/wireless/rt2860v2_ap/Kconfig	2013-05-22 12:24:13.741342371 +0800
+@@ -50,6 +50,10 @@
+ 	bool "AP-CLient Support"
+ 	depends on RT2860V2_AP
+ 
++config  RT2860V2_AP_APCLI_WPA_SUPPLICANT
++	bool "WPA_SUPPLICANT Support"
++	depends on RT2860V2_AP
++
+ config  RT2860V2_AP_MAC_REPEATER
+ 	bool "MAC Repeater Support"
+ 	depends on RT2860V2_AP

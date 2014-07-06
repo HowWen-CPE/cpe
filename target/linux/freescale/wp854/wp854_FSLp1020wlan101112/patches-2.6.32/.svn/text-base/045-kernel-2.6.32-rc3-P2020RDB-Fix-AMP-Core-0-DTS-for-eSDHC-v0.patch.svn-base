@@ -1,0 +1,29 @@
+From 332e74a5f832add91b2fbeaaf9899daea317cdfe Mon Sep 17 00:00:00 2001
+From: Rajesh Gumasta <rajesh.gumasta@freescale.com>
+Date: Thu, 5 Nov 2009 13:52:43 +0530
+Subject: [PATCH] P2020RDB: Fix AMP Core 0 DTS for eSDHC
+
+Added the dma-broken and adjust-timeout parameters to the
+P2020RDB AMP Core0 DTS.
+
+Signed-off-by: Rajesh Gumasta <rajesh.gumasta@freescale.com>
+---
+ arch/powerpc/boot/dts/p2020rdb_camp_core0.dts |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p2020rdb_camp_core0.dts b/arch/powerpc/boot/dts/p2020rdb_camp_core0.dts
+index de34c21..cb32861 100644
+--- a/arch/powerpc/boot/dts/p2020rdb_camp_core0.dts
++++ b/arch/powerpc/boot/dts/p2020rdb_camp_core0.dts
+@@ -295,6 +295,8 @@
+ 			reg = <0x2e000 0x1000>;
+ 			interrupts = <72 0x2>;
+ 			interrupt-parent = <&mpic>;
++			fsl,sdhci-dma-broken;
++			fsl,sdhci-adjust-timeout;
+ 			/* Filled in by U-Boot */
+ 			clock-frequency = <0>;
+ 		};
+-- 
+1.5.6.5
+

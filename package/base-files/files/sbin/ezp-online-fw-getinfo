@@ -1,0 +1,53 @@
+#!/bin/sh
+parse_info_file()
+{
+    local inf_file="$1"
+    local rule_set="$2"
+    [ -f "${inf_file}" ] || exit 1
+    model=$(cat ${inf_file} | grep "Model" | sed 's/Model: //g')
+    fwfile=$(cat ${inf_file} | grep "FW file" | sed 's/FW file: //g')
+    fwversion=$(cat ${inf_file} | grep "FW version" | sed 's/FW version: //g')
+    revision=$(cat ${inf_file} | grep "Revision" | sed 's/Revision: //g')
+    reldate=$(cat ${inf_file} | grep "Release date" | sed 's/Release date: //g')
+    relnote=$(cat ${inf_file} | grep "Release note" | sed 's/Release note: //g')
+    nvram replace attr fw_info_rule ${rule_set} model "$model"
+    nvram replace attr fw_info_rule ${rule_set} fwfile "$fwfile"
+    nvram replace attr fw_info_rule ${rule_set} fwversion "$fwversion"
+    nvram replace attr fw_info_rule ${rule_set} revision "$revision"
+    nvram replace attr fw_info_rule ${rule_set} reldate "$reldate"
+    nvram replace attr fw_info_rule ${rule_set} relnote "$relnote"
+    nvram replace attr fw_info_rule ${rule_set} info_ok "0"
+    nvram replace attr fw_info_rule ${rule_set} fw_ok "0"
+    nvram replace attr fw_info_rule ${rule_set} relnote_ok "0"
+}
+
+rule_set="0"
+method="$(nvram show fw_upgrade_rule ${rule_set} method)"
+server_ipaddr="$(nvram show fw_upgrade_rule ${rule_set} server)"
+filepath="$(nvram show fw_upgrade_rule ${rule_set} path)"
+inf_file="$(nvram show fw_upgrade_rule ${rule_set} inf_filename)"
+username="$(nvram show fw_upgrade_rule ${rule_set} username)"
+passwd="$(nvram show fw_upgrade_rule ${rule_set} passwd)"
+if [ "${method}" = "ftpget" ]; then
+    [ -z "${server_ipaddr}" -o -z "${inf_file}" -o -z "${username}" ] && {
+        echo "missing server address, info file or user"
+        exit "1"
+    }
+    ftpget -u ${username} -p ${passwd} ${server_ipaddr} /tmp/zyfw_info ${filepath}/${inf_file}
+    res="$?"
+    [ "$res" = "0" -a -f "/tmp/zyfw_info" ] || {
+        echo "get info fail"
+        exit "1"
+    }
+    parse_info_file "/tmp/zyfw_info" "${rule_set}"
+    [ -z "$(nvram show fw_info_rule ${rule_set} fwversion)" -o \
+      -z "$(nvram show fw_info_rule ${rule_set} reldate)" -o \
+      -z "$(nvram show fw_info_rule ${rule_set} fwfile)" -o \
+      -z "$(nvram show fw_info_rule ${rule_set} model)" ] && {
+        echo "info file is corrupted"
+        exit "1"
+    }
+    nvram replace attr fw_info_rule ${rule_set} info_ok "1"
+    echo "get info success"
+    echo "0"
+fi

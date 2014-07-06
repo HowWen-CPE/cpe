@@ -1,0 +1,26 @@
+From 89befd53c9859173ee1a06e6b8dc090355825dd3 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Thu, 4 Mar 2010 12:53:04 +0530
+Subject: [PATCH] 1588: modify the OSC freq to support default CCB configuration
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/gianfar.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/gianfar.h b/drivers/net/gianfar.h
+index 752d48a..46a4c90 100644
+--- a/drivers/net/gianfar.h
++++ b/drivers/net/gianfar.h
+@@ -596,7 +596,7 @@ extern const char gfar_driver_version[];
+ #define TMR_CTRL_EXT_CLK	0x00000000
+ #define TMR_CTRL_SYS_CLK	0x00000001
+ #define TMR_CTRL_TCLK_PRD	0x000A0000
+-#define TMR_OSC_FREQ		300000000
++#define TMR_OSC_FREQ		200000000
+ #define TMR_ADD_VAL		CONFIG_GFAR_PTP_TMR_ADD
+ #define TMR_CTRL_TCLK_MASK	0x03ff0000
+ #define TMR_PTPD_MAX_FREQ	0x80000
+-- 
+1.5.6.3
+

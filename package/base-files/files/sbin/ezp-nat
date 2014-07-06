@@ -1,0 +1,18 @@
+#!/bin/sh
+
+nat_enable="$(nvram show nat_rule 0 enable)"
+[ "${nat_enable}" = "1" ] && {
+    local lanipaddr
+    local lanmask
+    lanipaddr="$(nvram get lan0_ipaddr)"
+    lanmask="$(nvram get lan0_mask)"
+    [ -z "$lanipaddr" -o -z "$lanmask" ] && {
+    	lanipaddr="$(nvram show lan_static_rule 0 ipaddr)"
+    	lanmask="$(nvram show lan_static_rule 0 mask)"
+    }
+    # First we try to remove duplicated rule
+    iptables -t nat -D EZP_SNAT -s "$lanipaddr/$lanmask" -j MASQUERADE
+    iptables -t nat -A EZP_SNAT -s "$lanipaddr/$lanmask" -j MASQUERADE
+} || {
+	iptables -t nat -F EZP_SNAT
+}

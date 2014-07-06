@@ -1,0 +1,8 @@
+--- boot_atheros/utility/Makefile	2013-04-03 13:42:49.000000000 +0800
++++ boot_liteon/utility/Makefile	2013-03-29 17:58:49.000000000 +0800
+@@ -1,4 +1,4 @@
+-DIRS = adjust_dep adjust_time bin2hex imghdr patch_gen checksum
++DIRS = adjust_dep adjust_time bin2hex imghdr patch_gen checksum binfile imagealign
+ 
+ all:
+ 	for i in $(DIRS) ; do make -C $$i || exit $? ; done

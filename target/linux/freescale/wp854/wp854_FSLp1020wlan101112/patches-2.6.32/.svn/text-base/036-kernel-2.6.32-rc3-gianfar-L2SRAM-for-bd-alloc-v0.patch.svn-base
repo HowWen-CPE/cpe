@@ -1,0 +1,203 @@
+From e508debe7a355ad5804879dcc9a62fa5a9674e96 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Fri, 23 Oct 2009 19:29:33 +0530
+Subject: [PATCH] gianfar: L2SRAM integration for bd allocation
+
+This provides support for allocation of bd's in L2SRAM.
+This option can be enabled via the config variable
+CONFIG_GIANFAR_L2SRAM.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/Kconfig   |    7 +++++
+ drivers/net/gianfar.c |   71 +++++++++++++++++++++++++++++++++++--------------
+ drivers/net/gianfar.h |    5 +++
+ 3 files changed, 63 insertions(+), 20 deletions(-)
+
+diff --git a/drivers/net/Kconfig b/drivers/net/Kconfig
+index 8ed497e..7f63a40 100644
+--- a/drivers/net/Kconfig
++++ b/drivers/net/Kconfig
+@@ -2409,6 +2409,13 @@ config 1588_MUX_eTSEC2
+ 	  Eth2 will not work if this is selected.
+ 	  This is needed when user want to use external clock, PPn signals etc
+ 
++config GIANFAR_L2SRAM
++	bool "Selecting L2sram bd allocation"
++	depends on (GIANFAR && MPC85xx)
++	select FSL_85XX_CACHE_SRAM if MPC85xx
++	help
++	  This option supports BD alloc in L2SRAM.
++
+ config UCC_GETH
+ 	tristate "Freescale QE Gigabit Ethernet"
+ 	depends on QUICC_ENGINE
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index d795da8..b965dd2 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -1238,10 +1238,22 @@ static void free_grp_irqs(struct gfar_priv_grp *grp)
+ 	free_irq(grp->interruptReceive, grp);
+ }
+ 
++void free_bds(struct gfar_private *priv)
++{
++#ifdef CONFIG_GIANFAR_L2SRAM
++       mpc85xx_cache_sram_free(priv->tx_queue[0]->tx_bd_base);
++#else
++	dma_free_coherent(&priv->ofdev->dev,
++			sizeof(struct txbd8) * priv->total_tx_ring_size
++			+ sizeof(struct rxbd8) * priv->total_rx_ring_size,
++			priv->tx_queue[0]->tx_bd_base,
++			gfar_read(&(priv->gfargrp[0].regs)->tbase0));
++#endif
++}
++
+ void stop_gfar(struct net_device *dev)
+ {
+ 	struct gfar_private *priv = netdev_priv(dev);
+-	struct gfar __iomem *regs = priv->gfargrp[0].regs;
+ 	unsigned long flags;
+ 	int i = 0;
+ 
+@@ -1272,12 +1284,7 @@ void stop_gfar(struct net_device *dev)
+ 	}
+ 
+ 	free_skb_resources(priv);
+-
+-	dma_free_coherent(&priv->ofdev->dev,
+-			sizeof(struct txbd8)* priv->total_tx_ring_size
+-			+ sizeof(struct rxbd8)* priv->total_rx_ring_size,
+-			priv->tx_queue[0]->tx_bd_base,
+-			gfar_read(&regs->tbase0));
++	free_bds(priv);
+ }
+ 
+ #ifdef CONFIG_GFAR_SKBUFF_RECYCLING
+@@ -1348,8 +1355,9 @@ static void free_skb_tx_queue(struct gfar_priv_tx_q *tx_queue)
+ 		dev_kfree_skb_any(tx_queue->tx_skbuff[i]);
+ 		tx_queue->tx_skbuff[i] = NULL;
+ 	}
+-
++#ifndef CONFIG_GIANFAR_L2SRAM
+ 	kfree(tx_queue->tx_skbuff);
++#endif
+ }
+ 
+ static void free_skb_rx_queue(struct gfar_priv_rx_q *rx_queue)
+@@ -1378,8 +1386,9 @@ static void free_skb_rx_queue(struct gfar_priv_rx_q *rx_queue)
+ 
+ 			rxbdp++;
+ 		}
+-
++#ifndef CONFIG_GIANFAR_L2SRAM
+ 		kfree(rx_queue->rx_skbuff);
++#endif
+ 	}
+ }
+ 
+@@ -1540,6 +1549,27 @@ err_irq_fail:
+ 
+ }
+ 
++unsigned long alloc_bds(struct gfar_private *priv, dma_addr_t *addr)
++{
++	unsigned long vaddr;
++	unsigned long region_size;
++
++#ifdef CONFIG_GIANFAR_L2SRAM
++	region_size = (sizeof(struct txbd8) + sizeof(struct sk_buff *)) *
++			priv->total_tx_ring_size +
++			(sizeof(struct rxbd8) + sizeof(struct sk_buff *)) *
++			priv->total_rx_ring_size;
++	vaddr =  (unsigned long) mpc85xx_cache_sram_alloc(region_size,
++					(phys_addr_t *)addr, ALIGNMENT);
++#else
++	region_size = sizeof(struct txbd8) + priv->total_tx_ring_size +
++			sizeof(struct rxbd8) + priv->total_rx_ring_size;
++	vaddr = (unsigned long) dma_alloc_coherent(&priv->ofdev->dev,
++				region_size, addr, GFP_KERNEL);
++#endif
++	return vaddr;
++}
++
+ /* Bring the controller up and running */
+ int startup_gfar(struct net_device *dev)
+ {
+@@ -1573,10 +1603,7 @@ int startup_gfar(struct net_device *dev)
+ 		priv->total_rx_ring_size += priv->rx_queue[i]->rx_ring_size;
+ 
+ 	/* Allocate memory for the buffer descriptors */
+-	vaddr = (unsigned long) dma_alloc_coherent(&priv->ofdev->dev,
+-			sizeof (struct txbd8) * priv->total_tx_ring_size +
+-			sizeof (struct rxbd8) * priv->total_rx_ring_size,
+-			&addr, GFP_KERNEL);
++	vaddr = alloc_bds(priv, &addr);
+ 
+ 	if (vaddr == 0) {
+ 		if (netif_msg_ifup(priv))
+@@ -1614,10 +1641,15 @@ int startup_gfar(struct net_device *dev)
+ 	/* Setup the skbuff rings */
+ 	for (i = 0; i < priv->num_tx_queues; i++) {
+ 		tx_queue = priv->tx_queue[i];
++#ifdef CONFIG_GIANFAR_L2SRAM
++		tx_queue->tx_skbuff = (struct sk_buff **) vaddr;
++		vaddr += sizeof(struct sk_buff **) * tx_queue->tx_ring_size;
++#else
+ 		tx_queue->tx_skbuff =
+ 			(struct sk_buff **)kmalloc(sizeof
+ 				(struct sk_buff *) * tx_queue->tx_ring_size,
+ 				GFP_KERNEL);
++#endif
+ 		if (NULL == tx_queue->tx_skbuff) {
+ 			if (netif_msg_ifup(priv))
+ 				printk(KERN_ERR
+@@ -1633,10 +1665,14 @@ int startup_gfar(struct net_device *dev)
+ 
+ 	for (i = 0; i < priv->num_rx_queues; i++) {
+ 		rx_queue = priv->rx_queue[i];
++#ifdef CONFIG_GIANFAR_L2SRAM
++		rx_queue->rx_skbuff = (struct sk_buff **) vaddr;
++		vaddr += sizeof(struct sk_buff **) * rx_queue->rx_ring_size;
++#else
+ 		rx_queue->rx_skbuff =
+ 			(struct sk_buff **)kmalloc(sizeof (struct sk_buff *) *
+ 					rx_queue->rx_ring_size, GFP_KERNEL);
+-
++#endif
+ 		if (NULL == rx_queue->rx_skbuff) {
+ 			if (netif_msg_ifup(priv))
+ 				printk(KERN_ERR
+@@ -1806,12 +1842,7 @@ err_rxalloc_fail:
+ rx_skb_fail:
+ tx_skb_fail:
+ 	free_skb_resources(priv);
+-	dma_free_coherent(&priv->ofdev->dev,
+-			sizeof(struct txbd8)*priv->total_tx_ring_size
+-			+ sizeof(struct rxbd8)*priv->total_rx_ring_size,
+-			priv->tx_queue[0]->tx_bd_base,
+-			gfar_read(&regs->tbase0));
+-
++	free_bds(priv);
+ 	return err;
+ }
+ 
+diff --git a/drivers/net/gianfar.h b/drivers/net/gianfar.h
+index 18c3831..576f582 100644
+--- a/drivers/net/gianfar.h
++++ b/drivers/net/gianfar.h
+@@ -47,6 +47,11 @@
+ #include <linux/workqueue.h>
+ #include <linux/ethtool.h>
+ 
++#ifdef CONFIG_GIANFAR_L2SRAM
++#include <asm/fsl_85xx_cache_sram.h>
++#define ALIGNMENT 0x20
++#endif
++
+ /* The maximum number of packets to be handled in one call of gfar_poll */
+ #ifdef CONFIG_GFAR_SKBUFF_RECYCLING
+ #define GFAR_DEV_WEIGHT 16
+-- 
+1.5.6.5
+

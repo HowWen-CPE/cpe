@@ -1,0 +1,29 @@
+From 853150085c843e058d8dec4ac9ec8f02d32c89b6 Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Mon, 14 Dec 2009 11:50:08 +0530
+Subject: [PATCH 1/1] powerpc/fsl: 85xx: p1020rdb: use p2020-guts as compatible
+
+Use fsl,p2020-guts as the compatible for p1020
+global utilities block
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ arch/powerpc/boot/dts/p1020rdb.dts |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p1020rdb.dts b/arch/powerpc/boot/dts/p1020rdb.dts
+index a61c226..3cf5f47 100644
+--- a/arch/powerpc/boot/dts/p1020rdb.dts
++++ b/arch/powerpc/boot/dts/p1020rdb.dts
+@@ -583,7 +583,7 @@
+ 		};
+ 
+ 		global-utilities@e0000 {	//global utilities block
+-			compatible = "fsl,p1020-guts";
++			compatible = "fsl,p2020-guts";
+ 			reg = <0xe0000 0x1000>;
+ 			fsl,has-rstcr;
+ 		};
+-- 
+1.5.6.5
+

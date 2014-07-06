@@ -1,0 +1,77 @@
+From c9f861098d946951ed19f6692fef3451ee74d5b1 Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Fri, 23 Oct 2009 17:40:05 +0530
+Subject: [PATCH v0] Configure eSDHC using I2C device
+
+On P1 and P2 RDB Platforms, read the I2C EEPROM to
+get various board switch settings like NOR Flash
+Bank selection, SD Data width etc.
+
+Depending on,
+switch SW5[6] - select width for eSDHC
+        ON  - 4-bit [Enable eSPI]
+        OFF - 8-bit [Disable eSPI]
+
+switch SW4[8] - NOR Flash Bank selection for Booting
+        OFF - Primary Bank
+        ON  - Secondary Bank
+
+Signed-off-by: Dipen Dudhat <dipen.dudhat@freescale.com>
+---
+ board/freescale/p1_p2_rdb/p1_p2_rdb.c |   25 +++++++++++++++++++++++++
+ include/configs/P1_P2_RDB.h           |    1 +
+ 2 files changed, 26 insertions(+), 0 deletions(-)
+
+diff --git a/board/freescale/p1_p2_rdb/p1_p2_rdb.c b/board/freescale/p1_p2_rdb/p1_p2_rdb.c
+index 4c03468..d34a6e7 100644
+--- a/board/freescale/p1_p2_rdb/p1_p2_rdb.c
++++ b/board/freescale/p1_p2_rdb/p1_p2_rdb.c
+@@ -130,8 +130,33 @@ int checkboard (void)
+ 
+ int board_early_init_r(void)
+ {
++	u8 i2c_data;
++	volatile ccsr_gur_t *gur = (void *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
+ 	const unsigned int flashbase = CONFIG_SYS_FLASH_BASE;
+ 	const u8 flash_esel = 2;
++	unsigned int orig_bus = i2c_get_bus_num();
++
++	i2c_set_bus_num(1);
++	if (i2c_read(CONFIG_SYS_I2C_EEPROM_ADDR2, 0,
++				1, &i2c_data, sizeof(i2c_data)) == 0) {
++		if (i2c_data & 0x2)
++			puts("NOR Flash Bank : Secondary\n");
++		else
++			puts("NOR Flash Bank : Primary\n");
++
++		if (i2c_data & 0x1) {
++			setbits_be32(&gur->pmuxcr, MPC85xx_PMUXCR_SD_DATA);
++			puts("SD/MMC : 8-bit Mode\n");
++			puts("eSPI : Disabled\n");
++		} else {
++			puts("SD/MMC : 4-bit Mode\n");
++			puts("eSPI : Enabled\n");
++		}
++	}
++	else
++		puts("Failed reading I2C Chip 0x18 on bus 1\n");
++
++	i2c_set_bus_num(orig_bus);
+ 
+ 	/*
+ 	 * Remap Boot flash region to caching-inhibited
+diff --git a/include/configs/P1_P2_RDB.h b/include/configs/P1_P2_RDB.h
+index e2930c1..078bf15 100644
+--- a/include/configs/P1_P2_RDB.h
++++ b/include/configs/P1_P2_RDB.h
+@@ -338,6 +338,7 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ #define CONFIG_SYS_I2C_EEPROM_NXID
+ #endif
+ #define CONFIG_SYS_I2C_EEPROM_ADDR	0x57
++#define CONFIG_SYS_I2C_EEPROM_ADDR2	0x18
+ #define CONFIG_SYS_I2C_EEPROM_ADDR_LEN 1
+ #define CONFIG_SYS_EEPROM_BUS_NUM	1
+ 
+-- 
+1.5.6.5
+

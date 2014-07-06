@@ -1,0 +1,629 @@
+#!/bin/sh
+
+dbg_iwpriv()
+{
+    echo "iwpriv $1 $2 $3 $4 $5 $6 $7 $8"
+    iwpriv "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8"
+}
+
+apply_apcli()
+{
+# Leave if universal repeater is not activated
+#[ "$(nvram show wl0_apcli_rule 0 enable)" = "0" ] && {
+#[ "$(nvram get apclii0_enable)" = "0" ] && {
+#        ifconfig apclii0 down && ifconfig apclii0 up && iwpriv apclii0 set ApCliEnable=0
+#       echo "apclii0 disconnect with AP>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+#       exit
+#}
+ifconfig apclii0 up
+echo "*****************************************apclii0 up"
+dbg_iwpriv apclii0 set ApCliEnable=1
+ApCliSsid="$(nvram get repeater_SSID)"
+ApCliBssid="$(nvram get repeater_BSSID)"
+
+#[ -z "$ApCliSsid" -a -z "$ApCliBssid" ] && exit
+
+if [ "$(nvram get repeater_lockmac)" = "0" ]; then
+	ApCliBssid=""
+fi
+
+dbg_iwpriv apclii0 set ApCliSsid="$ApCliSsid"
+dbg_iwpriv apclii0 set ApCliBssid="$ApCliBssid"
+iwpriv apclii0 set AutoAssocAP=0
+#enable HT40 connection of TKIP and Wep--Alvin
+dbg_iwpriv apclii0 set HtDisallowTKIP=0
+#add end--Alvin
+
+#adapt_extcha "$ApCliSsid" "$ApCliBssid"
+
+#ApCliChannel="$(nvram get apclii0_channel)"
+#dbg_iwpriv apclii0 set Channel=$ApCliChannel
+
+#case "$(nvram show wl0_apcli_rule 0 secmode)" in
+case "$(nvram get repeater_secmode )" in
+wep)
+    if [ "$(nvram get repeater_wep_encmode)" = "shared" ]; then
+	
+        dbg_iwpriv apclii0 set ApCliAuthMode=SHARED
+    else
+        dbg_iwpriv apclii0 set ApCliAuthMode=OPEN
+    fi
+    
+    dbg_iwpriv apclii0 set ApCliEncrypType=WEP
+    local keyid="$(nvram get repeater_wep_keyindex)"
+    [ -z "$keyid" ] && keyid=1
+    dbg_iwpriv apclii0 set ApCliDefaultKeyID="$keyid"
+    dbg_iwpriv apclii0 set ApCliKey${keyid}="$(nvram get repeater_wep_key${keyid})"
+;;
+######wpa)
+    # We don't have these velues because Ralink ApCli doesn't support wpa
+    ######dbg_iwpriv apclii0 set ApCliAuthMode=WPA
+    #if [ "$(nvram get apclii0_sec_wpa_crypto)" = "aes" ]; then
+    #    dbg_iwpriv apclii0 set ApCliEncrypType=AES
+    #else
+    #    dbg_iwpriv apclii0 set ApCliEncrypType=TKIP
+    #fi
+    #dbg_iwpriv apclii0 set ApCliWPAPSK="$(nvram show wl0_apcli_sec_wpa_rule 0 key)"
+######;;
+######wpa2)
+    # We don't have these velues because Ralink ApCli doesn't support wpa2
+    #######dbg_iwpriv apclii0 set ApCliAuthMode=WPA2
+    #if [ "$(nvram get apclii0_sec_wpa2_crypto)" = "aes" ]; then
+    #    dbg_iwpriv apclii0 set ApCliEncrypType=AES
+    #else
+    #    dbg_iwpriv apclii0 set ApCliEncrypType=TKIP
+    #fi
+    #dbg_iwpriv apclii0 set ApCliWPAPSK="$(nvram show wl0_apcli_sec_wpa2_rule 0 key)"
+######;;
+#psk)
+wpapsk)
+    dbg_iwpriv apclii0 set ApCliAuthMode=WPAPSK
+    if [ "$(nvram get repeater_wpapsk_crypto)" = "aes" ]; then
+        dbg_iwpriv apclii0 set ApCliEncrypType=AES
+    else
+        dbg_iwpriv apclii0 set ApCliEncrypType=TKIP
+    fi
+    dbg_iwpriv apclii0 set ApCliWPAPSK="$(nvram get repeater_wpapsk_key)"
+;;
+#psk2)
+wpa2psk)
+    dbg_iwpriv apclii0 set ApCliAuthMode=WPA2PSK
+    if [ "$(nvram get repeater_wpa2psk_crypto)" = "aes" ]; then
+        dbg_iwpriv apclii0 set ApCliEncrypType=AES
+    else
+        dbg_iwpriv apclii0 set ApCliEncrypType=TKIP
+    fi
+    dbg_iwpriv apclii0 set ApCliWPAPSK="$(nvram get repeater_wpa2psk_key)"
+;;
+*)
+    # All other case are treated as none
+    dbg_iwpriv apclii0 set ApCliAuthMode=OPEN
+    dbg_iwpriv apclii0 set ApCliEncrypType=NONE
+;;
+esac
+#ApcliAddrMode="$(nvram show wl0_apcli_rule 0 addrmode)"
+#ApcliAddrMode="$(nvram get apclii0_addrmode)"
+#dbg_iwpriv apclii0 set apcliAddrMode=$ApcliAddrMode
+dbg_iwpriv apclii0 set apcliAddrMode=0
+
+#if [ "$(nvram show wl_mode_rule 0 mode)" = "wisp" ]; then
+#   dbg_iwpriv apclii0 set apcliAddrMode=0
+#fi
+
+dbg_iwpriv apclii0 set ApCliEnable=1
+ifconfig apclii0 down
+ifconfig apclii0 up
+}
+
+creat_wpa_supplicant_conf()
+{
+    ssid=$(nvram get apclii0_ssid)
+    secmode=$(nvram get apclii0_secmode)
+    if [ "$1" = "wpa" ];then
+	   echo "==wpa=="
+	    wpa_crypto=$(nvram get apclii0_sec_wpa_crypto)
+	    wpa_auth=$(nvram get apclii0_sec_wpa_auth)
+	    wpa_user=$(nvram get apclii0_sec_wpa_user)
+	    wpa_passwd=$(nvram get apclii0_sec_wpa_passwd)	
+    fi
+    
+    if [ "$1" = "wpa2" ] ;then
+	    echo "==wpa2=="
+	    wpa_crypto=$(nvram get apclii0_sec_wpa2_crypto)
+	    wpa_auth=$(nvram get apclii0_sec_wpa2_auth)
+	    wpa_user=$(nvram get apclii0_sec_wpa2_user)
+	    wpa_passwd=$(nvram get apclii0_sec_wpa2_passwd) 
+    fi
+
+   echo "$ssid  $secmode $wpa_crypto $wpa_auth $wpa_user $wpa_passwd "
+   if [ "${secmode}" = "wpa" ];then
+     proto="WPA"
+   else
+     proto="RSN"
+   fi
+
+   if [ "${wpa_crypto}" = "aes" ];then
+     pairwise="CCMP"
+   else
+     pairwise="TKIP"
+   fi
+
+   if [ "${wpa_auth}" = "1" ];then
+     eap="PEAP"
+   else
+     eap="TTLS"
+   fi
+
+   cat > /tmp/wpa_supplicant.conf <<EOF
+
+network={
+        ssid="$ssid"
+        scan_ssid=1
+        key_mgmt=WPA-EAP
+        proto=$proto
+        pairwise=$pairwise
+        eap=$eap
+        identity="$wpa_user"
+        password="$wpa_passwd"
+        phase2="auth=MSCHAPV2"
+}
+EOF
+}
+
+
+
+#~~~~~~~~~~~~~~~~~~~ap~begin~~~~~~~~~~~~~~~
+apply_ssid_sec_none()
+{
+    local vidx="$1"
+    local sidx="$2"
+    dbg_iwpriv rai$sidx set AuthMode=OPEN
+    dbg_iwpriv rai$sidx set EncrypType=NONE
+}
+
+apply_ssid_sec_wep()
+{
+    local vidx="$1"
+    local sidx="$2"
+    #local encmode="$(nvram show wl0_sec_wep_rule $vidx encmode)"
+    local encmode="$(nvram get  repeater_wep_encmode)"
+    #echo "=$(nvram get  rai${vidx}_wep_encmode)="
+
+    #local keyindex="$(nvram show wl0_sec_wep_rule $vidx key_index)"
+    local keyindex="$(nvram get repeater_wep_keyindex)"
+    
+    #local key="$(nvram show wl0_sec_wep_rule $vidx key$keyindex)"
+    local key="$(nvram get repeater_wep_key$keyindex)"
+    
+    #local keytype="$(nvram show wl0_sec_wep_rule $vidx keytype)"
+    #local keytype="$(nvram get rai${vidx}_wep_keytype)"
+    
+    #local ssid="$(nvram show wl0_ssid_rule $vidx ssid)"
+    
+    [ "$encmode" = "open" ] && {
+        dbg_iwpriv rai$sidx set AuthMode=OPEN
+        dbg_iwpriv rai$sidx set EncrypType=WEP
+    }
+    [ "$encmode" = "shared" ] && {
+        dbg_iwpriv rai$sidx set AuthMode=SHARED
+        dbg_iwpriv rai$sidx set EncrypType=WEP
+    }
+    [ "$encmode" = "auto" ] && {
+        dbg_iwpriv rai$sidx set AuthMode=WEPAUTO
+        dbg_iwpriv rai$sidx set EncrypType=WEP
+    }
+    dbg_iwpriv rai$sidx set IEEE8021X=0
+    
+    dbg_iwpriv rai$sidx set Key$keyindex="$key"
+    #dbg_iwpriv rai$sidx set Key2=$key2
+    #dbg_iwpriv rai$sidx set Key3=$key3
+    #dbg_iwpriv rai$sidx set Key4=$key4
+    dbg_iwpriv rai$sidx set DefaultKeyID=$keyindex
+    #dbg_iwpriv rai$sidx set SSID="$ssid"
+}
+
+apply_ssid_sec_psk()
+{
+    local vidx="$1"
+    local sidx="$2"
+    local wpaversion="$3"
+    [ "$wpaversion" = "2" ] && {
+        local wpapadstr="2"
+    }
+    #echo "=====$wpapadstr===="
+    #local key="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx key)"
+    local key="$(nvram get  repeater_wpa${wpapadstr}psk_key )"
+    #echo key="$(nvram get  rai${vidx}_wpa${wpapadstr}_psk_key )"
+    #echo "rai${vidx}_wpa${wpapadstr}_psk_key"
+    
+    #local crypto="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx crypto)"
+    #local crypto="$(nvram get rai${vidx}_wpa${wpapadstr}_psk_crypto)"
+    local crypto=mixed
+    #echo crypto="$(nvram get rai${vidx}_wpa${wpapadstr}_psk_crypto)"
+    
+    #local ssid="$(nvram show wl0_ssid_rule $vidx ssid)"
+ 
+    #local RekeyMethod="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx rekey_mode)"
+    #local RekeyMethod="$(nvram get rai${vidx}_wpa${wpapadstr}_psk_RekeyMethod)"
+    local RekeyMethod=time
+    #rai${vidx}_wpa${wpapadstr}_psk_RekeyMethod is set to time
+    #echo "RekeyMethod="$(nvram get rai${vidx}_wpa${wpapadstr}_psk_RekeyMethod)""
+    
+    local wpacap=""
+    
+    #[ "$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx wpacap)" = "1" -a "$wpapadstr" = "2" ] && wpacap="WPAPSK"
+    #rai0 need to modify to rai${vidx}
+    #[ "$(nvram get  rai0_wpa2_psk_wpacap)" = "1" -a "$wpapadstr" = "2" ] && wpacap="WPAPSK"
+    
+    #[ "$(nvram get  rai${sidx}_wpa2_psk_wpacap)" = "1" -a "$wpapadstr" = "2" ] && wpacap="WPAPSK"
+    #don't need to wpacap here
+    #[ "$wpapadstr" = "2" ] && wpacap="WPAPSK"
+    echo 
+
+    dbg_iwpriv rai$sidx set AuthMode="${wpacap}WPA${wpapadstr}PSK"
+
+    case "$crypto" in 
+    aes)
+        dbg_iwpriv rai$sidx set EncrypType=AES
+    ;;
+    tkip)
+        dbg_iwpriv rai$sidx set EncrypType=TKIP
+    ;;
+    mixed)
+        dbg_iwpriv rai$sidx set EncrypType=TKIPAES
+        [ "$wpaversion" = "2" -a -n "$wpacap" ] && {
+            dbg_iwpriv rai$sidx set WpaMixPairCipher="WPA_TKIPAES_WPA2_TKIPAES"
+        }
+    ;;
+    *)
+        dbg_iwpriv rai$sidx set EncrypType=TKIPAES
+        [ "$wpaversion" = "2" -a -n "$wpacap" ] && {
+            dbg_iwpriv rai$sidx set WpaMixPairCipher="WPA_TKIPAES_WPA2_TKIPAES"
+        }
+    ;;
+    esac
+    dbg_iwpriv rai$sidx set IEEE8021X=0
+    #dbg_iwpriv rai$sidx set SSID="$ssid"
+    dbg_iwpriv rai$sidx set WPAPSK=$key
+    dbg_iwpriv rai$sidx set DefaultKeyID=2
+    ##dbg_iwpriv rai$sidx set SSID="$ssid"
+    if [ "$RekeyMethod" = "time" ]; then
+        dbg_iwpriv rai$sidx set RekeyMethod="TIME"
+        #dbg_iwpriv rai$sidx set RekeyInterval="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx rekey_time_interval)"
+        #dbg_iwpriv rai$sidx set RekeyInterval="$(nvram get rai${sidx}_wpa${wpapadstr}_psk_rekey_time_interval)"
+         dbg_iwpriv rai$sidx set RekeyInterval=3600
+    elif [ "$RekeyMethod" = "pkt" ]; then
+        dbg_iwpriv rai$sidx set RekeyMethod="PKT"
+        #dbg_iwpriv rai$sidx set RekeyInterval="$(nvram get rai${sidx}_wpa${wpapadstr}_psk_rekey_time_interval)"
+        dbg_iwpriv rai$sidx set RekeyInterval=3600
+    else
+        dbg_iwpriv rai$sidx set RekeyMethod="DISABLE"
+    fi
+}
+
+apply_ssid_sec_wpa()
+{
+    local vidx="$1"
+    local sidx="$2"
+    local wpaversion="$3"
+    [ "$wpaversion" = "2" ] && {
+        local wpapadstr="2"
+    }
+
+    #local key="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx key)"
+    #seems no need
+    local key="$(nvram get  rai${sidx}_wpa${wpapadstr}_key)"
+
+    
+    #local crypto="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx crypto)"
+    #local crypto="$(nvram get rai${sidx}_wpa${wpapadstr}_crypto)"
+    local crypto=mixed
+    
+    #local ssid="$(nvram show wl0_ssid_rule $vidx ssid)"
+
+
+    
+    #local radiusserver="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx radius_ipaddr)"
+    local radiusserver="$(nvram get rai${sidx}_wpa${wpapadstr}_radius_ipaddr)"
+
+    
+    #local radiusport="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx radius_port)"
+    local radiusport="$(nvram get rai${sidx}_wpa${wpapadstr}_radius_port)"
+
+    
+    #local radiuskey="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx radius_key)"
+    local radiuskey="$(nvram get rai${sidx}_wpa${wpapadstr}_radius_key)"
+
+
+    
+    local own_ip_addr="$(nvram get lan0_ipaddr)"
+
+
+    #local RekeyMethod="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx rekey_mode)"
+    #local RekeyMethod="$(nvram get rai${sidx}_wpa${wpapadstr}_rekey_mode)"
+    local RekeyMethod=time
+
+    
+    # WPA2
+    local wpacap=""
+    #[ "$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx wpacap)" = "1" -a "$wpaversion" = "2" ] && wpacap="WPA1"
+    # rai0_wpa2_wpacap need to modify to rai${idx}_wpa2_wpacap
+    #[ "$(nvram get rai0_wpa2_wpacap)" = "1" -a "$wpaversion" = "2" ] && wpacap="WPA1"
+    [ "$(nvram get rai${sidx}_wpa2_wpacap)" = "1" -a "$wpaversion" = "2" ] && wpacap="WPA1"
+    [ "$wpaversion" = "1" ] && wpaversion=
+
+
+    
+    dbg_iwpriv rai$sidx set AuthMode="${wpacap}WPA$wpaversion"
+    
+    case "$crypto" in 
+    aes)
+        dbg_iwpriv rai${sidx} set EncrypType=AES
+    ;;
+    tkip)
+        dbg_iwpriv rai${sidx} set EncrypType=TKIP
+    ;;
+    mixed)
+        dbg_iwpriv rai${sidx} set EncrypType=TKIPAES
+        [ "$wpaversion" = "2" -a -n "$wpacap" ] && {
+            dbg_iwpriv rai${sidx} set WpaMixPairCipher="WPA_TKIPAES_WPA2_TKIPAES"
+        }
+    ;;
+    *)
+        dbg_iwpriv rai${sidx} set EncrypType=TKIPAES
+        [ "$wpaversion" = "2" -a -n "$wpacap" ] && {
+            dbg_iwpriv rai${sidx} set WpaMixPairCipher="WPA_TKIPAES_WPA2_TKIPAES"
+        }
+    ;;
+    esac
+    # "IEEE8021X=1" only when Radius-WEP or Radius-NONE mode on, otherwise must 
+    # "IEEE8021X=0". 
+    dbg_iwpriv rai$sidx set IEEE8021X=0
+    #dbg_iwpriv rai$sidx set SSID="$ssid"
+    dbg_iwpriv rai$sidx set RADIUS_Server=$radiusserver
+    dbg_iwpriv rai$sidx set RADIUS_Port=$radiusport
+    dbg_iwpriv rai$sidx set RADIUS_Key=$radiuskey
+    dbg_iwpriv rai$sidx set DefaultKeyID=2
+    dbg_iwpriv rai$sidx set own_ip_addr=$own_ip_addr
+    #dbg_iwpriv rai$sidx set session_timeout_interval="$(nvram show wl0_sec_wpa2_rule $vidx session_timeout)"
+    if [ "$RekeyMethod" = "time" ]; then
+        dbg_iwpriv rai$sidx set RekeyMethod="TIME"
+        #dbg_iwpriv rai$sidx set RekeyInterval="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx rekey_time_interval)"
+        #dbg_iwpriv rai$sidx set RekeyInterval="$(nvram get rai${sidx}_wpa${wpapadstr}_rekey_time_interval)"
+        dbg_iwpriv rai$sidx set RekeyInterval=3600
+    elif [ "$RekeyMethod" = "pkt" ]; then
+        dbg_iwpriv rai$sidx set RekeyMethod="PKT"
+        #dbg_iwpriv rai$sidx set RekeyInterval="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx rekey_pkt_interval)"
+        dbg_iwpriv rai$sidx set RekeyInterval="$(nvram get rai${sidx}_wpa${wpapadstr}_rekey_pkt_interval)"
+    else
+        dbg_iwpriv rai$sidx set RekeyMethod="DISABLE"
+    fi
+    # For WPA2 settings
+    [ "$wpaversion" = "2" ] && {
+        #dbg_iwpriv rai$sidx set PMKCachePeriod="$(nvram show wl0_sec_wpa2_rule $vidx pmkperiod)"
+        #dbg_iwpriv rai$sidx set PMKCachePeriod="$(nvram get rai${sidx}_wpa2_pmkperiod)"
+        dbg_iwpriv rai$sidx set PMKCachePeriod=10
+        #dbg_iwpriv rai$sidx set PreAuth="$(nvram show wl0_sec_wpa2_rule $vidx preauth)"
+        dbg_iwpriv rai$sidx set PreAuth="$(nvram get rai${sidx}_wpa2_preauth)"
+    }
+    /etc/rc.common /etc/init.d/rt2860apd start
+}
+
+
+apply_ssid_acl()
+{
+    local sidx=$1  
+    dbg_iwpriv rai$sidx set AccessPolicy=0
+    dbg_iwpriv rai$sidx set ACLClearAll=1  
+    dbg_iwpriv rai$sidx set ACLAddEntry="$(nvram get rai${sidx}_acl_add_entry)"
+    #dbg_iwpriv rai$sidx set ACLDelEntry="$(nvram get rai${sidx}_acl_del_entry)"
+}
+
+apply_ssid ()
+{
+  #local wlvnum="$(nvram get wlv_rule_num)"
+  local wlvnum=1
+  local wlvidx=0
+  local ssididx=0
+
+	brctl delif br0 rai7
+	brctl delif br0 rai6
+	brctl delif br0 rai5
+  brctl delif br0 rai4
+	brctl delif br0 rai3
+	brctl delif br0 rai2
+	brctl delif br0 rai1
+	brctl delif br0 rai0
+	#brctl delif br0 apclii0
+
+	ifconfig rai7 down
+	ifconfig rai6 down
+	ifconfig rai5 down
+	ifconfig rai4 down
+	ifconfig rai3 down
+	ifconfig rai2 down
+	ifconfig rai1 down
+	#ifconfig rai0 down
+	#ifconfig apclii0 down
+
+	killall rt2860apd
+
+    while [ "$wlvidx" -lt "$wlvnum" ];
+    do
+        # Apply settings to every ssid
+        #[ "$(nvram show wl0_basic_rule $wlvidx enable)" = "1" ] && {
+        #[ "$(nvram get rai0_EnableNetwork)" = "1" ] && {
+        #[ "$(nvram get rai${ssididx}_EnableNetwork)" = "1" ] && {
+        {
+            #iterate_wlv "$wlvidx" "$ssididx" "wl0_basic_rule" "$wlv_basic_rule_item" "$wlv_basic_rule_priv"
+            #iterate_wlv "$wlvidx" "$ssididx" "wl0_ssid_rule" "$wlv_ssid_rule_item" "$wlv_ssid_rule_priv"
+	    #payattention	    
+	    ifconfig rai${ssididx} up
+	    dbg_iwpriv rai${ssididx} set HideSSID=0  
+	    #dbg_iwpriv rai${ssididx} set HideSSID="$(nvram get rai${ssididx}_HideSSID)"
+	    dbg_iwpriv rai${ssididx} set NoForwarding=0 
+	    #dbg_iwpriv rai${ssididx} set NoForwarding="$(nvram get rai${ssididx}_NoForwarding)" 
+	    #dbg_iwpriv rai${ssididx} set SSID="$(nvram get rai${ssididx}_SSID)" 	            
+      dbg_iwpriv rai${ssididx} set SSID="$(nvram get repeater_SSID)"     
+            #secmode="$(nvram get  rai${ssididx}_secmode )"
+            secmode="$(nvram get  repeater_secmode )"
+            #echo "====secmode is $secmode ====== "
+            case "$secmode" in
+            none)
+                apply_ssid_sec_none "$wlvidx" "$ssididx"
+            ;;
+            wep)
+                #echo "==in wep=="
+                apply_ssid_sec_wep "$wlvidx" "$ssididx"
+            ;;
+            wpapsk)
+                apply_ssid_sec_psk "$wlvidx" "$ssididx" "1"
+            ;;
+            wpa2psk)
+                apply_ssid_sec_psk "$wlvidx" "$ssididx" "2"
+            ;;
+            #wpa)
+            #    apply_ssid_sec_wpa "$wlvidx" "$ssididx" "1"
+            #;;
+            #wpa2)
+            #    apply_ssid_sec_wpa "$wlvidx" "$ssididx" "2"
+            #;;
+            disabled)
+                apply_ssid_sec_none "$wlvidx" "$ssididx"
+            ;;
+            *)
+                apply_ssid_sec_none "$wlvidx" "$ssididx"
+            ;;
+            esac
+                apply_ssid_acl "$ssididx"
+            brctl addif br0 rai${ssididx}
+                
+        }
+        ssididx="$(($ssididx + 1))"
+        wlvidx="$(($wlvidx + 1))"
+    done
+}
+
+
+apply_setting()
+{
+#category=$1
+#item=$2
+#ifconfig apclii0 down
+#ifconfig rai0 down
+ifconfig rai0 up
+#ifconfig rai0 up
+#ifconfig rai0 up
+##
+
+dbg_iwpriv rai0 set DeviceMode=0
+
+##
+##dbg_iwpriv rai0 set IEEE8021X=0
+
+#WPA,WPA2
+#apply_ssid
+
+#dbg_iwpriv rai0 set DtimPeriod="$(nvram get rai_DtimPeriod)"
+dbg_iwpriv rai0 set DtimPeriod=1
+#dbg_iwpriv rai0 set HtGi="$(nvram get rai_HtGi)"
+dbg_iwpriv rai0 set HtGi=1
+#move behind? no need
+dbg_iwpriv rai0 set RadioOn=1  
+#dbg_iwpriv rai0 set WirelessMode="$(nvram get rai_wireless_mode)"
+dbg_iwpriv rai0 set WirelessMode=9
+#Configure CutTxPower.
+#dbg_iwpriv rai0 set CutTxPower="$(nvram get rai_CutTxPower)"
+dbg_iwpriv rai0 set CutTxPower=0
+#dbg_iwpriv rai0 set NoForwardingBTNBSSID="$(nvram get rai_no_forwarding_btn_bssid)" 
+dbg_iwpriv rai0 set NoForwardingBTNBSSID=1
+#Configure ack timeout.
+#dbg_iwpriv rai0 ack_timeout 1="$(nvram get rai_ack_timeout)" 
+
+
+
+#if [ "$(nvram get rai_channel)" = "0" ];then
+#{
+#	dbg_iwpriv rai0 set Channel=0
+#	dbg_iwpriv rai0 set AutoChannelSel="$(nvram get rai_AutoChannelSel)" 
+#}
+#else
+#{
+#	dbg_iwpriv rai0 set Channel="$(nvram get rai_channel)" 
+#}
+#fi
+
+
+dbg_iwpriv rai0 set Channel="$(nvram get repeater_channel)" 
+#dbg_iwpriv rai0 set HtBw="$(nvram get rai_HtBw)" 
+#dbg_iwpriv rai0 set HtExtcha="$(nvram get rai_HtExtcha)" 
+dbg_iwpriv rai0 set HtBw="$(nvram get repeater_HtBw)" 
+dbg_iwpriv rai0 set HtExtcha="$(nvram get repeater_HtExtcha)" 
+
+
+#ifconfig rai0 up
+#need move forwarding
+#dbg_iwpriv rai0 set DtimPeriod="$(nvram get rai_DtimPeriod)"
+#dbg_iwpriv rai0 set HtGi="$(nvram get rai_HtGi)"
+#dbg_iwpriv rai0 set BeaconPeriod="$(nvram get rai_BeaconPeriod)"
+dbg_iwpriv rai0 set BeaconPeriod=100
+}
+
+
+#~~~~~~~~~~~~~~~~~~~ap~end~~~~~~~~~~~~~~~
+
+
+echo "~~repeater-client config begin~~"
+brctl delif br0 rai7
+brctl delif br0 rai6
+brctl delif br0 rai5
+brctl delif br0 rai4
+brctl delif br0 rai3
+brctl delif br0 rai2
+brctl delif br0 rai1
+brctl delif br0 rai0
+brctl delif br0 apclii0
+
+ifconfig rai7 down
+ifconfig rai6 down
+ifconfig rai5 down
+ifconfig rai4 down
+ifconfig rai3 down
+ifconfig rai2 down
+ifconfig rai1 down
+ifconfig rai0 down
+
+ifconfig apclii0 down
+
+#local wpa_mode="$(nvram get apclii0_secmode)"
+ifconfig rai0 up
+apply_apcli
+##??
+##repeater need to set DeviceMode to send beacon
+##dbg_iwpriv rai0 set DeviceMode=1
+brctl addif br0 apclii0
+#apply_ssid
+
+dbg_iwpriv rai0 set MACRepeaterEn=0
+
+
+killall wpa_supplicant
+#creat_wpa_supplicant_conf $wpa_mode
+#start wpa_supplica
+#if [ "$wpa_mode" = "wpa" -o "$wpa_mode" = "wpa2" ]; then  
+#	/usr/sbin/wpa_supplicant  -iapclii0 -b br0 -c /tmp/wpa_supplicant.conf  -Dralink -B  
+#fi
+ifconfig eth2 down
+ifconfig eth2 hw ether $(sh /usr/sbin/PFD_Test get ethmac)
+ifconfig eth2 up
+echo "~~repeater client config end~~"
+
+echo "~~repeater ap config begin~~"
+apply_setting
+apply_ssid
+apply_setting
+apply_ssid
+echo "~~repeater ap config end~~"
+
+
+

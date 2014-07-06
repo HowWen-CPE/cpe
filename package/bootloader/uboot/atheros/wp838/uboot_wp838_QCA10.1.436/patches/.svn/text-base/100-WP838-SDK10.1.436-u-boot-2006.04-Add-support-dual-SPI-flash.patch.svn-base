@@ -1,0 +1,919 @@
+Index: u-boot-2006-04-06-1725/Makefile
+===================================================================
+--- u-boot-2006-04-06-1725.orig/Makefile	2013-12-14 09:37:26.389050175 +0800
++++ u-boot-2006-04-06-1725/Makefile	2013-12-14 09:37:26.507045871 +0800
+@@ -1987,6 +1987,15 @@
+ 	@echo '#define CONFIG_AR7242_S16_PHY 1' >>include/config.h
+ 	@echo '#define CFG_AG7240_NMACS 1' >>include/config.h
+ endif
++#liteon add+
++ifeq ($(ETH_CONFIG2), _f1e)
++	@echo '#define CONFIG_F1E_PHY 1' >>include/config.h
++	@echo '#define CFG_DUAL_PHY_SUPPORT 1' >>include/config.h
++endif
++ifdef AP_SPI_CS2_GPIO
++	@echo "#define AP_SPI_CS2_GPIO $(AP_SPI_CS2_GPIO)" >>include/config.h
++endif
++#liteon add-
+ ifeq ($(ETH_CONFIG), _f1e)
+ 	@echo '#define CONFIG_F1E_PHY 1' >>include/config.h
+ 	@echo '#define CFG_AG7240_NMACS 1' >>include/config.h
+@@ -3128,6 +3137,11 @@
+ 	@echo "#define ATH_CAL_NAND_PARTITION "\"$(strip ${ATH_CAL_NAND_PARTITION})\" >>include/config.h
+ 	@echo '#define ATH_CAL_OFF_INVAL        0xbad0ff' >>include/config.h
+ endif
++#liteon add+
++ifdef AP_SPI_CS2_GPIO
++	@echo "#define AP_SPI_CS2_GPIO $(AP_SPI_CS2_GPIO)" >>include/config.h
++endif
++#liteon add-
+ ifdef FLASH_SIZE
+ 	@echo '#define FLASH_SIZE	$(FLASH_SIZE)'	>>include/config.h
+ endif
+Index: u-boot-2006-04-06-1725/board/ar7240/common/ar7240_flash.c
+===================================================================
+--- u-boot-2006-04-06-1725.orig/board/ar7240/common/ar7240_flash.c	2013-12-14 09:37:25.374992625 +0800
++++ u-boot-2006-04-06-1725/board/ar7240/common/ar7240_flash.c	2013-12-14 09:37:26.507045871 +0800
+@@ -38,12 +38,24 @@
+ /*
+  * statics
+  */
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++static void ar7240_spi_write_enable_cs(unsigned cs);
++static void ar7240_spi_poll_cs(unsigned cs);
++static void ar7240_spi_write_page_cs(unsigned cs, uint32_t addr, uint8_t *data, int len);
++static void ar7240_spi_sector_erase_cs(unsigned cs, uint32_t addr);
++static void ar7240_spi_flash_unblock_cs(unsigned cs);
++#else
++//liteon add-
+ static void ar7240_spi_write_enable(void);
+ static void ar7240_spi_poll(void);
+ #if !defined(ATH_SST_FLASH)
+ static void ar7240_spi_write_page(uint32_t addr, uint8_t * data, int len);
+ #endif
+ static void ar7240_spi_sector_erase(uint32_t addr);
++//liteon add+
++#endif
++//liteon add-
+ 
+ static void
+ ath_spi_read_id(void)
+@@ -55,7 +67,15 @@
+ 	ar7240_spi_delay_8();
+ 	ar7240_spi_delay_8();
+ 	ar7240_spi_delay_8();
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++	ar7240_spi_go_cs(0);
++#else
++//liteon add-
+ 	ar7240_spi_go();
++//liteon add+
++#endif
++//liteon add-
+ 
+ 	rd = ar7240_reg_rd(AR7240_SPI_RD_STATUS);
+ 
+@@ -75,8 +95,32 @@
+ }
+ #endif
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++static void 
++flash_init_each(int bank, flash_info_t *flash_info)
++{
++    int i;
++    
++    flash_info->flash_id	= 0x100000ff;
++    flash_info->size		= (CFG_FLASH_SIZE);//16MB
++    flash_info->sector_count	= (CFG_FLASH_SIZE)/(CFG_FLASH_SECTOR_SIZE);// (16MB/64KB)
++    flash_info->bank            =  bank;
++
++    for (i=0 ; i<flash_info->sector_count ;i++) {
++         flash_info->start[i]	= (bank ? (0xbe000000) : (0xbf000000)) + (i * (CFG_FLASH_SECTOR_SIZE));
++    }
++}
++#endif
++//liteon add-
++
+ unsigned long flash_init(void)
+ {
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++        int i;
++#endif
++//liteon add-
+ #ifndef CONFIG_WASP
+ #ifdef ATH_SST_FLASH
+ 	ar7240_reg_wr_nf(AR7240_SPI_CLOCK, 0x3);
+@@ -90,10 +134,27 @@
+ 	ath_spi_read_id();
+ 	ar7240_reg_rmw_clear(AR7240_SPI_FS, 1);
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++        memset(flash_info, 0, sizeof(flash_info));
++
++	for (i=0 ; i<CFG_MAX_FLASH_BANKS ; i++) {
++             flash_init_each(i, &flash_info[i]);
++	}
++	        	
++	/*
++	 * quick and dirty
++	 */
++	return (2*flash_get_geom(&flash_info[0]));
++#else
++//liteon add-
+ 	/*
+ 	 * hook into board specific code to fill flash_info
+ 	 */
+ 	return (flash_get_geom(&flash_info[0]));
++//liteon add+
++#endif
++//liteon add-
+ }
+ 
+ void
+@@ -118,7 +179,15 @@
+ #else
+ 		puts(".");
+ #endif
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++		ar7240_spi_sector_erase_cs(info->bank, i * sector_size);
++#else
++//liteon add-
+ 		ar7240_spi_sector_erase(i * sector_size);
++//liteon add+
++#endif
++//liteon add-
+ 	}
+ 	ar7240_spi_done();
+ 	printf("\n");
+@@ -194,7 +263,15 @@
+ 		len_this_lp =
+ 		    ((len - total) >
+ 		     bytes_this_page) ? bytes_this_page : (len - total);
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++		ar7240_spi_write_page_cs(info->bank, dst, src, len_this_lp);
++#else
++//liteon add-
+ 		ar7240_spi_write_page(dst, src, len_this_lp);
++//liteon add+
++#endif
++//liteon add-
+ 		total += len_this_lp;
+ 		if(counter>=255)
+ 		{
+@@ -213,6 +290,103 @@
+ }
+ #endif
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++static void
++ar7240_spi_write_enable_cs(unsigned cs)  
++{
++    ar7240_reg_wr_nf(AR7240_SPI_FS, 1);                  
++    ar7240_reg_wr_nf(AR7240_SPI_WRITE, AR7240_SPI_CS_DIS);     
++    ar7240_spi_bit_banger_cs(cs,AR7240_SPI_CMD_WREN);             
++    ar7240_spi_go_cs(cs);
++}
++
++static void
++ar7240_spi_flash_unblock_cs(unsigned cs)
++{
++    ar7240_spi_write_enable_cs(cs);
++    ar7240_spi_bit_banger_cs(cs,AR7240_SPI_CMD_WRITE_SR);
++    ar7240_spi_bit_banger_cs(cs,0x0);
++    ar7240_spi_go_cs(cs);
++    ar7240_spi_poll_cs(cs);
++}
++
++
++static void
++ar7240_spi_poll_cs(unsigned cs)
++{
++    int rd;                                                 
++
++    do {
++        ar7240_reg_wr_nf(AR7240_SPI_WRITE, AR7240_SPI_CS_DIS);     
++        ar7240_spi_bit_banger_cs(cs,AR7240_SPI_CMD_RD_STATUS);        
++        ar7240_spi_delay_8_cs(cs);
++        rd = (ar7240_reg_rd(AR7240_SPI_RD_STATUS) & 1);               
++    }while(rd);
++}
++
++static void
++ar7240_spi_write_page_cs(unsigned cs, uint32_t addr, uint8_t *data, int len)
++{
++    int i;
++    uint8_t ch;
++
++    ar7240_spi_write_enable_cs(cs);
++    ar7240_spi_bit_banger_cs(cs, AR7240_SPI_CMD_PAGE_PROG);
++    ar7240_spi_send_addr_cs(cs,addr);
++
++    for(i = 0; i < len; i++) {
++        ch = *(data + i);
++        ar7240_spi_bit_banger_cs(cs,ch);
++    }
++
++    ar7240_spi_go_cs(cs);
++    ar7240_spi_poll_cs(cs);
++}
++
++static void
++ar7240_spi_sector_erase_cs(unsigned cs, uint32_t addr)
++{
++    ar7240_spi_write_enable_cs(cs);
++    ar7240_spi_bit_banger_cs(cs,AR7240_SPI_CMD_SECTOR_ERASE);
++    ar7240_spi_send_addr_cs(cs,addr);
++    ar7240_spi_go_cs(cs);
++    ar7240_spi_poll_cs(cs);
++}
++
++int
++flash_read_page(flash_info_t *info, ulong addr, uchar *dest, ulong len)
++{
++	if (info->bank==0) {
++		memcpy(dest, (uchar *)addr, len);
++		return	0;
++	}
++
++	if (addr >= info->start[0] && addr < (info->start[0] + info->size)) {
++		ar7240_reg_wr_nf(AR7240_SPI_FS, 1);                  
++		ar7240_reg_wr_nf(AR7240_SPI_WRITE, AR7240_SPI_CS_DIS);     
++		ar7240_spi_bit_banger_cs(info->bank,AR7240_SPI_CMD_FAST_READ);        
++		ar7240_spi_send_addr_cs(info->bank,addr);
++		ar7240_spi_delay_8_cs(info->bank);
++		for (; len>0 ; len--, dest++) {
++			ar7240_spi_delay_8_cs(info->bank);
++			*dest	= (uchar)ar7240_reg_rd(AR7240_SPI_RD_STATUS);
++		}
++		ar7240_spi_done();
++		return	0;
++	}
++
++	{
++		ulong	i;
++		uchar	deadbeaf[4]	= { 0xDE, 0xAD, 0xBE, 0xEF };
++		for (i=0 ; i<len ; i++) {
++			dest[i]	= deadbeaf[i & 0x3];
++		}
++		return	-1;
++	}
++}
++#else
++//liteon add-
+ static void
+ ar7240_spi_write_enable()
+ {
+@@ -269,3 +443,6 @@
+ 	display(0x7d);
+ 	ar7240_spi_poll();
+ }
++//liteon add+
++#endif
++//liteon add-
+Index: u-boot-2006-04-06-1725/board/ar7240/common/ar7240_flash.h
+===================================================================
+--- u-boot-2006-04-06-1725.orig/board/ar7240/common/ar7240_flash.h	2013-12-14 09:37:25.374992625 +0800
++++ u-boot-2006-04-06-1725/board/ar7240/common/ar7240_flash.h	2013-12-14 09:37:26.507045871 +0800
+@@ -34,6 +34,10 @@
+ #define AR7240_SPI_CS_DIS       0x70000
+ #define AR7240_SPI_CE_LOW       0x60000
+ #define AR7240_SPI_CE_HIGH      0x60100
++//liteon add+
++#define AR7240_SPI_CS_LOW       0x70000
++#define AR7240_SPI_CS_HIGH      0x70100
++//liteon add-
+ 
+ #define AR7240_SPI_CMD_WRITE_SR     0x01
+ #define AR7240_SPI_CMD_WREN         0x06
+@@ -66,6 +70,40 @@
+     }       \
+ }while(0);
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++#define ar7240_spi_bit_banger_cs(_cs, _byte)  do {        \
++    int _i;                                      \
++    for(_i = 0; _i < 8; _i++) {                    \
++	     ar7240_reg_wr_nf(AR7240_SPI_WRITE, \ 
++                       (~(1<<(16 + _cs)) & (AR7240_SPI_CS_LOW)) | ar7240_be_msb(_byte, _i));  \
++	     ar7240_reg_wr_nf(AR7240_SPI_WRITE, \ 
++                       (~(1<<(16 + _cs)) & (AR7240_SPI_CS_HIGH)) | ar7240_be_msb(_byte, _i)); \
++    }	\
++}while(0);
++
++
++#define ar7240_spi_go_cs(_cs) do {	\
++       ar7240_reg_wr_nf(AR7240_SPI_WRITE, (~(1<<(16 + _cs)) & (AR7240_SPI_CS_LOW))); \
++       ar7240_reg_wr_nf(AR7240_SPI_WRITE, AR7240_SPI_CS_DIS); \
++}while(0);
++
++
++#define ar7240_spi_send_addr_cs(_cs,_addr) do {	\
++    unsigned long	__adr	= (_addr) & 0x00ffffff;		\
++    ar7240_spi_bit_banger_cs(_cs, (((__adr) & 0xff0000) >> 16));\
++    ar7240_spi_bit_banger_cs(_cs, (((__adr) & 0x00ff00) >>  8));\
++    ar7240_spi_bit_banger_cs(_cs, (((__adr) & 0x0000ff) >>  0));\
++}while(0)
++
++#define ar7240_spi_delay_8()    ar7240_spi_bit_banger(0)
++#define ar7240_spi_delay_8_cs(_cs)	ar7240_spi_bit_banger_cs(_cs,0)
++#define ar7240_spi_done() do {	\
++    ar7240_reg_wr_nf(AR7240_SPI_WRITE, AR7240_SPI_CS_DIS);	\
++    ar7240_reg_wr(AR7240_SPI_FS, 0);			\
++} while(0)
++#else
++//liteon add-
+ #define ar7240_spi_go() do {        \
+     ar7240_reg_wr_nf(AR7240_SPI_WRITE, AR7240_SPI_CE_LOW); \
+     ar7240_reg_wr_nf(AR7240_SPI_WRITE, AR7240_SPI_CS_DIS); \
+@@ -80,6 +118,9 @@
+ 
+ #define ar7240_spi_delay_8()    ar7240_spi_bit_banger(0)
+ #define ar7240_spi_done()       ar7240_reg_wr_nf(AR7240_SPI_FS, 0)
++//liteon add+
++#endif  //AP_SPI_CS2_GPIO
++//liteon add-
+ 
+ extern unsigned long flash_get_geom (flash_info_t *flash_info);
+ 
+Index: u-boot-2006-04-06-1725/board/atheros/common/ath_flash.c
+===================================================================
+--- u-boot-2006-04-06-1725.orig/board/atheros/common/ath_flash.c	2013-12-14 09:37:25.618971515 +0800
++++ u-boot-2006-04-06-1725/board/atheros/common/ath_flash.c	2013-12-14 09:37:26.511356795 +0800
+@@ -39,12 +39,24 @@
+ /*
+  * statics
+  */
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++static void ath_spi_write_enable_cs(unsigned cs);
++static void ath_spi_poll_cs(unsigned cs);
++static void ath_spi_write_page_cs(unsigned cs, uint32_t addr, uint8_t *data, int len);
++static void ath_spi_sector_erase_cs(unsigned cs, uint32_t addr);
++static void ath_spi_flash_unblock_cs(unsigned cs);
++#else
++//liteon add-
+ static void ath_spi_write_enable(void);
+ static void ath_spi_poll(void);
+ #if !defined(ATH_SST_FLASH)
+ static void ath_spi_write_page(uint32_t addr, uint8_t * data, int len);
+ #endif
+ static void ath_spi_sector_erase(uint32_t addr);
++//liteon add+
++#endif
++//liteon add-
+ 
+ static void
+ ath_spi_read_id(void)
+@@ -56,7 +68,15 @@
+ 	ath_spi_delay_8();
+ 	ath_spi_delay_8();
+ 	ath_spi_delay_8();
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++	ath_spi_go_cs(0);
++#else
++//liteon add-
+ 	ath_spi_go();
++//liteon add+
++#endif
++//liteon add-
+ 
+ 	rd = ath_reg_rd(ATH_SPI_RD_STATUS);
+ 
+@@ -76,8 +96,32 @@
+ }
+ #endif
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++static void 
++flash_init_each(int bank, flash_info_t *flash_info)
++{
++    int i;
++    
++    flash_info->flash_id	= 0x100000ff;
++    flash_info->size		= (CFG_FLASH_SIZE);//16MB
++    flash_info->sector_count	= (CFG_FLASH_SIZE)/(CFG_FLASH_SECTOR_SIZE);// (16MB/64KB)
++    flash_info->bank            =  bank;
++
++    for (i=0 ; i<flash_info->sector_count ;i++) {
++         flash_info->start[i]	= (bank ? (0xbe000000) : (0xbf000000)) + (i * (CFG_FLASH_SECTOR_SIZE));
++    }
++}
++#endif
++//liteon add-
++
+ unsigned long flash_init(void)
+ {
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++        int i;
++#endif
++//liteon add-
+ #if !(defined(CONFIG_WASP_SUPPORT) || defined(CONFIG_MACH_QCA955x) || defined(CONFIG_MACH_QCA953x))
+ #ifdef ATH_SST_FLASH
+ 	ath_reg_wr_nf(ATH_SPI_CLOCK, 0x3);
+@@ -91,10 +135,27 @@
+ 	ath_spi_read_id();
+ 	ath_reg_rmw_clear(ATH_SPI_FS, 1);
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++        memset(flash_info, 0, sizeof(flash_info));
++
++	for (i=0 ; i<CFG_MAX_FLASH_BANKS ; i++) {
++             flash_init_each(i, &flash_info[i]);
++	}
++	        	
++	/*
++	 * quick and dirty
++	 */
++	return (2*flash_get_geom(&flash_info[0]));
++#else
++//liteon add-
+ 	/*
+ 	 * hook into board specific code to fill flash_info
+ 	 */
+ 	return (flash_get_geom(&flash_info[0]));
++//liteon add+
++#endif
++//liteon add-
+ }
+ 
+ void
+@@ -113,7 +174,15 @@
+ 
+ 	for (i = s_first; i <= s_last; i++) {
+ 		printf("\b\b\b\b%4d", i);
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++		ath_spi_sector_erase_cs(info->bank, i * sector_size);
++#else
++//liteon add-
+ 		ath_spi_sector_erase(i * sector_size);
++//liteon add+
++#endif
++//liteon add-
+ 	}
+ 	ath_spi_done();
+ 	printf("\n");
+@@ -187,7 +256,15 @@
+ 		len_this_lp =
+ 			((len - total) >
+ 			bytes_this_page) ? bytes_this_page : (len - total);
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++		ath_spi_write_page_cs(info->bank, dst, src, len_this_lp);
++#else
++//liteon add-
+ 		ath_spi_write_page(dst, src, len_this_lp);
++//liteon add+
++#endif
++//liteon add-
+ 		total += len_this_lp;
+ 	}
+ 
+@@ -197,6 +274,103 @@
+ }
+ #endif
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++static void
++ath_spi_write_enable_cs(unsigned cs)  
++{
++    ath_reg_wr_nf(ATH_SPI_FS, 1);                  
++    ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS);     
++    ath_spi_bit_banger_cs(cs,ATH_SPI_CMD_WREN);             
++    ath_spi_go_cs(cs);
++}
++
++static void
++ath_spi_flash_unblock_cs(unsigned cs)
++{
++    ath_spi_write_enable_cs(cs);
++    ath_spi_bit_banger_cs(cs,ATH_SPI_CMD_WRITE_SR);
++    ath_spi_bit_banger_cs(cs,0x0);
++    ath_spi_go_cs(cs);
++    ath_spi_poll_cs(cs);
++}
++
++
++static void
++ath_spi_poll_cs(unsigned cs)
++{
++    int rd;                                                 
++
++    do {
++        ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS);     
++        ath_spi_bit_banger_cs(cs,ATH_SPI_CMD_RD_STATUS);        
++        ath_spi_delay_8_cs(cs);
++        rd = (ath_reg_rd(ATH_SPI_RD_STATUS) & 1);               
++    }while(rd);
++}
++
++static void
++ath_spi_write_page_cs(unsigned cs, uint32_t addr, uint8_t *data, int len)
++{
++    int i;
++    uint8_t ch;
++
++    ath_spi_write_enable_cs(cs);
++    ath_spi_bit_banger_cs(cs, ATH_SPI_CMD_PAGE_PROG);
++    ath_spi_send_addr_cs(cs,addr);
++
++    for(i = 0; i < len; i++) {
++        ch = *(data + i);
++        ath_spi_bit_banger_cs(cs,ch);
++    }
++
++    ath_spi_go_cs(cs);
++    ath_spi_poll_cs(cs);
++}
++
++static void
++ath_spi_sector_erase_cs(unsigned cs, uint32_t addr)
++{
++    ath_spi_write_enable_cs(cs);
++    ath_spi_bit_banger_cs(cs,ATH_SPI_CMD_SECTOR_ERASE);
++    ath_spi_send_addr_cs(cs,addr);
++    ath_spi_go_cs(cs);
++    ath_spi_poll_cs(cs);
++}
++
++int
++flash_read_page(flash_info_t *info, ulong addr, uchar *dest, ulong len)
++{
++	if (info->bank==0) {
++		memcpy(dest, (uchar *)addr, len);
++		return	0;
++	}
++
++	if (addr >= info->start[0] && addr < (info->start[0] + info->size)) {
++		ath_reg_wr_nf(ATH_SPI_FS, 1);                  
++		ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS);     
++		ath_spi_bit_banger_cs(info->bank,ATH_SPI_CMD_FAST_READ);        
++		ath_spi_send_addr_cs(info->bank,addr);
++		ath_spi_delay_8_cs(info->bank);
++		for (; len>0 ; len--, dest++) {
++			ath_spi_delay_8_cs(info->bank);
++			*dest	= (uchar)ath_reg_rd(ATH_SPI_RD_STATUS);
++		}
++		ath_spi_done();
++		return	0;
++	}
++
++	{
++		ulong	i;
++		uchar	deadbeaf[4]	= { 0xDE, 0xAD, 0xBE, 0xEF };
++		for (i=0 ; i<len ; i++) {
++			dest[i]	= deadbeaf[i & 0x3];
++		}
++		return	-1;
++	}
++}
++#else
++//liteon add-
+ static void
+ ath_spi_write_enable()
+ {
+@@ -253,6 +427,9 @@
+ 	display(0x7d);
+ 	ath_spi_poll();
+ }
++//liteon add+
++#endif
++//liteon add-
+ 
+ #ifdef ATH_DUAL_FLASH
+ void flash_print_info(flash_info_t *info)
+Index: u-boot-2006-04-06-1725/common/cmd_mem.c
+===================================================================
+--- u-boot-2006-04-06-1725.orig/common/cmd_mem.c	2013-12-14 09:37:25.820811751 +0800
++++ u-boot-2006-04-06-1725/common/cmd_mem.c	2013-12-14 09:37:26.511356795 +0800
+@@ -167,6 +167,28 @@
+ 
+ 		} else {	/* addr does not correspond to DataFlash */
+ #endif
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++                if ( (addr2info(addr) != NULL) ) { /* addr correspond to Flash*/ 
++			char	readbuf[DISP_LINE_LEN];
++			char	*pbuf	= readbuf;
++
++			flash_read(addr, pbuf, linebytes);
++
++			for (i=0; i<linebytes; i+= size) {
++				if (size == 4) {
++					printf(" %08x", (*uip++ = *((uint *)pbuf)));
++				} else if (size == 2) {
++					printf(" %04x", (*usp++ = *((ushort *)pbuf)));
++				} else {
++					printf(" %02x", (*ucp++ = *((u_char *)pbuf)));
++				}
++				pbuf += size;
++			}
++			addr	+= linebytes;
++		} else { 
++#endif
++//liteon add-
+ 		for (i=0; i<linebytes; i+= size) {
+ 			if (size == 4) {
+ 				printf(" %08x", (*uip++ = *((uint *)addr)));
+@@ -177,6 +199,11 @@
+ 			}
+ 			addr += size;
+ 		}
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++                }
++#endif
++//liteon add-
+ #ifdef CONFIG_HAS_DATAFLASH
+ 		}
+ #endif
+Index: u-boot-2006-04-06-1725/common/flash.c
+===================================================================
+--- u-boot-2006-04-06-1725.orig/common/flash.c	2006-04-06 21:03:42.000000000 +0800
++++ u-boot-2006-04-06-1725/common/flash.c	2013-12-14 09:37:26.511356795 +0800
+@@ -225,4 +225,48 @@
+ 
+ /*-----------------------------------------------------------------------
+  */
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++extern	int	flash_read (ulong src, char *dst, ulong len)
++{
++	flash_info_t *info;
++	int			i;
++	int			rc;
++	ulong		addr;
++	ulong		copied;
++	ulong		cnt;
++
++	if (len == 0) {
++		return (ERR_OK);
++	}
++
++	copied	= 0;
++	addr	= src;
++	for (i=0, info=&flash_info[0]; i<CFG_MAX_FLASH_BANKS && copied<len ; ++i, ++info) {
++
++		if (info->flash_id == FLASH_UNKNOWN)	continue;
++
++		if (copied)
++			addr = info->start[0];
++		cnt	= len - copied;
++
++		if (addr >= info->start[0] && addr < (info->start[0]+info->size)) {
++
++			if ((addr + cnt) > (info->start[0] + info->size))
++				cnt	= (info->start[0] + info->size - addr);
++
++			if ( (rc = flash_read_page(info, addr, dst+copied, cnt)) != ERR_OK)
++				return	rc ;
++			copied	+= cnt;
++		}
++	}
++
++	if (len != copied) {
++		return (ERR_INVAL);
++	}
++
++	return (ERR_OK);
++}
++#endif
++//liteon add-
+ #endif /* !CFG_NO_FLASH */
+Index: u-boot-2006-04-06-1725/cpu/mips/start.S
+===================================================================
+--- u-boot-2006-04-06-1725.orig/cpu/mips/start.S	2013-12-14 09:37:26.004757715 +0800
++++ u-boot-2006-04-06-1725/cpu/mips/start.S	2013-12-14 09:52:52.735139844 +0800
+@@ -418,6 +418,29 @@
+ 	sw	t0,	0(a0)
+ #endif
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++#ifdef CONFIG_MACH_QCA955x  // only support for GPIO16
++	li  t7, 0xb804003C;
++	lw  t8, 0(t7);
++	li  t9, 0x0000000A;
++	or  t8, t8, t9;
++	sw  t8, 0(t7);
++#else   // only support for GPIO13
++	li  t7, 0xb8040038;
++	lw  t8, 0(t7);
++	li  t9, 0x00000700;
++	or  t8, t8, t9;
++	sw  t8, 0(t7);
++	/* config GPIO13 as output */
++	li  t7, 0xb8040000;
++	lw  t8, 0(t7);
++	li  t9, 0xffffdfff;
++	and t8, t8, t9;
++	sw  t8, 0(t7);
++#endif
++#endif
++//liteon add-
+ 
+ #if defined(CONFIG_AR9100) && defined(CFG_HOWL_1_2)
+ 	/* Disable remap for parallel flash */
+Index: u-boot-2006-04-06-1725/include/configs/board955x.h
+===================================================================
+--- u-boot-2006-04-06-1725.orig/include/configs/board955x.h	2013-12-14 09:37:26.275514823 +0800
++++ u-boot-2006-04-06-1725/include/configs/board955x.h	2013-12-14 09:37:26.523069556 +0800
+@@ -37,7 +37,15 @@
+ /*-----------------------------------------------------------------------
+  * FLASH and environment organization
+  */
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++#define CFG_MAX_FLASH_BANKS 2   /* max number of memory banks */
++#else
++//liteon add-
+ #define CFG_MAX_FLASH_BANKS	1	/* max number of memory banks */
++//liteon add+
++#endif
++//liteon add-
+ #if (FLASH_SIZE == 16)
+ #define CFG_MAX_FLASH_SECT	256	/* max number of sectors on one chip */
+ #define ATH_MTDPARTS_MIB0	"8256k(mib0)"
+@@ -168,7 +176,15 @@
+ #	define ATH_F_ADDR		0x9f050000
+ #	define ATH_K_FILE		vmlinux${bc}.lzma.uImage
+ #	define ATH_K_ADDR		0x9f680000
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++#	define MTDPARTS_DEFAULT		"mtdparts=ath-nor0:256k(u-boot),64k(u-boot-env),6336k(rootfs),1408k(uImage)," ATH_MTDPARTS_MIB0 ",64k(ART);ath-nor1:16384k(data16M)"
++#else
++//liteon add-
+ #	define MTDPARTS_DEFAULT		"mtdparts=ath-nor0:256k(u-boot),64k(u-boot-env),6336k(rootfs),1408k(uImage)," ATH_MTDPARTS_MIB0 ",64k(ART)"
++//liteon add+
++#endif
++//liteon add-
+ #endif /*CONFIG_MI124*/
+ 
+ #ifndef ATH_ROOT_DEV
+Index: u-boot-2006-04-06-1725/include/configs/db12x.h
+===================================================================
+--- u-boot-2006-04-06-1725.orig/include/configs/db12x.h	2013-12-14 09:37:26.279037827 +0800
++++ u-boot-2006-04-06-1725/include/configs/db12x.h	2013-12-14 09:37:26.523069556 +0800
+@@ -30,12 +30,23 @@
+ #include <configs/ar7240.h>
+ 
+ #ifndef FLASH_SIZE
+-#define FLASH_SIZE		8
++//liteon modify+
++//#define FLASH_SIZE		8
++#define FLASH_SIZE		16
++//liteon modify-
+ #endif
+ /*-----------------------------------------------------------------------
+  * FLASH and environment organization
+  */
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++#define CFG_MAX_FLASH_BANKS     2	    /* max number of memory banks */
++#else
++//liteon add-
+ #define CFG_MAX_FLASH_BANKS     1	    /* max number of memory banks */
++//liteon add+
++#endif
++//liteon add-
+ #if (FLASH_SIZE == 16)
+ #define CFG_MAX_FLASH_SECT      256    /* max number of sectors on one chip */
+ #elif (FLASH_SIZE == 8)
+@@ -205,7 +216,14 @@
+ #	define ATH_F_ADDR		0x9f050000
+ #	define ATH_K_FILE		vmlinux${bc}.lzma.uImage
+ #	define ATH_K_ADDR		0x9f680000
+-#	define MTDPARTS_DEFAULT		"mtdparts=ath-nor0:256k(u-boot),64k(u-boot-env),6336k(rootfs),1408k(uImage),64k(mib0),64k(ART)"
++//liteon modify+
++#ifdef AP_SPI_CS2_GPIO
++#	define MTDPARTS_DEFAULT		"mtdparts=ath-nor0:256k(u-boot),64k(u-boot-env),6336k(rootfs),1408k(uImage),8256k(mib0),64k(ART);ath-nor1:16384k(data16M)"
++#else
++//#	define MTDPARTS_DEFAULT		"mtdparts=ath-nor0:256k(u-boot),64k(u-boot-env),6336k(rootfs),1408k(uImage),64k(mib0),64k(ART)"
++#	define MTDPARTS_DEFAULT		"mtdparts=ath-nor0:256k(u-boot),64k(u-boot-env),6336k(rootfs),1408k(uImage),8256k(mib0),64k(ART)"
++#endif
++//liteon modify-
+ #endif /*CONFIG_MI124*/
+ 
+ #ifndef ATH_ROOT_DEV
+@@ -335,7 +353,10 @@
+ #ifndef CONFIG_ATH_NAND_SUPPORT
+ #	define CFG_ENV_ADDR		0x9f040000
+ #	if (FLASH_SIZE == 16)
+-#		define CONFIG_BOOTCOMMAND "bootm 0x9f550000"
++//liteon modify+
++//#		define CONFIG_BOOTCOMMAND "bootm 0x9f550000"
++#		define CONFIG_BOOTCOMMAND "bootm 0x9f680000"
++//liteon modify-
+ #	else  /* FLASH_SIZE == 16 */
+ #		ifdef COMPRESSED_UBOOT
+ #			if (FLASH_SIZE == 4)
+Index: u-boot-2006-04-06-1725/include/flash.h
+===================================================================
+--- u-boot-2006-04-06-1725.orig/include/flash.h	2013-12-14 09:37:26.302955839 +0800
++++ u-boot-2006-04-06-1725/include/flash.h	2013-12-14 09:37:26.527005271 +0800
+@@ -49,6 +49,11 @@
+ 	ushort	interface;		/* used for x8/x16 adjustments		*/
+ 	ushort	legacy_unlock;		/* support Intel legacy (un)locking	*/
+ #endif
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++	int bank;
++#endif
++//liteon add-
+ } flash_info_t;
+ 
+ /*
+@@ -89,6 +94,12 @@
+ extern int flash_write (char *, ulong, ulong);
+ extern flash_info_t *addr2info (ulong);
+ extern int write_buff (flash_info_t *info, uchar *src, ulong addr, ulong cnt);
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++extern int flash_read_page(flash_info_t *info, ulong addr, uchar *dest, ulong len);
++extern int flash_read(ulong, char *, ulong);
++#endif
++//liteon add-
+ 
+ /* board/?/flash.c */
+ #if defined(CFG_FLASH_PROTECTION)
+Index: u-boot-2006-04-06-1725/board/atheros/common/ath_flash.h
+===================================================================
+--- u-boot-2006-04-06-1725.orig/board/atheros/common/ath_flash.h	2013-12-14 09:37:25.618971515 +0800
++++ u-boot-2006-04-06-1725/board/atheros/common/ath_flash.h	2013-12-14 09:37:26.527005271 +0800
+@@ -24,6 +24,10 @@
+ #define _ATH_FLASH_H
+ 
+ #define display(_x)
++//liteon add+
++#define ATH_SPI_CS_LOW      0x70000
++#define ATH_SPI_CS_HIGH     0x70100
++//liteon add-
+ 
+ /*
+  * primitives
+@@ -41,6 +45,40 @@
+ 	}								\
+ } while (0)
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++#define ath_spi_bit_banger_cs(_cs, _byte)  do {        \
++    int _i;                                      \
++    for(_i = 0; _i < 8; _i++) {                    \
++	     ath_reg_wr_nf(ATH_SPI_WRITE, \ 
++                       (~(1<<(16 + _cs)) & (ATH_SPI_CS_LOW)) | ath_be_msb(_byte, _i));  \
++	     ath_reg_wr_nf(ATH_SPI_WRITE, \ 
++                       (~(1<<(16 + _cs)) & (ATH_SPI_CS_HIGH)) | ath_be_msb(_byte, _i)); \
++    }	\
++}while(0);
++
++
++#define ath_spi_go_cs(_cs) do {	\
++       ath_reg_wr_nf(ATH_SPI_WRITE, (~(1<<(16 + _cs)) & (ATH_SPI_CS_LOW))); \
++       ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS); \
++}while(0);
++
++
++#define ath_spi_send_addr_cs(_cs,_addr) do {	\
++    unsigned long	__adr	= (_addr) & 0x00ffffff;		\
++    ath_spi_bit_banger_cs(_cs, (((__adr) & 0xff0000) >> 16));\
++    ath_spi_bit_banger_cs(_cs, (((__adr) & 0x00ff00) >>  8));\
++    ath_spi_bit_banger_cs(_cs, (((__adr) & 0x0000ff) >>  0));\
++}while(0)
++
++#define ath_spi_delay_8()    ath_spi_bit_banger(0)
++#define ath_spi_delay_8_cs(_cs)	ath_spi_bit_banger_cs(_cs,0)
++#define ath_spi_done() do {	\
++    ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS);	\
++    ath_reg_wr(ATH_SPI_FS, 0);			\
++} while(0)
++#else
++//liteon add-
+ #define ath_spi_go()	do {				\
+ 	ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CE_LOW);	\
+ 	ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS);	\
+@@ -55,6 +93,9 @@
+ 
+ #define ath_spi_delay_8()	ath_spi_bit_banger(0)
+ #define ath_spi_done()		ath_reg_wr_nf(ATH_SPI_FS, 0)
++//liteon add+
++#endif  //AP_SPI_CS2_GPIO
++//liteon add-
+ 
+ extern unsigned long flash_get_geom (flash_info_t *flash_info);
+ 

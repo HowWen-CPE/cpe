@@ -1,0 +1,298 @@
+﻿<po>
+	<message msgid="firewall disable" msgstr="停用"/>
+	<message msgid="firewall enable" msgstr="启用"/>
+	<message msgid="firewall apply" msgstr="应用"/>
+	<message msgid="firewall reset" msgstr="重设"/>
+	<message msgid="firewall del select" msgstr="删除选取项目"/>
+	<message msgid="firewall no" msgstr="编号"/>
+	<message msgid="firewall protocol" msgstr="通信协议"/>
+	<message msgid="firewall comment" msgstr="注解"/>
+	<message msgid="firewall default drop" msgstr="其余将全部丢弃"/>
+	<message msgid="firewall default accept" msgstr="其余将全部接受"/>
+	<message msgid="port title" msgstr="MAC/IP/连接端口过滤设置"/>
+	<message msgid="port introduction" msgstr="您可以设置防火墙规则，以保护您的网络免受国际网络上的病毒、蠕虫和恶意活动威胁。"/>
+	<message msgid="port basic setting" msgstr="基本设置"/>
+	<message msgid="port basic filter" msgstr="MAC/IP/连接端口过滤"/>
+	<message msgid="port basic default policy" msgstr="预设规则 -- 不符合任何规则的封包将会："/>
+	<message msgid="port basic default policy accepted" msgstr="接受。"/>
+	<message msgid="port basic default policy dropped" msgstr="丢弃。"/>
+	<message msgid="port filter setting" msgstr="MAC/IP/连接端口过滤设置"/>
+	<message msgid="port filter macaddr" msgstr="MAC 地址"/>
+	<message msgid="port filter source ipaddr" msgstr="来源 IP 地址"/>
+	<message msgid="port filter port range" msgstr="连接端口范围"/>
+	<message msgid="port filter dest ipaddr" msgstr="终点 IP 地址"/>
+	<message msgid="port filter action" msgstr="动作"/>
+	<message msgid="port filter action drop" msgstr="丢弃"/>
+	<message msgid="port filter action accept" msgstr="接受"/>
+	<message msgid="port current filter" msgstr="系统目前的 Mac/IP/连接端口过滤规则："/>
+	<message msgid="port filter source port range" msgstr="来源端口范围"/>
+	<message msgid="port filter dest port range" msgstr="终点端口范围"/>
+	<message msgid="port filter packetcount" msgstr="Pkt 计数"/>
+	<message msgid="nat setup" msgstr="NAT 设置"/>
+	<message msgid="nat translation" msgstr="启用网络地址转译 (NAT)"/>
+	<message msgid="nat default server setup" msgstr="预设服务器设置"/>
+	<message msgid="nat server ip" msgstr="服务器 IP 地址："/>
+	<message msgid="nat apply" msgstr="应用"/>
+	<message msgid="nat reset" msgstr="重设"/>
+	<message msgid="application add app" msgstr="新增应用规则"/>
+	<message msgid="application active" msgstr="启动"/>
+	<message msgid="application service name" msgstr="服务名称"/>
+	<message msgid="application port" msgstr="连接端口"/>
+	<message msgid="application server ip" msgstr="服务器 IP 地址"/>
+	<message msgid="application app rule sum" msgstr="应用规则摘要"/>
+	<message msgid="application app rule sum2" msgstr="应用规则摘要"/>
+	<message msgid="application td active" msgstr="启动"/>
+	<message msgid="application td name" msgstr="名称"/>
+	<message msgid="application td port" msgstr="连接端口"/>
+	<message msgid="application td server ip" msgstr="服务器 IP 地址"/>
+	<message msgid="application td modify" msgstr="修改"/>
+	<message msgid="nat rule note" msgstr=" 最大可设置规则数目为10." />
+	<message msgid="nat advance app rule sum" msgstr="应用规则摘要"/>
+	<message msgid="nat advance port trigger rule" msgstr="连接端口触发规则"/>
+	<message msgid="nat advance name" msgstr="名称"/>
+	<message msgid="nat advance incoming" msgstr="内送"/>
+	<message msgid="nat advance trigger" msgstr="触发"/>
+	<message msgid="nat advance port1" msgstr="连接端口"/>
+	<message msgid="nat advance endport1" msgstr="结束端口"/>
+	<message msgid="nat advance port2" msgstr="连接端口"/>
+	<message msgid="nat advance endport2" msgstr="结束端口"/>
+	<message msgid="firewall setup" msgstr="防火墙设置"/>
+	<message msgid="firewall enable" msgstr="启用防火墙"/>
+	<message msgid="spi setup" msgstr="SPI 设置"/>
+	<message msgid="spi enable" msgstr="启用 SPI"/>
+	<message msgid="sc filter restrict" msgstr="限制网页功能"/>
+	<message msgid="sc filter keyword blocking" msgstr="关键字封锁"/>
+	<message msgid="sc filter enable keyword blocking" msgstr="启用 URL 关键字封锁"/>
+	<message msgid="sc filter keyword" msgstr="关键字"/>
+	<message msgid="sc filter keyword list" msgstr="关键字清单"/>
+	<message msgid="sc filter add" msgstr="新增"/>
+	<message msgid="sc filter delete" msgstr="删除"/>
+	<message msgid="sc filter clear" msgstr="全部清除"/>
+	<message msgid="sc filter trusted ip" msgstr="信任的 IP 设置"/>
+	<message msgid="sc filter str1" msgstr="信任的电脑可完整存取所有的封锁资源。0.0.0.0 代表没有信任的电脑。"/>
+	<message msgid="sc filter str2" msgstr="信任的电脑 IP 地址："/>
+	<message msgid="remote management server port" msgstr="服务器端口："/>
+	<message msgid="remote management server access" msgstr="服务器接取："/>
+	<message msgid="remote management secured ip" msgstr="安全用户端 IP 地址："/>
+	<message msgid="remote management secured ip all" msgstr="全部"/>
+	<message msgid="remote management secured ip sel" msgstr="已选取"/>
+	<message msgid="port filter Respon To Ping On" msgstr="回应侦测："/>
+	<message msgid="port filter PingFrmWANFilter WAN" msgstr="WAN"/>
+	<message msgid="port filter PingFrmWANFilter Disable" msgstr="停用"/>
+	<message msgid="port filter enable firewall rule1" msgstr="启用防火墙规则"/>
+	<message msgid="port filter enable firewall rule2" msgstr="启用防火墙规则"/>
+	<message msgid="port filter firewall rule" msgstr="防火墙规则"/>
+	<message msgid="port filter add firewall rule" msgstr="新增防火墙规则"/>
+	<message msgid="port filter service name" msgstr="服务名称："/>
+	<message msgid="port filter apply1" msgstr="应用"/>
+	<message msgid="port filter apply2" msgstr="应用"/>
+	<message msgid="port filter add Rule" msgstr="新增规则"/>
+	<message msgid="port filter table service name" msgstr="服务名称"/>
+	<message msgid="port filter table mac address" msgstr="MAC 地址"/>
+	<message msgid="port filter table dest ip" msgstr="终点 IP 地址"/>
+	<message msgid="port filter table source ip" msgstr="来源 IP 地址"/>
+	<message msgid="port filter table source prorocol" msgstr="通信协议"/>
+	<message msgid="port filter table dest port range" msgstr="终点端口范围"/>
+	<message msgid="port filter table source port range" msgstr="来源端口范围"/>
+	<message msgid="port filter table source action" msgstr="动作"/>
+	<message msgid="port filter table source delete" msgstr="删除"/>
+	<message msgid="User_Defined" msgstr="使用者定义"/>
+	<message msgid="Services" msgstr="---服务---"/>
+	<message msgid="Please input any IP or/and port value." msgstr="请输入 IP 地址、连接端口号码。"/>
+	<message msgid="Invalid port number: source port." msgstr="无效的连接端口值：来源端口。"/>
+	<message msgid="Invalid source port number." msgstr="无效的来源端口值。"/>
+	<message msgid="Invalid source port range setting." msgstr="无效的来源端口范围设置。"/>
+	<message msgid="Invalid port number: dest port." msgstr="无效的连接端口值：目的端口"/>
+	<message msgid="Invalid dest port number." msgstr="无效的目的端口值。"/>
+	<message msgid="Invalid dest port range setting." msgstr="无效的目的端口范围设置。"/>
+	<message msgid="Source IP address format error." msgstr="来源 IP 地址格式错误。"/>
+	<message msgid="Dest IP address format error." msgstr="目的 IP 地址格式错误。"/>
+	<message msgid="Error. IP address is empty." msgstr="错误! 未输入 IP 地址。"/>
+	<message msgid="Error. IP address is broadcast address." msgstr="错误，IP地址是广播地址。" />
+	<message msgid="Error. Class E IP address cannot be used." msgstr="错误，E类IP地址不能使用。" />
+	<message msgid="Error. IP address is multicast address." msgstr="错误，IP地址是多播地址。" />
+	<message msgid="It should be a [0-9] number." msgstr="此应为 [0-9] 的数字。"/>
+	<message msgid="IP adress format error." msgstr="IP 地址格式错误。"/>
+	<message msgid="Incoming End port is error" msgstr="内送结束端口错误"/>
+	<message msgid="Trigger port should not be zero" msgstr="触发端口不得为零"/>
+	<message msgid="Trigger End port is error" msgstr="触发结束端口错误"/>
+	<message msgid="Incoming port is exist" msgstr="内送端口存在"/>
+	<message msgid="Incoming End port is exist" msgstr="内送结束端口存在"/>
+	<message msgid="Trigger port is exist" msgstr="触发端口存在"/>
+	<message msgid="Port Service is exist" msgstr="连接端口服务已经存在"/>
+	<message msgid="The value is invalid" msgstr="数值无效"/>
+	<message msgid="Key word is exist" msgstr="关键字存在"/>
+	<message msgid="The rule number is exceeded." msgstr="规则编号超过。"/>
+<!-- one-to-one NAT message, add by wind 2013-12-11 -->
+<message msgid="OneToOne Rule Add" msgstr=" 增加一对一映射规则 " />
+<message msgid="OneToOne Active" msgstr=" 启动 " />
+<message msgid="OneToOne Service Name" msgstr=" 服务名称 " />
+<message msgid="OneToOne Port" msgstr=" 连接端口 " />
+<message msgid="Internal IP" msgstr=" 内部IP地址 " />
+<message msgid="External IP" msgstr=" 外部映射IP地址 " />
+<message msgid="Server Forward" msgstr=" 服务器转发 " />
+<message msgid="Forward Enable" msgstr=" 开启 " />
+<message msgid="Forward Disable" msgstr=" 关闭 " />
+<message msgid="OneToOne App Rule Sum" msgstr=" 一对一映射规则摘要 " />
+<message msgid="OneToOne App Rule Sum2" msgstr=" 一对一映射规则摘要 " />
+<message msgid="OneToOne Td Active" msgstr=" 启动 " />
+<message msgid="OneToOne Td Name" msgstr=" 名称 " />
+<message msgid="OneToOne Td IntIP" msgstr=" 内部IP地址 " />
+<message msgid="OneToOne Td ExtIP" msgstr=" 外部映射IP地址 " />
+<message msgid="OneToOne Td Port" msgstr=" 连接端口 " />
+<message msgid="OneToOne Td ServerForward" msgstr=" 服务器转发 " />
+<message msgid="OneToOne Td Modify" msgstr=" 修改 " />
+<message msgid="Alert note" msgstr=" 最大可设置规则数目为10。 " />
+<!-- pptp server message, add by wind 2014-01-14 -->
+<message msgid="application AddApp" msgstr=" PPTP 服务器 " />
+<message msgid="pptp Server Rule" msgstr=" PPTP 服务器设置 " />
+<message msgid="pptp MTU" msgstr=" MTU " />
+<message msgid="pptp LocalIP" msgstr=" VPN 本地地址 " />
+<message msgid="start IP" msgstr=" VPN 起始IP地址 " />
+<message msgid="max Num" msgstr=" 最大VPN客户端数量 " />
+<message msgid="auto Dns" msgstr=" 自动DNS " />
+<message msgid="pptp Dns" msgstr=" DNS " />
+<message msgid="chap Enable" msgstr=" 开启CHAP认证 " />
+<message msgid="mscharp Enable" msgstr=" 开启MSCHAP认证 " />
+<message msgid="mscharp V2" msgstr=" 开启MSCHAP V2 认证 " />
+<message msgid="mppe 128" msgstr=" 开启MPPE128位加密 " />
+<message msgid="proxy ARP" msgstr=" 开启ARP代理 " />
+<message msgid="nat Enable" msgstr=" 开启NAT " />
+<message msgid="add Rules" msgstr=" 增加用户规则 " />
+<message msgid="rule Enable" msgstr=" 开启规则 " />
+<message msgid="pptpd User Name" msgstr=" 用户名 " />
+<message msgid="pptpd Password" msgstr=" 密码 " />
+<message msgid="table Add" msgstr=" 增加 " />
+<message msgid="user RuleSum" msgstr=" 用户规则摘要 " />
+<message msgid="pptpd Modify" msgstr=" 修改 " />
+<!-- l2tp server message, add by kissth 2014-03-13 -->
+<message msgid="l2tp AddApp" msgstr=" L2TP 服务器" />
+<message msgid="l2tp Server Rule" msgstr=" L2TP 服务器设置" />
+<message msgid="L2tpOIPsec Rule" msgstr=" L2tpOIPsec 使能" />
+<message msgid="PSK Rule" msgstr=" 共享密钥 " />
+<!-- NAT note message, add by wind 2014-01-03 -->
+<message msgid="nat dmz note" msgstr=" 注: NAT模式没有开启时，DMZ规则设置无效。 " />
+<message msgid="nat note" msgstr=" 注：" />
+<message msgid="nat port note" msgstr=" NAT模式没有开启时，端口转发应用规则设置无效。 " />
+<message msgid="nat trigger note" msgstr=" 注：NAT模式没有开启时，触发规则设置无效。 " />
+<message msgid="one note" msgstr=" 注：" />
+<message msgid="one2one note" msgstr=" NAT模式没有开启时，一对一NAT规则设置无效。 " />
+<!-- one-to-one NAT message, add by wind 2013-12-26 -->
+<message msgid="Duplicate port not allowed to be set!" msgstr=" 不能设置重复的端口! " />
+<message msgid="Duplicate rule not allowed to be set!" msgstr="不能设置重复的规则!" />
+<message msgid="Internal ip could not be lan ip" msgstr="内部IP不能是路由器的LAN IP!" />
+<message msgid="External mapping ip could not be wan ip" msgstr="外部映射IP不能是路由器的WAN IP!" />
+<message msgid="server ip could not be lan ip" msgstr="服务器IP不能是LAN IP!" />
+<!-- alert message add by wind 2014-02-10 -->
+<message msgid="Invalid MTU! Valid MTU value is [1280,1460]." msgstr="MTU值无效! 合法的MTU范围是[1280,1460]。" />
+<message msgid="Authentication error.In the case that MPPE enable, authentication way must include MSCHAP or MSCHAPV2." msgstr="认证错误。使能MPPE加密时，必须至少包含MSCHAP或者MSCHAPV2。" />
+<message msgid="Authentication error.In the case that MPPE disable, you must enable anyone authentication way." msgstr="认证错误。不使能MPPE加密时，必须至少包含任一种认证方式。" />
+<message msgid="Max VPN Client number should not be empty." msgstr="VPN客户端连接数不应该为空。" />
+<message msgid="Please disable PPTP Server function." msgstr="请禁用PPTP服务器功能。" />
+<message msgid="Please disable IPsec function." msgstr="请禁用IPsec功能。" />
+<message msgid="Could not change l2tp server settings,at least one authentication protocol should be specified." msgstr="无法更改L2TP服务器的设置，至少有一个认证协议需要指定。" />
+<message msgid="Enter letters digits or underline. Preshared Key length should be from 8 to 40!" msgstr="请输入字母数字或下划线，共享密钥长度范围是8到40！" />
+<message msgid="Preshared Key length should be from 8 to 40 digits letters or underline." msgstr="共享密钥应该是8到40个数字字母或下划线。" />
+<message msgid="User name repeats." msgstr="用户名重复。" />
+<message msgid="The max number of the rule is 32!" msgstr="规则的最大数是32！" />
+<message msgid="MTU value is empty!" msgstr="MTU值是空的!" />
+<message msgid="MTU should be a number." msgstr="MTU应该是一个数字。" />
+<message msgid="Invalid MTU! Valid MTU value is [1280,1444]." msgstr="非法的MTU，合法的MTU范围是[1280,1444]." />
+<message msgid="Invalid VPN Clients range, The clients number must be a digit." msgstr="非法的客户端范围，合法的客户端数量值是一个数字。" />
+<message msgid="Invalid VPN Clients range, the min clients number is 1, and the max clients number is 32." msgstr="非法的VPN客户端范围，最小的客户端数量是1，最大的客户端数量是32。" />
+<message msgid="Invalid VPN Clients range." msgstr="非法的VPN客户端范围，VPN客户端范围应该和VPN起始地址兼容。" />
+<message msgid="User name is required." msgstr="用户名不能为空。" />
+<message msgid="Password is required." msgstr="密码不能为空。" />
+<message msgid="User name error. Chatacter Caret,Pile Sign and Double Quote are not supported in this field." msgstr="用户名错误。不支持脱字符，竖线，双引号等字符。" />
+<message msgid="Password error. Chatacter Caret,Pile Sign and Double Quote are not supported in this field." msgstr="密码错误。不支持脱字符，竖线，双引号等字符。" />
+<!-- alert message from c file-->
+<message msgid="MAC is invaild" msgstr="MAC 无效" />
+<message msgid="IP error" msgstr="IP 无效" />
+<message msgid="Invaild setting" msgstr="无效的设置" />
+<message msgid="IP is invaild" msgstr="IP 无效" />
+<message msgid="Please set port between 1~65535" msgstr="请将连接端口设置在 1~65535 之间" />
+<message msgid="Length is too log." msgstr="长度过长。" />
+<!-- alert message from c file-->
+<message msgid="main Ready" msgstr="准备就绪"/>
+<message msgid="main ConfigurationSuccess" msgstr="设置更新成功"/>
+<message msgid="main ConfigurationProceeding" msgstr="正在进行设置更新。请稍候..."/>
+<message msgid="main firmware download in progress" msgstr="韧体升级进行中。 请稍候..."/>
+<message msgid="main firmware upgrade is proceeding" msgstr="正在进行韧体升级 请稍候并勿将装置断电。"/>
+<!-- 4615 SCFilter.asp-->
+<message msgid="sc filter rwf activex" msgstr=" ActiveX " />
+<message msgid="sc filter rwf java" msgstr=" Java " />
+<message msgid="sc filter rwf cookies" msgstr=" Cookies " />
+<message msgid="sc filter rwf web" msgstr="网页代理"/>
+<!-- 4615 remote_web.asp-->
+<message msgid="remote management www" msgstr=" WWW " />
+<!--Steve add and reference other page-->
+<message msgid="System do not support specific invalid characters." msgstr="系统不支持特定的无效字符。"/>
+<!--Steve add for the fw_s2.asp page-->
+<message msgid="The flter rule number is exceeded." msgstr="过滤规则超过。"/>
+<message msgid="Dest IP Address is not correct!" msgstr="目的IP地址不正确! "/>
+<message msgid="Source IP Address is not correct!" msgstr="源IP地址不正确! "/>
+<message msgid="Dest IP Address can't contain LAN_IP!" msgstr="目的IP地址不能包含路由器的LAN IP地址! "/>
+<message msgid="Dest IP Address can't contain WAN_IP!" msgstr="目的IP地址不能包含路由器的WAN IP地址! "/>
+<message msgid="Source IP Address can't contain LAN_IP!" msgstr="源IP地址不能包含路由器的LAN IP地址! "/>
+<message msgid="Source IP Address can't contain WAN_IP!" msgstr="源IP地址不能包含路由器的WAN IP地址! "/>
+<message msgid="Error. IP address is not valid." msgstr="错误，IP地址不合法。"/>
+<message msgid="Error. IP address is loopback address." msgstr="错误，IP地址是回环地址。"/>
+<message msgid="Empty space, Single quota,Double quota characters are not surpported in this field." msgstr="不支持空格，单引号，双引号。"/>
+<message msgid="Invalid server ip address!It should be located in the same subnet of current LAN IP address." msgstr="服务器IP地址应该与LAN IP地址在同一子网。"/>
+<message msgid="service name already exsits!" msgstr="规则名称已经存在了。"/>
+<!--wind add for the nat_advance.asp page-->
+<message msgid="Invalid start incoming port" msgstr="内送起始端口非法。"/>
+<message msgid="Invalid end incoming port" msgstr="內送结束端口非法。"/>
+<message msgid="Invalid start trigger port" msgstr="触发起始端口非法。"/>
+<message msgid="Invalid end trigger port" msgstr="触发结束端口非法。"/>
+<message msgid="Port should not be blank" msgstr="端口不能为空。"/>
+<message msgid="Incoming port range is exist" msgstr="内送端口范围已经存在。"/>
+<!--wind add for the nat_application.asp page-->
+<message msgid="The port already existed" msgstr="端口已经存在。"/>
+<!--wind add for the SCFilter.asp page-->
+<message msgid="CGI parameter error" msgstr="CGI 参数错误。"/>
+
+<message msgid="contact" msgstr="联系："/>
+<message msgid="community read" msgstr="团体名称（只读）："/>
+<message msgid="community write" msgstr="团体名称（读/写）："/>
+<message msgid="trap ip" msgstr="陷阱IP（全0关服务器）："/>
+<message msgid="snmp enable" msgstr="开"/>
+<message msgid="snmp disable" msgstr="关"/>
+<message msgid="snmpversion" msgstr="SNMP版本支持:"/>
+<message msgid="User_Name" msgstr="用户名:"/>
+<message msgid="Security_Level" msgstr="安全级别:"/>
+<message msgid="snmp_user_ro_passwd_td" msgstr="认证密码（数字和字母，长度8-15）:"/>
+<message msgid="snmp_user_rw_passwd_td" msgstr="加密密码（数字和字母，长度8-15）:"/>
+<message msgid="ssh enable" msgstr="开"/>
+<message msgid="ssh disable" msgstr="关"/>
+<message msgid="telnet enable" msgstr="开"/>
+<message msgid="telnet disable" msgstr="关"/>
+<message msgid="https enable" msgstr="开"/>
+<message msgid="https disable" msgstr="关"/>
+<message msgid="ssh server port" msgstr="服务器端口："/>
+<message msgid="telnet server port" msgstr="服务器端口："/>
+<message msgid="https server port" msgstr="服务器端口："/>
+<message msgid="service apply" msgstr="应用"/>
+<message msgid="service reset" msgstr="取消"/>
+<message msgid="firmware transport failure" msgstr="固件传输失败"/>
+<message msgid="firmware transport timeout" msgstr="固件传输超时，请检查网络或在AP模式下用以太网升级"/>
+<!--vpn passthrough-->
+<message msgid="vpn Pass Setup" msgstr="VPN 穿透设置"/>
+<message msgid="ipsec Enable" msgstr="开启"/>
+<message msgid="ipsec Disable" msgstr="关闭"/>
+<message msgid="ipsec Set" msgstr="IPsec 穿透"/>
+<message msgid="pptp Enable" msgstr="开启"/>
+<message msgid="pptp Disable" msgstr="关闭"/>
+<message msgid="pptp Set" msgstr="PPTP 穿透"/>
+<message msgid="l2tp Enable" msgstr="开启"/>
+<message msgid="l2tp Disable" msgstr="关闭"/>
+<message msgid="l2tp Set" msgstr="L2TP 穿透"/>
+<message msgid="pppoe Enable" msgstr="开启"/>
+<message msgid="pppoe Disable" msgstr="关闭"/>
+<message msgid="pppoe Set" msgstr="PPPOE 穿透"/>
+<message msgid="VPN Apply" msgstr="应用"/>
+<message msgid="VPN Reset" msgstr="取消"/>
+<!-- firmware upgrade-->
+<message msgid="firmware size is too large to write down" msgstr="固件大小超过flash限制"/>
+<message msgid="Port has been occupied" msgstr="端口被占用"/>
+</po>

@@ -1,0 +1,47 @@
+Index: dhcpcd-3.2.3.orig/config.h
+===================================================================
+--- dhcpcd-3.2.3.orig.orig/config.h	2014-03-24 14:11:16.885705762 +0800
++++ dhcpcd-3.2.3.orig/config.h	2014-03-24 14:13:02.754641885 +0800
+@@ -32,7 +32,7 @@
+  * was running on a low memory device */
+ 
+ #define ENABLE_ARP
+-#define ENABLE_NTP
++//#define ENABLE_NTP			//disbled by frank
+ #define ENABLE_NIS
+ #define ENABLE_INFO
+ /* Define this to enable some compatability with 1.x and 2.x info files */
+@@ -40,16 +40,16 @@
+ 
+ /* IPV4LL, aka ZeroConf, aka APIPA, aka RFC 3927.
+  * Needs ARP. */
+-#define ENABLE_IPV4LL
++//#define ENABLE_IPV4LL			//disabled by frank
+ 
+ /* We will auto create a DUID_LLT file if it doesn't exist.
+  * You can always create your own DUID file that just contains the
+  * hex string that represents the DUID.
+  * See RFC 3315 for details on this. */
+-#define ENABLE_DUID
++//#define ENABLE_DUID				//disabled by frank
+ 
+ /* resolvconf is framework for multiple interfaces to manage resolv.conf */
+-#define ENABLE_RESOLVCONF
++//#define ENABLE_RESOLVCONF			//disabled by frank
+ 
+ /* Some systems do not have a working fork.
+  * The Makefile will attempt to work it out, but if it fails to feel free to
+Index: dhcpcd-3.2.3.orig/dhcpcd.c
+===================================================================
+--- dhcpcd-3.2.3.orig.orig/dhcpcd.c	2014-03-24 14:11:22.589705462 +0800
++++ dhcpcd-3.2.3.orig/dhcpcd.c	2014-03-24 14:14:00.910892672 +0800
+@@ -174,7 +174,8 @@
+ 	options->dogateway = true;
+ 	options->daemonise = true;
+ 	options->doinform = false;
+-	options->doipv4ll = true;
++	options->doipv4ll = false;		//disabled by frank
++	options->dolastlease = false;		//disabled by frank
+ 	options->doduid = true;
+ 	options->timeout = DEFAULT_TIMEOUT;
+ 

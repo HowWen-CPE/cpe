@@ -1,0 +1,33 @@
+--- linux-2.6.32-freescale-p1020-sku/arch/powerpc/Kconfig	2012-07-13 03:18:53.918112300 -0700
++++ linux-liteon-wp854-openwrt/arch/powerpc/Kconfig	2012-07-13 03:21:05.477728162 -0700
+@@ -247,6 +247,30 @@
+ source "arch/powerpc/sysdev/Kconfig"
+ source "arch/powerpc/platforms/Kconfig"
+ 
++
++#
++# Endianess selection.  Sufficiently obscure so many users don't know what to
++# answer,so we try hard to limit the available choices.  Also the use of a
++# choice statement should be more obvious to the user.
++#
++choice
++        prompt "Endianess selection"
++        help
++          Some MIPS machines can be configured for either little or big endian
++          byte order. These modes require different kernels and a different
++          Linux distribution.  In general there is one preferred byteorder for a
++          particular system but some systems are just as commonly used in the
++          one or the other endianess.
++
++config CPU_BIG_ENDIAN
++        bool "Big endian"
++
++config CPU_LITTLE_ENDIAN
++        bool "Little endian"
++        help
++
++endchoice
++
+ menu "Kernel options"
+ 
+ config HIGHMEM

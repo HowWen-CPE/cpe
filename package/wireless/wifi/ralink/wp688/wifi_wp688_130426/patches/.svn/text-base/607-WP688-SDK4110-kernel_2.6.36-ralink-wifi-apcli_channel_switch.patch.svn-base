@@ -1,0 +1,95 @@
+Index: mt7620_wifi2716_all_dpa_20130426/rt2860v2/ap/apcli_ctrl.c
+===================================================================
+--- mt7620_wifi2716_all_dpa_20130426.orig/rt2860v2/ap/apcli_ctrl.c	2013-05-20 10:47:27.000000000 +0800
++++ mt7620_wifi2716_all_dpa_20130426/rt2860v2/ap/apcli_ctrl.c	2013-10-08 16:14:12.598893250 +0800
+@@ -406,6 +406,61 @@
+ 	return;
+ }
+ 
++/* added by Ricardo ----------------------->*/
++VOID SwitchChannel(
++	IN	PRTMP_ADAPTER	pAd )
++{
++#ifdef CONFIG_AP_SUPPORT
++	INT		i;
++#endif /* CONFIG_AP_SUPPORT */
++
++	pAd->CommonCfg.Channel = pAd->CommonCfg.Channel + 1;
++	if(pAd->CommonCfg.Channel > 13) {
++		pAd->CommonCfg.Channel = 1;
++	} 
++
++#ifdef CONFIG_AP_SUPPORT
++	IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
++	{
++		if (((pAd->CommonCfg.PhyMode == PHY_11A)
++#ifdef DOT11_N_SUPPORT
++			|| (pAd->CommonCfg.PhyMode == PHY_11AN_MIXED)
++#endif /* DOT11_N_SUPPORT */
++			)
++			&& (pAd->CommonCfg.bIEEE80211H == TRUE))
++		{
++			for (i = 0; i < pAd->ChannelListNum; i++)
++			{
++				if (pAd->ChannelList[i].Channel == pAd->CommonCfg.Channel)
++				{
++					if (pAd->ChannelList[i].RemainingTimeForUse > 0)
++					{
++						DBGPRINT(RT_DEBUG_ERROR, ("ERROR: previous detection of a radar on this channel(Channel=%d)\n", pAd->CommonCfg.Channel));
++						break;
++					}
++					else
++					{
++						DBGPRINT(RT_DEBUG_INFO, ("RemainingTimeForUse %d ,Channel %d\n",
++								pAd->ChannelList[i].RemainingTimeForUse, pAd->CommonCfg.Channel));
++					}
++				}
++			}
++		}
++
++#ifdef DOT11_N_SUPPORT
++		N_ChannelCheck(pAd);
++#endif /* DOT11_N_SUPPORT */
++		pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel;
++		AsicBBPAdjust(pAd);
++		OPSTATUS_CLEAR_FLAG(pAd, fOP_STATUS_BG_PROTECTION_INUSED);
++		AsicSwitchChannel(pAd, pAd->CommonCfg.CentralChannel, FALSE);
++		AsicLockChannel(pAd, pAd->CommonCfg.CentralChannel);
++	}
++#endif /* CONFIG_AP_SUPPORT */
++
++}
++/* end  by Ricardo <---------------------------------*/
++
+ /* 
+     ==========================================================================
+     Description:
+@@ -464,6 +519,15 @@
+ 
+ 	pApCliEntry = &pAd->ApCfg.ApCliTab[ifIndex];
+ 
++	 /*If SSID is Null, Cancel channel switch, Sirian@liteon, 2013-09-30----->*/
++	if ((pApCliEntry->CfgSsidLen == 0) && (pAd->CommonCfg.bAutoAssocAP ==FALSE))
++		DBGPRINT(RT_DEBUG_TRACE, ("(%s) Cancel channel switch.\n", __FUNCTION__));
++	else{
++		DBGPRINT(RT_DEBUG_TRACE, ("(%s) Enable channel switch.\n", __FUNCTION__));
++		SwitchChannel(pAd);
++	}
++        /*<-----Sirian@liteon, 2013-09-30*/
++		
+ 	NdisZeroMemory(&JoinReq, sizeof(APCLI_MLME_JOIN_REQ_STRUCT));
+ 
+ 	if (!MAC_ADDR_EQUAL(pApCliEntry->CfgApCliBssid, ZERO_MAC_ADDR))
+Index: mt7620_wifi2716_all_dpa_20130426/rt2860v2/include/ap_apcli.h
+===================================================================
+--- mt7620_wifi2716_all_dpa_20130426.orig/rt2860v2/include/ap_apcli.h	2013-05-20 10:47:24.000000000 +0800
++++ mt7620_wifi2716_all_dpa_20130426/rt2860v2/include/ap_apcli.h	2013-10-08 16:11:32.028994168 +0800
+@@ -37,7 +37,7 @@
+ #define AUTH_TIMEOUT	300         /* unit: msec */
+ #define ASSOC_TIMEOUT	300         /* unit: msec */
+ /*#define JOIN_TIMEOUT	2000        // unit: msec // not used in Ap-client mode, remove it */
+-#define PROBE_TIMEOUT	1000        /* unit: msec */
++#define PROBE_TIMEOUT	300        /* unit: msec */
+   
+ #define APCLI_ROOT_BSSID_GET(pAd, wcid) ((pAd)->MacTab.Content[(wcid)].Addr)
+ 

@@ -1,0 +1,513 @@
+﻿<po>
+	<message msgid="band title" msgstr="拖曳滑杆可调整各网络应用程序的带宽。"/>
+	<message msgid="band Apply" msgstr="应用"/>
+	<message msgid="band Cancel" msgstr="取消"/>
+	<message msgid="game title" msgstr="无论何时开启游戏引擎，设备都会提供最佳的游戏体验。 带宽管理中的游戏机选项会设置在最优先顺位，除非游戏引擎关闭，否则不会有任何调整。"/>
+	<message msgid="game ok" msgstr="确定"/>
+	<message msgid="g2-1 easy123" msgstr="eaSetup 123"/>
+	<message msgid="g2-1 Internet" msgstr="连接至网络"/>
+	<message msgid="g2-1 Password" msgstr="设备密码"/>
+	<message msgid="g2-1 Security" msgstr="无线安全机制"/>
+	<message msgid="g2-1 InternetType" msgstr="网络连线类型："/>
+	<message msgid="g2-1 InternetType1" msgstr="静态 IP"/>
+	<message msgid="g2-1 InternetType2" msgstr="DHCP"/>
+	<message msgid="g2-1 InternetType3" msgstr="PPPoE"/>
+	<message msgid="g2-1 InternetType4" msgstr="PPTP"/>
+	<message msgid="g2-1 InternetType5" msgstr="L2TP"/>
+	<message msgid="g2-1 title" msgstr="请参阅网络服务提供商 (ISP) 所提供的信息，并填写下列空格。"/>
+	<message msgid="g2-1 Dynamic" msgstr="动态 IP"/>
+	<message msgid="g2-1 Static" msgstr="静态 IP"/>
+	<message msgid="g2-1 IP" msgstr="IP 地址："/>
+	<message msgid="g2-1 User" msgstr="使用者名称："/>
+	<message msgid="g2-1 Password1" msgstr="密码："/>
+	<message msgid="g2-1 Next" msgstr="下一步"/>
+	<message msgid="g2-1 Back" msgstr="上一步"/>
+	<message msgid="g2-1 Exit" msgstr="结束"/>
+	<message msgid="g2-1 No" msgstr="否"/>
+	<message msgid="g2-1 Yes" msgstr="是"/>
+	<message msgid="g2-1 msg" msgstr="您确定要结束？"/>
+	<message msgid="g2-2 easy123" msgstr="eaSetup 123"/>
+	<message msgid="g2-2 Internet" msgstr="连接至网络"/>
+	<message msgid="g2-2 Password" msgstr="设备密码"/>
+	<message msgid="g2-2 Security" msgstr="无线安全机制"/>
+	<message msgid="g2-2 InternetType" msgstr="网络连线类型："/>
+	<message msgid="g2-2 InternetType1" msgstr="静态 IP"/>
+	<message msgid="g2-2 InternetType2" msgstr="DHCP"/>
+	<message msgid="g2-2 InternetType3" msgstr="PPPoE"/>
+	<message msgid="g2-2 InternetType4" msgstr="PPTP"/>
+	<message msgid="g2-2 InternetType5" msgstr="L2TP"/>
+	<message msgid="g2-2 title" msgstr="请参阅网络服务提供商 (ISP) 所提供的信息，填写下列空格。"/>
+	<message msgid="g2-2 IP" msgstr="IP 地址:"/>
+	<message msgid="g2-2 Subnet" msgstr="子网掩码："/>
+	<message msgid="g2-2 Gateway" msgstr="网关："/>
+	<message msgid="g2-2 DNS1" msgstr="主要 DNS："/>
+	<message msgid="g2-2 DNS2" msgstr="次要 DNS："/>
+	<message msgid="g2-2 Gateway1" msgstr="网关"/>
+	<message msgid="g2-2 Next" msgstr="下一步"/>
+	<message msgid="g2-2 Back" msgstr="上一步"/>
+	<message msgid="g2-2 Exit" msgstr="结束"/>
+	<message msgid="g2-2 No" msgstr="否"/>
+	<message msgid="g2-2 Yes" msgstr="是"/>
+	<message msgid="g2-2 msg" msgstr="您确定要结束？"/>
+	<message msgid="g2-3 title" msgstr="一般而言，如果连线类型设置为 DHCP，代表电脑一开启就可使用网络服务。"/>
+	<message msgid="g2-3 title1" msgstr="请点选下一步继续进行下个步骤。"/>
+	<message msgid="g2-4 Dynamic" msgstr="动态 IP"/>
+	<message msgid="g2-4 Static" msgstr="静态 IP"/>
+	<message msgid="g2-4 Address" msgstr="PPTP 地址："/>
+	<message msgid="g2-4 Subnet" msgstr="PPTP 子网掩码："/>
+	<message msgid="g2-4 Gateway" msgstr="PPTP 网关 IP 地址："/>
+	<message msgid="g2-4 Server" msgstr="PPTP 服务器 IP 地址："/>
+	<message msgid="g2-4 User" msgstr="使用者名称："/>
+	<message msgid="g2-4 Password" msgstr="密码："/>
+	<message msgid="g2-5 Dynamic" msgstr="动态 IP"/>
+	<message msgid="g2-5 Static" msgstr="静态 IP"/>
+	<message msgid="g2-5 Address" msgstr="L2TP 地址："/>
+	<message msgid="g2-5 Subnet" msgstr="L2TP 子网掩码："/>
+	<message msgid="g2-5 Gateway" msgstr="L2TP 网关 IP 地址："/>
+	<message msgid="g2-5 Server" msgstr="L2TP 服务器 IP 地址："/>
+	<message msgid="g2-5 User" msgstr="使用者名称："/>
+	<message msgid="g2-5 Password" msgstr="密码："/>
+	<message msgid="g2-44 easy123" msgstr="eaSetup 正连接至网络。"/>
+	<message msgid="g2-44 Connect" msgstr="连线中..."/>
+	<message msgid="g2h easy123" msgstr="eaSetup 正在侦测您的网络连线类型。"/>
+	<message msgid="g2h Detecting" msgstr="侦测中..."/>
+	<message msgid="g2-e2 msg1" msgstr="信息不正确"/>
+	<message msgid="g2-e2 msg2" msgstr="很抱歉！ 设备无法根据您刚才提供的信息连接到网络。  请再输入一次。"/>
+	<message msgid="g2-e msg1" msgstr="侦测不到网络服务"/>
+	<message msgid="g2-e msg2" msgstr="请手动检查下列项目："/>
+	<message msgid="g2-e msg3" msgstr="1. 电脑、设备及xDSL\Cable数据机机间的连接是否正确。"/>
+	<message msgid="g2-e msg4" msgstr="2. 网络连线是否正常。"/>
+	<message msgid="g2-e msg5" msgstr="您可以点选再试一次，再执行一次侦测。"/>
+	<message msgid="g2-e msg6" msgstr="再试一次"/>
+	<message msgid="g3 title" msgstr="变更设备密码"/>
+	<message msgid="g3 msg" msgstr="建议您可以另外设置一个新的管理员密码(登录设备设置页面的密码)，出厂预设密码为admin。"/>
+	<message msgid="g3 Password" msgstr="密码："/>
+	<message msgid="g3 VPassword" msgstr="验证密码："/>
+	<message msgid="g41 title" msgstr="无线安全机制"/>
+	<message msgid="g41 msg" msgstr="受保护的无线网络可在您以无线方式进行任何网络活动时，确保信息传输安全。 请选择下列任一种安全模式并设置密码，以确保无线网络安全。"/>
+	<message msgid="g41 SSID" msgstr="无线网络名称 (SSID) ："/>
+	<message msgid="g41 Security" msgstr="安全模式："/>
+	<message msgid="g41 password" msgstr="无线密码："/>
+	<message msgid="g41 Vpassword" msgstr="验证密码："/>
+	<message msgid="g41 Security0" msgstr="无安全模式"/>
+	<message msgid="g41 Security1" msgstr="WPA-PSK"/>
+	<message msgid="g41 Security2" msgstr="WPA2-PSK"/>
+	<message msgid="g5 title" msgstr="完成！"/>
+	<message msgid="g5 msg" msgstr="您已经成功连接到网络。 现在，何不点选 {执行}，体验全世界最好用的设备管理工具！"/>
+	<message msgid="g5 GO" msgstr="执行"/>
+	<message msgid="Welcome" msgstr="欢迎使用"/>
+	<message msgid="g5 msg" msgstr="您已经成功连接到网络。 现在，何不点选 {执行}，体验全世界最好用的设备管理工具！"/>
+	<message msgid="g5 GO" msgstr="执行"/>
+	<message msgid="pass title" msgstr="设置精灵将会引导您选择最常用的设置。 如果是第一次设置设备或是需要变更基本设置，建议使用此模式。"/>
+	<message msgid="pass title1" msgstr="如果您需要使用精灵模式所没有的高级功能，请选用高级模式。"/>
+	<message msgid="pass Password" msgstr="新密码："/>
+	<message msgid="pass Retype" msgstr="重新输入一次以供确认："/>
+	<message msgid="pass Ignore" msgstr="忽略"/>
+	<message msgid="pass Apply" msgstr="应用"/>
+	<message msgid="ws title" msgstr="以无线方式传输信息但却未加密非常不安全。 请设置安全模式与密码，确保您的无线网络安全。 接着，只需要点击滑鼠，就可以使用 WPS 将电脑连接至无线网络。"/>
+	<message msgid="ws SSID" msgstr="无线网络名称 (SSID)："/>
+	<message msgid="ws Security" msgstr="安全模式："/>
+	<message msgid="ws Security1" msgstr="无安全措施"/>
+	<message msgid="ws Security2" msgstr="WPA-PSK"/>
+	<message msgid="ws Security3" msgstr="WPA2-PSK"/>
+	<message msgid="ws password" msgstr="无线密码："/>
+	<message msgid="ws vpassword" msgstr="验证密码："/>
+	<message msgid="ws WPS" msgstr="WPS"/>
+	<message msgid="ws Cancel" msgstr="取消"/>
+	<message msgid="ws Apply" msgstr="应用"/>
+	<message msgid="ws title1" msgstr="Wi-Fi 保护设置 (WPS) 可让您更轻松、迅速地将电脑/设备连接到无线网络。 请使用下列其中一个方法来连线。"/>
+	<message msgid="ws title2" msgstr="请点选无线用户端的 Wi-Fi 保护设置按钮，然後再点选画面底部的按钮。"/>
+	<message msgid="ws title3" msgstr="请注册您的无线用户端的 PIN 号码"/>
+	<message msgid="ws title4" msgstr="如果无线用户端要求输入设备的 PIN 码，请依照指示输入"/>
+	<message msgid="ws title5" msgstr="。"/>
+	<message msgid="ws Confirm" msgstr="确认"/>
+	<message msgid="ws OK" msgstr="确定"/>
+	<message msgid="ws ws" msgstr="无线安全机制"/>
+	<message msgid="ws Exit" msgstr="结束"/>
+	<message msgid="ws WPS1" msgstr="WPS"/>
+	<message msgid="ws Register" msgstr="注册"/>
+	<message msgid="ps title" msgstr="请根据以下表格为无线服务进行排程。"/>
+	<message msgid="ps status" msgstr="无线局域网络状态"/>
+	<message msgid="ps Day" msgstr="日"/>
+	<message msgid="ps times" msgstr="不含下列时段 (24小时格式)"/>
+	<message msgid="ps Cancel" msgstr="取消"/>
+	<message msgid="ps Apply" msgstr="应用"/>
+	<message msgid="pc title" msgstr="任何包含任何以下关键字的 URL 都会遭到拦截，无法浏览，除非输入加长的金钥。"/>
+	<message msgid="pc Delete" msgstr="删除"/>
+	<message msgid="pc Add" msgstr="新增"/>
+	<message msgid="pc Cancel" msgstr="取消"/>
+	<message msgid="pc Apply" msgstr="应用"/>
+	<message msgid="Firewall title" msgstr="启用防火墙可保护电脑不受网络上的恶意攻击。"/>
+	<message msgid="Firewall ok" msgstr="确定"/>
+	<message msgid="g Welcome" msgstr="欢迎使用"/>
+	<message msgid="g title" msgstr="接下来的步骤将引导您完成设备的设置并连接至网络。 请点选下方其中一个语言图示以继续进行下个步骤。"/>
+	<message msgid="g Connect" msgstr="连接至网络"/>
+	<message msgid="g Language" msgstr="语言"/>
+	<message msgid="maintain title" msgstr="系统设置"/>
+	<message msgid="maintain sys name" msgstr="系统名称"/>
+	<message msgid="maintain dom name" msgstr="网域名称"/>
+	<message msgid="maintain adm in timer" msgstr="管理超时时间(超时将会自动退出)"/>
+	<message msgid="maintain minutes" msgstr="分钟，0 代表不会超时"/>
+	<message msgid="maintain apply" msgstr="应用"/>
+	<message msgid="maintain reset" msgstr="重设"/>
+	<message msgid="pw title" msgstr="密码设置"/>
+	<message msgid="pw old pw" msgstr="旧密码"/>
+	<message msgid="pw username" msgstr="用户名"/>
+	<message msgid="pw new pw" msgstr="新密码"/>
+	<message msgid="pw confirm" msgstr="请重新输入一次新密码以供确认"/>
+	<message msgid="pw apply" msgstr="应用"/>
+	<message msgid="pw reset" msgstr="重设"/>
+	<message msgid="dash ezmode" msgstr="简易模式"/>
+	<message msgid="dash about" msgstr="关于"/>
+	<message msgid="dash home" msgstr="首页"/>
+	<message msgid="dash logout" msgstr="退出"/>
+	<message msgid="dash welcome" msgstr="欢迎使用： 管理员"/>
+	<message msgid="dash welcome_g" msgstr="欢迎使用: 访客" />
+	<message msgid="dash title" msgstr="状态"/>
+	<message msgid="dash ref interval" msgstr="刷新间隔"/>
+	<message msgid="dash ref none" msgstr="无"/>
+	<message msgid="dash ref 5s" msgstr="60 秒"/>
+	<message msgid="dash ref 10s" msgstr="120 秒"/>
+	<message msgid="dash ref 15s" msgstr="180 秒"/>
+	<message msgid="dash ref 20s" msgstr="240 秒"/>
+	<message msgid="dash ref 25s" msgstr="300 秒"/>
+	<message msgid="dash ref 30s" msgstr="30 秒"/>
+	<message msgid="dash ref apply" msgstr="立即刷新"/>
+	<message msgid="dash logout title" msgstr="退出"/>
+	<message msgid="dash logout mes" msgstr="您确定要退出？"/>
+	<message msgid="dash logout no" msgstr="否"/>
+	<message msgid="dash logout yes" msgstr="是"/>
+	<message msgid="dash about title" msgstr="关于"/>
+	<message msgid="dash about check1" msgstr="欲升级设备至最新版软件请参访官方网页： " />
+	<message msgid="dash about check2" msgstr="." />
+	<message msgid="dash about close" msgstr="关闭"/>
+	<message msgid="dash_info title" msgstr="设备信息"/>
+	<message msgid="dash_info item" msgstr="项目"/>
+	<message msgid="dash_info data" msgstr="信息"/>
+	<message msgid="dash_info hostname" msgstr="主机名称"/>
+	<message msgid="dash_info fwver" msgstr="软件版本"/>
+	<message msgid="dash_info sys opmode" msgstr="系统操作模式"/>
+	<message msgid="dash_info sys router" msgstr="路由器模式"/>
+	<message msgid="dash_info sys ap" msgstr="AP模式"/>
+	<message msgid="dash_info sys clinet" msgstr="无线用户端模式"/>
+	<message msgid="dash_info sys wds" msgstr="桥接器模式 (WDS)"/>
+	<message msgid="dash_info sys apwds" msgstr="AP + 桥接器模式 (AP +WDS)"/>
+	<message msgid="dash_info sys apcli" msgstr="桥接模式"/>
+	<message msgid="dash_info sys wisp" msgstr="WISP 模式"/>
+	<message msgid="dash_info wan info" msgstr="广域网络信息"/>
+	<message msgid="dash_info wan mac" msgstr="MAC 地址"/>
+	<message msgid="dash_info wan ip" msgstr="IP 地址"/>
+	<message msgid="dash_info wan mask" msgstr="IP 子网掩码"/>
+	<message msgid="dash_info wan contype" msgstr="连线类型"/>
+	<message msgid="dash_info lan info" msgstr="局域网络信息"/>
+	<message msgid="dash_info lan mac" msgstr="MAC 地址"/>
+	<message msgid="dash_info lan ip" msgstr="IP 地址"/>
+	<message msgid="dash_info lan mask" msgstr="IP 子网掩码"/>
+	<message msgid="dash_info lan dhcp client"	msgstr="DHCP 客户端" />
+	<message msgid="dash_info lan dhcp srv" msgstr="服务器"/>
+	<message msgid="dash_info lan dhcp dis" msgstr="停用"/>
+	<message msgid="dash_info lan dhcp ena" msgstr="启用" />
+	<message msgid="dash_info lan dhcp server"	msgstr="DHCP 服务器" />
+	<message msgid="dash_info lan dhcp relay"	msgstr="DHCP 中继" />
+	<message msgid="dash_info wlan info" msgstr="无线2.4G局域网络信息"/>
+	<message msgid="dash_info wlan opmode" msgstr="无线2.4G局域网络操作模式"/>
+    <message msgid="dash_info wlan-1 info" msgstr="无线2.4G-1局域网络信息" />
+    <message msgid="dash_info wlan-1 opmode" msgstr="无线2.4G-1局域网络操作模式" />
+    <message msgid="dash_info wlan-2 info" msgstr="无线2.4G-2局域网络信息" />
+    <message msgid="dash_info wlan-2 opmode" msgstr="无线2.4G-2局域网络操作模式" />
+	<message msgid="dash_info wlan1 info" msgstr="无线5G局域网络信息"/>
+	<message msgid="dash_info wlan1 opmode" msgstr="无线5G局域网络操作模式"/>
+	<message msgid="dash_info wlan ap0" msgstr="AP模式"/>
+	<message msgid="dash_info wlan ap1" msgstr="AP模式"/>
+	<message msgid="dash_info wlan cli" msgstr="用户端模式"/>
+	<message msgid="dash_info wlan wds" msgstr="桥接器模式 (WDS)"/>
+	<message msgid="dash_info wlan apwds" msgstr="AP + 桥接器模式 (AP +WDS)"/>
+	<message msgid="dash_info wlan apcli" msgstr="AP 用户端模式"/>
+	<message msgid="dash_info wlan wisp" msgstr="无线用户端模式"/>
+	<message msgid="dash_info wlan sta" msgstr="无线用户端模式"/>
+	<message msgid="dash_info wlan stawds" msgstr="无线WDS用户端模式"/>
+	<message msgid="dash_info wlan mac" msgstr="MAC 地址"/>
+	<message msgid="dash_info wlan status" msgstr="状态"/>
+	<message msgid="dash_info wlan status off" msgstr="关闭"/>
+	<message msgid="dash_info wlan status on" msgstr="开启"/>
+	<message msgid="dash_info wlan status essid" msgstr="ESSID"/>
+	<message msgid="dash_info wlan status namessid" msgstr="名称 (Main_SSID)"/>
+	<message msgid="dash_info wlan associated namessid" msgstr="关联的SSID"/>
+	<message msgid="dash_info wlan chanbw" msgstr="频道带宽"/>
+	<message msgid="dash_info wlan chan" msgstr="频道选择方式"/>
+	<message msgid="dash_info wlan chan auto" msgstr="自动选择频道"/>
+	<message msgid="dash_info wlan chan fixed" msgstr="固定频道"/>
+	<message msgid="dash_info wlan opchan" msgstr="操作频道"/>
+	<message msgid="dash_info wlan extchan" msgstr="扩展频道"/>
+	<message msgid="dash_info wlan sec" msgstr="安全模式"/>
+	<message msgid="dash_info wlan sec nosec" msgstr="无安全模式"/>
+	<message msgid="dash_info wlan 80211mode" msgstr="802.11 模式"/>
+	<message msgid="dash_info wlan 80211mode config" msgstr="已设置"/>
+	<message msgid="dash_info ifstat title" msgstr="接口状态"/>
+	<message msgid="dash_info ifstat if" msgstr="接口"/>
+	<message msgid="dash_info ifstat stat" msgstr="状态"/>
+	<message msgid="dash_info ifstat rate" msgstr="速率"/>
+	<message msgid="dash_info ifstat wan" msgstr="广域网络"/>
+	<message msgid="dash_info ifstat wan down" msgstr="无法运行"/>
+	<message msgid="dash_info ifstat wan up" msgstr="运行中"/>
+	<message msgid="dash_info ifstat lan" msgstr="局域网络"/>
+	<message msgid="dash_info ifstat lan up" msgstr="运行中"/>
+	<message msgid="dash_info ifstat wlan" msgstr="无线2.4G局域网络"/>
+    <message msgid="dash_info ifstat-1 wlan" msgstr="无线2.4G-1局域网络" />
+    <message msgid="dash_info ifstat-2 wlan" msgstr="无线2.4G-2局域网络" />
+	<message msgid="dash_info ifstat1 wlan" msgstr="无线5G局域网络"/>
+	<message msgid="dash_info ifstat wlan down" msgstr="无法运行"/>
+	<message msgid="dash_info ifstat wlan up" msgstr="运行中"/>
+	<message msgid="dash_info systat title" msgstr="系统状态"/>
+	<message msgid="dash_info systat item" msgstr="项目"/>
+	<message msgid="dash_info systat data" msgstr="数据"/>
+	<message msgid="dash_info systat sysuptime" msgstr="系统已执行时间"/>
+	<message msgid="dash_info systat currtime" msgstr="目前日期/时间"/>
+	<message msgid="dash_info systat sysres" msgstr="系统资源"/>
+	<message msgid="dash_info systat cpu" msgstr="CPU 使用量"/>
+	<message msgid="dash_info systat mem" msgstr="内存使用量"/>
+	<message msgid="dash_info systat setting" msgstr="系统设置"/>
+	<message msgid="dash_info systat setting fw" msgstr="防火墙"/>
+	<message msgid="dash_info systat setting en" msgstr="启用"/>
+	<message msgid="dash_info systat setting dis" msgstr="停用"/>
+	<message msgid="dash_info systat bm" msgstr="带宽管理"/>
+	<message msgid="dash_info systat bm en" msgstr="启用"/>
+	<message msgid="dash_info systat bm dis" msgstr="停用"/>
+	<message msgid="dash_info systat upnp en" msgstr="启用"/>
+	<message msgid="dash_info systat upnp dis" msgstr="停用"/>
+	<message msgid="dash_info systat confmode" msgstr="设置模式"/>
+	<message msgid="dash_info systat confmode exp" msgstr="专家"/>
+	<message msgid="dash_info sum title" msgstr="摘要"/>
+	<message msgid="dash_info sum bw" msgstr="带宽管理监视器"/>
+	<message msgid="dash_info sum bw det" msgstr="详细信息"/>
+	<message msgid="dash_info sum dhcp" msgstr="DHCP 表格"/>
+	<message msgid="dash_info sum dhcp det" msgstr="详细信息"/>
+	<message msgid="dash_info sum pktstat" msgstr="封包统计信息"/>
+	<message msgid="dash_info sum pktstat det" msgstr="详细信息"/>
+	<message msgid="dash_info sum wlan" msgstr="无线网络工作站状态"/>
+    <message msgid="dash_info sum wlan-1"	msgstr="无线网络2.4G-1工作站状态" />
+	<message msgid="dash_info sum wlan-2"	msgstr="无线网络2.4G-2工作站状态" />
+    <message msgid="dash_info sum wlan1"	msgstr="无线网络5G工作站状态" />
+	<message msgid="dash_info sum wlan det" msgstr="详细信息"/>
+	<message msgid="dash_info rssi"	msgstr="RSSI" />
+	<message msgid="networkmap Home" msgstr="首页"/>
+	<message msgid="networkmap ExpertMode" msgstr="专家模式"/>
+	<message msgid="networkmap Logout" msgstr="退出"/>
+	<message msgid="networkmap Modem" msgstr="数据机"/>
+	<message msgid="networkmap Status" msgstr="状态"/>
+	<message msgid="networkmap Name" msgstr="系统名称："/>
+	<message msgid="networkmap Time" msgstr="时间："/>
+	<message msgid="networkmap WANIP" msgstr="广域网络 IP："/>
+	<message msgid="networkmap MACAddress" msgstr="MAC 地址："/>
+	<message msgid="networkmap FirmwareVersion" msgstr="软件版本："/>
+	<message msgid="networkmap WirelessNetworkNameSSID" msgstr="无线网络名称 (SSID)："/>
+	<message msgid="networkmap Security" msgstr="安全机制："/>
+	<message msgid="networkmap NetworkMAP" msgstr="网络 MAP"/>
+	<message msgid="networkmap GameEngine" msgstr="游戏引擎"/>
+	<message msgid="networkmap ParenetalControl" msgstr="内容过滤"/>
+	<message msgid="networkmap BandwidthMGMT" msgstr="带宽管理"/>
+	<message msgid="networkmap Firewall" msgstr="防火墙"/>
+	<message msgid="networkmap WirelessSecurity" msgstr="无线安全机制"/>
+	<message msgid="networkmap PowerSaving" msgstr="省电机制"/>
+	<message msgid="networkmap ScanningyourNetwork" msgstr="正在扫描您的网络..."/>
+	<message msgid="Logout" msgstr="退出"/>
+	<message msgid="Home" msgstr="首页"/>
+	<message msgid="About" msgstr="关于"/>
+	<message msgid="EasyMode" msgstr="简易模式"/>
+	<message msgid="WelcomeAdmin" msgstr="欢迎使用： 管理员"/>
+	<message msgid="Welcomeguest" msgstr="欢迎使用: 访客" />
+	<message msgid="openall" msgstr="全部开启"/>
+	<message msgid="closeall" msgstr="关闭"/>
+	<message msgid="CONFIGURATION" msgstr="设置"/>
+	<message msgid="CONFIGURATION_TITLE" msgstr="设置"/>
+	<message msgid="Network" msgstr="网络"/>
+	<message msgid="Wireless LAN" msgstr="无线局域网络"/>
+	<message msgid="Wireless LAN 2.4G" msgstr="无线2.4G局域网络"/>
+	<message msgid="Wireless LAN 2.4G-1" msgstr="无线2.4G-1局域网络"/>
+	<message msgid="Wireless LAN 2.4G-2" msgstr="无线2.4G-2局域网络"/>
+	<message msgid="Wireless LAN 5G" msgstr="无线5G局域网络"/>
+	<message msgid="SNMP" msgstr="SNMP"/>
+	<message msgid="System Utilities" msgstr="系统工具"/>
+    <message msgid="Service" msgstr="服务"/>
+	<message msgid="Qos" msgstr="Qos"/>
+	<message msgid="Factory Default" msgstr="恢复出厂值"/>
+	<message msgid="General" msgstr="一般"/>
+	<message msgid="UpLink" msgstr="上行链路" />
+	<message msgid="DownLink" msgstr="下行链路" />
+	<message msgid="WAN" msgstr="广域网络"/>
+	<message msgid="Internet Connection" msgstr="网络连线"/>
+	<message msgid="LAN" msgstr="局域网络"/>
+	<message msgid="DHCP Server" msgstr="DHCP 服务器"/>
+	<message msgid="Static Route" msgstr="静态路由"/>
+	<message msgid="IP Static Route" msgstr="IP 静态路由"/>
+	<message msgid="Security" msgstr="安全机制"/>
+	<message msgid="Firewall" msgstr="防火墙"/>
+	<message msgid="Content Filter" msgstr="内容过滤"/>
+	<message msgid="Utility" msgstr="公用程序"/>
+	<message msgid="Bandwidth Management" msgstr="带宽管理"/>
+	<message msgid="IGMP Snooping" msgstr="IGMP 窥探"/>
+	<message msgid="IP Alias" msgstr="IP 别名"/>
+	<message msgid="MAC Filter" msgstr="MAC 过滤"/>
+	<message msgid="Basic" msgstr="基本" />
+	<message msgid="Advanced" msgstr="高级"/>
+	<message msgid="WPS Station" msgstr="WPS 工作站"/>
+	<message msgid="Scheduling" msgstr="排程"/>
+	<message msgid="AP Client" msgstr="AP用户端"/>
+	<message msgid="WDS" msgstr="WDS"/>
+	<message msgid="Client" msgstr="用户端"/>
+	<message msgid="Application" msgstr="应用程序"/>
+	<message msgid="One To One NAT" msgstr="一对一 NAT"/>
+	<message msgid="Services" msgstr="服务"/>
+	<message msgid="SPI" msgstr="SPI"/>
+	<message msgid="RIP" msgstr="RIP"/>
+	<message msgid="Routing" msgstr="路由"/>
+	<message msgid="Monitor" msgstr="监视器"/>
+	<message msgid="Parental Control" msgstr="内容过滤"/>
+	<message msgid="MAINTENANCE" msgstr="维护"/>
+	<message msgid="Maintenance" msgstr="维护"/>
+	<message msgid="Password" msgstr="密码"/>
+	<message msgid="Time" msgstr="时间"/>
+	<message msgid="Time Setting" msgstr="时间设置"/>
+	<message msgid="Remote Management" msgstr="远端管理"/>
+	<message msgid="Firmware Upgrade" msgstr="软件升级"/>
+	<message msgid="Backup Restore" msgstr="备份/恢复"/>
+	<message msgid="Reset Restart" msgstr="重设/重新启动"/>
+	<message msgid="Sys OP Mode" msgstr="系统操作模式"/>
+	<message msgid="Password Setup" msgstr="密码设置"/>
+	<message msgid="Restart" msgstr="重新启动"/>
+	<message msgid="MONITOR" msgstr="监视器"/>
+	<message msgid="Monitor" msgstr="监视器"/>
+	<message msgid="Log" msgstr="日志"/>
+	<message msgid="View Log" msgstr="查看日志"/>
+	<message msgid="Log Settings" msgstr="日志设置"/>
+	<message msgid="BW MGMT Monitor" msgstr="带宽管理监视器"/>
+	<message msgid="DHCP Table" msgstr="DHCP 表格"/>
+	<message msgid="Packet Statistics" msgstr="封包统计信息"/>
+	<message msgid="Port Statistics" msgstr="端口统计信息"/>
+	<message msgid="Wireless Statistics" msgstr="无线统计信息"/>
+	<message msgid="Ethernet Client" msgstr="以太网客户端"/>
+	<message msgid="Ethernet Client List" msgstr="以太网客户端列表"/>
+
+	<message msgid="WLAN Station Status" msgstr="无线网络工作站状态"/>
+	<message msgid="WLAN 2.4G Station Status" msgstr="无线2.4G网络工作站状态"/>
+	<message msgid="WLAN 2.4G-1 Station Status" msgstr="无线2.4G-1网络工作站状态"/>
+	<message msgid="WLAN 2.4G-2 Station Status" msgstr="无线2.4G-2网络工作站状态"/>
+	<message msgid="WLAN 5G Station Status" msgstr="无线5G网络工作站状态"/>
+	<message msgid="Association List" msgstr="关联表"/>
+	<message msgid="Sys OP Mode" msgstr="系统操作模式"/>
+	<message msgid="Password Setup" msgstr="密码设置"/>
+	<message msgid="Restart" msgstr="重新启动"/>
+	<message msgid="message_header" msgstr="信息"/>
+	<message msgid="Unconfigured" msgstr="未设置"/>
+	<message msgid="Configured" msgstr="已设置"/>
+	<message msgid="System Name cannot be empty." msgstr="系统名称不可空白。"/>
+	<message msgid="Domain Name cannot be empty." msgstr="网域名称不可空白。"/>
+	<message msgid="Please specify Administrator Inactivity Timer." msgstr="请设置管理员超时时间。"/>
+	<message msgid="Invalid Administrator Inactivity Timer" msgstr="无效的管理员超时时间"/>
+	<message msgid="Error: Confirm password not match!!" msgstr="错误：确认密码不一致！！"/>
+<!-- loading.asp -->
+<message msgid="proceeding message 1" msgstr="正在进行设置更新。请稍候..."/>
+<!-- loading.asp -->
+<!-- proceeding.asp -->
+<message msgid="proceeding message 2" msgstr="设备现在要重新开机。由于并无指示何时程序将完成，请稍待一分钟後，再尝试存取设备。"/>
+<message msgid="proceeding Restart" msgstr="设备现正重新启动。"/>
+<!-- proceeding.asp -->
+<!-- upload_process.html -->
+<message msgid="proceeding message 3" msgstr="正在进行软件升级...请稍后..."/>
+<message msgid="proceeding message 4" msgstr="设备现正重新启动。请稍后..."/>
+<message msgid="proceeding message 5" msgstr="请勿将设备断电。"/>
+<!-- upload_process.html -->
+<message msgid="main Ready" msgstr="准备就绪"/>
+<message msgid="main ConfigurationSuccess" msgstr="设置更新成功"/>
+<message msgid="main ConfigurationProceeding" msgstr="正在进行设置更新。请稍候..."/>
+<message msgid="main firmware download in progress" msgstr="软件升级进行中。 请稍候..."/>
+<message msgid="main firmware upgrade is proceeding" msgstr="正在进行软件升级 请稍候并勿将设备断电。"/>
+<message msgid="Management" msgstr="管理"/>
+<!-- parental_control.asp 20090624 add-->
+<message msgid="Key_Word" msgstr="新增关键字"/>
+<message msgid="change_password" msgstr="使用此页面来更改密码"/>
+<message msgid="Disassociated" msgstr="没有关联"/>
+<message msgid="Associated" msgstr="已关联"/>
+<message msgid="Connect Status" msgstr="关联信息"/>
+
+<!-- added by WR71210IRA -->
+	<message msgid="g41 msg2" msgstr="强烈建议您设置 WPA 或 WPA2 加密，以确保无线网络安全。"/>
+	<message msgid="g5 msg2" msgstr="若要将设备升级至最新的软件，造访本公司网站：www.HP.com。"/>
+	<message msgid="g5 msg3" msgstr="亦可前往 Expert mode (专家模式) &gt; Maintenance (维护) &gt; Firmware Upgrade (软件升级)，进行线上软件升级。"/>
+	<message msgid="dash_info wlan sec wep" msgstr="静态 WEP"/>
+	<message msgid="dash_info wlan sec wpapsk" msgstr="WPA-PSK"/>
+	<message msgid="dash_info wlan sec wpa2psk" msgstr="WPA2-PSK"/>
+	<message msgid="dash_info wlan sec wpapskwpa2psk" msgstr="WPA-PSK/WPA2-PSK"/>
+	<message msgid="dash_info wlan sec wpawpa2" msgstr="WPA/WPA2"/>
+	<message msgid="dash_info wlan sec wpa"	msgstr="WPA" />
+	<message msgid="dash_info wlan sec wpa2" msgstr="WPA2" />
+	<message msgid="dash_info wlan sec unavailable"	msgstr="无法获取" />
+	<message msgid="dash_info wlan sec unknown"	msgstr="未知" />
+	<message msgid="IPv6" msgstr="IPv6"/>
+	<message msgid="NAT" msgstr="NAT"/>
+	<message msgid="DDNS" msgstr="DDNS"/>
+	<message msgid="UPnP" msgstr="UPnP"/>
+	<message msgid="dash_info wan3G simstatus" msgstr="SIM 无线网卡状态"/>
+	<message msgid="dash_info ifstat wan3G" msgstr="3G 数据机"/>
+	<message msgid="dash_info ifstat wan3G up" msgstr="运行中"/>
+	<message msgid="dash_info ifstat wan3G down" msgstr="无法运行"/>
+	<message msgid="dash_info sum3G title" msgstr="3G 状态"/>
+	<message msgid="dash_info systat item" msgstr="项目"/>
+	<message msgid="dash_info systat data" msgstr="信息"/>
+	<message msgid="dash_info conn3G status" msgstr="3G 连线状态"/>
+	<message msgid="dash_info wan3G ISP" msgstr="服务提供者"/>
+	<message msgid="dash_info wan3G SSI" msgstr="信号强度"/>
+	<message msgid="dash_info wan3G uptime" msgstr="上次连线已执行时间"/>
+	<message msgid="dash_info wan3G Manufacturer" msgstr="3G 无线网络卡制造商"/>
+	<message msgid="dash_info wan3G Model" msgstr="3G 无线网络卡型号"/>
+	<message msgid="dash_info wan3G firmware" msgstr="3G 无线网络卡软件版本"/>
+	<message msgid="dash_info wan3G IMEI" msgstr="3G 无线网络卡 IMEI"/>
+	<message msgid="dash_info wan3G SIM_IMEI" msgstr="SIM 无线网络卡 IMEI"/>
+	<message msgid="dash_info wan3G ready" msgstr="准备就绪"/>
+	<message msgid="dash_info wan3G not_ready" msgstr="尚未准备就绪"/>
+	<message msgid="dash_info wan3G SSIunit" msgstr="dBm"/>
+	<message msgid="g2-1 ServiceName" msgstr="服务名称："/>
+	<message msgid="Site Survey" msgstr="扫描网络"/>
+	<message msgid="System do not support specific invalid characters" msgstr="系统不支援特定的无效字符"/>
+	<message msgid="It is strongly recommended to set WPA or WPA2 encryption for better wireless security." msgstr="强烈建议您设置 WPA 或 WPA2 加密，以确保无线网络安全。"/>
+	<message msgid="Please enter SSID!" msgstr="请输入 SSID！"/>
+	<message msgid="Please enter Password!" msgstr="请输入密码！"/>
+	<message msgid="Password should be with length 8~64" msgstr="密码长度应介于 8~64 个字符之间"/>
+	<message msgid="Please enter Verify Password correctly!" msgstr="请正确输入验证密码！"/>
+	<message msgid="Error. IP address is empty." msgstr="错误。 未输入 IP 地址。"/>
+	<message msgid="It should be a [0-9] number." msgstr="此应为 [0-9] 的数字。"/>
+	<message msgid="IP adress format error." msgstr="IP 地址格式错误。"/>
+	<message msgid="PPPoE user name should not be empty!" msgstr="PPPoE 使用者名称不可空白！"/>
+	<message msgid="PPPoE password should not be empty!" msgstr="PPPoE 密码不可空白！"/>
+	<message msgid="First DNS Server should not be empty with User-Defined." msgstr="第一个 DNS 服务器在使用者定义时不可空白。"/>
+	<message msgid="First DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="第一个 DNS 服务器不得为 0.0.0.0，请提供 DNS IP 地址。"/>
+	<message msgid="Second DNS Server should not be 0.0.0.0, please give DNS IP Address." msgstr="第二个 DNS 服务器不得为 0.0.0.0，请提供 DNS IP 地址。"/>
+	<message msgid="PPTP user name should not be empty!" msgstr="PPTP 使用者名称不可空白！"/>
+	<message msgid="PPTP password should not be empty!" msgstr="PPTP 密码不可空白！"/>
+	<message msgid="L2TP user name should not be empty!" msgstr="L2TP 使用者名称不可空白！"/>
+	<message msgid="L2TP password should not be empty!" msgstr="L2TP 密码不可空白！"/>
+	<message msgid="WWW" msgstr="WWW"/>
+	<message msgid="QoS" msgstr="QoS"/>
+	<message msgid="WPS" msgstr="WPS"/>
+	<message msgid="Universal Repeater" msgstr="通用桥接器"/>
+	<message msgid="dash_info sys wisp ur"	msgstr="WISP + UR Mode" />
+	<message msgid="dash_info wlan wisp ur"	msgstr="AP + Wireless Client Mode" />
+	<message msgid="dash_info ipv6 title"	msgstr="IPv6 状态" />
+	<message msgid="dash_info ipv6 conn type"	msgstr="IPv6 连接类型" />
+	<message msgid="dash_info ipv6 wan address"	msgstr="WAN IPv6 地址" />
+	<message msgid="dash_info ipv6 wan gateway"	msgstr="网关 IP 地址" />
+	<message msgid="dash_info ipv6 wan first dns"	msgstr="第一 DNS 服务器" />
+	<message msgid="dash_info ipv6 wan second dns"	msgstr="第二 DNS 服务器" />
+	<message msgid="dash_info ipv6 lan address"	msgstr="LAN IPv6 地址" />
+	<message msgid="dash_info ipv6 lan link local"	msgstr="LAN IPv6 本地地址" />
+	<message msgid="Routing Table" 	msgstr="路由表" />
+  <message msgid="IPv4 Routing Table"   msgstr="IPv4 路由表" />
+	<message msgid="VPN Passthrough" 	msgstr="VPN 穿透" />
+<message msgid="STP"  msgstr="生成树协议" />
+<message msgid="User Rule"  msgstr="用户规则" />
+<message msgid="PPTP Server" msgstr="PPTP 服务器" />
+<!-- add by kissth for l2tp server 2014-0114 -->
+<message msgid="L2TP Server" msgstr="L2TP 服务器" />
+<!-- Rogue AP for main_config_frame.asp -->
+<message msgid="Rogue AP Detection" msgstr="非法AP检测" />
+</po>

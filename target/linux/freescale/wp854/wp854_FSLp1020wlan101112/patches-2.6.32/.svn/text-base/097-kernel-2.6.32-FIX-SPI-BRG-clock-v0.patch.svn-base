@@ -1,0 +1,99 @@
+From 25479a2c22405144da441b4c1bae163c862a2bb2 Mon Sep 17 00:00:00 2001
+From: Rajesh Gumasta <Rajesh.Gumasta@freescale.com>
+Date: Tue, 2 Mar 2010 19:19:23 +0530
+Subject: [PATCH] FIX: SPI BRG clock
+
+   o. In the current code, spibrg is equals to CCB clock , which caused
+      to set incorrect PM(Prescale Modulus) bits in the spi mode register
+      and with this effect SPI_CLK generating at higher frequency than expected.
+
+   o. spibrg must be CCB/2 which set PM bits, correctly to generate the
+      expected SPI_CLK frequency (modified in drivers/spi/fsl_espi.c)
+
+   o. updated clock-frequency of SPI-flash for P1 and P2 platforms
+
+Signed-off-by: Rajesh Gumasta <Rajesh.Gumasta@freescale.com>
+---
+ arch/powerpc/boot/dts/p1020rdb.dts            |    2 +-
+ arch/powerpc/boot/dts/p2020rdb.dts            |    2 +-
+ arch/powerpc/boot/dts/p2020rdb_camp_core0.dts |    2 +-
+ drivers/spi/fsl_espi.c                        |   15 ++++++---------
+ 4 files changed, 9 insertions(+), 12 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p1020rdb.dts b/arch/powerpc/boot/dts/p1020rdb.dts
+index 612e79b..1f14335 100644
+--- a/arch/powerpc/boot/dts/p1020rdb.dts
++++ b/arch/powerpc/boot/dts/p1020rdb.dts
+@@ -255,7 +255,7 @@
+ 				reg = <0>;
+ 				linux,modalias = "fsl_m25p80";
+ 				modal = "s25sl128b";
+-				spi-max-frequency = <50000000>;
++				spi-max-frequency = <45000000>;
+ 				mode = <0>;
+ 
+ 				partition@0 {
+diff --git a/arch/powerpc/boot/dts/p2020rdb.dts b/arch/powerpc/boot/dts/p2020rdb.dts
+index c3b4e89..e38f76b 100644
+--- a/arch/powerpc/boot/dts/p2020rdb.dts
++++ b/arch/powerpc/boot/dts/p2020rdb.dts
+@@ -255,7 +255,7 @@
+ 				reg = <0>;
+ 				linux,modalias = "fsl_m25p80";
+ 				modal = "s25sl128b";
+-				spi-max-frequency = <50000000>;
++				spi-max-frequency = <32000000>;
+ 				mode = <0>;
+ 
+ 				partition@0 {
+diff --git a/arch/powerpc/boot/dts/p2020rdb_camp_core0.dts b/arch/powerpc/boot/dts/p2020rdb_camp_core0.dts
+index cb32861..fab83bf 100644
+--- a/arch/powerpc/boot/dts/p2020rdb_camp_core0.dts
++++ b/arch/powerpc/boot/dts/p2020rdb_camp_core0.dts
+@@ -122,7 +122,7 @@
+ 				reg = <0>;
+ 				linux,modalias = "fsl_m25p80";
+ 				modal = "s25sl128b";
+-				spi-max-frequency = <50000000>;
++				spi-max-frequency = <32000000>;
+ 				mode = <0>;
+ 
+ 				partition@0 {
+diff --git a/drivers/spi/fsl_espi.c b/drivers/spi/fsl_espi.c
+index 694bd20..2d138b3 100644
+--- a/drivers/spi/fsl_espi.c
++++ b/drivers/spi/fsl_espi.c
+@@ -204,16 +204,13 @@ int fsl_espi_setup_transfer(struct spi_device *spi, struct spi_transfer *t)
+ 	cs->hw_mode |= CSMODE_LEN(bits_per_word) | CSMODE_INIT_VAL;
+ 
+ 	if ((fsl_espi->spibrg / hz) >= 32) {
++		cs->hw_mode |= CSMODE_DIV16;
+ 		pm = fsl_espi->spibrg / (hz * 32);
+ 		if (pm > 16) {
+-			cs->hw_mode |= CSMODE_DIV16;
+-			pm = pm / 16;
+-			if (pm > 16) {
+-				dev_err(&spi->dev, "Requested speed is too "
+-					"low: %d Hz. Will use %d Hz instead.\n",
+-					hz, fsl_espi->spibrg / 1024);
+-				pm = 16;
+-			}
++			dev_err(&spi->dev, "Requested speed is too "
++				"low: %d Hz. Will use %d Hz instead.\n",
++				hz, fsl_espi->spibrg / 512);
++			pm = 16;
+ 		}
+ 	} else
+ 		pm = fsl_espi->spibrg / (hz * 2);
+@@ -475,7 +472,7 @@ static int mpc85xx_spi_probe(struct device *dev, struct resource *mem,
+ 	fsl_espi->cs_control = pdata->cs_control;
+ 	fsl_espi->get_rx = fsl_espi_rx_buf_u32;
+ 	fsl_espi->get_tx = fsl_espi_tx_buf_u32;
+-	fsl_espi->spibrg = pdata->sysclk;
++	fsl_espi->spibrg = pdata->sysclk / 2;
+ 
+ 	fsl_espi->rx_shift = 0;
+ 	fsl_espi->tx_shift = 0;
+-- 
+1.5.6.3
+

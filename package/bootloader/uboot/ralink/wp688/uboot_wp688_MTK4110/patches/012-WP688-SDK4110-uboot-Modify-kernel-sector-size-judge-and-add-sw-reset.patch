@@ -1,0 +1,86 @@
+--- uboot-ra4110-old/lib_mips/board.c	2012-11-28 15:36:35.000000000 +0800
++++ uboot-ra4110/lib_mips/board.c	2013-01-06 14:34:42.000000000 +0800
+@@ -34,7 +34,6 @@
+ #include <nand_api.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+-#undef DEBUG
+ 
+ #define SDRAM_CFG1_REG RALINK_SYSCTL_BASE + 0x0304
+ 
+@@ -732,6 +731,7 @@
+ 	 */
+ 	addr_sp -= CFG_BOOTPARAMS_LEN;
+ 	bd->bi_boot_params = addr_sp;
++
+ #ifdef DEBUG
+ 	debug ("Reserving %dk for boot params() at: %08lx\n",
+ 			CFG_BOOTPARAMS_LEN >> 10, addr_sp);
+@@ -761,6 +761,23 @@
+ 
+ 	memcpy (id, (void *)gd, sizeof (gd_t));
+ 
++/* Add software reset Soc, Sean@liteon, 2012-12-27-----> */
++#ifdef LITEON_SRC_VALID
++	{
++		unsigned int gpio23_00_data;
++		unsigned int gpio14_data;
++
++		gpio23_00_data = le32_to_cpu(*(volatile u32 *)(RALINK_PIO_BASE + 0x20));
++		gpio14_data = ((gpio23_00_data >> 14) & 0x1);
++
++		if (gpio14_data == 0) {
++			/* Set RSTCTRL[0] = 0x1 to reset Soc */
++			(*(volatile u32 *)(RALINK_SYSCTL_BASE + 0x34)) = cpu_to_le32(0x1);
++		} 
++	}
++#endif //LITEON_SRC_VALID
++/* <-----Sean@liteon, 2012-12-27 */
++
+ 	/* On the purple board we copy the code in a special way
+ 	 * in order to solve flash problems
+ 	 */
+@@ -1804,7 +1821,7 @@
+ 	    s = getenv ("bootdelay");
+ 	    timer1 = s ? (int)simple_strtol(s, NULL, 10) : CONFIG_BOOTDELAY;
+ 	}
+-
++			
+ 	OperationSelect();   
+ 	while (timer1 > 0) {
+ 		--timer1;
+@@ -1820,6 +1837,22 @@
+ 			}
+ 			udelay (10000);
+ 		}
++/* Add software reset Soc, Sean@liteon, 2012-12-27-----> */
++#ifdef LITEON_SRC_VALID
++	{
++		unsigned int gpio23_00_data;
++		unsigned int gpio14_data;
++
++		gpio23_00_data = le32_to_cpu(*(volatile u32 *)(RALINK_PIO_BASE + 0x20));
++		gpio14_data = ((gpio23_00_data >> 14) & 0x1);
++
++		if (gpio14_data == 0) {
++			/* Set RSTCTRL[0] = 0x1 to reset Soc */
++			(*(volatile u32 *)(RALINK_SYSCTL_BASE + 0x34)) = cpu_to_le32(0x1);
++		} 
++	}
++#endif //LITEON_SRC_VALID
++/* <-----Sean@liteon, 2012-12-27 */
+ 		printf ("\b\b\b%2d ", timer1);
+ 	}
+ 	putc ('\n');
+@@ -1896,7 +1929,11 @@
+ 				flash_sect_erase(PHYS_FLASH_2, e_end);
+ 			}
+ #else
++#ifdef LITEON_SRC_VALID
++			if (NetBootFileXferSize <= (bd->bi_flashsize - (CFG_BOOTLOADER_SIZE + CFG_CONFIG_SIZE + CFG_FACTORY_SIZE + CFG_NVRAM_SIZE))) {
++#else
+ 			if (NetBootFileXferSize <= (bd->bi_flashsize - (CFG_BOOTLOADER_SIZE + CFG_CONFIG_SIZE + CFG_FACTORY_SIZE))) {
++#endif //LITEON_SRC_VALID
+ 				e_end = CFG_KERN_ADDR + NetBootFileXferSize;
+ 				if (0 != get_addr_boundary(&e_end))
+ 					break;

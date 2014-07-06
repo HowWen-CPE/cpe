@@ -1,0 +1,166 @@
+<po>
+	<message msgid="firewall disable" msgstr="Devre Dışı Bırak"/>
+	<message msgid="firewall enable" msgstr="Etkinleştir"/>
+	<message msgid="firewall apply" msgstr="Uygula"/>
+	<message msgid="firewall reset" msgstr="İptal et"/>
+	<message msgid="firewall del select" msgstr="Seçileni Sil"/>
+	<message msgid="firewall no" msgstr="No."/>
+	<message msgid="firewall protocol" msgstr="Protokol"/>
+	<message msgid="firewall comment" msgstr="Yorum"/>
+	<message msgid="firewall default drop" msgstr="Diğerleri iptal edilecek"/>
+	<message msgid="firewall default accept" msgstr="Diğerleri kabul edilecek"/>
+	<message msgid="port title" msgstr="MAC/IP/Bağlantı Noktası Filtreleme Ayarları"/>
+	<message msgid="port introduction" msgstr="Ağınızı internetteki virüs, solucan ve kötü amaçlı falaiyetlerden korumak için güvenlik duvarı kurallarını ayarlayabilirsiniz."/>
+	<message msgid="port basic setting" msgstr="Temel Ayarlar"/>
+	<message msgid="port basic filter" msgstr="MAC/IP/Bağlantı Noktası Filtreleme"/>
+	<message msgid="port basic default policy" msgstr="Varsayılan Politika -- Hiçbir kurala uymayan paket:"/>
+	<message msgid="port basic default policy accepted" msgstr="Kabul Edilecek."/>
+	<message msgid="port basic default policy dropped" msgstr="İptal edilecek."/>
+	<message msgid="port filter setting" msgstr="MAC/IP/Bağlantı Noktası Filtre Ayarları"/>
+	<message msgid="port filter macaddr" msgstr="MAC adresi"/>
+	<message msgid="port filter source ipaddr" msgstr="Kaynak IP Adresi"/>
+	<message msgid="port filter port range" msgstr="Bağlantı Noktası Aralığı"/>
+	<message msgid="port filter dest ipaddr" msgstr="Hedef IP Adresi"/>
+	<message msgid="port filter action" msgstr="İşlem"/>
+	<message msgid="port filter action drop" msgstr="İptal et"/>
+	<message msgid="port filter action accept" msgstr="Kabul et"/>
+	<message msgid="port current filter" msgstr="Sistemdeki geçerli MAC/IP/Bağlantı Noktası filtreleme kuralları:"/>
+	<message msgid="port filter source port range" msgstr="Kaynak Bağlantı Noktası Aralığı"/>
+	<message msgid="port filter dest port range" msgstr="Hedef Bağlantı Noktası Aralığı"/>
+	<message msgid="port filter packetcount" msgstr="Paket Adedi"/>
+	<message msgid="nat setup" msgstr="NAT Ayarı"/>
+	<message msgid="nat translation" msgstr="Ağ Adres Çevrimini Etkinleştir"/>
+	<message msgid="nat default server setup" msgstr="Varsayılan Sunucu Ayarı"/>
+	<message msgid="nat server ip" msgstr="Sunucu IP Adresi:"/>
+	<message msgid="nat apply" msgstr="Uygula"/>
+	<message msgid="nat reset" msgstr="İptal et"/>
+	<message msgid="application add app" msgstr="Uygulama Kuralı Ekle"/>
+	<message msgid="application active" msgstr="Etkin"/>
+	<message msgid="application service name" msgstr="Hizmet Adı"/>
+	<message msgid="application port" msgstr="Bağlantı Noktası"/>
+	<message msgid="application server ip" msgstr="Sunucu IP Adresi"/>
+	<message msgid="application app rule sum" msgstr="Uygulama Kuralları Özeti"/>
+	<message msgid="application app rule sum2" msgstr="Uygulama Kuralları Özeti"/>
+	<message msgid="application td active" msgstr="Etkin"/>
+	<message msgid="application td name" msgstr="İsim"/>
+	<message msgid="application td port" msgstr="Bağlantı Noktası"/>
+	<message msgid="application td server ip" msgstr="Sunucu IP Adresi"/>
+	<message msgid="application td modify" msgstr="Değiştir"/>
+	<message msgid="nat advance app rule sum" msgstr="Uygulama Kuralları Özeti"/>
+	<message msgid="nat advance port trigger rule" msgstr="Bağlantı Noktası Tetikleme Kuralları"/>
+	<message msgid="nat advance name" msgstr="İsim"/>
+	<message msgid="nat advance incoming" msgstr="Gelen"/>
+	<message msgid="nat advance trigger" msgstr="Tetikleyici"/>
+	<message msgid="nat advance port1" msgstr="Bağlantı Noktası"/>
+	<message msgid="nat advance endport1" msgstr="Son Bağlantı Noktası"/>
+	<message msgid="nat advance port2" msgstr="Bağlantı Noktası"/>
+	<message msgid="nat advance endport2" msgstr="Son Bağlantı Noktası"/>
+	<message msgid="firewall setup" msgstr="Güvenlik Duvarı Ayarı"/>
+	<message msgid="firewall enable" msgstr="Güvenlik Duvarını Etkinleştir"/>
+	<message msgid="spi setup" msgstr="SPI Ayarı"/>
+	<message msgid="spi enable" msgstr="SPI'yi etkinleştir"/>
+	<message msgid="sc filter restrict" msgstr="Web Özelliklerini Sınırlandır"/>
+	<message msgid="sc filter keyword blocking" msgstr="Anahtar Kelime Engelleme"/>
+	<message msgid="sc filter enable keyword blocking" msgstr="URL Anahtar Kelime Engellemeyi Etkinleştir"/>
+	<message msgid="sc filter keyword" msgstr="Anahtar Kelime"/>
+	<message msgid="sc filter keyword list" msgstr="Anahtar Kelime Listesi"/>
+	<message msgid="sc filter add" msgstr="Ekle"/>
+	<message msgid="sc filter delete" msgstr="Sil"/>
+	<message msgid="sc filter clear" msgstr="Tümünü Sil"/>
+	<message msgid="sc filter trusted ip" msgstr="Güvenilir IP Ayarı"/>
+	<message msgid="sc filter str1" msgstr="Güvenilir bir bilgisayar tüm engellenmiş kaynaklara tam erişime sahiptir. 0.0.0.0 hiç güvenilir bilgisayar olmadığı anlamına gelir."/>
+	<message msgid="sc filter str2" msgstr="Güvenilir Bilgisayar IP Adresi:"/>
+	<message msgid="remote management server port" msgstr="Sunucu Bağlantı Noktası:"/>
+	<message msgid="remote management server access" msgstr="Sunucu Erişimi:"/>
+	<message msgid="remote management secured ip" msgstr="Güvenli İstemci IP Adresi:"/>
+	<message msgid="remote management secured ip all" msgstr="Tümü"/>
+	<message msgid="remote management secured ip sel" msgstr="Seçili"/>
+	<message msgid="port filter Respon To Ping On" msgstr="Ping'e yanıt verilecek konum:"/>
+	<message msgid="port filter PingFrmWANFilter WAN" msgstr="WAN"/>
+	<message msgid="port filter PingFrmWANFilter Disable" msgstr="Devre Dışı Bırak"/>
+	<message msgid="port filter enable firewall rule1" msgstr="Güvenlik Duvarı Kuralını Etkinleştir"/>
+	<message msgid="port filter enable firewall rule2" msgstr="Güvenlik Duvarı Kuralını Etkinleştir"/>
+	<message msgid="port filter firewall rule" msgstr="Güvenlik Duvarı Kuralı"/>
+	<message msgid="port filter add firewall rule" msgstr="Güvenlik Duvarı Kuralı Ekle"/>
+	<message msgid="port filter service name" msgstr="Hizmet Adı:"/>
+	<message msgid="port filter apply1" msgstr="Uygula"/>
+	<message msgid="port filter apply2" msgstr="Uygula"/>
+	<message msgid="port filter add Rule" msgstr="Kural Ekle"/>
+	<message msgid="port filter table service name" msgstr="Hizmet Adı"/>
+	<message msgid="port filter table mac address" msgstr="MAC Adresi"/>
+	<message msgid="port filter table dest ip" msgstr="Hedef IP"/>
+	<message msgid="port filter table source ip" msgstr="Kaynak IP"/>
+	<message msgid="port filter table source prorocol" msgstr="Protokol"/>
+	<message msgid="port filter table dest port range" msgstr="Hedef Bağlantı Noktası Aralığı"/>
+	<message msgid="port filter table source port range" msgstr="Kaynak Bağlantı Noktası Aralığı"/>
+	<message msgid="port filter table source action" msgstr="İşlem"/>
+	<message msgid="port filter table source delete" msgstr="Sil"/>
+	<message msgid="User_Defined" msgstr="Kullanıcı Tanımlı"/>
+	<message msgid="Services" msgstr="--Hizmet---"/>
+	<message msgid="Please input any IP or/and port value." msgstr="Lütfen herhangi bir IP ve/veya bağlantı noktası değeri girin."/>
+	<message msgid="Invalid port number: source port." msgstr="Geçersiz bağlantı noktası numarası: kaynak bağlantı noktası."/>
+	<message msgid="Invalid source port number." msgstr="Geçersiz kaynak bağlantı noktası numarası."/>
+	<message msgid="Invalid source port range setting." msgstr="Geçersiz kaynak bağlantı noktası ayarı."/>
+	<message msgid="Invalid port number: dest port." msgstr="Geçersiz bağlantı noktası numarası: hedef bağlantı noktası."/>
+	<message msgid="Invalid dest port number." msgstr="Geçersiz hedef bağlantı noktası numarası."/>
+	<message msgid="Invalid dest port range setting." msgstr="Geçersiz hedef bağlantı noktası ayarı."/>
+	<message msgid="Source IP address format error." msgstr="Kaynak IP adres formatı hatası."/>
+	<message msgid="Dest IP address format error." msgstr="Hedef IP adres formatı hatası."/>
+	<message msgid="Error. IP address is empty." msgstr="Hata. IP adresi boş."/>
+	<message msgid="It should be a [0-9] number." msgstr="Bir [0-9] sayısı olmalı."/>
+	<message msgid="IP adress format error." msgstr="IP adres formatı hatası."/>
+	<message msgid="Incoming End port is error" msgstr="Gelen Son bağlantı noktası hatalı."/>
+	<message msgid="Trigger port should not be zero" msgstr="Tetikleyici bağlantı noktası sıfır olmamalı"/>
+	<message msgid="Trigger End port is error" msgstr="Tetikleyici Son bağlantı noktası hatalı."/>
+	<message msgid="Incoming port is exist" msgstr="Gelen bağlantı noktası mevcut"/>
+	<message msgid="Incoming End port is exist" msgstr="Gelen Son bağlantı noktası mevcut"/>
+	<message msgid="Trigger port is exist" msgstr="Tetikleyici bağlantı noktası mevcut"/>
+	<message msgid="Port Service is exist" msgstr="Bağlantı Noktası Hizmeti mevcut"/>
+	<message msgid="The value is invalid" msgstr="Değer geçersiz"/>
+	<message msgid="Key word is exist" msgstr="Anahtar kelime mevcut"/>
+	<message msgid="The rule number is exceeded." msgstr="Kural sayısı aşılmış."/>
+	<message msgid="MAC is invaild" msgstr="MAC geçersiz"/>
+	<message msgid="IP error" msgstr="IP hatası"/>
+	<message msgid="Invaild setting" msgstr="Geçersiz ayar"/>
+	<message msgid="IP is invaild" msgstr="IP geçersiz"/>
+	<message msgid="Please set port between 1~65535" msgstr="Lütfen bağlantı noktasını 1~65535 arasında ayarlayın"/>
+	<message msgid="Length is too log." msgstr="Uzunluk çok uzun."/>
+	<message msgid="main Ready" msgstr="Hazır"/>
+	<message msgid="main ConfigurationSuccess" msgstr="Yapılandırma başarıyla güncellendi."/>
+	<message msgid="main ConfigurationProceeding" msgstr="Yapılandırma Güncellemesi devam ediyor. Lütfen Bekleyiniz..."/>
+	<message msgid="main firmware download in progress" msgstr="Donanım yazılımı indiriliyor. Lütfen bekleyiniz. . ."/>
+	<message msgid="main firmware upgrade is proceeding" msgstr="Yazılım yükseltmesi devam ediyor. Lütfen bekleyin ve cihazınızı KAPATMAYINIZ."/>
+	<message msgid="sc filter rwf activex" msgstr="ActiveX"/>
+	<message msgid="sc filter rwf java" msgstr="Java"/>
+	<message msgid="sc filter rwf cookies" msgstr="Cookies"/>
+	<message msgid="sc filter rwf web" msgstr="Web Proxy"/>
+	<message msgid="remote management www" msgstr="WWW"/>
+	<message msgid="System do not support specific invalid characters." msgstr="Sistem belirli geçersiz karakterleri desteklemez."/>
+<message msgid="contact" msgstr="Contact:"/>
+<message msgid="community read" msgstr="Community Name(read only):"/>
+<message msgid="community write" msgstr="Community Name(read/write):"/>
+<message msgid="trap ip" msgstr="Trap IP(full 0 disable server):"/>
+<message msgid="snmp enable" msgstr="Enable"/>
+<message msgid="snmp disable" msgstr="Disable"/>
+<message msgid="snmpversion" msgstr="SNMP Version Support :"/>
+<message msgid="User_Name" msgstr="User Name:"/>
+<message msgid="Security_Level" msgstr="Security Level:"/>
+<message msgid="snmp_user_ro_passwd_td" msgstr="Auth password(Numbers and Letters, Length 8-15):"/>
+<message msgid="snmp_user_rw_passwd_td" msgstr="Privacy Password(Numbers and Letters, Length 8-15):"/>
+<message msgid="ssh enable" msgstr="Enable"/>
+<message msgid="ssh disable" msgstr="Disable"/>
+<message msgid="telnet enable" msgstr="Enable"/>
+<message msgid="telnet disable" msgstr="Disable"/>
+<message msgid="https enable" msgstr="Enable"/>
+<message msgid="https disable" msgstr="Disable"/>
+<message msgid="ssh server port" msgstr="Server Port:"/>
+<message msgid="telnet server port" msgstr="Server Port:"/>
+<message msgid="https server port" msgstr="Server Port:"/>
+<message msgid="service apply" msgstr="Apply"/>
+<message msgid="service reset" msgstr="Cancel"/>
+<message msgid="firmware transport failure" msgstr="firmware transport failure"/>
+<message msgid="firmware transport timeout" msgstr="firmware transport timeout,please check your network or do it in ap mode under ethernet"/>
+<!-- firmware upgrade-->
+<message msgid="firmware size is too large to write down" msgstr="firmware size is too large to write down"/>
+<message msgid="Port has been occupied" msgstr="Port has been occupied"/>
+</po>

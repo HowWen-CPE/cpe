@@ -1,0 +1,18 @@
+Index: linux-2.6.36_MTK4110/arch/mips/Kconfig.debug
+===================================================================
+--- linux-2.6.36_MTK4110.orig/arch/mips/Kconfig.debug	2013-07-06 09:52:25.456151092 +0800
++++ linux-2.6.36_MTK4110/arch/mips/Kconfig.debug	2013-07-06 09:52:38.884448488 +0800
+@@ -20,6 +20,13 @@
+ 	  doesn't cooperate with an X server. You should normally say N here,
+ 	  unless you want to debug such a crash.
+ 
++config UBOOT_CMDLINE
++	bool "Enable uboot command line"
++	default n
++	help
++          This option enables uboot command line. Default is disable, 
++          use ralink defined command line in file cmdline.c.
++          
+ config CMDLINE_BOOL
+ 	bool "Built-in kernel command line"
+ 	default n

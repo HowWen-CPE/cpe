@@ -1,0 +1,124 @@
+diff -urN a/rt2860v2/ap/ap_apcli.c b/rt2860v2/ap/ap_apcli.c
+--- a/rt2860v2/ap/ap_apcli.c	2013-05-13 17:50:32.733727817 +0800
++++ b/rt2860v2/ap/ap_apcli.c	2013-05-13 13:57:26.034472574 +0800
+@@ -529,7 +529,14 @@
+ 				pMacEntry->HTPhyMode.field.MCS = OfdmRateToRxwiMCS[pMacEntry->MaxSupportedRate];
+ 			}
+ 			pMacEntry->CapabilityInfo = pApCliEntry->ApCliMlmeAux.CapabilityInfo;
+-
++#ifndef WIFI_DRIVER_PRE_PORTING	
++                    if (!(pApCliEntry->AuthMode==Ndis802_11AuthModeWPA2  ||  pApCliEntry->AuthMode==Ndis802_11AuthModeWPA))
++                    {//clear wpa_supplicant up flag			 
++#ifdef APCLI_WPA_SUPPLICANT_SUPPORT
++                                 pApCliEntry->WpaSupplicantUP = WPA_SUPPLICANT_DISABLE;
++#endif /* APCLI_WPA_SUPPLICANT_SUPPORT */
++                    }
++#endif
+ 			if ((pApCliEntry->WepStatus == Ndis802_11WEPEnabled)
+ #ifdef APCLI_WPA_SUPPLICANT_SUPPORT
+ 				&& (pApCliEntry->WpaSupplicantUP == WPA_SUPPLICANT_DISABLE)
+@@ -922,7 +929,7 @@
+ 	if (pApCliEntry->WpaSupplicantUP) 
+ 	{
+ 		DBGPRINT(RT_DEBUG_TRACE, ("(%s) ApCli interface[%d] Send RT_DISASSOC_EVENT_FLAG.\n", __FUNCTION__, ifIndex));
+-		RtmpOSWrielessEventSend(pAd->net_dev, RT_WLAN_EVENT_CUSTOM, RT_DISASSOC_EVENT_FLAG, NULL, NULL, 0);
++		//RtmpOSWrielessEventSend(pAd->net_dev, RT_WLAN_EVENT_CUSTOM, RT_DISASSOC_EVENT_FLAG, NULL, NULL, 0);
+ 	}   
+ #endif /* APCLI_WPA_SUPPLICANT_SUPPORT */  
+ }
+@@ -2000,7 +2007,7 @@
+ 		{
+ 			if (pApCliEntry->WepStatus != WPA.GroupCipher)
+ 			{
+-				DBGPRINT(RT_DEBUG_ERROR, ("ApCliValidateRSNIE - WPA validate cipher suite error \n"));
++				DBGPRINT(RT_DEBUG_TRACE, ("ApCliValidateRSNIE - WPA validate cipher suite error \n"));
+ 				return FALSE;
+ 			}
+ 		}
+@@ -2036,7 +2043,7 @@
+ 		{
+ 			if (pApCliEntry->WepStatus != WPA2.GroupCipher)
+ 			{
+-				DBGPRINT(RT_DEBUG_ERROR, ("ApCliValidateRSNIE - WPA2 validate cipher suite error \n"));
++				DBGPRINT(RT_DEBUG_TRACE, ("ApCliValidateRSNIE - WPA2 validate cipher suite error \n"));
+ 				return FALSE;
+ 			}
+ 		}
+diff -urN a/rt2860v2/ap/ap_cfg.c b/rt2860v2/ap/ap_cfg.c
+--- a/rt2860v2/ap/ap_cfg.c	2013-05-13 17:50:32.733727817 +0800
++++ b/rt2860v2/ap/ap_cfg.c	2013-05-13 17:52:06.849747257 +0800
+@@ -3045,6 +3045,8 @@
+ 		APStartUp(pAd);
+             break;
+ 
++      case OID_802_11_INFRASTRUCTURE_MODE:
++            break;
+         case OID_802_11_WEP_STATUS:
+             if (wrq->u.data.length != sizeof(NDIS_802_11_WEP_STATUS)) 
+                 Status  = -EINVAL;
+@@ -3603,6 +3605,8 @@
+ 				}
+ 			break;
+ #endif /*HOSTAPD_SUPPORT*/
++		case RT_OID_WPS_PROBE_REQ_IE:
++			break;
+ 
+ 
+    		default:
+diff -urN a/rt2860v2/common/cmm_profile.c b/rt2860v2/common/cmm_profile.c
+--- a/rt2860v2/common/cmm_profile.c	2013-05-13 17:50:32.725728237 +0800
++++ b/rt2860v2/common/cmm_profile.c	2013-05-13 14:13:45.061784213 +0800
+@@ -874,6 +874,10 @@
+ 				pApCliEntry->AuthMode = Ndis802_11AuthModeWPAPSK;
+ 			else if ((strncmp(macptr, "WPA2PSK", 7) == 0) || (strncmp(macptr, "wpa2psk", 7) == 0))
+ 				pApCliEntry->AuthMode = Ndis802_11AuthModeWPA2PSK;
++			else if ((strncmp(macptr, "WPA", 3) == 0) || (strncmp(macptr, "wpa", 3) == 0))
++				pApCliEntry->AuthMode = Ndis802_11AuthModeWPA;
++			else if ((strncmp(macptr, "WPA2", 4) == 0) || (strncmp(macptr, "wpa2", 4) == 0))
++				pApCliEntry->AuthMode = Ndis802_11AuthModeWPA2;
+ 			else
+ 				pApCliEntry->AuthMode = Ndis802_11AuthModeOpen;
+ 
+diff -urN a/rt2860v2/os/linux/ap_ioctl.c b/rt2860v2/os/linux/ap_ioctl.c
+--- a/rt2860v2/os/linux/ap_ioctl.c	2013-05-13 17:50:32.737977534 +0800
++++ b/rt2860v2/os/linux/ap_ioctl.c	2013-05-13 14:09:34.805723020 +0800
+@@ -381,7 +381,10 @@
+ 			RTMP_AP_IoctlHandle(pAd, wrq, CMD_RTPRIV_IOCTL_GET_MAC_TABLE_STRUCT, 0, NULL, 0);
+ 			break;
+ /* end of modification */
+-
++		case SIOCSIWSCAN:
++			break;
++		case SIOCGIWSCAN:                   
++			break;
+ #ifdef AP_SCAN_SUPPORT
+ 		case RTPRIV_IOCTL_GSITESURVEY:
+ 			RTMP_AP_IoctlHandle(pAd, wrq, CMD_RTPRIV_IOCTL_GSITESURVEY, 0, NULL, 0);
+diff -urN a/rt2860v2_ap/Kconfig b/rt2860v2_ap/Kconfig
+--- a/rt2860v2_ap/Kconfig	2013-05-13 17:50:32.741977431 +0800
++++ b/rt2860v2_ap/Kconfig	2013-05-13 14:11:08.625723440 +0800
+@@ -50,6 +50,10 @@
+ 	bool "AP-CLient Support"
+ 	depends on RT2860V2_AP
+ 
++config  RT2860V2_AP_APCLI_WPA_SUPPLICANT
++	bool "WPA_SUPPLICANT Support"
++	depends on RT2860V2_AP
++
+ config  RT2860V2_AP_MAC_REPEATER
+ 	bool "MAC Repeater Support"
+ 	depends on RT2860V2_AP
+diff -urN a/rt2860v2_ap/Makefile b/rt2860v2_ap/Makefile
+--- a/rt2860v2_ap/Makefile	2013-05-13 17:50:32.741977431 +0800
++++ b/rt2860v2_ap/Makefile	2013-05-13 14:12:20.453723399 +0800
+@@ -408,6 +408,10 @@
+ EXTRA_CFLAGS += -DMAT_SUPPORT
+ endif
+ 
++ifeq ($(CONFIG_RT2860V2_AP_APCLI_WPA_SUPPLICANT),y)
++EXTRA_CFLAGS += -DAPCLI_WPA_SUPPLICANT_SUPPORT
++endif
++
+ ifeq ($(CONFIG_RT2860V2_AP_MAC_REPEATER),y)
+ ifeq ($(CONFIG_RALINK_MT7620),y)
+ EXTRA_CFLAGS += -DMAC_APCLI_SUPPORT

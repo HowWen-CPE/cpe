@@ -1,0 +1,13 @@
+Index: linux-2.6.32.6/arch/powerpc/kernel/pci_32.c
+===================================================================
+--- linux-2.6.32.6.orig/arch/powerpc/kernel/pci_32.c	2012-07-19 10:55:29.131678964 -0700
++++ linux-2.6.32.6/arch/powerpc/kernel/pci_32.c	2012-07-19 10:56:08.040340234 -0700
+@@ -57,7 +57,7 @@
+ 	if ((class == PCI_CLASS_PROCESSOR_POWERPC ||
+ 	     class == PCI_CLASS_BRIDGE_OTHER) &&
+ 		(dev->hdr_type == PCI_HEADER_TYPE_NORMAL) &&
+-		(!class & 0xf) && (dev->bus->parent == NULL)) {
++		((!class) & 0xf) && (dev->bus->parent == NULL)) {
+ 		for (i = 0; i < DEVICE_COUNT_RESOURCE; i++) {
+ 			dev->resource[i].start = 0;
+ 			dev->resource[i].end = 0;

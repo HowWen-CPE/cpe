@@ -1,0 +1,11 @@
+--- a/common/cmd_nand.c
++++ b/common/cmd_nand.c
+@@ -37,7 +37,7 @@ int find_dev_and_part(const char *id, st
+ 		      u8 *part_num, struct part_info **part);
+ #endif
+ 
+-static int nand_dump(nand_info_t *nand, ulong off, int only_oob)
++int nand_dump(nand_info_t *nand, ulong off, int only_oob)
+ {
+ 	int i;
+ 	u_char *datbuf, *oobbuf, *p;

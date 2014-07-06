@@ -1,0 +1,133 @@
+#!/bin/sh
+exit
+# Modify br_rule member
+# $1 : add/del
+# $2 : ifname
+mod_lan_member()
+{
+    local ifname
+    local brifnames
+    case "$1" in
+    add)
+        ifname="$2"
+        brifnames="$(nvram show br_rule 0 ifnames)"
+        [ -z "$(echo \"$brifnames\" | grep $ifname)" ] && {
+            brifnames="$brifnames $ifname"
+            nvram replace attr br_rule 0 ifnames "$brifnames"
+        }
+    ;;
+    del)
+        ifname="$2"
+        brifnames="$(nvram show br_rule 0 ifnames)"
+        [ -n "$(echo \"$brifnames\" | grep $ifname)" ] && {
+            brifnames="$(nvram show br_rule 0 ifnames | sed s/$ifname//g | sed 's/  / /g' )"
+            nvram replace attr br_rule 0 ifnames "$brifnames"
+        }
+    ;;
+    *)
+    esac
+}
+local postact=$1
+local snoopenable="$(nvram show igmp_snoop_rule 0 enable)"
+local langroup=""
+local snoopgroup=""
+local i=0
+local addvlan3="0"
+# construct port belonging
+while [ "$i" -le "4" ]; do
+[ "$(nvram show igmp_snoop_rule 0 p$i)" = "1" -a "$snoopenable" = "1" ] && {
+    snoopstr="snoopport$i=\"1\""
+    lanstr="lanport$i=\"0\""
+    addvlan3="1"
+    eval $snoopstr
+    eval $lanstr
+} || {
+    snoopstr="snoopport$i=\"0\""
+    lanstr="lanport$i=\"1\""
+    eval $snoopstr
+    eval $lanstr
+}
+i=$(($i + 1))
+done
+
+# construct each port egress member
+[ "$snoopport1" = "1" ] && {
+    gmembport="0${snoopport4}${snoopport3}${snoopport2}01"
+    pvid="3"
+} || {
+    gmembport="0${lanport4}${lanport3}${lanport2}01"
+    pvid="1"
+}
+nvram replace attr vlanport_rule 0 gmemb $gmembport
+nvram replace attr vlanport_rule 0 pvid $pvid
+[ "$snoopport2" = "1" ] && {
+    gmembport="0${snoopport4}${snoopport3}0${snoopport1}1"
+    pvid="3"
+} || {
+    gmembport="0${lanport4}${lanport3}0${lanport1}1"
+    pvid="1"
+}
+nvram replace attr vlanport_rule 1 gmemb $gmembport
+nvram replace attr vlanport_rule 1 pvid $pvid
+[ "$snoopport3" = "1" ] && {
+    gmembport="0${snoopport4}0${snoopport2}${snoopport1}1"
+    pvid="3"
+} || {
+    gmembport="0${lanport4}0${lanport2}${lanport1}1"
+    pvid="1"
+}
+nvram replace attr vlanport_rule 2 gmemb $gmembport
+nvram replace attr vlanport_rule 2 pvid $pvid
+[ "$snoopport4" = "1" ] && {
+    gmembport="00${snoopport3}${snoopport2}${snoopport1}1"
+    pvid="3"
+} || {
+    gmembport="00${lanport3}${lanport2}${lanport1}1"
+    pvid="1"
+}
+nvram replace attr vlanport_rule 3 gmemb $gmembport
+nvram replace attr vlanport_rule 3 pvid $pvid
+
+# FIX ME !!! We set vlan3 into vlan_rule 2
+# If we implemented vlan function, the the position needs to be re-calculated
+# Or we can replace this function with vlan
+if [ "$addvlan3" = "1" ]; then
+    # add vlan3
+    [ "$(nvram get vlan_rule_num)" = "2" ] && {
+#        vlan3rule="VLAN3^1^eth2^3^0000011^"
+        vlan1rule="$(nvram show vlan_rule 0)"
+        vlan2rule="$(nvram show vlan_rule 1)"
+        vlanrule="$vlan1rule|$vlan2rule|VLAN3^1^eth2^3^0000011^"
+        nvram fset vlan_rule="$vlanrule"
+        nvram fset vlan_rule_num="3"
+#        nvram replace rule vlan_rule 2 "$vlan3rule"
+        # add vlan3 into br0
+        mod_lan_member add "vlan3"
+    }
+else
+    # remove vlan3
+    [ "$(nvram get vlan_rule_num)" = "3" ] && {
+        vlan1rule="$(nvram show vlan_rule 0)"
+        vlan2rule="$(nvram show vlan_rule 1)"
+        nvram fset vlan_rule="$vlan1rule|$vlan2rule"
+        nvram fset vlan_rule_num="2"
+        # remove vlan3 into br0
+        mod_lan_member del "vlan3"
+    }
+fi
+nvram commit
+# we can reboot after setting up or, we reconstruct vlan and bridge group
+[ "$postact" = "reboot" ] && {
+    reboot
+    exit
+}
+/sbin/ezp-setup-vlan
+/sbin/ezp-setup-br
+if [ "$addvlan3" = "1" ]; then
+    ifconfig vlan3 up
+    brctl addif br0 vlan3
+else
+    brctl delif br0 vlan3
+    ifconfig vlan3 down
+fi
+/usr/sbin/ezp-phy-rst

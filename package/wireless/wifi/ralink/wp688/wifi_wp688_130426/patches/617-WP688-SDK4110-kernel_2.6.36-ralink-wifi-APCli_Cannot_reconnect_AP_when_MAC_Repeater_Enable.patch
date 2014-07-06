@@ -1,0 +1,24 @@
+diff -Naur linux-2.6.36-ra4110-org/rt2860v2/ap/ap_apcli.c linux-2.6.36-ra4110/rt2860v2/ap/ap_apcli.c
+--- linux-2.6.36-ra4110-org/rt2860v2/ap/ap_apcli.c	2013-05-22 15:10:14.457304256 +0800
++++ linux-2.6.36-ra4110/rt2860v2/ap/ap_apcli.c	2013-05-22 15:20:40.793302178 +0800
+@@ -912,7 +912,19 @@
+ 		MacTabWCID = pAd->ApCfg.ApCliTab[ifIndex].RepeaterCli[CliIdx].MacTabWCID;
+ 	else
+ #endif /* MAC_REPEATER_SUPPORT */
+-	MacTabWCID = pApCliEntry->MacTabWCID;
++      {
++            MacTabWCID = pApCliEntry->MacTabWCID;
++#ifdef MAC_REPEATER_SUPPORT
++          if(pAd->ApCfg.bMACRepeaterEn)
++          {//fix bug:when ap change configuration ,the DUT 0f WP688 cant not reconnnect to the AP
++               int i=0;
++               for(i=33;i<64;i++)
++               {
++                     MacTableDeleteEntry(pAd, i, APCLI_ROOT_BSSID_GET(pAd, pApCliEntry->MacTabWCID));
++               }
++          }
++#endif
++      }
+ 
+ 	MacTableDeleteEntry(pAd, MacTabWCID, APCLI_ROOT_BSSID_GET(pAd, pApCliEntry->MacTabWCID));
+ 

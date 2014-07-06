@@ -1,0 +1,181 @@
+#!/bin/sh
+# This file is used to initialize wmm rules when reboot device wp838
+
+local wireless_mode_2g=$(nvram show wl_mode_rule 0 mode);
+local wireless_mode_5g=$(nvram show wl1_mode_rule 0 mode);
+
+start_2g()
+{
+   if [ "$wireless_mode_2g" == "ap" ]; then
+    vap_name="ath0"
+         wmm_enable=$(nvram show wl0_ap_wmm_rule 0 wmm_enable)
+        `iwpriv $vap_name wmm $wmm_enable`
+        
+         cwmin_bk=$(nvram show wl0_ap_wmm_rule 0 cwmin_bk)
+        `iwpriv $vap_name setwmmparams 1 1 0 $cwmin_bk`
+        `iwpriv $vap_name setwmmparams 1 1 1 $cwmin_bk`
+         cwmin_be=$(nvram show wl0_ap_wmm_rule 0 cwmin_be)
+        `iwpriv $vap_name setwmmparams 1 0 0 $cwmin_be`
+        `iwpriv $vap_name setwmmparams 1 0 1 $cwmin_be`
+         cwmin_vi=$(nvram show wl0_ap_wmm_rule 0 cwmin_vi)
+        `iwpriv $vap_name setwmmparams 1 2 0 $cwmin_vi`
+        `iwpriv $vap_name setwmmparams 1 2 1 $cwmin_vi`
+         cwmin_vo=$(nvram show wl0_ap_wmm_rule 0 cwmin_vo)
+        `iwpriv $vap_name setwmmparams 1 3 0 $cwmin_vo`
+        `iwpriv $vap_name setwmmparams 1 3 1 $cwmin_vo`
+
+         cwmax_bk=$(nvram show wl0_ap_wmm_rule 0 cwmax_bk)
+        `iwpriv $vap_name setwmmparams 2 1 0 $cwmax_bk`
+        `iwpriv $vap_name setwmmparams 2 1 1 $cwmax_bk`
+         cwmax_be=$(nvram show wl0_ap_wmm_rule 0 cwmax_be)
+        `iwpriv $vap_name setwmmparams 2 0 0 $cwmax_be`
+        `iwpriv $vap_name setwmmparams 2 0 1 $cwmax_be`
+         cwmax_vi=$(nvram show wl0_ap_wmm_rule 0 cwmax_vi)
+        `iwpriv $vap_name setwmmparams 2 2 0 $cwmax_vi`
+        `iwpriv $vap_name setwmmparams 2 2 1 $cwmax_vi`  
+         cwmax_vo=$(nvram show wl0_ap_wmm_rule 0 cwmax_vo)
+        `iwpriv $vap_name setwmmparams 2 3 0 $cwmax_vo`
+        `iwpriv $vap_name setwmmparams 2 3 1 $cwmax_vo`  
+
+         aifs_bk=$(nvram show wl0_ap_wmm_rule 0 aifs_bk)
+        `iwpriv $vap_name setwmmparams 3 1 0 $aifs_bk`
+        `iwpriv $vap_name setwmmparams 3 1 1 $aifs_bk`  
+         aifs_be=$(nvram show wl0_ap_wmm_rule 0 aifs_be)
+        `iwpriv $vap_name setwmmparams 3 0 0 $aifs_be`
+        `iwpriv $vap_name setwmmparams 3 0 1 $aifs_be`  
+         aifs_vi=$(nvram show wl0_ap_wmm_rule 0 aifs_vi)
+        `iwpriv $vap_name setwmmparams 3 2 0 $aifs_vi`
+        `iwpriv $vap_name setwmmparams 3 2 1 $aifs_vi`  
+         aifs_vo=$(nvram show wl0_ap_wmm_rule 0 aifs_vo)
+        `iwpriv $vap_name setwmmparams 3 3 0 $aifs_vo`
+        `iwpriv $vap_name setwmmparams 3 3 1 $aifs_vo`  
+        
+         txop_bk=$(nvram show wl0_ap_wmm_rule 0 txop_bk)
+        `iwpriv $vap_name setwmmparams 4 1 0 $txop_bk`
+        `iwpriv $vap_name setwmmparams 4 1 1 $txop_bk`  
+         txop_be=$(nvram show wl0_ap_wmm_rule 0 txop_be)
+        `iwpriv $vap_name setwmmparams 4 0 0 $txop_be`
+        `iwpriv $vap_name setwmmparams 4 0 1 $txop_be`  
+         txop_vi=$(nvram show wl0_ap_wmm_rule 0 txop_vi)
+        `iwpriv $vap_name setwmmparams 4 2 0 $txop_vi`
+        `iwpriv $vap_name setwmmparams 4 2 1 $txop_vi`  
+         txop_vo=$(nvram show wl0_ap_wmm_rule 0 txop_vo)
+        `iwpriv $vap_name setwmmparams 4 3 0 $txop_vo`
+        `iwpriv $vap_name setwmmparams 4 3 1 $txop_vo`  
+
+         ac_bk=$(nvram show wl0_sta_wmm_rule 0 ac_bk)
+        `iwpriv $vap_name setwmmparams 5 1 1 $ac_bk`
+         ac_be=$(nvram show wl0_sta_wmm_rule 0 ac_be)
+        `iwpriv $vap_name setwmmparams 5 0 1 $ac_be`
+         ac_vi=$(nvram show wl0_sta_wmm_rule 0 ac_vi)
+        `iwpriv $vap_name setwmmparams 5 2 1 $ac_vi`
+         ac_vo=$(nvram show wl0_sta_wmm_rule 0 ac_vo)
+        `iwpriv $vap_name setwmmparams 5 3 1 $ac_vo`
+        
+         ack_enable=$(nvram show wl0_ap_wmm_rule 0 ack_enable);
+        for i in 0 1 2 3 ; do `iwpriv $vap_name setwmmparams 6 $i 0 $ack_enable`; done
+    elif [ "$wireless_mode_2g" == "client" ]; then
+     vap_name="sta0"
+         wmm_enable=$(nvram show wl0_sta_wmm_rule 0 wmm_enable)
+        `iwpriv $vap_name wmm $wmm_enable`
+         ack_enable=$(nvram show wl0_sta_wmm_rule 0 ack_enable);
+        for i in 0 1 2 3 ; do `iwpriv $vap_name setwmmparams 6 $i 0 $ack_enable`; done
+    fi
+}
+
+start_5g()
+{
+    if [ "$wireless_mode_5g" == "ap" ]; then
+        vap_name="ath1"
+        wmm_enable=$(nvram show wl1_ap_wmm_rule 0 wmm_enable)
+        `iwpriv $vap_name wmm $wmm_enable`
+        
+         cwmin_bk=$(nvram show wl1_ap_wmm_rule 0 cwmin_bk)
+        `iwpriv $vap_name setwmmparams 1 1 0 $cwmin_bk`
+        `iwpriv $vap_name setwmmparams 1 1 1 $cwmin_bk`  
+         cwmin_be=$(nvram show wl1_ap_wmm_rule 0 cwmin_be)
+        `iwpriv $vap_name setwmmparams 1 0 0 $cwmin_be`
+        `iwpriv $vap_name setwmmparams 1 0 1 $cwmin_be`
+         cwmin_vi=$(nvram show wl1_ap_wmm_rule 0 cwmin_vi)
+        `iwpriv $vap_name setwmmparams 1 2 0 $cwmin_vi`
+        `iwpriv $vap_name setwmmparams 1 2 1 $cwmin_vi`
+         cwmin_vo=$(nvram show wl1_ap_wmm_rule 0 cwmin_vo)
+        `iwpriv $vap_name setwmmparams 1 3 0 $cwmin_vo`
+        `iwpriv $vap_name setwmmparams 1 3 1 $cwmin_vo`
+
+         cwmax_bk=$(nvram show wl1_ap_wmm_rule 0 cwmax_bk)
+        `iwpriv $vap_name setwmmparams 2 1 0 $cwmax_bk`
+        `iwpriv $vap_name setwmmparams 2 1 1 $cwmax_bk`
+         cwmax_be=$(nvram show wl1_ap_wmm_rule 0 cwmax_be)
+        `iwpriv $vap_name setwmmparams 2 0 0 $cwmax_be`
+        `iwpriv $vap_name setwmmparams 2 0 1 $cwmax_be`
+         cwmax_vi=$(nvram show wl1_ap_wmm_rule 0 cwmax_vi)
+        `iwpriv $vap_name setwmmparams 2 2 0 $cwmax_vi`
+        `iwpriv $vap_name setwmmparams 2 2 1 $cwmax_vi`  
+         cwmax_vo=$(nvram show wl1_ap_wmm_rule 0 cwmax_vo)
+        `iwpriv $vap_name setwmmparams 2 3 0 $cwmax_vo`
+        `iwpriv $vap_name setwmmparams 2 3 1 $cwmax_vo`  
+
+         aifs_bk=$(nvram show wl1_ap_wmm_rule 0 aifs_bk)
+        `iwpriv $vap_name setwmmparams 3 1 0 $aifs_bk`
+        `iwpriv $vap_name setwmmparams 3 1 1 $aifs_bk`  
+         aifs_be=$(nvram show wl1_ap_wmm_rule 0 aifs_be)
+        `iwpriv $vap_name setwmmparams 3 0 0 $aifs_be`
+        `iwpriv $vap_name setwmmparams 3 0 1 $aifs_be`  
+         aifs_vi=$(nvram show wl1_ap_wmm_rule 0 aifs_vi)
+        `iwpriv $vap_name setwmmparams 3 2 0 $aifs_vi`
+        `iwpriv $vap_name setwmmparams 3 2 1 $aifs_vi`  
+         aifs_vo=$(nvram show wl1_ap_wmm_rule 0 aifs_vo)
+        `iwpriv $vap_name setwmmparams 3 3 0 $aifs_vo`
+        `iwpriv $vap_name setwmmparams 3 3 1 $aifs_vo`  
+        
+         txop_bk=$(nvram show wl1_ap_wmm_rule 0 txop_bk)
+        `iwpriv $vap_name setwmmparams 4 1 0 $txop_bk`
+        `iwpriv $vap_name setwmmparams 4 1 1 $txop_bk`  
+         txop_be=$(nvram show wl1_ap_wmm_rule 0 txop_be)
+        `iwpriv $vap_name setwmmparams 4 0 0 $txop_be`
+        `iwpriv $vap_name setwmmparams 4 0 1 $txop_be`  
+         txop_vi=$(nvram show wl1_ap_wmm_rule 0 txop_vi)
+        `iwpriv $vap_name setwmmparams 4 2 0 $txop_vi`
+        `iwpriv $vap_name setwmmparams 4 2 1 $txop_vi`  
+         txop_vo=$(nvram show wl1_ap_wmm_rule 0 txop_vo)
+        `iwpriv $vap_name setwmmparams 4 3 0 $txop_vo`
+        `iwpriv $vap_name setwmmparams 4 3 1 $txop_vo`
+
+         ac_bk=$(nvram show wl1_sta_wmm_rule 0 ac_bk)
+        `iwpriv $vap_name setwmmparams 5 1 1 $ac_bk`
+         ac_be=$(nvram show wl1_sta_wmm_rule 0 ac_be)
+        `iwpriv $vap_name setwmmparams 5 0 1 $ac_be`
+         ac_vi=$(nvram show wl1_sta_wmm_rule 0 ac_vi)
+        `iwpriv $vap_name setwmmparams 5 2 1 $ac_vi`
+         ac_vo=$(nvram show wl1_sta_wmm_rule 0 ac_vo)
+        `iwpriv $vap_name setwmmparams 5 3 1 $ac_vo`
+        
+         ack_enable=$(nvram show wl1_ap_wmm_rule 0 ack_enable);
+        for i in 0 1 2 3 ; do `iwpriv $vap_name setwmmparams 6 $i 0 $ack_enable`; done
+    elif [ "$wireless_mode_5g" == "client" ]; then
+    vap_name="sta1"
+         wmm_enable=$(nvram show wl1_sta_wmm_rule 0 wmm_enable)
+        `iwpriv $vap_name wmm $wmm_enable`
+         ack_enable=$(nvram show wl1_sta_wmm_rule 0 ack_enable);
+        for i in 0 1 2 3 ; do `iwpriv $vap_name setwmmparams 6 $i 0 $ack_enable`; done
+    fi
+}
+
+start()
+{
+start_2g
+start_5g
+}
+
+start
+
+
+
+#paraget=$1
+
+#case "$paraget" in 
+#start)
+#start
+#;;
+#esac

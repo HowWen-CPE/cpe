@@ -1,0 +1,29 @@
+From d867d05476efde3bbf289aed8641faf3d3a60209 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Thu, 12 Nov 2009 17:41:50 +0530
+Subject: [PATCH] mpc85xx_rdb: Modify the compatible field for mpic_alloc
+
+Modify the compatible field for mpic_alloc so that AMP bring
+up is possible.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ arch/powerpc/platforms/85xx/mpc85xx_rdb.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/powerpc/platforms/85xx/mpc85xx_rdb.c b/arch/powerpc/platforms/85xx/mpc85xx_rdb.c
+index 67e56f4..a5b3caa 100644
+--- a/arch/powerpc/platforms/85xx/mpc85xx_rdb.c
++++ b/arch/powerpc/platforms/85xx/mpc85xx_rdb.c
+@@ -58,7 +58,7 @@ void __init mpc85xx_rdb_pic_init(void)
+ 		return;
+ 	}
+ 
+-	if (of_flat_dt_is_compatible(root, "fsl,85XXRDB-CAMP")) {
++	if (of_flat_dt_is_compatible(root, "fsl,MPC85XXRDB-CAMP")) {
+ 		mpic = mpic_alloc(np, r.start,
+ 			MPIC_PRIMARY |
+ 			MPIC_BIG_ENDIAN | MPIC_BROKEN_FRR_NIRQS,
+-- 
+1.5.2.2
+

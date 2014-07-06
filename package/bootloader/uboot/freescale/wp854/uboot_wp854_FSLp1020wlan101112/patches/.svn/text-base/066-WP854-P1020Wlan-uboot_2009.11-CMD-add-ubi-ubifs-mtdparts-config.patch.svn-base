@@ -1,0 +1,53 @@
+--- a/include/configs/P1020_SKU.h	2012-08-29 19:32:18.000000000 -0700
++++ b/include/configs/P1020_SKU.h	2012-08-29 19:46:48.000000000 -0700
+@@ -376,7 +376,7 @@
+ #define CONFIG_SYS_NAND_BASE_LIST	{CONFIG_SYS_NAND_BASE}
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+ #define NAND_MAX_CHIPS			1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
++//#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND			1
+ #define CONFIG_NAND_FSL_ELBC		1
+ 
+@@ -711,7 +711,7 @@
+ /************************************************************
+  * USB support
+  ************************************************************/
+-#define CONFIG_USB_EHCI
++#undef CONFIG_USB_EHCI
+ #ifdef CONFIG_USB_EHCI
+ #define CONFIG_CMD_USB
+ #define CONFIG_EHCI_HCD_INIT_AFTER_RESET
+@@ -721,6 +721,32 @@
+ #endif
+ /*<-----end sirian-----*/
+ 
++#if 0
++/**********************Sean add************************/
++
++#define CONFIG_CMD_UBI
++#define CONFIG_CMD_UBIFS
++#define CONFIG_CMD_MTDPARTS
++#define CONFIG_MTD_DEVICE
++#define CONFIG_MTD_PARTITIONS
++#define CONFIG_RBTREE
++#define CONFIG_LZO  
++
++
++#define MTDIDS_DEFAULT "nand0=nand0"
++#if 0
++#define MTDPARTS_DEFAULT "mtdparts=nand0:0x300000@0x0(linux), \
++0xa80000@0x300000(rootfs),0x100000@0xd80000(ap config), \
++0x80000@0xe80000(board data),0x1000000@0xf00000(reserved), \
++0x100000@0x1f00000(uboot),0x20000000@0x2000000(nand_rootfs)"
++#else
++#define MTDPARTS_DEFAULT "mtdparts=nand0:0x4000000@0x20000(nk)\
++,0x4000000@0x4020000(nr)"
++#endif
++
++/************************Sean end******************************/
++#endif
++
+ #if defined(CONFIG_MMC) || defined(CONFIG_USB_EHCI)
+ #define CONFIG_CMD_EXT2
+ #define CONFIG_CMD_FAT

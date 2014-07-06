@@ -1,0 +1,56 @@
+Index: busybox-1.19.4/networking/ifconfig.c
+===================================================================
+--- busybox-1.19.4.orig/networking/ifconfig.c	2012-02-05 03:24:55.000000000 +0800
++++ busybox-1.19.4/networking/ifconfig.c	2013-12-11 13:47:20.749643891 +0800
+@@ -328,6 +328,9 @@
+ 
+ 	/* get interface name */
+ 	strncpy_IFNAMSIZ(ifr.ifr_name, *argv);
++	
++	struct ifreq ifr_getmac;
++	strncpy_IFNAMSIZ(ifr_getmac.ifr_name, *argv);
+ 
+ 	/* Process the remaining arguments. */
+ 	while (*++argv != (char *) NULL) {
+@@ -446,6 +449,41 @@
+ 						if (hw_class == 1 ? in_ether(host, &sa) : in_ib(host, &sa))
+ 							bb_error_msg_and_die("invalid hw-addr %s", host);
+ 						p = (char *) &sa;
++						
++						/*Filter invliad MAC address, Sirian@liteon, 2013-12-11----->*/
++						/*Filter mac address is null or all 0 case,return*/
++						if( 0 == sa.sa_data[5] &&  0 == sa.sa_data[4] &&  0 == sa.sa_data[3] \
++						&&  0 == sa.sa_data[2] && 0 == sa.sa_data[1] && 0 == sa.sa_data[0]){
++						
++							bb_error_msg_and_die("invalid hw-addr %s", host);
++							
++						}
++						
++						/*Filter broadcast mac address case,return*/
++						if( 0xff == sa.sa_data[0] &&  0xff == sa.sa_data[0] &&  0xff == sa.sa_data[2] \
++						&&  0xff== sa.sa_data[3] && 0xff == sa.sa_data[4] && 0xff == sa.sa_data[5]){
++						
++							bb_error_msg_and_die("invalid hw-addr %s", host);
++							
++						}
++
++						/*Filter multicast mac address case, return*/
++						if ( 0x01 == (sa.sa_data[0] & 0x01) ){
++							
++							bb_error_msg_and_die("invalid hw-addr %s", host);
++							
++						}
++						/*<-----Sirian@liteon, 2013-12-11*/
++						
++						
++						/* Get device type(eth(1) or wifi(801)) first before set interface MAC address. Bevin@Liteon, 2013-11-18 -----> */
++						int getmac_res;
++						if ((getmac_res = ioctl (sockfd, SIOCGIFHWADDR, &ifr_getmac)) < 0) {
++        					continue;
++    					} else {
++							sa.sa_family = ifr_getmac.ifr_hwaddr.sa_family;
++						}
++						/* <----- Bevin@Liteon, 2013-11-18 */
+ 					}
+ #endif
+ 					memcpy( (((char *)&ifr) + a1op->ifr_offset),

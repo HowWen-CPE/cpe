@@ -1,0 +1,502 @@
+// 接收设备端数据包 David 2010.6.3
+void CUpgraderView::GetDevicesInfo()
+{
+	//CWireless	dlgWirelessConfig;		// 无线设置对话框
+	//CDeviceInfoDlg	dlgInfo;			// 设备信息对话框
+
+	//char		GetLen;
+	//char		szDeviceType[33];
+	//char		szFirmwareVer[20];
+	//char		szcSSID[33];
+	//char		szDeviceName[33];
+	
+	//int			iOpMode;
+	//int			iChannel, iChannelDisplay;
+	//int			iWirelessMode;
+	//int			iSuperG;
+	//int			iSecurity;
+	//int			iEncryption;
+	//int			iWepKeyType;
+	//int			iEncryptionOnOff;
+	//int        iWepInputType;
+	//int			iMACAddrTemp[6];
+	
+	//bool		ErrorBreak = false;
+	//char		szcharWlanMACAddress[18];
+	
+	//CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+
+	if (m_Socket == INVALID_SOCKET)
+		return;
+
+	// 接收设备端数据包
+	const int	MSG_CHUNK = 512;
+	char		buffer[MSG_CHUNK] = "\0";
+	sockaddr_in soctFrom;	// 设备端的IP地址
+	memset(&soctFrom, NULL, sizeof(sockaddr));
+	int	nFromLen = sizeof(sockaddr_in);	// 数据包长度	
+	int status = recvfrom(m_Socket, buffer, MSG_CHUNK, 0, (sockaddr*)&soctFrom, &nFromLen);
+	CString strServIP = inet_ntoa(soctFrom.sin_addr);
+	char szIP[20];
+	//int index, n;
+	memset(szIP,0,sizeof(szIP));
+	m_npBufferIndex = 0;
+	char szBufferBin[512] = "\0";
+	
+	// 接收失败返回
+	if (status <= 0)
+		return;	
+	
+	// 接收成功，将转换到本地内存
+	CUpgraderDoc* pDoc = GetDocument();
+	ASSERT(NULL != pDoc);
+	int nRes = pDoc->GetDataFromSocket(buffer, strServIP);
+	switch (nRes)
+	{
+	case 0:		// 缓冲区指针为空
+	case -1:	// 不是来自设备端的数据包
+	case -2:	// 与客户端的IP不同
+		return;
+	case -3:	// 转换分段数据错误
+		MessageBox("Data To Doc Error");
+		return;
+	case -4:	// 用户名和密码错误
+		AfxMessageBox( "User Name or Password Fail!" );
+		return;
+	}
+	
+	// 获取设备端IP
+	pDoc->m_RecieveData.m_strServIP = strServIP;
+	// socket数据转换到本地内存后，继续后续的任务
+	LaterAction();
+
+	// 接收成功
+	/*ULONG uClientOper;
+	HexToULONG(buffer, 2, m_npBufferIndex, &uClientOper);
+
+	// 如果不是来自设备端的数据包返回
+	if (uClientOper != UAP_CLIENT_OPTION)	
+		return;
+
+	// 正常接收设备端的数据包
+	memset(m_szLocalHostIP, NULL, sizeof(m_szLocalHostIP));
+	GetLocalIPs(m_szLocalHostIP, sizeof(m_szLocalHostIP));
+	int len = strlen(m_szLocalHostIP);
+	if (!IsHexDigit(m_szLocalHostIP[len-1]))
+		m_szLocalHostIP[len-1] = 0;
+	char szIPEnd[2]= {13, 0};
+	len = strcspn(m_szLocalHostIP, szIPEnd);
+	m_szLocalHostIP[len] = 0;
+
+	// 客户端IP
+	HexToChar(buffer, 4 , m_npBufferIndex , szIP);
+	Ip2String(szIP, szIP);
+	if (strcmp(m_szLocalHostIP, szIP) != 0)
+		return;
+
+	// UDP 端口号
+	ULONG		uPort;
+	HexToULONG(buffer, 2 , m_npBufferIndex , &uPort);
+	
+	// 服务（设备）端类型
+	ULONG Distype;
+	HexToULONG(buffer, 2 , m_npBufferIndex , &Distype);								
+
+	// 服务（设备）端MAC地址
+	for (int j=0; j<6; j++)
+	{
+		HexToint(buffer, 1 , m_npBufferIndex , &iMACAddrTemp[j]);
+	}
+	char chrMacAddrTemp[18];
+	memset(chrMacAddrTemp, 0 , sizeof(chrMacAddrTemp));
+	_stprintf(chrMacAddrTemp,"%02X:%02X:%02X:%02X:%02X:%02X", 
+			iMACAddrTemp[0], iMACAddrTemp[1], iMACAddrTemp[2], 
+			iMACAddrTemp[3], iMACAddrTemp[4], iMACAddrTemp[5]);							
+	CString	strMACAddress = chrMacAddrTemp;
+
+	// 序列号
+	ULONG		uFlagRequest;
+	HexToULONG(buffer, 2 , m_npBufferIndex , &uFlagRequest);
+
+	// 设备类型
+	ULONG		uIPConfig;
+	HexToULONG(buffer, 2 , m_npBufferIndex , &uIPConfig);
+
+	// Flag
+	ULONG		uType;
+	HexToULONG(buffer, 1 , m_npBufferIndex , &uType);
+
+	// 设备类别
+	ULONG		uUCPClass;
+	HexToULONG(buffer, 4 , m_npBufferIndex , &uUCPClass);
+
+	// method
+	ULONG		uMethod;
+	HexToULONG(buffer, 2 , m_npBufferIndex , &uMethod);
+	*/
+	// 根据回应包的方法获取数据
+/*	switch(uMethod)
+	{
+	case UCP_METHOD_DISCOVER:
+		for (n = 0; n < 3; n++)
+		{
+			ULONG		Flag;
+			HexToULONG(buffer, 1 , m_npBufferIndex , &Flag);					
+			int StrLen = (int)buffer[m_npBufferIndex++];
+			switch(Flag)
+			{
+			case UCP_CODE_DEVICE_NAME:
+				memset(szDeviceName, 0, sizeof(szDeviceName));
+				HexToChar(buffer, StrLen , m_npBufferIndex , szDeviceName);
+				break;
+			case UCP_CODE_DEVICE_TYPE:
+				memset(szDeviceType, 0, sizeof(szDeviceType));
+				HexToChar(buffer, StrLen , m_npBufferIndex , szDeviceType);
+				break;
+			case UCP_CODE_SOFTWARE_VER:
+				memset(szFirmwareVer, 0, sizeof(szFirmwareVer));
+				HexToChar(buffer, StrLen , m_npBufferIndex , szFirmwareVer);
+				break;
+			}
+		}
+		for(index=0; index<m_nDeviceCount; index++)
+		{
+			if (strcmp(m_szMacAddressList[index], chrMacAddrTemp) == 0)
+				break;
+		}
+
+		// 探测到新设备
+		if (index == m_nDeviceCount)
+		{
+			// 添加到内存
+			memcpy( iMACAddr[index], iMACAddrTemp, sizeof(iMACAddrTemp));
+			strcpy(m_szDeviceNameList[index], szDeviceName);
+			strcpy(m_szDeviceTypeList[index], szDeviceType);
+			strcpy(m_szFirmwareVerList[index], szFirmwareVer);
+			strcpy(m_szMacAddressList[index], chrMacAddrTemp);
+			strcpy(m_szIPAddressList[index], strServIP);
+
+			// 添加到界面list中
+			LV_ITEM		lvitem;
+			lvitem.mask = LVIF_TEXT;
+			lvitem.iSubItem = 0;
+			lvitem.pszText = _T("");
+			lvitem.iItem = index;
+			ctlList.InsertItem(&lvitem);
+
+			ctlList.SetItemText(m_nDeviceCount, 0, m_szDeviceNameList[index] );
+			ctlList.SetItemText(m_nDeviceCount, 1, m_szDeviceTypeList[index] );
+			ctlList.SetItemText(m_nDeviceCount, 2, strServIP);
+			ctlList.SetItemText(m_nDeviceCount, 3, strMACAddress);
+			ctlList.SetItemText(m_nDeviceCount, 4, szFirmwareVer);
+
+			if (m_nDeviceCount < MAXIMUM_LIST)
+				m_nDeviceCount++;
+		}
+		break;
+	case UCP_METHOD_GET_INFO:
+	case UCP_METHOD_GET_WIZARD: 
+	case UCP_METHOD_GET_WLAN:
+	case UCP_METHOD_GET_IP:
+		KillTimer(TIMER_OVERTIME);
+		ErrorBreak = false;
+		char GetTemp;
+		for( HexToChar(buffer, 1 , m_npBufferIndex , &GetTemp);
+		     GetTemp != (char)UCP_CODE_END;
+		     HexToChar(buffer, 1 , m_npBufferIndex , &GetTemp) )
+		{						
+			HexToChar(buffer, 1 , m_npBufferIndex , &GetLen);
+			switch(GetTemp)
+			{
+			//----------
+			case UCP_CODE_DEVICE_NAME:
+				memset(szDeviceName, 0, sizeof(szDeviceName));
+				HexToChar(buffer, GetLen , m_npBufferIndex , szDeviceName);
+				break;
+			case UCP_CODE_DEVICE_TYPE:
+				memset(szDeviceType, 0, sizeof(szDeviceType));
+				HexToChar(buffer, GetLen , m_npBufferIndex , szDeviceType);
+				break;
+			case UCP_CODE_SOFTWARE_VER:
+				memset(szFirmwareVer, 0, sizeof(szFirmwareVer));
+				HexToChar(buffer, GetLen , m_npBufferIndex , szFirmwareVer);
+				break;						
+			//----------
+			case UCP_CODE_USE_DHCP:
+				HexToint(buffer, 1 , m_npBufferIndex , &iDHCPEnable);
+				break;
+			case UCP_CODE_GATEWAY_ADDR:
+				HexToint(buffer, 1 , m_npBufferIndex , &iGateway[0]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iGateway[1]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iGateway[2]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iGateway[3]);
+				break;
+			case UCP_CODE_SUBNET_MASK:
+				HexToint(buffer, 1 , m_npBufferIndex , &iSubMask[0]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iSubMask[1]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iSubMask[2]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iSubMask[3]);
+				break;
+			case UCP_CODE_IP_ADDR:
+				HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[0]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[1]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[2]);
+				HexToint(buffer, 1 , m_npBufferIndex , &iIPAddr[3]);
+				break;
+			case UCP_CODE_SSID:
+				memset(szcSSID, 0, sizeof(szcSSID));
+				HexToChar(buffer, GetLen , m_npBufferIndex , szcSSID);
+				break;
+			case UCP_CODE_CHANNEL:
+				if (GetLen == 0)
+				{
+					iChannel = 0;
+					HexToint(buffer, 1 , m_npBufferIndex , &iChannelDisplay);
+				}
+				else
+				{
+					HexToint(buffer, 1 , m_npBufferIndex , &iChannel);
+					iChannelDisplay = iChannel;
+				}
+				break;
+			case UCP_CODE_OPMODE:
+				HexToint(buffer, 1 , m_npBufferIndex , &iOpMode);
+				break;
+			case UCP_CODE_WIRELESS_MODE:
+				HexToint(buffer, 1 , m_npBufferIndex , &iWirelessMode);
+				break;
+			case UCP_CODE_SUPER_G:
+				HexToint(buffer, 1 , m_npBufferIndex , &iSuperG);
+				break;
+			case UCP_CODE_SEC_METHOD:
+				HexToint(buffer, 1 , m_npBufferIndex , &iSecurity);
+				break;
+			case UCP_CODE_WLAN_MACADDR:
+				memset(szcharWlanMACAddress, 0, sizeof(szcharWlanMACAddress));
+				HexToChar(buffer, GetLen , m_npBufferIndex , szcharWlanMACAddress);
+				break;
+			case UCP_CODE_ENCRYPTION:
+				HexToint(buffer, 1 , m_npBufferIndex , &iEncryption);
+				break;
+			case UCP_CODE_RADIUS_SERVER:
+				{
+					char		szRadiusServer[16];
+					memset(szRadiusServer, 0, sizeof(szRadiusServer));
+					HexToChar(buffer, GetLen , m_npBufferIndex , szRadiusServer);
+					strcpy(dlgWirelessConfig.RadiusServerinwireless, szRadiusServer);
+					break;
+				}						
+			case UCP_CODE_WEP_KEY_TYPE:
+				HexToint(buffer, 1 , m_npBufferIndex , &iWepKeyType);
+				break;
+			case UCP_CODE_ENCRYPT_ONOFF:
+				HexToint(buffer, 1 , m_npBufferIndex , &iEncryptionOnOff);
+				break;
+			case UCP_CODE_WEP_InputType:
+				HexToint(buffer, 1 , m_npBufferIndex , &iWepInputType);
+				break;
+			default:
+				ErrorBreak = true;
+				break;
+			}
+			if (ErrorBreak)
+				break;
+		}
+*/		
+	// 控制端的界面显示
+/*	switch(uMethod)
+	{
+	case UCP_METHOD_GET_IP:	
+		{
+			ShowIPConfigDlg();			
+			break;
+		}					
+	case UCP_METHOD_GET_WLAN:
+		break;
+	case UCP_METHOD_GET_INFO:
+		ShowDeviceInfoDlg();
+		/*char charTemp[33];
+
+		// Device Name
+		dlgInfo.m_strModelName = szDeviceName;
+
+		// Ethernet MAC Address
+		dlgInfo.m_strMacAddr = chrMacAddrTemp;
+
+		// Wireless MAC Address
+		dlgInfo.m_strWlanMacAddr = szcharWlanMACAddress;
+
+		// Firmware Version
+		dlgInfo.m_strFwVer = szFirmwareVer;
+
+		// IP Address
+		sprintf(charTemp,"%d.%d.%d.%d", 
+			iIPAddr[0], iIPAddr[1], iIPAddr[2], iIPAddr[3]);
+		dlgInfo.m_strIpAddr = charTemp;
+
+		// Subnet Mask
+		sprintf(charTemp,"%d.%d.%d.%d", 
+						iSubMask[0], iSubMask[1], iSubMask[2], iSubMask[3]);
+		dlgInfo.m_strSubnetMask = charTemp;
+
+		// Default Gateway 如果设置为空，则界面全部显示为空
+		if ((iGateway[0]==0) && (iGateway[1]==0) && (iGateway[2]==0) && (iGateway[3]==0))
+			sprintf(charTemp,"");
+		else
+			sprintf(charTemp,"%d.%d.%d.%d", 
+							iGateway[0], iGateway[1], iGateway[2], iGateway[3]);
+		dlgInfo.m_strGateway = charTemp;
+
+		// DHCP Client
+		if (iDHCPEnable == 1)
+			sprintf(charTemp,"Enabled");
+		else
+			sprintf(charTemp,"Disabled");
+		dlgInfo.m_strDhcp = charTemp;
+
+		// Operation Mode
+		switch(iOpMode)
+		{
+		case CFG_OP_MODE_AP:
+			sprintf(charTemp,"Access Point ");
+			break;
+		case CFG_OP_MODE_STA:
+			sprintf(charTemp,"Infrastructure");
+			break;
+		case CFG_OP_MODE_ADHOC:
+			sprintf(charTemp,"AD-HOC");
+			break;
+		case CFG_OP_MODE_REPEATER:
+			sprintf(charTemp,"Repeater");
+			break;
+		default:
+			ASSERT(FALSE);
+			break;
+		}
+		dlgInfo.m_strOpMode = charTemp;
+
+		// Wireless Mode
+		if ((iSuperG & ABOLT_TURBO_G) && (iSuperG & ABOLT_TURBO_PRIME))
+			sprintf(charTemp,"2.4GHz 802.11 Super G dynamic");
+		else
+		{
+			switch(iWirelessMode)
+			{
+			case MODE_SELECT_11B:
+				sprintf(charTemp,"2.4GHz 802.11b");
+				break;
+			case MODE_SELECT_11G:
+				sprintf(charTemp,"2.4GHz 802.11g");
+				break;
+			case MODE_SELECT_108G:
+				sprintf(charTemp,"2.4GHz 802.11 Super G static");
+				break;
+			default:
+				ASSERT(FALSE);
+				break;
+			}
+		}
+		dlgInfo.m_strWlanMode = charTemp;
+
+		// SSID
+		dlgInfo.m_strSsid = szcSSID;
+
+		// Channel / Frequency
+		sprintf(charTemp, "Channel %d/ %dMHz",iChannelDisplay, 2407+(iChannelDisplay*5));
+		dlgInfo.m_strChannel = charTemp;
+
+		// Security
+		switch(iSecurity)
+		{
+		case AUTH_OPEN_SYSTEM:
+			//scoutlee for detemine whether wep open system or no security
+			if(iEncryptionOnOff)
+				sprintf(charTemp, "WEP Open System");
+			else 
+				sprintf(charTemp, "NO Security");
+			break;
+		case AUTH_SHARED_KEY:
+			sprintf(charTemp, "WEP Shared Key");
+			break;
+		case AUTH_WPA:
+			sprintf(charTemp, "WPA-802.1x");
+			break;
+		case AUTH_WPAPSK:
+			sprintf(charTemp, "WPA-PSK");
+			break;
+		case AUTH_AUTO:
+			sprintf(charTemp, "WEP Auto");
+			break;
+		default:
+			ASSERT(FALSE);
+			break;
+		}
+		dlgInfo.m_strSecurity = charTemp;
+		dlgInfo.DoModal();
+		break;
+	}
+		break;
+	case UCP_METHOD_SET_WIZARD:
+	case UCP_METHOD_SET_WLAN:
+	case UCP_METHOD_SET_IP:			
+	case UCP_METHOD_RESET:
+		{
+			KillTimer(TIMER_OVERTIME);
+			BeginWaitCursor();	// Display the hourglass cursor.
+			CWaitReset	dlgw(40000);
+			dlgw.DoModal();
+			EndWaitCursor();	// Remove the hourglass cursor.
+			StartDiscovery();
+			break;
+		}				
+	case UCP_METHOD_REBOOT:
+		{
+			KillTimer(TIMER_OVERTIME);
+			BeginWaitCursor();	// Display the hourglass cursor.
+			CWaitReset	dlgw(50000);
+			dlgw.DoModal();
+			EndWaitCursor();	// Remove the hourglass cursor.
+			StartDiscovery();
+			break;
+		}
+	case UCP_METHOD_AUTH:		//登录认证回应包
+		KillTimer(TIMER_OVERTIME);
+		ULONG		uAuthFail;
+		HexToULONG(buffer, 1 , m_npBufferIndex , &uAuthFail);
+		if (uAuthFail)
+		{
+			m_bAuthPass = FALSE;
+			m_bAuthRecvFlag = TRUE;
+			AfxMessageBox( "User Name or Password Fail!" );
+			return;
+		}
+		else
+		{
+			ULONG uCfgMode;
+			HexToULONG(buffer, 2 , m_npBufferIndex , &uCfgMode);
+			switch(uCfgMode)
+			{
+			case UCP_METHOD_RESET:
+				SetFactoryDefault();
+				SetTimer(TIMER_OVERTIME, 2000, NULL);
+				break;
+			case UCP_METHOD_GET_IP:
+				SendConfig();
+				SetTimer(TIMER_OVERTIME, 2000, NULL);
+				break;
+			case UCP_METHOD_GET_WLAN:
+				GetWirelessInfo();
+				SetTimer(TIMER_OVERTIME, 2000, NULL);
+				break;
+			case UCP_METHOD_REBOOT:
+				SendReboot();
+				SetTimer(TIMER_OVERTIME, 2000, NULL);
+				break;
+			default:
+				break;
+			}
+		}
+		break;
+	}
+*/
+}

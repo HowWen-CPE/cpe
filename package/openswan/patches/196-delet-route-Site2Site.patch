@@ -1,0 +1,56 @@
+--- a/programs/_updown.klips/_updown.ip2.in	2014-02-24 18:07:05.000000000 +0800
++++ b/programs/_updown.klips/_updown.ip2.in	2014-02-24 18:12:43.000000000 +0800
+@@ -186,7 +186,8 @@
+ # utility functions for route manipulation
+ # Meddling with this stuff should not be necessary and requires great care.
+ uproute() {
+-	doroute add
++	action="$1"
++	[ -z "$action" ] && doroute add || doroute add "$action"
+ 	ip route flush cache
+ }
+ 
+@@ -538,6 +539,27 @@
+     then
+     	echo "$0: doroute \`$it_tbl' failed ($oops_tbl)" >&2
+     fi
++	num=`nvram rule num ipsec_rule`
++	while [ "$num" -ge 1 ]
++	do
++		i=`expr $num - 1`
++		mode=`nvram show ipsec_rule $i mode`
++		name=`nvram show ipsec_rule $i name`
++		[ "$mode" == "net2net" -a "$name" == "$PLUTO_CONNECTION" ] && {
++		   conn=`nvram show ipsec_rule $i conn_init`
++		   [ "$conn" == "1" -a "$2" == "" ] && {
++		     it="ip route delete $parms $parms2 $parms3"
++		     # EZP: add routing rule under each wan routing table
++		     type="${PLUTO_INTERFACE%%[0-9]*}"
++		     num="${PLUTO_INTERFACE#${type}}"
++		     it_tbl="ip route delete table 1${num} $parms $parms2 $parms3"
++		     oops="`eval $it 2>&1`"
++		     oops_tbl="`eval $it_tbl 2>&1`"
++		     #echo "run delete mode=$mode,name=$name,connection=$PLUTO_CONNECTION">/dev/console
++	      }
++       }
++       num=`expr $num - 1`
++     done
+ 	return $st
+ }
+  
+@@ -620,6 +642,7 @@
+ 	# If you are doing a custom version, firewall commands go here.
+ 	#echo -e "client up ipsec add SNAT rule ${PLUTO_PEER_CLIENT}\n" > /dev/console
+ 	iptables -t nat -I EZP_SNAT_IPSEC -o ipsec+ -d ${PLUTO_PEER_CLIENT} -j ACCEPT
++	uproute $PLUTO_CONNECTION
+ 	;;
+ down-client:)
+ 	# connection to my client subnet going down
+@@ -627,6 +650,7 @@
+ 	# If you are doing a custom version, firewall commands go here.
+ 	#echo -e "client down ipsec delete SNAT rule ${PLUTO_PEER_CLIENT}\n" > /dev/console
+ 	iptables -t nat -D EZP_SNAT_IPSEC -o ipsec+ -d ${PLUTO_PEER_CLIENT} -j ACCEPT
++	downroute
+ 	;;
+ updateresolvconf-host|updateresolvconf-client)
+ 	# updating resolv.conf using DNS info obtained from the server

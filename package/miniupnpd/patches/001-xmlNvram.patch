@@ -1,0 +1,93 @@
+--- miniupnpd-1.7/upnpdescgen.c	2013-08-06 10:19:29.000000000 +0800
++++ miniupnpd-1.7/upnpdescgen.c	2013-08-06 09:40:25.000000000 +0800
+@@ -21,6 +21,8 @@
+ #include "upnpurns.h"
+ #include "getconnstatus.h"
+ 
++#include <bcmnvram.h>
++#include "ezp-lib.h"
+ 
+ /* Event magical values codes */
+ #define CONNECTIONSTATUS_MAGICALVALUE (249)
+@@ -124,6 +126,43 @@
+ 	"scpd xmlns=\"urn:schemas-upnp-org:service-1-0\"";
+ static const char root_device[] =
+ 	"root xmlns=\"urn:schemas-upnp-org:device-1-0\"";
++//#if 0
++ static char friendlyName_buf[MODELNUMBER_MAX_LEN] ;
++ static char manufacturer_buf[MODELNUMBER_MAX_LEN];
++ static char manufacturerURL_buf[PRESENTATIONURL_MAX_LEN];
++ static char modelDescription_buf[PRESENTATIONURL_MAX_LEN];
++ static char modelName_buf[MODELNUMBER_MAX_LEN];
++/*static char modelNumber_buf[MODELNUMBER_MAX_LEN];*/
++ char modelURL_buf[PRESENTATIONURL_MAX_LEN];
++/*static char serialNumber_buf[SERIALNUMBER_MAX_LEN];*/
++/*static char UDN_buf[MODELNUMBER_MAX_LEN];*/
++
++static void ezp_set_model_info(void) {
++    ezplib_get_attr_val("upnpxml_rule", 0, "friendlyName", 
++            friendlyName_buf, sizeof(friendlyName_buf), EZPLIB_USE_CLI);
++	printf("friendly Name is===== %s\n",friendlyName_buf);
++    ezplib_get_attr_val("upnpxml_rule", 0, "manufacturer",
++            manufacturer_buf, sizeof(manufacturer_buf), EZPLIB_USE_CLI);
++	printf("manufacturer is===== %s\n",manufacturer_buf);
++    ezplib_get_attr_val("upnpxml_rule", 0, "manufacturerURL",
++            manufacturerURL_buf, sizeof(manufacturerURL_buf), EZPLIB_USE_CLI);
++	printf("manufacturerURL is===== %s\n",manufacturerURL_buf);
++    ezplib_get_attr_val("upnpxml_rule", 0, "modelDescription",
++            modelDescription_buf, sizeof(modelDescription_buf), EZPLIB_USE_CLI);
++	printf("modelDescription is===== %s\n",modelDescription_buf);
++    ezplib_get_attr_val("upnpxml_rule", 0, "modelName",
++            modelName_buf, sizeof(modelName_buf), EZPLIB_USE_CLI);
++	printf("modelName is===== %s\n",modelName_buf);
++    /*ezplib_get_attr_val("upnpxml_rule", 0, "modelNumber",
++            modelNumber_buf, sizeof(modelNumber_buf), EZPLIB_USE_CLI);*/
++    ezplib_get_attr_val("upnpxml_rule", 0, "modelURL",
++            modelURL_buf, sizeof(modelURL_buf), EZPLIB_USE_CLI);
++    /*ezplib_get_attr_val("upnpxml_rule", 0, "serialNumber",
++            serialNumber_buf, sizeof(serialNumber_buf), EZPLIB_USE_CLI);*/
++    /*ezplib_get_attr_val("upnpxml_rule", 0, "UDN",
++            UDN_buf, sizeof(UDN_buf), EZPLIB_USE_CLI);*/
++}
++//#endif
+ 
+ /* root Description of the UPnP Device
+  * fixed to match UPnP_IGD_InternetGatewayDevice 1.0.pdf
+@@ -145,14 +184,20 @@
+ /* 5 */
+ 	{"/deviceType", DEVICE_TYPE_IGD},
+ 		/* urn:schemas-upnp-org:device:InternetGatewayDevice:1 or 2 */
+-	{"/friendlyName", friendly_name/*ROOTDEV_FRIENDLYNAME*/},	/* required */
+-	{"/manufacturer", ROOTDEV_MANUFACTURER},		/* required */
++	//{"/friendlyName", friendly_name/*ROOTDEV_FRIENDLYNAME*/},	/* required */
++	{"/friendlyName", friendlyName_buf/*ROOTDEV_FRIENDLYNAME*/},
++	//{"/manufacturer", ROOTDEV_MANUFACTURER},		/* required */
++	{"/manufacturer", manufacturer_buf},
+ /* 8 */
+-	{"/manufacturerURL", ROOTDEV_MANUFACTURERURL},	/* optional */
+-	{"/modelDescription", ROOTDEV_MODELDESCRIPTION}, /* recommended */
+-	{"/modelName", ROOTDEV_MODELNAME},	/* required */
++	//{"/manufacturerURL", ROOTDEV_MANUFACTURERURL},	/* optional */
++	{"/manufacturerURL", manufacturerURL_buf},
++	//{"/modelDescription", ROOTDEV_MODELDESCRIPTION}, /* recommended */
++	{"/modelDescription", modelDescription_buf},
++	//{"/modelName", ROOTDEV_MODELNAME},	/* required */
++	{"/modelName", modelName_buf},
+ 	{"/modelNumber", modelnumber},
+-	{"/modelURL", ROOTDEV_MODELURL},
++	//{"/modelURL", ROOTDEV_MODELURL},
++	{"/modelURL", modelURL_buf},
+ 	{"/serialNumber", serialnumber},
+ 	{"/UDN", uuidvalue},	/* required */
+ 	/* see if /UPC is needed. */
+@@ -928,8 +973,10 @@
+ 	* len = strlen(xmlver);
+ 	/*strcpy(str, xmlver); */
+ 	memcpy(str, xmlver, *len + 1);
++	ezp_set_model_info();
+ 	str = genXML(str, len, &tmplen, rootDesc);
+ 	str[*len] = '\0';
++	printf("Gen XML ********************* len:%d\n%s\n", *len, str);
+ 	return str;
+ }
+ 

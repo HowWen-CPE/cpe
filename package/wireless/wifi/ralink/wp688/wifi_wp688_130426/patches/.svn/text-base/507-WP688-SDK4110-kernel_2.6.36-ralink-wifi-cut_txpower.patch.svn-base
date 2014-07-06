@@ -1,0 +1,350 @@
+diff -Nur linux-2.6.36-ra4110-old/rt2860v2/ap/ap_cfg.c linux-2.6.36-ra4110-new/rt2860v2/ap/ap_cfg.c
+--- linux-2.6.36-ra4110-old/rt2860v2/ap/ap_cfg.c	2013-05-06 14:08:35.342729901 +0800
++++ linux-2.6.36-ra4110-new/rt2860v2/ap/ap_cfg.c	2013-05-06 14:02:58.561957456 +0800
+@@ -768,6 +768,11 @@
+ 	{"BeaconPeriod",				Set_BeaconPeriod_Proc},
+ 	{"DtimPeriod",					Set_DtimPeriod_Proc},
+ 	{"TxPower",					Set_TxPower_Proc},
++/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/	
++#ifdef LITEON_SRC_VALID
++	{"CutTxPower",				Set_CutTxPower_Proc},  // Accurately cut down Tx Power
++#endif
++/*<-----daniel@liteon,2013-4-28*/
+ 	{"BGProtection",				Set_BGProtection_Proc},
+ 	{"DisableOLBC", 				Set_OLBCDetection_Proc},
+ 	{"TxPreamble",				Set_TxPreamble_Proc},
+diff -Nur linux-2.6.36-ra4110-old/rt2860v2/chips/rt6352.c linux-2.6.36-ra4110-new/rt2860v2/chips/rt6352.c
+--- linux-2.6.36-ra4110-old/rt2860v2/chips/rt6352.c	2013-05-06 14:08:35.330642428 +0800
++++ linux-2.6.36-ra4110-new/rt2860v2/chips/rt6352.c	2013-05-06 14:02:58.421345907 +0800
+@@ -4486,11 +4486,45 @@
+ 				{
+ 					UINT32 MacValue;
+ 					CHAR delta_pwr = 0;
++					UINT32 MacValue2;					
++					UINT32 MacValue3;
++					
++					/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/
++					#ifdef LITEON_SRC_VALID
++					CHAR      MinTxPwer = 0;
++					UCHAR    CurrentChannel;
++					UCHAR    index;
++					CHAR      change_pwr = 0;
++					#endif
++					/*<-----daniel@liteon,2013-4-28*/
+ 					
+ 					/* adjust compensation value by MP temperature readings(i.e., e2p[77h]) */
+ 					delta_pwr = pAd->TxAgcCompensateG - pAd->mp_delta_pwr;
+ 					delta_pwr += pAd->DeltaPwrBeforeTempComp;
+ 					/* 8-bit representation ==> 6-bit representation (2's complement) */
++					/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/
++					#ifdef LITEON_SRC_VALID					
++					//adjust the delta_pwr
++					if (delta_pwr > 31)
++						delta_pwr = 31;
++					else if(delta_pwr < -31)
++						delta_pwr = -31;
++					
++					if (delta_pwr <0)
++					{
++						CurrentChannel = pAd->CommonCfg.Channel;
++						index = CurrentChannel-1;
++						MinTxPwer =((pAd->TxPower[index].Power  < pAd->TxPower[index].Power2) ? pAd->TxPower[index].Power : pAd->TxPower[index].Power2);
++						change_pwr=MinTxPwer+delta_pwr;
++						if (change_pwr<0)
++						{
++							delta_pwr=-MinTxPwer;
++							
++						}
++						
++					}
++					#endif
++					/*<-----daniel@liteon,2013-4-28*/
+ 					delta_pwr = (delta_pwr & 0x80) ? \
+ 									((delta_pwr & 0x1f) | 0x20) : (delta_pwr & 0x3f);						
+ 					/*	write compensation value into TX_ALG_CFG_1, 
+@@ -4509,6 +4543,11 @@
+ 								pAd->TssiCalibratedOffset,
+ 								pAd->mp_delta_pwr,
+ 								MacValue));	
++					RTMP_IO_READ32(pAd, TX_ALG_CFG_0, &MacValue2);
++					RTMP_IO_READ32(pAd, TX_ALG_CFG_1, &MacValue3);
++
++					
++					
+ 				}
+ 				else
+ 				{
+@@ -4643,7 +4682,11 @@
+ 					TemperatureDiff = ((pAd->CurrTemperature - pAd->TemperatureRef25C) * 19) - pAd->DoCalibrationTemperature;
+ 				}
+ 			}
+-
++			/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/
++			#ifdef LITEON_SRC_VALID
++			AsicPreciseCutDeltaPower(pAd);//adjust channel power after 0x13B4 is changed
++			#endif
++			/*<-----daniel@liteon,2013-4-28*/
+ 			return;
+ 		}
+ 		else
+@@ -4705,6 +4748,15 @@
+ 		{
+ 			INT32 Diff;
+ 			UINT32 MacValue;
++			/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/
++			#ifdef LITEON_SRC_VALID
++			CHAR      MinTxPwer = 0;
++			UCHAR    CurrentChannel;
++			UCHAR    index;
++			CHAR      change_pwr = 0;
++			CHAR     origDiff=0;
++			#endif
++			/*<-----daniel@liteon,2013-4-28*/
+ 			RTMP_IO_READ32(pAd, TX_ALG_CFG_1, &MacValue); /* MAC 0x13B4 */
+ 			MacValue &= 0xffffffc0;
+ 	
+@@ -4714,10 +4766,33 @@
+ 			else if(Diff < -31)
+ 				Diff = -31;
+ 	
++			/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/
++			#ifdef LITEON_SRC_VALID
++			if (Diff <0)
++			{
++				CurrentChannel = pAd->CommonCfg.Channel;
++				index = CurrentChannel-1;
++				MinTxPwer =((pAd->TxPower[index].Power  < pAd->TxPower[index].Power2) ? pAd->TxPower[index].Power : pAd->TxPower[index].Power2);
++				change_pwr=MinTxPwer+Diff;
++				if (change_pwr<0)
++				{
++					origDiff=Diff;
++					Diff=-MinTxPwer;
++					
++				}
++				
++				}
++			#endif
++			/*<-----daniel@liteon,2013-4-28*/
+ 			MacValue |= (Diff & 0x3F);
+ 			RTMP_IO_WRITE32(pAd, TX_ALG_CFG_1, MacValue); 
+ 
+ 			DBGPRINT(RT_DEBUG_TRACE, ("TotalDeltaPower=%d, Mac 0x13B4 is 0x%08x\n", TotalDeltaPower, MacValue));
++			/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/
++			#ifdef LITEON_SRC_VALID
++			AsicPreciseCutDeltaPower(pAd);//adjust channel power after 0x13B4 is changed
++			#endif
++			/*<-----daniel@liteon,2013-4-28*/
+ 		}
+ 
+ 		/* Extra set MAC registers to compensate Tx power if any */
+diff -Nur linux-2.6.36-ra4110-old/rt2860v2/common/cmm_asic.c linux-2.6.36-ra4110-new/rt2860v2/common/cmm_asic.c
+--- linux-2.6.36-ra4110-old/rt2860v2/common/cmm_asic.c	2013-05-06 14:08:35.297239171 +0800
++++ linux-2.6.36-ra4110-new/rt2860v2/common/cmm_asic.c	2013-05-06 14:02:58.077275481 +0800
+@@ -1569,6 +1569,9 @@
+ 		E2PROM setting is calibrated for maximum TX power (i.e. 100%).
+ 		We lower TX power here according to the percentage specified from UI.
+ 	*/
++
++	//Test Code for simulate the temperature change
++
+ 	
+ 	if (pAd->CommonCfg.TxPowerPercentage >= 100) /* AUTO TX POWER control */
+ 	{
+@@ -1618,6 +1621,63 @@
+ 	}
+ }
+ 
++/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/
++#ifdef LITEON_SRC_VALID
++VOID AsicPreciseCutDeltaPower(
++	IN 		PRTMP_ADAPTER 		pAd) 
++{
++
++	UCHAR    index;
++	CHAR      TxPwer = 0, TxPwer2 = 0;
++	CHAR      TxPwerCutLimit = 0;
++	UINT32 	Value = 0;
++	CHAR      CutValue = 0;
++	UCHAR    CurrentChannel;
++	CHAR      temp_comp;//the value is affacted by bw_power_delta,temprature,percentage_power
++	UINT32   macValue;
++	
++	CurrentChannel = pAd->CommonCfg.Channel;
++	index = CurrentChannel-1;
++	TxPwerCutLimit =((pAd->TxPower[index].Power  < pAd->TxPower[index].Power2) ? pAd->TxPower[index].Power : pAd->TxPower[index].Power2);	
++	RTMP_IO_READ32(pAd, TX_ALG_CFG_1, &macValue);
++	temp_comp = (char)(macValue & 0x0000003F);
++	if ((temp_comp & 0x20) == 0x20)
++				temp_comp -= 64;
++	if (temp_comp<0)
++		TxPwerCutLimit=TxPwerCutLimit+temp_comp;
++	if (TxPwerCutLimit<0)
++	{
++		//will not come to here
++		
++		return;
++	}	
++	
++	CutValue=(CHAR)(0xff&pAd->CommonCfg.CutTxPower);
++	DBGPRINT(RT_DEBUG_WARN, ("==\n orig power1 is %d  , orig power2 is %d ==\n",pAd->TxPower[index].Power , pAd->TxPower[index].Power2));	
++	
++	
++	if (CutValue > TxPwerCutLimit)
++	{
++	
++		CutValue = TxPwerCutLimit;
++			
++	}
++	TxPwer = pAd->TxPower[index].Power-CutValue;
++	TxPwer2 = pAd->TxPower[index].Power2-CutValue;
++	RTMP_IO_READ32(pAd, TX_ALG_CFG_0, &Value);
++	Value = Value & (~0x3F3F);
++	Value |= TxPwer;
++	Value |= (TxPwer2 << 8);
++	Value |= (0x2F << 16);
++	Value |= (0x2F << 24);
++	RTMP_IO_WRITE32(pAd, TX_ALG_CFG_0, Value);
++	DBGPRINT(RT_DEBUG_WARN, ("====Cut==== Mac 0x13B0 is 0x%08x==\n",  Value));
++	
++}
++#endif
++/*<-----daniel@liteon,2013-4-28*/
++
++
+ VOID AsicCompensatePowerViaBBP(
+ 	IN 		PRTMP_ADAPTER 		pAd,
+ 	INOUT	PCHAR				pTotalDeltaPower) 
+@@ -1875,6 +1935,8 @@
+ 
+ 			}
+ 		}
++
++		
+ #else /* specific for RT3352 */
+ /*****************************************************************************/
+ 		/* Set new Tx power for different Tx rates */
+diff -Nur linux-2.6.36-ra4110-old/rt2860v2/common/cmm_info.c linux-2.6.36-ra4110-new/rt2860v2/common/cmm_info.c
+--- linux-2.6.36-ra4110-old/rt2860v2/common/cmm_info.c	2013-05-06 14:08:35.318750347 +0800
++++ linux-2.6.36-ra4110-new/rt2860v2/common/cmm_info.c	2013-05-06 14:02:58.332188831 +0800
+@@ -839,6 +839,49 @@
+ 	return success;
+ }
+ 
++/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/
++#ifdef LITEON_SRC_VALID
++/* 
++    ==========================================================================
++    Description:
++        Accurately cut down Tx Power
++    Return:
++        TRUE if all parameters are OK, FALSE otherwise
++    ==========================================================================
++*/
++INT	Set_CutTxPower_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg)
++{
++	LONG CutTxPower;
++	INT   success = FALSE;
++	CutTxPower = simple_strtol(arg, 0, 10);
++	if (CutTxPower <= 47)
++	{
++#ifdef CONFIG_AP_SUPPORT
++		IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
++		{
++			pAd->CommonCfg.CutTxPower = CutTxPower;
++              }
++#endif /* CONFIG_AP_SUPPORT */
++
++#ifdef CONFIG_STA_SUPPORT
++		IF_DEV_CONFIG_OPMODE_ON_STA(pAd)
++		{
++			pAd->CommonCfg.CutTxPower = CutTxPower;
++		}
++#endif /* CONFIG_STA_SUPPORT */
++		success = TRUE;
++	}
++	else
++		success = FALSE;
++
++	DBGPRINT(RT_DEBUG_TRACE, ("Set_CutTxPower_Proc::(CutTxPower=%ld)\n", pAd->CommonCfg.CutTxPower));
++	
++	return success;
++}
++#endif
++/*<-----daniel@liteon,2013-4-28*/
+ /* 
+     ==========================================================================
+     Description:
+diff -Nur linux-2.6.36-ra4110-old/rt2860v2/common/rtmp_init.c linux-2.6.36-ra4110-new/rt2860v2/common/rtmp_init.c
+--- linux-2.6.36-ra4110-old/rt2860v2/common/rtmp_init.c	2013-05-06 14:08:35.289771598 +0800
++++ linux-2.6.36-ra4110-new/rt2860v2/common/rtmp_init.c	2013-05-06 14:02:57.905237505 +0800
+@@ -3217,6 +3217,11 @@
+ 	pAd->bGenOneHCCA = FALSE;
+ 	pAd->CommonCfg.Dsifs = 10;      /* in units of usec */
+ 	pAd->CommonCfg.TxPower = 100; /* mW*/
++/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/	
++#ifdef LITEON_SRC_VALID
++	pAd->CommonCfg.CutTxPower = 0;
++#endif
++/*<-----daniel@liteon,2013-4-28*/
+ 	pAd->CommonCfg.TxPowerPercentage = 0xffffffff; /* AUTO*/
+ 	pAd->CommonCfg.TxPowerDefault = 0xffffffff; /* AUTO*/
+ 	pAd->CommonCfg.TxPreamble = Rt802_11PreambleAuto; /* use Long preamble on TX by defaut*/
+diff -Nur linux-2.6.36-ra4110-old/rt2860v2/include/rtmp.h linux-2.6.36-ra4110-new/rt2860v2/include/rtmp.h
+--- linux-2.6.36-ra4110-old/rt2860v2/include/rtmp.h	2013-05-06 14:08:35.262121737 +0800
++++ linux-2.6.36-ra4110-new/rt2860v2/include/rtmp.h	2013-05-06 14:02:57.513212457 +0800
+@@ -1640,6 +1640,11 @@
+ 	USHORT FragmentThreshold;	/* in unit of BYTE */
+ 
+ 	UCHAR TxPower;		/* in unit of mW */
++	/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/
++	#ifdef LITEON_SRC_VALID
++	ULONG CutTxPower;		/* in unit of mW */
++	#endif
++	/*<-----daniel@liteon,2013-4-28*/
+ 	ULONG TxPowerPercentage;	/* 0~100 % */
+ 	ULONG TxPowerDefault;	/* keep for TxPowerPercentage */
+ 	UINT8 PwrConstraint;
+@@ -5570,6 +5575,12 @@
+ 	INOUT	PCHAR				pDeltaPwr,
+ 	INOUT	PCHAR				pDeltaPowerByBbpR1);
+ 
++/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/
++#ifdef LITEON_SRC_VALID
++VOID AsicPreciseCutDeltaPower(
++	IN 		PRTMP_ADAPTER 		pAd) ;
++#endif
++/*<-----daniel@liteon,2013-4-28*/
+ VOID AsicCompensatePowerViaBBP(
+ 	IN 		PRTMP_ADAPTER 		pAd,
+ 	INOUT	PCHAR				pTotalDeltaPower);
+@@ -8277,6 +8288,13 @@
+ 	IN	PRTMP_ADAPTER	pAd,
+ 	IN	PSTRING			arg);
+ 
++/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/
++#ifdef LITEON_SRC_VALID
++INT	Set_CutTxPower_Proc(
++	IN	PRTMP_ADAPTER	pAd,
++	IN	PSTRING			arg);
++#endif
++/*<-----daniel@liteon,2013-4-28*/
+ INT Set_BGProtection_Proc(
+ 	IN  PRTMP_ADAPTER		pAd, 
+ 	IN  PSTRING			arg);
+diff -Nur linux-2.6.36-ra4110-old/rt2860v2/sta/sta_cfg.c linux-2.6.36-ra4110-new/rt2860v2/sta/sta_cfg.c
+--- linux-2.6.36-ra4110-old/rt2860v2/sta/sta_cfg.c	2013-05-06 14:08:35.334819787 +0800
++++ linux-2.6.36-ra4110-new/rt2860v2/sta/sta_cfg.c	2013-05-06 14:02:58.453576344 +0800
+@@ -111,6 +111,11 @@
+ 	{"TxBurst",					Set_TxBurst_Proc},
+ 	{"TxPreamble",				Set_TxPreamble_Proc},
+ 	{"TxPower",					Set_TxPower_Proc},
++/*add for cutting txpower function, daniel@liteon,2013-4-28----->*/	
++#ifdef LITEON_SRC_VALID
++	{"CutTxPower",				Set_CutTxPower_Proc},  // Accurately cut down Tx Power
++#endif
++/*<-----daniel@liteon,2013-4-28*/
+ 	{"Channel",					Set_Channel_Proc},            
+ 	{"BGProtection",				Set_BGProtection_Proc},
+ 	{"RTSThreshold",				Set_RTSThreshold_Proc},       

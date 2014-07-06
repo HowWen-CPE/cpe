@@ -1,0 +1,101 @@
+--- linux-2.6.32-freescale-p1020-sku/drivers/net/gianfar.c	2012-07-13 03:19:14.794388655 -0700
++++ linux-liteon-wp854-openwrt/drivers/net/gianfar.c	2012-07-13 03:21:25.089757194 -0700
+@@ -652,16 +652,19 @@
+ {
+ 	struct gfar_private *priv = netdev_priv(dev);
+ 	int retVal = 0;
+-
++    
+ 	if (!netif_running(dev))
+ 		return -EINVAL;
+-
++       
+ 	if (!priv->phydev)
+ 		return -ENODEV;
+ 
++	#define P1020_ETH_CONFIG (SIOCDEVPRIVATE + 15)
+ 	if ((cmd >= PTP_GET_RX_TIMESTAMP_SYNC) &&
+ 			(cmd <= PTP_CLEANUP_TIMESTAMP_BUFFERS))
+ 		retVal = gfar_ioctl_1588(dev, rq, cmd);
++	else if(cmd == P1020_ETH_CONFIG)//Alvin add 2011.6.1
++		retVal = liteon_phy_mii(priv->phydev, rq);
+ 	else
+ 		retVal = phy_mii_ioctl(priv->phydev, if_mii(rq), cmd);
+ 
+@@ -1346,7 +1349,8 @@
+ 	}
+ 
+ 	/* Enable most messages by default */
+-	priv->msg_enable = (NETIF_MSG_IFUP << 1 ) - 1;
++	//priv->msg_enable = (NETIF_MSG_IFUP << 1 ) - 1;
++	priv->msg_enable = (NETIF_MSG_WOL << 1 ) - 1; //show more error message. peter, 2011.11.23
+ 
+ 	/* Carrier starts down, phylib will bring it up */
+ 	netif_carrier_off(dev);
+@@ -1752,14 +1756,32 @@
+ 	/* Stop the DMA, and wait for it to stop */
+ 	tempval = gfar_read(&regs->dmactrl);
+ 	if ((tempval & (DMACTRL_GRS | DMACTRL_GTS))
+-	    != (DMACTRL_GRS | DMACTRL_GTS)) {
++	    != (DMACTRL_GRS | DMACTRL_GTS)) 
++	{
+ 		tempval |= (DMACTRL_GRS | DMACTRL_GTS);
+ 		gfar_write(&regs->dmactrl, tempval);
+ 
++		i = 0;
++
+ 		while ((gfar_read(&regs->ievent) &
+ 			(IEVENT_GRSC | IEVENT_GTSC)) !=
+ 			(IEVENT_GRSC | IEVENT_GTSC))
++		{
++#ifndef ETH_LITEON_PRE_DEBUG
++			/* sometimes system loop in this conditin forever, so add break loop here. peter, 2011.12.5.*/
++
++			i++;
++
++			if( i==10000 )
++			{
++				printk("gfar_halt_nodisable: ievent=%x\n", regs->ievent);	
++				break;
++			}
++#else
++
+ 			cpu_relax();
++#endif
++		}
+ 	}
+ }
+ 
+@@ -3021,6 +3043,8 @@
+ 	return 0;
+ }
+ 
++extern void br_reset_dev(struct net_device *); //workaround for bridge block. add by peter, 2011.11.10.
++
+ /* gfar_reset_task gets scheduled when a packet has not been
+  * transmitted after a set amount of time.
+  * For now, assume that clearing out all the structures, and
+@@ -3040,6 +3064,12 @@
+ 	}
+ 
+ 	netif_tx_schedule_all(dev);
++
++	/*
++	 * workaround for bridge block: re-add the device to bridge after timeout reset task.
++	 * add by peter, 2011.11.10.
++	 */
++	br_reset_dev(dev);
+ }
+ 
+ static void gfar_timeout(struct net_device *dev)
+@@ -4333,6 +4363,10 @@
+ 		if (netif_msg_tx_err(priv))
+ 			printk(KERN_DEBUG "%s: babbling TX error\n", dev->name);
+ 	}
++
++	/* debug ethernet rx block issue. peter, 2011.11.23*/
++	schedule_work(&priv->reset_task);
++
+ 	return IRQ_HANDLED;
+ }
+ 

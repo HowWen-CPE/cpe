@@ -1,0 +1,10 @@
+--- linux-2.6.31_atheros/net/netfilter/Makefile	2013-04-03 13:34:55.000000000 +0800
++++ linux-2.6.31_liteon/net/netfilter/Makefile	2013-02-07 16:37:14.000000000 +0800
+@@ -89,6 +89,7 @@
+ obj-$(CONFIG_NETFILTER_XT_MATCH_SCTP) += xt_sctp.o
+ obj-$(CONFIG_NETFILTER_XT_MATCH_SOCKET) += xt_socket.o
+ obj-$(CONFIG_NETFILTER_XT_MATCH_STATE) += xt_state.o
++obj-$(CONFIG_NETFILTER_XT_MATCH_LAYER7) += xt_layer7.o
+ obj-$(CONFIG_NETFILTER_XT_MATCH_STATISTIC) += xt_statistic.o
+ obj-$(CONFIG_NETFILTER_XT_MATCH_STRING) += xt_string.o
+ obj-$(CONFIG_NETFILTER_XT_MATCH_TCPMSS) += xt_tcpmss.o

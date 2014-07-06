@@ -1,0 +1,18 @@
+--- linux-2.6.36_MTK4110/drivers/serial/8250.c	2012-12-10 16:32:12.000000000 +0800
++++ linux-2.6.36_MTK4110-New/drivers/serial/8250.c	2013-07-26 11:04:52.860378416 +0800
+@@ -2301,6 +2301,15 @@
+ 		else
+ 			fcr = uart_config[up->port.type].fcr;
+ 	}
++/* Enable DMA and FIFO. Sean@liteon, 2013-07-26-----> */
++#ifdef LITEON_SRC_VALID
++#if defined(CONFIG_RALINK_MT7620)
++        /* Enable DMA mode and FIFO. */
++        fcr |= (UART_FCR_ENABLE_FIFO | UART_FCR_DMA_SELECT);
++#endif //CONFIG_RALINK_MT7620
++#endif //LITEON_SRC_VALID
++/* <----- Sean@liteon, 2013-07-26 */
++
+ 
+ 	/*
+ 	 * MCR-based auto flow control.  When AFE is enabled, RTS will be

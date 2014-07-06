@@ -1,0 +1,44 @@
+From b2c14df2e523d51172ae5cc589685538404436c6 Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Thu, 8 Oct 2009 16:50:15 +0530
+Subject: [PATCH] Enable Cache snooping for Freescale eSDHC controller driver
+
+
+Signed-off-by: Dipen Dudhat <dipen.dudhat@freescale.com>
+---
+ drivers/mmc/host/sdhci.c |    3 +++
+ drivers/mmc/host/sdhci.h |    4 ++++
+ 2 files changed, 7 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/mmc/host/sdhci.c b/drivers/mmc/host/sdhci.c
+index c279fbc..f5c39d8 100644
+--- a/drivers/mmc/host/sdhci.c
++++ b/drivers/mmc/host/sdhci.c
+@@ -178,6 +178,9 @@ static void sdhci_init(struct sdhci_host *host)
+ {
+ 	sdhci_reset(host, SDHCI_RESET_ALL);
+ 
++	/* Enable cache snooping */
++	sdhci_writel(host, SDHCI_CACHE_SNOOP, SDHCI_HOST_DMA_CONTROL);
++
+ 	sdhci_clear_set_irqs(host, SDHCI_INT_ALL_MASK,
+ 		SDHCI_INT_BUS_POWER | SDHCI_INT_DATA_END_BIT |
+ 		SDHCI_INT_DATA_CRC | SDHCI_INT_DATA_TIMEOUT | SDHCI_INT_INDEX |
+diff --git a/drivers/mmc/host/sdhci.h b/drivers/mmc/host/sdhci.h
+index ce5f1d7..de9b534 100644
+--- a/drivers/mmc/host/sdhci.h
++++ b/drivers/mmc/host/sdhci.h
+@@ -176,6 +176,10 @@
+ #define   SDHCI_SPEC_100	0
+ #define   SDHCI_SPEC_200	1
+ 
++/* 40C DMA control register*/
++#define SDHCI_HOST_DMA_CONTROL	0x40C
++#define SDHCI_CACHE_SNOOP	0x40
++
+ struct sdhci_ops;
+ 
+ struct sdhci_host {
+-- 
+1.5.6.3
+

@@ -1,0 +1,82 @@
+#!/bin/sh
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+# When the ppp link comes up, this script is called with the following
+# parameters
+#       $1      the interface name used by pppd (e.g. ppp3)
+#       $2      the tty device name
+#       $3      the tty device speed
+#       $4      the local IP address for the interface
+#       $5      the remote IP address
+#       $6      the parameter specified by the 'ipparam' option to pppd
+
+. /etc/network.sh
+#. /etc/arch.sh
+local lic_inv=$(nvram get license_invalid)
+[ -z "$6" ] || {
+    type="${6%%[0-9]}"
+    num="${6#$type}"
+    PPP_DEMAND_STATE_FILE="/tmp/ppp-${type}${num}-demand.tmp"
+    [ "$type" = "wan" ] && {
+    	# Mask is 32 because this is a point-to-point protocol.
+    	iface_up "$6" "$4" "32" "$5" "$DNS1 $DNS2" 2>&-
+        [ "$(nvram show wan0_proto 0 curr)" = "pptp" ] && {
+            # !!! FixMe !!!
+            # When pptp over other device like ipsec0 or ppp0, we
+            # have to change the vlan2 to the response device
+            nvram replace attr wan_pptp_l2tp_rule 0 ipaddr "$4" 
+            nvram replace attr wan_pptp_l2tp_rule 0 netmask "255.255.255.255"
+            nvram replace attr wan_pptp_l2tp_rule 0 gateway "$5"       
+            nvram replace attr wan_pptpc_rule 0 custom_ipaddr "$4" 
+            local linkip="$(nvram show wan_pptpc_rule $num ipaddr)"
+            local linkmask="$(nvram show wan_pptpc_rule $num netmask)"
+            local linkgw="$(nvram show wan_pptpc_rule $num gateway)"
+            local servip="$(nvram show wan_pptpc_rule $num serverip)"
+            local devname="$(nvram get wan${num}_device)"
+            local gwstr=""
+            # If the server and client is in different subnet
+            [ "$(ipcalc $linkip $linkmask | grep NETWORK)" != "$(ipcalc $servip $linkmask | grep NETWORK)" ] && {
+                gwstr=" via $linkgw "
+            }
+            ip route add to $servip dev $devname $gwstr src $linkip
+        }
+        [ "$(nvram show wan0_proto 0 curr)" = "l2tp" ] && {
+            # !!! FixMe !!!
+            # When l2tp over other device like ipsec0 or ppp0, we
+            # have to change the vlan2 to the response device
+            nvram replace attr wan_pptp_l2tp_rule 0 ipaddr "$4" 
+            nvram replace attr wan_pptp_l2tp_rule 0 netmask "255.255.255.255"
+            nvram replace attr wan_pptp_l2tp_rule 0 gateway "$5"       
+            nvram replace attr wan_l2tpc_rule 0 custom_ipaddr "$4" 
+            local linkip="$(nvram show wan_l2tpc_rule $num ipaddr)"
+            local linkmask="$(nvram show wan_l2tpc_rule $num netmask)"
+            local linkgw="$(nvram show wan_l2tpc_rule $num gateway)"
+            local servip="$(nvram show wan_l2tpc_rule $num serverip)"
+            local devname="$(nvram get wan${num}_device)"
+            local gwstr=""
+            # If the server and client is in different subnet
+            [ "$(ipcalc $linkip $linkmask | grep NETWORK)" != "$(ipcalc $servip $linkmask | grep NETWORK)" ] && {
+                gwstr=" via $linkgw "
+            }
+            ip route add to $servip dev $devname $gwstr src $linkip
+        }
+    	env -i ACTION="ifup" INTERFACE="$6" PROTO=ppp TYPE="$type" \
+    	NUM="$num" IFNAME="${2}" /sbin/hotplug-call "iface" &
+        [ "$lic_inv" -gt "0" ] && arch_led_licinv_start || arch_led_usb_stop
+    }
+    [ "$type" != "wan" ] && {
+        log_usr "PPTP Server" "client [$6] local [$5] connected" OK
+    }
+    [ -f "${PPP_DEMAND_STATE_FILE}" ] && {
+        [ "$(cat ${PPP_DEMAND_STATE_FILE})" = "demand-start" ] && {
+            echo -n "demand-connected" > ${PPP_DEMAND_STATE_FILE}
+        }
+    }
+}
+
+[ -d /etc/ppp/ip-up.d ] && {
+	for SCRIPT in /etc/ppp/ip-up.d/*
+	do
+		[ -x "$SCRIPT" ] && "$SCRIPT" $@
+	done
+}

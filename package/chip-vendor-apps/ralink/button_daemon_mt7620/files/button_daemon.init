@@ -1,0 +1,27 @@
+#!/bin/sh /etc/rc.common
+START=99
+BUT_GPIO_DIR="/tmp/but_gpio"
+BUT_GPIO_DIR_1="/tmp/but_gpio/1"
+BUT_GPIO_DIR_2="/tmp/but_gpio/2"
+
+
+boot() {
+	start
+}
+
+start() {
+	mknod /dev/gpio c 252 0
+	mkdir "${BUT_GPIO_DIR}" >/dev/null 2>/dev/null
+	mkdir "${BUT_GPIO_DIR_1}" >/dev/null 2>/dev/null
+	mkdir "${BUT_GPIO_DIR_2}" >/dev/null 2>/dev/null
+	touch "${BUT_GPIO_DIR_1}/14"
+	touch "${BUT_GPIO_DIR_2}/14"
+	#//button_daemon &
+	ethernet_config
+	wifi_config	
+}
+
+stop() {
+	#rm -rf "${BUT_GPIO_DIR}" >/dev/null 2>/dev/null
+	killall button_daemon
+}

@@ -1,0 +1,55 @@
+From 1219325f3e5075e9a769c4592812d5ddcadbcd0e Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Mon, 9 Nov 2009 17:48:03 +0530
+Subject: [PATCH 1/1] powerpc/85xx: p2020rdb: pcie legacy int entries in per core dts
+
+The following entries in the per core dts will enable
+the INTx/IRQn sharing. Meant only for the P2020RDB BSP.
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ arch/powerpc/boot/dts/p2020rdb_camp_core0.dts |    8 ++++++++
+ arch/powerpc/boot/dts/p2020rdb_camp_core1.dts |    8 ++++++++
+ 2 files changed, 16 insertions(+), 0 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p2020rdb_camp_core0.dts b/arch/powerpc/boot/dts/p2020rdb_camp_core0.dts
+index 0fe93d0..de34c21 100644
+--- a/arch/powerpc/boot/dts/p2020rdb_camp_core0.dts
++++ b/arch/powerpc/boot/dts/p2020rdb_camp_core0.dts
+@@ -346,6 +346,14 @@
+ 		clock-frequency = <33333333>;
+ 		interrupt-parent = <&mpic>;
+ 		interrupts = <25 2>;
++		interrupt-map-mask = <0xf800 0x0 0x0 0x7>;
++		interrupt-map = <
++			/* IDSEL 0x0 */
++			0000 0x0 0x0 0x1 &mpic 0x4 0x1
++			0000 0x0 0x0 0x2 &mpic 0x5 0x1
++			0000 0x0 0x0 0x3 &mpic 0x6 0x1
++			0000 0x0 0x0 0x4 &mpic 0x7 0x1
++			>;
+ 		pcie@0 {
+ 			reg = <0x0 0x0 0x0 0x0 0x0>;
+ 			#size-cells = <2>;
+diff --git a/arch/powerpc/boot/dts/p2020rdb_camp_core1.dts b/arch/powerpc/boot/dts/p2020rdb_camp_core1.dts
+index e95a512..3d64acf 100644
+--- a/arch/powerpc/boot/dts/p2020rdb_camp_core1.dts
++++ b/arch/powerpc/boot/dts/p2020rdb_camp_core1.dts
+@@ -167,6 +167,14 @@
+ 		clock-frequency = <33333333>;
+ 		interrupt-parent = <&mpic>;
+ 		interrupts = <26 2>;
++		interrupt-map-mask = <0xf800 0x0 0x0 0x7>;
++		interrupt-map = <
++			/* IDSEL 0x0 */
++			0000 0x0 0x0 0x1 &mpic 0x0 0x1
++			0000 0x0 0x0 0x2 &mpic 0x1 0x1
++			0000 0x0 0x0 0x3 &mpic 0x2 0x1
++			0000 0x0 0x0 0x4 &mpic 0x3 0x1
++			>;
+ 		pcie@0 {
+ 			reg = <0x0 0x0 0x0 0x0 0x0>;
+ 			#size-cells = <2>;
+-- 
+1.5.6.5
+

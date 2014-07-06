@@ -1,0 +1,31 @@
+From 3b1dee3ffebef018158d6147bab9f768cc557b1d Mon Sep 17 00:00:00 2001
+From: Andy Fleming <afleming@freescale.com>
+Date: Tue, 20 Apr 2010 11:59:38 +0530
+Subject: [PATCH] tsec: Wait for both RX and TX to stop
+
+When gracefully stopping the controller, the driver was continuing if
+*either* RX or TX had stopped.  We need to wait for both, or the
+controller could get into an invalid state.
+
+Signed-off-by: Andy Fleming <afleming@freescale.com>
+---
+ drivers/net/tsec.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/tsec.c b/drivers/net/tsec.c
+index da49648..fd72a14 100644
+--- a/drivers/net/tsec.c
++++ b/drivers/net/tsec.c
+@@ -988,7 +988,8 @@ static void tsec_halt(struct eth_device *dev)
+ 	regs->dmactrl &= ~(DMACTRL_GRS | DMACTRL_GTS);
+ 	regs->dmactrl |= (DMACTRL_GRS | DMACTRL_GTS);
+ 
+-	while (!(regs->ievent & (IEVENT_GRSC | IEVENT_GTSC))) ;
++	while ((regs->ievent & (IEVENT_GRSC | IEVENT_GTSC))
++		!= (IEVENT_GRSC | IEVENT_GTSC)) ;
+ 
+ 	regs->maccfg1 &= ~(MACCFG1_TX_EN | MACCFG1_RX_EN);
+ 
+-- 
+1.5.6.3
+

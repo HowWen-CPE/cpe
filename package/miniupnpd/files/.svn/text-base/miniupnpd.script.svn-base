@@ -1,0 +1,54 @@
+#!/bin/sh /etc/rc.common
+# hotplug event: $NUM and $TYPE are required.
+set -x
+BIN=/usr/bin/miniupnpd
+PID_FILE=/var/run/miniupnpd.pid
+. /etc/network.sh
+#START=60
+TRIGGER=90
+#TRIGGER_STOP=90
+LANTRIGGER=90
+LANTRIGGER_STOP=90
+log_msg="UPnP-server"
+
+stop () {
+	[ "$TYPE" = "wan" -a "$PROTO" = "dhcp" ] && exit 1
+    /sbin/ezp-iptables upnp stop
+    ip route del 239.0.0.0/8 dev $(nvram get lan0_ifname)
+    iptables -t nat -F MINIUPNPD 2> /dev/null > /dev/null || err=1
+    iptables -t filter -F MINIUPNPD 2> /dev/null > /dev/null || err=1
+    [ -n `pidof miniupnpd` ] && {
+    	kill `pidof miniupnpd`		
+    }
+}
+
+start () {
+	wandevice="$(nvram get wan0_ifname)"
+	[ "$TYPE" = "wan" -a "$PROTO" = "dhcp" ] && exit 1
+    stop
+    feature_judge upnp
+    value=$?
+    [ $value = "1" ] &&
+    {
+#        [ "$TYPE" != "wan" -o "$NUM" != "0" ] && exit 1;
+        port=$(nvram show upnp_rule 0 port)
+        pmp_enable=$(nvram show upnp_rule 0 pmp_enable)
+        enable=$(nvram show upnp_rule 0 enable)
+        [ "$enable" = "0" ] && exit
+
+        if [ "$pmp_enable" = "1" ] ; then
+            pmp_enable="-N"
+        else
+            pmp_enable=""
+        fi
+        /sbin/ezp-iptables upnp start
+        ip route add 239.0.0.0/8 dev $(nvram get lan0_ifname)
+        mac1=`ifconfig br-lan0 | grep "HWaddr" |awk {'print $5'}`
+        $BIN -B 100000000 100000000 $pmp_enable -i $(nvram get wan0_ifname) -a $(nvram get lan0_ipaddr) \
+            -p $port -s "$(nvram show upnpxml_rule 0 serialNumber)" \
+            -w http://$(nvram get lan0_ipaddr):$(nvram show http_rule 0 port) -N \
+            -m "$(nvram get model)" -u "75802409-bccb-40e7-8e6c-$mac1"
+
+    }
+}
+

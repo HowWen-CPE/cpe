@@ -1,0 +1,199 @@
+#!/bin/sh
+# for rt3883 0:iwpriv 1:iwconfig
+
+#[ "$#" = "4" ] || {
+#    echo "usage : cmd interface mode value"
+#    eg:ezp-wps-set 0 rai0 WscConfMode 0
+#    mode 
+#      0:WscConfMode 1:WscConfStatus 2:WscMode 3:WscGetConf 4:WscPinCode 5:AuthMode
+#      6:EncrypType  7:WscGenPinCode 8:SSID 9:WscVendorPinCode 10:stat
+#}
+cmd="$1" #0:iwpriv 1:iwconfig 2:function 01:iwconfig in CONFIG_RT2860V2_STA_WSC mode
+interface="$2" #0:rai0 1:ra0 00:apclii0 01:apcli0
+mode="$3"
+set_value="$4"
+
+board_type="$(nvram show board_model_rule 0 bd_model)"
+
+[ "$interface" = "0" ] && interface="rai0"
+[ "$interface" = "1" ] && {
+	if [ "$board_type" = "0A22" -o "$board_type" = "0A52" ]; then
+		interface="ra0"
+	else
+		interface="rai0"
+	fi
+}
+[ "$interface" = "00" ] && interface="apclii0"
+[ "$interface" = "01" ] && {
+	if [ "$board_type" = "0A22" -o "$board_type" = "0A52" ]; then
+		interface="apcli0"
+	else
+		interface="apclii0"
+	fi
+}
+#echo "ethernet rate=$rate"
+#echo "ethernet linkst=$linkst"
+
+[ "$cmd" = "0" ] && {
+ case "$mode" in
+    0)
+      iwpriv "$interface" set WscConfMode="$set_value"
+      ;;
+    1)
+      iwpriv "$interface" set WscConfStatus="$set_value"
+      ;;
+    2)
+      iwpriv "$interface" set WscMode="$set_value"
+      ;;
+    3)
+      iwpriv "$interface" set WscGetConf="$set_value"
+      ;;
+    4)
+      iwpriv "$interface" set WscPinCode="$set_value"
+      ;;
+    5)
+      iwpriv "$interface" set AuthMode="$set_value"
+      ;;
+    6)
+      iwpriv "$interface" set EncrypType="$set_value"
+      ;;
+    7)
+      iwpriv "$interface" set WscGenPinCode
+      ;;
+    8)
+      iwpriv "$interface" set SSID="$set_value"
+      ;;
+    9)
+      iwpriv "$interface" set WscVendorPinCode="$set_value"
+      ;;
+    10)
+      iwpriv $interface stat
+     ;;
+    11)
+      iwpriv "$interface" set RadioOn="$set_value"
+      ;;
+    12)
+      iwpriv "$interface" set IgmpSnEnable="$set_value"
+      ;;
+    13)
+      iwpriv "$interface" set SiteSurvey="$set_value"
+      ;;
+    14)
+      #value=`iwpriv $interface get_site_survey`
+      [ "$interface" = "apclii0" ] && iwpriv apclii0 get_site_survey > /etc/site_survey.dat
+      [ "$interface" = "apcli0" ] && iwpriv apcli0 get_site_survey > /etc/site1_survey.dat
+      ;;
+    *)
+      echo "Wps set Mode!!!"
+     ;;
+ esac
+}
+
+[ "$cmd" = "1" ] && {
+ case "$mode" in
+    0)
+      #rate=`iwconfig $interface | grep 'Rate' | sed 's/^.*Rate\=//g' | sed 's/\ .*$//g'`
+      #echo "$rate">/tmp/link_rate
+      iwconfig $interface | grep 'Rate' | sed 's/^.*Rate\=//g' | sed 's/\ .*$//g' > /tmp/link_rate
+      ;;
+    1)
+      #channel=`iwconfig $interface`
+      #echo "$channel">/tmp/opchannel
+      iwconfig $interface >/tmp/opchannel
+      ;;
+    2)
+      #channelnum=`iwconfig $interface`
+      #echo "$channelnum">/tmp/dat
+      iwconfig $interface >/tmp/dat
+      ;;
+    3)
+      #essid_name=`iwconfig $interface | grep 'ESSID' | sed 's/^.*ESSID:\"//g' | sed 's/\".*$//g'`
+    [ "$interface" = "apclii0" ] && iwconfig apclii0 | grep 'ESSID' | sed 's/^.*ESSID:\"//g' | sed 's/\".*$//g'>/tmp/wisp_essid_name
+    [ "$interface" = "apcli0" ] &&  iwconfig apcli0 | grep 'ESSID' | sed 's/^.*ESSID:\"//g' | sed 's/\".*$//g'>/tmp/wisp1_essid_name
+      ;;
+    4)
+      #essid_mac=`iwconfig $interface | grep 'Access Point:' | sed 's/^.*Access Point: //g'`
+      [ "$interface" = "rai0" ] && iwconfig rai0 | grep 'Access Point:' | sed 's/^.*Access Point: //g'>/tmp/wisp_essid_mac
+      [ "$interface" = "apclii0" ] && iwconfig apclii0 | grep 'Access Point:' | sed 's/^.*Access Point: //g'>/tmp/wisp_essid_mac
+      [ "$interface" = "apcli0" ] && iwconfig apcli0 | grep 'Access Point:' | sed 's/^.*Access Point: //g'>/tmp/wisp1_essid_mac
+      ;;
+    5)
+      #apc_essid_mac=`iwconfig $interface | grep 'Access Point:' | sed 's/^.*Access Point: //g'`
+      [ "$interface" = "apclii0" ] && iwconfig apclii0 | grep 'Access Point:' | sed 's/^.*Access Point: //g'>/tmp/apclient_essid_mac
+      [ "$interface" = "apcli0" ] && iwconfig apcli0 | grep 'Access Point:' | sed 's/^.*Access Point: //g'>/tmp/apclient1_essid_mac
+      ;;
+    *)
+      echo "iwconfig set Mode!!!"
+     ;;
+ esac
+}
+
+[ "$cmd" = "01" ] && { #In CONFIG_RT2860V2_STA_WSC mode
+ case "$mode" in
+    0)
+      iwpriv "$interface" wsc_start 
+      ;;
+    1)
+      iwpriv "$interface" wsc_stop 
+      ;;
+    2)
+      iwpriv "$interface" wsc_ssid "$set_value" 
+      ;;
+    3)
+      iwpriv "$interface" wsc_pin "$set_value" 
+      ;;
+    4)
+      iwpriv "$interface" wsc_mode "$set_value" 
+      ;;
+    5)
+      iwpriv "$interface" wsc_cred_ssid 0 "$set_value" 
+      ;;
+    6)
+      iwpriv "$interface" wsc_cred_auth 0 "$set_value" 
+      ;;
+    7)
+      iwpriv "$interface" wsc_cred_encr 0 "$set_value" 
+      ;;
+    8)
+      iwpriv "$interface" wsc_cred_key  0 "$set_value"  
+      ;;
+    9)
+      iwpriv "$interface" wsc_cred_keyIdx 0 "$set_value" 
+      ;;
+    10)
+      iwpriv "$interface" wsc_cred_count "$set_value" 
+     ;;
+    11)
+      iwpriv "$interface" wsc_conf_mode "$set_value"
+      ;;
+    12)
+      iwpriv "$interface" wsc_auto_conn "$set_value" 
+      ;;
+    13)
+      iwpriv "$interface" wsc_conn_by_idx "$set_value"
+      ;;
+    14)
+      iwpriv "$interface" wsc_gen_pincode 
+      ;;
+    *)
+      echo "Wps In STA set Mode!!!"
+     ;;
+ esac
+}
+
+[ "$cmd" = "2" ] && {
+ case "$mode" in
+    0)
+       bssid=$(nvram show wl0_apcli_rule 0 bssid)
+       if [ -n "$bssid" ] ;then
+	       echo ${bssid} > /etc/bssid.dat
+	       bssid=$(tr A-Z a-z <  /etc/bssid.dat)
+	       rm  /etc/bssid.dat
+	   	cat /etc/site_survey.dat | grep ${bssid} |awk '{print $6}' > /etc/wireless_mode.dat
+   	fi
+      ;;
+    *)
+      echo "Wps In STA set Mode!!!"
+     ;;
+     esac
+}

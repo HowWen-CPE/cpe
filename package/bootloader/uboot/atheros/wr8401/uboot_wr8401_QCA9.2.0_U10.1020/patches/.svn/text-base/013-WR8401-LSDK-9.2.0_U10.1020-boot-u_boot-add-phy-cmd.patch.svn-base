@@ -1,0 +1,113 @@
+--- boot_atheros/u-boot/cpu/mips/ar7240/ag934x.c	2013-04-03 13:42:49.000000000 +0800
++++ boot_liteon/u-boot/cpu/mips/ar7240/ag934x.c	2013-03-29 17:58:51.000000000 +0800
+@@ -21,6 +21,12 @@
+ void  ag7240_miiphy_write(char *devname, uint32_t phaddr,
+ 	        uint8_t reg, uint16_t data);
+ 
++/*added by sirian, 2011-05-08, for mii operation*/
++int ag7240_local_miiphy_read(char *devname, uint32_t phy_addr, uint8_t reg,unsigned short *value);
++void ag7240_local_miiphy_write(char *devname, uint32_t phy_addr, uint8_t reg, uint16_t data);
++
++
++
+ ag7240_mac_t *ag7240_macs[CFG_AG7240_NMACS];
+ extern void ar7240_sys_frequency(u32 *cpu_freq, u32 *ddr_freq, u32 *ahb_freq);
+ 
+@@ -46,9 +52,9 @@
+ 
+ #if defined(CONFIG_F1E_PHY) || defined(CONFIG_F2E_PHY)
+ extern int athr_phy_setup(int unit);
+-extern int athr_phy_is_up(int unit);
+-extern int athr_phy_is_fdx(int unit);
+-extern int athr_phy_speed(int unit);
++extern int athr_phy_is_up(int unit,int phyUnit);
++extern int athr_phy_is_fdx(int unit,int phyUnit);
++extern int athr_phy_speed(int unit,int phyUnit);
+ extern void athr_reg_init(void);
+ #endif
+ 
+@@ -329,9 +335,15 @@
+ {
+     u32 link, duplex, speed, fdx;
+ 
++/*Modify by sirian, 2011-05-08*/
++#ifdef BCM_ENET_PHY
++   ag7240_phy_speed_duplex_link(mac->mac_unit, &speed, &duplex, &link);
++#else
+     ag7240_phy_link(mac->mac_unit, &link);
+     ag7240_phy_duplex(mac->mac_unit, &duplex);
++	
+     ag7240_phy_speed(mac->mac_unit, &speed);
++#endif
+ 
+     mac->link = link;
+ #ifdef SUPPORT_PLC
+@@ -416,7 +428,7 @@
+     mac->duplex = duplex;
+     mac->speed = speed;
+ 
+-    printf("dup %d speed %d\n", duplex, speed);
++    printf("%dMbps %s\n", speed, duplex?"full duplex":"half duplex");
+ 
+     ag7240_set_mac_duplex(mac,duplex);
+ 
+@@ -544,6 +556,7 @@
+ {
+     unsigned char *eeprom;
+     unsigned char *mac = dev->enetaddr;
++#if 0
+ #ifndef CONFIG_AR7240_EMU
+     eeprom = ag7240_mac_addr_loc();
+ 
+@@ -571,6 +584,15 @@
+     } else {
+         printf("Fetching MAC Address from 0x%p\n", __func__, eeprom);
+     }
++#else
++    /* Use fixed address*/
++    mac[0] = 0x00;
++    mac[1] = 0x03;
++    mac[2] = 0x7f;
++    mac[3] = 0x09;
++    mac[4] = 0x0b;
++    mac[5] = 0xad;
++#endif
+ }
+ 
+ 
+@@ -619,8 +641,8 @@
+     }
+     for (i = 0;i < CFG_AG7240_NMACS;i++) {
+         eth_register(dev[i]);
+-#if(CONFIG_COMMANDS & CFG_CMD_MII)
+-        miiphy_register(dev[i]->name, ag7240_miiphy_read, ag7240_miiphy_write);
++#if(CONFIG_COMMANDS & CFG_CMD_MII) /*Modify by sirian, 2011-05-08, for mii operation*/
++        miiphy_register(dev[i]->name, ag7240_local_miiphy_read, ag7240_local_miiphy_write);
+ #endif
+ 
+          ag7240_reg_rmw_set(ag7240_macs[i], AG7240_MAC_CFG1, AG7240_MAC_CFG1_SOFT_RST
+@@ -795,4 +817,24 @@
+     if(ii==0)
+         printf("Error!!! Leave ag7240_miiphy_write without polling correct status!\n");
+ }
++
++/*Added by sirian, 2011-05-08, for mii operation*/
++int ag7240_local_miiphy_read(char *devname, uint32_t phy_addr, uint8_t reg,unsigned short *value)
++{
++	unsigned short ret;
++	
++	ret = ag7240_miiphy_read(devname, phy_addr, reg);
++
++	*value = ret;
++	
++        return 0;
++	
++}
++
++void ag7240_local_miiphy_write(char *devname, uint32_t phy_addr, uint8_t reg, uint16_t data)
++{
++	ag7240_miiphy_write(devname,phy_addr,reg, data);
++	
++	return 0;
++}
+ #endif		/* CONFIG_COMMANDS & CFG_CMD_MII */

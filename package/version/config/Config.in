@@ -1,0 +1,16 @@
+comment "Liteon Generic Platform Product Information"
+config VERSION_CONFIG_APPVERSIONID
+	string "Liteon Generic Platform Product Application Version Id"
+	default ""
+	help
+	    Configure your liteon generic platform product application version id
+config VERSION_CONFIG_VERSIONID
+	string "Liteon Generic Platform Product Version Id"
+	default ""
+	help
+	    Configure your liteon generic platform product version id
+config PRODUCT_NAME
+	string "Liteon Generic Platform Product Name"
+	default ""
+	help
+	    Configure your liteon generic platform product name

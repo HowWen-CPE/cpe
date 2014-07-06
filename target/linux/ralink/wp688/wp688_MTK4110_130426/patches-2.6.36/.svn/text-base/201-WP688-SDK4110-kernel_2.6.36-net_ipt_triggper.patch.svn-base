@@ -1,0 +1,24 @@
+diff -urN a/net/ipv4/netfilter/ipt_TRIGGER.c b/net/ipv4/netfilter/ipt_TRIGGER.c
+--- a/net/ipv4/netfilter/ipt_TRIGGER.c	2013-03-08 16:03:26.885328657 +0800
++++ b/net/ipv4/netfilter/ipt_TRIGGER.c	2013-03-08 16:11:10.369329185 +0800
+@@ -309,8 +309,9 @@
+         const struct ipt_trigger_info *info = targinfo; 
+         struct list_head *cur_item, *tmp_item; 
+         
+-        //printk("!! %s !!!\n", __FUNCTION__);
+- 
++        /* Just return to aviod potential err in x_table.c. Ricardo 2013-03-08 */ 
++        return 0;
++        
+         if ((strcmp(tablename, "mangle") == 0)) { 
+                 DEBUGP("trigger_check: bad table `%s'.\n", tablename); 
+                 return 0; 
+@@ -341,7 +342,7 @@
+             __del_trigger(trig); 
+         } 
+  
+-        return 1; 
++        return 0; 
+ } 
+  
+  

@@ -1,0 +1,10 @@
+#!/bin/sh
+while :; do
+   [ -z `pidof goahead` ] && {
+   logger EZP_DBG -s "there is no goahead, start it now"
+   /etc/rc.common /etc/init.d/goahead start
+   } || {
+   sleep 5
+   }
+done
+   

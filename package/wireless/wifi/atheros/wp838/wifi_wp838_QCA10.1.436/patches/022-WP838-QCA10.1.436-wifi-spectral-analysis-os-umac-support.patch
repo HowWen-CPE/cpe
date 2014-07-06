@@ -1,0 +1,593 @@
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c	2014-03-20 15:04:32.691638434 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c	2014-03-20 15:34:36.334688757 +0800
+@@ -951,6 +951,10 @@
+ {
+     osif_dev *osnetdev = ath_netdev_priv(dev);
+     wlan_if_t vap = osnetdev->os_if;
++    /*daniel add begin*/
++    //Added by Bruce Liu, 2012-12-28
++    struct ieee80211com *ic = vap->iv_ic;
++   /*daniel add end*/
+     int i;
+     int retval;
+     debug_print_ioctl(dev->name, SIOCSIWFREQ, "siwfreq") ;
+@@ -973,14 +977,61 @@
+                                                      __func__, i);        
+         return wlan_set_desired_ibsschan(vap, i);        
+     } else if (vap->iv_opmode == IEEE80211_M_HOSTAP) {
+-        wlan_mlme_stop_bss(vap, 0);
++       /*daniel add begin*/
++	//wlan_mlme_stop_bss(vap, 0);
++       /* dxm 2013.8.28 13:6 [START]*/
++        if((freq->i & 0xf0) != 0xf0)/*freq->i != 0xf0 is add for spectral scan,when scan,don't excute this*/
++        {
++            wlan_mlme_stop_bss(vap, 0);
++        }
++        else //henry optimize later
++        {
++            ieee80211_mlme_set_beacon_suspend_state(vap, true);
++        }	
++        /* Added by Bruce Liu, 2012-12-27 */
++        if(freq->i == 0xf1)/*before send action, stop bss can not excute*/
++        {
++	    printk(KERN_ERR"~ieee80211_ioctl_siwfreq  to add send action~~~~\n");
++            ic->ic_chanchange_chan = i;
++            ic->ic_send_action(vap);
++        }
++        /* Added by Bruce Liu */       
++        /* dxm 2013.8.28 13:6 [END]*/
++
++       /*daniel add end*/
+         retval = wlan_set_channel(vap, i);
+         if(!retval) {
+-            return IS_UP(dev) ? -osif_vap_init(dev, RESCAN) : 0;
+-        }
++	   /*daniel add begin*/	
++	    //return IS_UP(dev) ? -osif_vap_init(dev, RESCAN) : 0;
++             /* dxm 2013.8.28 13:6 [START]*/
++            if((freq->i & 0xf0) == 0xf0)/*freq->i != 0xf0 is add for spectral scan,when scan,don't excute this*/
++            {
++                //henry optimize later
++		 //return IS_UP(dev) ? -osif_vap_init(dev, 2) : 0;
++                 retval = IS_UP(dev) ? -osif_vap_init(dev, 2) : 0;                
++                ieee80211_mlme_set_beacon_suspend_state(vap, false);
++                return retval;
++            }
++            else
++            {
++                return IS_UP(dev) ? -osif_vap_init(dev, RESCAN) : 0;
++            }
++            /* dxm 2013.8.28 13:6 [END]*/
++	    /*daniel add end*/
++			
++	}	
+         return retval;
+     } else {
+         retval = wlan_set_channel(vap, i);
++		
++        /*daniel add begin*/
++	//henry optimize
++	    if((freq->i & 0xf0) == 0xf0)/*freq->i != 0xf0 is add for spectral scan,when scan,don't excute this*/
++        {
++            ieee80211_mlme_set_beacon_suspend_state(vap, false);
++        }
++
++       /*daniel add end*/
+         return retval;
+     }
+ }
+@@ -1909,6 +1960,10 @@
+     u_int8_t          opt_ie[IEEE80211_MAX_OPT_IE];
+     u_int32_t         length=0;
+ 
++    /*daniel add begin*/
++     struct iw_scan_req req;
++    int copyLength;
++    /*daniel add end*/
+ 
+     debug_print_ioctl(dev->name, SIOCSIWSCAN, "siwscan") ;
+     /*
+@@ -1950,8 +2005,10 @@
+ 
+ #if WIRELESS_EXT > 17
+     if (data && (data->flags & IW_SCAN_THIS_ESSID)) {
+-        struct iw_scan_req req;
+-        int copyLength;
++	 /*daniel delete begin*/	
++        //struct iw_scan_req req;
++        //int copyLength;
++       /*daniel delete end*/
+         IEEE80211_DPRINTF(vap, IEEE80211_MSG_SCAN,
+             "%s: SCAN_THIS_ESSID requested\n", __func__);
+         if (data->length > sizeof req) {
+@@ -1970,6 +2027,20 @@
+     } else
+ #endif
+     {
++       /*daniel add begin*/
++	if (data) {
++	        IEEE80211_DPRINTF(vap, IEEE80211_MSG_SCAN,
++	            "%s: SCAN_THIS_ESSID requested\n", __func__);
++	        if (data->length > sizeof req) {
++	            copyLength = sizeof req;
++	        } else {
++	            copyLength = data->length;
++	        }
++	        OS_MEMZERO(&req, sizeof req);
++	        if (_copy_from_user(&req, data->pointer, copyLength))
++	            return -EFAULT;
++	}
++	/*daniel add end*/
+         n_ssid = wlan_get_desired_ssidlist(vap, ssid_list, IEEE80211_SCAN_MAX_SSID);
+     }
+ 
+@@ -1992,7 +2063,14 @@
+                                          connected_flag,true,n_ssid,ssid_list,0);
+     }
+ #else
+-    wlan_set_default_scan_parameters(vap,scan_params,opmode,true,true,true,true,n_ssid,ssid_list,0);
++    /*daniel add begin*/
++    //wlan_set_default_scan_parameters(vap,scan_params,opmode,true,true,true,true,n_ssid,ssid_list,0);
++    if(req.flags == 3) {
++       		liteon_wlan_set_default_scan_parameters(vap,scan_params,opmode,true,true,true,true,n_ssid,ssid_list,0);
++	} else {
++		 wlan_set_default_scan_parameters(vap,scan_params,opmode,true,true,true,true,n_ssid,ssid_list,0);
++	}
++   /*daniel add end*/
+ #endif
+ 
+     switch (opmode)
+@@ -2001,8 +2079,18 @@
+         scan_params->flags = IEEE80211_SCAN_PASSIVE | IEEE80211_SCAN_ALLBANDS;
+         scan_params->type = IEEE80211_SCAN_FOREGROUND;
+         /* XXX tunables */
+-        scan_params->min_dwell_time_passive = 200;
+-        scan_params->max_dwell_time_passive = 300;
++	/*daniel add begin*/	
++        //scan_params->min_dwell_time_passive = 200;
++       // scan_params->max_dwell_time_passive = 300;
++        if(req.flags == 3) {
++		scan_params->min_dwell_time_passive = 30;
++	        scan_params->max_dwell_time_passive = 50;
++         } else {
++		scan_params->min_dwell_time_passive = 200;
++		scan_params->max_dwell_time_passive = 300;
++	}
++
++       /*daniel add end*/
+         /* For 11ac offload - if the passive scan dwell time is
+          * greater than beacon interval target reduces 
+          * passive dwell time. To avoid that increasing scan 
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/osif_umac.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/os/linux/src/osif_umac.c	2014-03-20 15:04:32.567638433 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/osif_umac.c	2014-03-20 15:34:45.517532314 +0800
+@@ -3311,7 +3311,21 @@
+              * TBD: Assuming AP mode. No monitor mode support yet
+              */
+             osifp->is_stop_event_recvd = 0;
++
++         /*daniel add begin*/
++
++            if (forcescan != 2) /*spectral scan is not excute this*/
++            {
++			
+             wlan_mlme_stop_bss(vap, 0);
++            }
++	     //henry add for optimize
++            else
++            {
++                return 0;
++            }
++
++          /*daniel add end*/
+             /* wait for vap stop event before letting the caller go */
+             waitcnt = 0;
+             schedule_timeout_interruptible(OSIF_STOP_VAP_TIMEOUT);
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/umac/if_lmac/if_ath.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/umac/if_lmac/if_ath.c	2014-03-20 15:04:32.611638433 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/if_lmac/if_ath.c	2014-03-20 15:34:59.959951649 +0800
+@@ -1594,6 +1594,129 @@
+ 
+     return 0;
+ }
++
++
++/*daniel add begin*/
++
++/* Added by Bruce Liu, 2012-12-27 */
++int ath_net80211_send_action(struct ieee80211vap *vap){
++    int error = EOK;
++    struct ieee80211_action_mgt_args *actionargs;
++
++    /*
++    struct ieee80211com *ic = vap->iv_ic;    
++    struct net_device *dev = ic->ic_dev;
++    struct ieee80211_node *ni;
++    struct ieee80211vap *tmpvap = NULL;
++    int chanStart,n;
++    u_int32_t curChanFlags, chan_flags, chan_flagext;
++    int rvaps = 0;
++
++    n = 0;
++    chan_flagext = 0;
++    */
++    
++    #if 0
++    printk(KERN_ERR "%s, ------------------------------\n", __func__ );
++    #endif
++    actionargs = OS_MALLOC(NULL, sizeof(struct ieee80211_action_mgt_args) , GFP_KERNEL);
++
++    if (actionargs == NULL) {
++            printk(KERN_ERR "%s: ieee80211_action_mgt_args alloc failure\n", __func__ );
++            return -EINVAL;
++    }
++
++    OS_MEMZERO(actionargs, sizeof(struct ieee80211_action_mgt_args));
++
++    /* No channel was found via scan module, means no good scanlist
++       was found */
++
++    #if 0
++    /* Pick a random channel */
++    chanStart = jiffies % ic->ic_nchans;
++    curChanFlags = (ic->ic_curchan->ic_flags) & IEEE80211_CHAN_ALL;
++    if ( ic->ic_flags_ext & IEEE80211_FEXT_BLKDFSCHAN ) 
++        curChanFlags &= ~IEEE80211_CHAN_DFS;
++
++
++    for (n = 0; n < ic->ic_nchans; chanStart++, n++)
++    {
++       if (chanStart == ic->ic_nchans)
++            chanStart = 0;
++            
++       chan_flags = ic->ic_channels[chanStart].ic_flags;
++       chan_flagext = ic->ic_channels[chanStart].ic_flagext;
++       /*
++        * (1) skip static turbo channel as it will require STA to be in
++        * static turbo to work.
++        * (2) skip channel which's marked with radar detection
++        * (3) WAR: we allow user to config not to use any DFS channel
++        */
++        /* When we pick a channel, skip excluded 11D channels. See bug 31246 */
++        if ((chan_flags & IEEE80211_CHAN_STURBO) ||
++               (chan_flags & IEEE80211_CHAN_RADAR)  ||
++               (chan_flagext & IEEE80211_CHAN_11D_EXCLUDED) ||
++               (chan_flags & IEEE80211_CHAN_DFS &&
++               ic->ic_flags_ext & IEEE80211_FEXT_BLKDFSCHAN ))
++                  continue;
++               if ((chan_flags & IEEE80211_CHAN_ALL) == curChanFlags)
++                  break;
++   }
++    
++   if (n < ic->ic_nchans)
++   {
++          /* <-- to accomplish channel switch task */
++          printk(KERN_ERR "Changing to channel %d (%d MHz)\n",
++                        ic->ic_channels[chanStart].ic_ieee,
++                        ic->ic_channels[chanStart].ic_freq);
++     
++            switch(vap->iv_opmode)
++            {
++                case IEEE80211_M_HOSTAP:
++                        TAILQ_FOREACH(tmpvap, &ic->ic_vaps, iv_next) 
++                        {
++                             if(tmpvap->iv_state != IEEE80211_S_RUN)
++                                    continue;
++                    	     else
++                    	         rvaps++;
++
++                             printk(KERN_ERR "%s, IEEE80211_M_HOSTAP\n", __func__);
++                             
++                    	     if (tmpvap->iv_opmode == IEEE80211_M_HOSTAP)
++                             {
++                                  actionargs->category = IEEE80211_ACTION_CAT_SPECTRUM;
++                                  actionargs->action = IEEE80211_ACTION_CHAN_SWITCH;
++                                  
++                                  error = ieee80211_send_action(tmpvap->iv_bss, actionargs, NULL);
++                    	     }
++                             else
++                             {
++                                /* should never come here? */
++                                printk(KERN_ERR "%s, Cannot change to any channel\n", __func__ );
++                                //return 0;
++                             }
++                        }
++                        break;
++               default:
++                        printk(KERN_ERR "%s, non ap mode!!\n", __func__ );
++                        break;
++            }
++    } else {
++        printk(KERN_ERR "%s, No change to any channel\n", __func__ );
++    }
++    #endif
++    
++    actionargs->category = IEEE80211_ACTION_CAT_SPECTRUM;
++    actionargs->action = IEEE80211_ACTION_CHAN_SWITCH;
++                                     
++    error = ieee80211_send_action(vap->iv_bss, actionargs, NULL);
++
++    return error;
++}
++/* Ended by Bruce Liu */
++/*daniel add end*/
++
++
+ #if ATH_SUPPORT_WIFIPOS
+                                            
+ static bool
+@@ -9491,6 +9614,13 @@
+     ic->ic_led_scan_start = ath_net80211_led_enter_scan;
+     ic->ic_led_scan_end = ath_net80211_led_leave_scan;
+     ic->ic_set_channel = ath_net80211_set_channel;
++
++    /*daniel add begin*/
++     /* Added by Bruce Liu, 2012-12-17 */
++    ic->ic_send_action = ath_net80211_send_action;
++    /* Ended by Bruce Liu */
++    /*daniel add end*/
++
+ #if ATH_SUPPORT_WIFIPOS
+     ic->ic_lean_set_channel = ath_net80211_lean_set_channel;
+     ic->ic_pause_node = ath_net80211_pause_node;
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/umac/include/ieee80211_var.h
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/umac/include/ieee80211_var.h	2014-03-20 15:04:32.615638434 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/include/ieee80211_var.h	2014-03-20 15:35:06.746419234 +0800
+@@ -726,6 +726,9 @@
+     void                    (*ic_led_scan_start)(struct ieee80211com *);
+     void                    (*ic_led_scan_end)(struct ieee80211com *);
+     int                     (*ic_set_channel)(struct ieee80211com *);
++   /*daniel add begin*/
++      int                     (*ic_send_action)(struct ieee80211vap *);
++/*daniel add end*/
+ #if ATH_SUPPORT_WIFIPOS
+     int                     (*ic_lean_set_channel)(struct ieee80211com *);
+     void                    (*ic_pause_node)(struct ieee80211com *, struct ieee80211_node *, bool pause );
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/umac/mlme/ieee80211_beacon.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/umac/mlme/ieee80211_beacon.c	2013-08-27 07:05:30.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/mlme/ieee80211_beacon.c	2014-03-20 15:35:14.430849385 +0800
+@@ -621,9 +621,9 @@
+     */
+     if (vap->channel_change_done) {
+         u_int8_t *frm;
+-
+-        IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH, "%s: reinit beacon\n", __func__);
+-
++     /*daniel modify for debug begin*/
++    //    IEEE80211_DPRINTF(vap, IEEE80211_MSG_DOTH, "%s: reinit beacon\n", __func__);
++   /*daniel modify for debug end*/
+         /*
+         * NB: iv_bsschan is in the DSPARMS beacon IE, so must set this
+         *     prior to the beacon re-init, below.
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/umac/mlme/ieee80211_mgmt.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/umac/mlme/ieee80211_mgmt.c	2014-03-20 15:04:32.515638432 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/mlme/ieee80211_mgmt.c	2014-03-20 15:35:29.589400602 +0800
+@@ -715,8 +715,11 @@
+     u_int8_t *frm = NULL;
+     int error = EOK;
+ 
++   /*daniel add begin*/
++    struct ieee80211_frame *wh;
++  /*daniel add end*/
+     switch (actionargs->category) {
+-#if ATH_SUPPORT_IBSS_DFS
++//#if ATH_SUPPORT_IBSS_DFS
+     case IEEE80211_ACTION_CAT_SPECTRUM: {
+         struct ieee80211_action_spectrum_channel_switch *csaaction;
+         struct ieee80211_action_measrep_header *measrep_header;
+@@ -729,6 +732,19 @@
+                 error = -ENOMEM;
+                 break;
+             }
++
++            /*daniel add begin*/
++               wh = (struct ieee80211_frame *)wbuf_header(wbuf);
++            /*printk(KERN_ERR "addr1:%x:%x:%x:%x:%x,%x, addr2:%x:%x:%x:%x:%x:%x, addr3: %x:%x:%x:%x:%x:%x", 
++                        wh->i_addr1[0],wh->i_addr1[1],wh->i_addr1[2],wh->i_addr1[3],wh->i_addr1[4],
++                        wh->i_addr1[5],wh->i_addr2[0],wh->i_addr2[1],wh->i_addr2[2],wh->i_addr2[3],
++                        wh->i_addr2[4],wh->i_addr2[5],wh->i_addr3[0],wh->i_addr3[1],wh->i_addr3[2],
++                        wh->i_addr3[3],wh->i_addr3[4],wh->i_addr3[5]);
++            printk(KERN_ERR "actionargs->category: %d, actionargs->action: %d\n", actionargs->category, actionargs->action);
++            printk(KERN_ERR "ic->ic_chanchange_chan: %d, ic->ic_curchan->ic_ieee: %d, vap->iv_bsschan->ic_ieee:%d\n", 
++                ic->ic_chanchange_chan, ic->ic_curchan->ic_ieee, vap->iv_bsschan->ic_ieee);*/
++           /*daniel add end*/
++
+            
+             csaaction = (struct ieee80211_action_spectrum_channel_switch *)frm;
+             frm += sizeof(struct ieee80211_action_spectrum_channel_switch);
+@@ -775,7 +791,7 @@
+         
+         break;
+     }
+-#endif /* ATH_SUPPORT_IBSS_DFS */
++//#endif /* ATH_SUPPORT_IBSS_DFS */
+ 
+     case IEEE80211_ACTION_CAT_QOS:
+         IEEE80211_NOTE(vap, IEEE80211_MSG_ACTION, ni,
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/umac/scan/ieee80211_scan.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/umac/scan/ieee80211_scan.c	2013-08-27 07:05:31.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/scan/ieee80211_scan.c	2014-03-20 15:35:38.919499574 +0800
+@@ -4138,6 +4138,175 @@
+     }    
+ }
+ 
++/*daniel add begin*/
++void liteon_ieee80211_set_default_scan_parameters(struct ieee80211vap   *vap,
++                                           ieee80211_scan_params *scan_params,
++                                           enum ieee80211_opmode opmode,
++                                           bool                  active_scan_flag,
++                                           bool                  high_priority_flag,
++                                           bool                  connected_flag,
++                                           bool                  external_scan_flag,
++                                           u_int32_t             num_ssid,
++                                           ieee80211_ssid        *ssid_list,
++                                           int                   peer_count)
++{
++/* All times in milliseconds */
++#define LITEON_HW_DEFAULT_SCAN_MIN_BEACON_COUNT_INFRA                           1
++#define LITEON_HW_DEFAULT_SCAN_MIN_BEACON_COUNT_IBSS                            3
++//#define HW_DEFAULT_SCAN_MIN_DWELL_TIME_ACTIVE                          105
++#define LITEON_HW_DEFAULT_SCAN_MIN_DWELL_TIME_ACTIVE                          20
++//#define HW_DEFAULT_SCAN_MIN_DWELL_TIME_PASSIVE                         130
++#define LITEON_HW_DEFAULT_SCAN_MIN_DWELL_TIME_PASSIVE                         23
++//#define HW_DEFAULT_SCAN_MAX_DWELL_TIME                                 500
++#define LITEON_HW_DEFAULT_SCAN_MAX_DWELL_TIME                                 30
++//#define HW_DEFAULT_SCAN_MIN_REST_TIME_INFRA                             50
++#define LITEON_HW_DEFAULT_SCAN_MIN_REST_TIME_INFRA                             15
++//#define HW_DEFAULT_SCAN_MIN_REST_TIME_IBSS                             250
++#define LITEON_HW_DEFAULT_SCAN_MIN_REST_TIME_IBSS                             35
++//#define HW_DEFAULT_SCAN_MAX_REST_TIME                                  500
++#define LITEON_HW_DEFAULT_SCAN_MAX_REST_TIME                                  40
++#define LITEON_HW_DEFAULT_SCAN_MAX_OFFCHANNEL_TIME                              0
++//#define HW_DEFAULT_REPEAT_PROBE_REQUEST_INTVAL                          50
++#define LITEON_HW_DEFAULT_REPEAT_PROBE_REQUEST_INTVAL                          14
++//#define HW_DEFAULT_SCAN_NETWORK_IDLE_TIMEOUT                           200
++#define LITEON_HW_DEFAULT_SCAN_NETWORK_IDLE_TIMEOUT                           13
++#define LITEON_HW_DEFAULT_SCAN_BEACON_TIMEOUT                                1000
++//#define HW_DEFAULT_SCAN_MAX_DURATION                                 50000
++#define LITEON_HW_DEFAULT_SCAN_MAX_DURATION                                 600
++//#define HW_DEFAULT_SCAN_MAX_START_DELAY                               5000
++#define LITEON_HW_DEFAULT_SCAN_MAX_START_DELAY                               60
++#define LITEON_HW_DEFAULT_SCAN_FAKESLEEP_TIMEOUT                             1000
++#define LITEON_HW_DEFAULT_SCAN_PROBE_DELAY                                      0
++#define LITEON_HW_DEFAULT_OFFCHAN_RETRY_DELAY                                 100
++//#define HW_DEFAULT_MAX_OFFCHAN_RETRIES                                   3
++#define LITEON_HW_DEFAULT_MAX_OFFCHAN_RETRIES                                   2
++#define LITEON_HW_NOT_CONNECTED_DWELL_TIME_FACTOR                               2
++
++    struct ieee80211_aplist_config    *pconfig = ieee80211_vap_get_aplist_config(vap);
++    int                               i;
++    u_int8_t                          *bssid;
++
++    OS_MEMZERO(scan_params, sizeof(*scan_params));
++    scan_params->min_dwell_time_active  = active_scan_flag ? LITEON_HW_DEFAULT_SCAN_MIN_DWELL_TIME_ACTIVE : LITEON_HW_DEFAULT_SCAN_MIN_DWELL_TIME_PASSIVE;
++    scan_params->max_dwell_time_active  = LITEON_HW_DEFAULT_SCAN_MAX_DWELL_TIME;
++    scan_params->min_dwell_time_passive = LITEON_HW_DEFAULT_SCAN_MIN_DWELL_TIME_PASSIVE;
++    scan_params->max_dwell_time_passive = LITEON_HW_DEFAULT_SCAN_MAX_DWELL_TIME;
++    scan_params->max_rest_time          = high_priority_flag ?
++        LITEON_HW_DEFAULT_SCAN_MAX_REST_TIME : 0;
++    scan_params->idle_time              = LITEON_HW_DEFAULT_SCAN_NETWORK_IDLE_TIMEOUT;
++    scan_params->repeat_probe_time      = LITEON_HW_DEFAULT_REPEAT_PROBE_REQUEST_INTVAL;
++    scan_params->offchan_retry_delay    = LITEON_HW_DEFAULT_OFFCHAN_RETRY_DELAY;
++    scan_params->max_offchannel_time    = LITEON_HW_DEFAULT_SCAN_MAX_OFFCHANNEL_TIME;
++
++    if (opmode == IEEE80211_M_IBSS) {
++        scan_params->min_rest_time    = LITEON_HW_DEFAULT_SCAN_MIN_REST_TIME_IBSS;
++        scan_params->min_beacon_count = (peer_count > 0) ?
++            LITEON_HW_DEFAULT_SCAN_MIN_BEACON_COUNT_IBSS : 0;
++        scan_params->type             = (peer_count > 0) ? IEEE80211_SCAN_BACKGROUND : IEEE80211_SCAN_FOREGROUND;
++    }
++    else {
++        scan_params->min_rest_time    = LITEON_HW_DEFAULT_SCAN_MIN_REST_TIME_INFRA;
++        scan_params->min_beacon_count = connected_flag ? LITEON_HW_DEFAULT_SCAN_MIN_BEACON_COUNT_INFRA : 0;
++        scan_params->type             = connected_flag ? IEEE80211_SCAN_BACKGROUND : IEEE80211_SCAN_FOREGROUND;
++    }
++
++    scan_params->max_offchan_retries        = LITEON_HW_DEFAULT_MAX_OFFCHAN_RETRIES;
++    scan_params->beacon_timeout             = LITEON_HW_DEFAULT_SCAN_BEACON_TIMEOUT;
++    scan_params->max_scan_time              = LITEON_HW_DEFAULT_SCAN_MAX_DURATION;
++    scan_params->probe_delay                = LITEON_HW_DEFAULT_SCAN_PROBE_DELAY;
++    scan_params->flags                      = (active_scan_flag   ? IEEE80211_SCAN_ACTIVE : IEEE80211_SCAN_PASSIVE) | 
++                                              (high_priority_flag ? IEEE80211_SCAN_FORCED : 0)                      |
++                                              (external_scan_flag ? IEEE80211_SCAN_EXTERNAL : 0)                    |
++                                              IEEE80211_SCAN_ALLBANDS;
++    scan_params->num_channels               = 0;
++    scan_params->chan_list                  = NULL;
++    scan_params->num_ssid                   = 0;
++    scan_params->ie_len                     = 0;
++    scan_params->ie_data                    = NULL;
++    scan_params->check_termination_function = NULL;
++    scan_params->check_termination_context  = NULL;
++    scan_params->restricted_scan            = false;
++    scan_params->multiple_ports_active      = ieee80211_count_active_ports(vap->iv_ic, vap);
++
++    /* 
++     * Validate time before sending second probe request. A value of 0 is valid
++     * and means a single probe request must be transmitted.
++     */
++    ASSERT(scan_params->repeat_probe_time < scan_params->min_dwell_time_active);
++
++    /* Double the dwell time if not connected */
++    if (! connected_flag)
++    {
++        scan_params->min_dwell_time_active *= HW_NOT_CONNECTED_DWELL_TIME_FACTOR;
++    }
++
++    /* 
++     * SSID list must be received as an argument instead of retrieved from
++     * the configuration parameters
++     */
++    scan_params->num_ssid = num_ssid;
++    if (scan_params->num_ssid > IEEE80211_N(scan_params->ssid_list)) {
++        scan_params->num_ssid = IEEE80211_N(scan_params->ssid_list);
++    }
++    for (i = 0; i < scan_params->num_ssid; i++) {
++        scan_params->ssid_list[i] = ssid_list[i];
++        
++        /* Validate SSID length */
++        if (scan_params->ssid_list[i].len > sizeof(scan_params->ssid_list[i].ssid)) {
++            scan_params->ssid_list[i].len = 0;
++        }
++    }
++
++    scan_params->num_bssid = ieee80211_aplist_get_desired_bssid_count(pconfig);
++    if (scan_params->num_bssid > IEEE80211_N(scan_params->bssid_list)) {
++        scan_params->num_bssid = IEEE80211_N(scan_params->bssid_list);
++    }
++
++    for (i = 0; i < scan_params->num_bssid; i++) {
++        ieee80211_aplist_get_desired_bssid(pconfig, i, &bssid);
++        OS_MEMCPY(scan_params->bssid_list[i],
++            bssid,
++            IEEE80211_N(scan_params->bssid_list[i]));
++    }    
++}
++
++
++
++
++void liteon_wlan_set_default_scan_parameters(wlan_if_t             vaphandle, 
++                                      ieee80211_scan_params *scan_params, 
++                                      enum ieee80211_opmode opmode,
++                                      bool                  active_scan_flag, 
++                                      bool                  high_priority_flag,
++                                      bool                  connected_flag,
++                                      bool                  external_scan_flag,
++                                      u_int32_t             num_ssid,
++                                      ieee80211_ssid        *ssid_list,
++                                      int                   peer_count)
++{
++     liteon_ieee80211_set_default_scan_parameters(vaphandle,
++                                           scan_params, 
++                                           opmode,
++                                           active_scan_flag, 
++                                           high_priority_flag,
++                                           connected_flag,
++                                           external_scan_flag,
++                                           num_ssid,
++                                           ssid_list,
++                                           peer_count);
++}
++
++
++
++
++
++
++
++
++
++
++
++/*daniel add end*/
+ static int _ieee80211_scan_get_requestor_id(ieee80211_scanner_t ss, u_int8_t *module_name, IEEE80211_SCAN_REQUESTOR *requestor)
+ {
+     int    i, j;

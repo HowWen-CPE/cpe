@@ -1,0 +1,14 @@
+#/bin/sh
+
+#reset vlan setting
+
+HOST="$(nvram get hostname)"
+
+if [ "$HOST" != "WP688" ]; then
+	esw_mgr -s -r 0x660 -v 0x14007e
+	esw_mgr -s -r 0x66c -v 0x14007d
+	esw_mgr -s -r 0x678 -v 0x14007b
+   	esw_mgr -s -r 0x684 -v 0x140077
+    	esw_mgr -s -r 0x690 -v 0x14006f
+    	esw_mgr -s -r 0x69c -v 0x14005f
+fi

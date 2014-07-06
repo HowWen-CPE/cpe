@@ -1,0 +1,32 @@
+Subject: [PATCH ][P1/P2 RDB] sdboot env variable to boot Linux from SD Card on P1 and P2 RDB Platforms
+
+To boot from preformatted SD card this environment variable is added on P1 and P2 RDB 
+platforms.
+
+Signed-off-by: Dipen Dudhat <dipen.dudhat@freescale.com>
+---
+applies to git://git.am.freescale.net/git/mirrors/u-boot-mpc85xx.git
+ include/configs/P1_P2_RDB.h |    7 ++++++-
+ 1 files changed, 6 insertions(+), 1 deletions(-)
+
+diff --git a/include/configs/P1_P2_RDB.h b/include/configs/P1_P2_RDB.h
+index 5c839b5..ad2f0df 100644
+--- a/include/configs/P1_P2_RDB.h
++++ b/include/configs/P1_P2_RDB.h
+@@ -713,7 +713,12 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ 	"console=$consoledev,$baudrate $othbootargs;"	\
+ 	"nand read 2000000 $nandbootaddr $nandimgsize;"	\
+ 	"nand read 3000000 $nandfdtaddr $nandfdtsize;"	\
+-	"bootm 2000000 - 3000000;\0"
++	"bootm 2000000 - 3000000;\0"	\
++	"sdboot=setenv bdev mmcblk0p2;setenv bootargs root=/dev/$bdev rw "	\
++	"rootdelay=30 console=$consoledev,$baudrate $othbootargs;mmcinfo;"	\
++	"ext2load mmc 0:2 $loadaddr /boot/$bootfile;"	\
++	"ext2load mmc 0:2 $fdtaddr /boot/$fdtfile;"	\
++	"bootm $loadaddr - $fdtaddr;\0"
+ 
+ #define CONFIG_NFSBOOTCOMMAND		\
+ 	"setenv bootargs root=/dev/nfs rw "	\
+-- 
+1.5.6.5
+

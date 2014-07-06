@@ -1,0 +1,749 @@
+#!/bin/sh
+##################################
+# Functions
+##################################
+#get_ownip()
+#{
+#    #wanip="$(/sbin/ifconfig eth0 | grep "inet addr" | sed -ne 's/^ *inet addr:\([[:digit:]\.]*\) .*$/\1/p')"
+#    # EZP: XXX: This needs to be fixed. 
+#    wanip="$(nvram get wan0_ipaddr)"
+#    lanip="$(nvram get lan0_ipaddr)"
+#
+#    # Use wanip if available
+#    if [ -n "$wanip" ];then
+#    echo $wanip
+#    elif [ -n "$lanip" ];then
+#    echo "$lanip"
+#    else
+#    echo 192.168.1.1
+#    fi
+#}
+
+get_rule_value()
+{
+    local rule_name=$1
+    local rule_index=$2
+    local rule_entry=$3
+    rule_content="$(nvram show $rule_name $rule_index $rule_entry | sed -e 's/\\/\\\\/g;s/"/\\\"/g;s/`/\\\`/g;')"
+    #echo $rule_content | sed -e "s/'/\\\'/g"
+    echo "$rule_content"
+}
+
+get_acl_policy()
+{
+    local idx=$1
+    local vidx=$2
+    if [ -z "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 enable)" -o \
+            "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 enable)" = "0" -o \
+            "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 enable)" = "disabled" ]; then
+        # Disabled
+        echo "0"
+        return 0
+    else
+        if [ "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 defpolicy)" = "allow" -o \
+             "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 defpolicy)" = "1" ]; then
+            #allow all
+            echo "1"
+            return 1
+        elif [ "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 defpolicy)" = "deny" -o \
+               "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 defpolicy)" = "2" ]; then
+            #deny all
+            echo "2"
+            return 2
+        else
+            # Disabled
+            echo "0"
+            return 0
+        fi
+    fi
+}
+
+get_wlan_mode()
+{
+    local idx=$1
+    if [ ${idx} = "0" ]; then
+        if [ "$(nvram show wl_mode_rule 0 mode)" = "ap" -o "$(nvram show wl_mode_rule 0 mode)" = "normal" ]; then
+            echo "0"
+        elif [ "$(nvram show wl_mode_rule 0 mode)" = "client" -o "$(nvram show wl_mode_rule 0 mode)" = "wisp" ]; then
+            echo "1"
+        else
+            echo "0"
+        fi
+    elif [ ${idx} = "1" ]; then
+        if [ "$(nvram show wl1_mode_rule 0 mode)" = "ap" -o "$(nvram show wl1_mode_rule 0 mode)" = "normal" ]; then
+            echo "0"
+        elif [ "$(nvram show wl1_mode_rule 0 mode)" = "client" -o "$(nvram show wl1_mode_rule 0 mode)" = "wisp" ]; then
+            echo "1"
+        else
+            echo "0"
+        fi
+    fi
+}
+
+get_acl_list()
+{
+    local idx=$1
+    local vidx=$2
+    #local defpol="$(nvram show wl${idx}${vidx}_acl_basic_rule 0 defpolicy)"
+    local aclnum="$(nvram get wl${idx}${vidx}_acl_num)"
+    local aclidx="0"
+    local acllist=""
+    while [ "$aclidx" -lt "$aclnum" ];
+    do
+        #check rule is enabled and policy is "not" default policy
+        [ "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 enable)" = "1" -a -n "$(nvram show wl${idx}${vidx}_acl_rule $aclidx mac)" ] && {
+            [ "$(nvram show wl${idx}${vidx}_acl_rule $aclidx flag)" = "1" -o "$(nvram show wl${idx}${vidx}_acl_rule $aclidx flag)" = "0" ] && {
+                if [ -n "${acllist}" ]; then
+                    acllist="${acllist};$(nvram show wl${idx}${vidx}_acl_rule $aclidx mac)"
+                else
+                    acllist="$(nvram show wl${idx}${vidx}_acl_rule $aclidx mac)"
+                fi
+          }
+        }
+        aclidx=$(($aclidx + 1))
+    done
+    acllist="${acllist};"
+    echo "${acllist}"
+}
+if [ "$(nvram show wl_mode_rule 0 mode)" = "ap" -o "$(nvram show wl_mode_rule 0 mode)" = "normal" ]; then
+    wl_rule_name="wl_ap_basic_rule wl_ap_advanced_rule wl_wds_rule"
+else
+    wl_rule_name="wl_basic_rule wl_advanced_rule wl_wds_rule"
+fi
+
+if [ "$(nvram show wl1_mode_rule 0 mode)" = "ap" -o "$(nvram show wlv_mode_rule 0 mode)" = "normal" ]; then
+    wl5g_rule_name="wl5g_ap_basic_rule wl1_ap_advanced_rule"
+else
+    wl5g_rule_name="wl5g_basic_rule wl1_advanced_rule"
+fi
+
+wl_basic_rule_item="enable net_mode txpower channel bisolation"
+wl5g_basic_rule_item="enable net_mode txpower channel bisolation"
+wl_advanced_rule_item="dtim bcn htbw gi opmode extcha"
+wl1_advanced_rule_item="dtim bcn htbw gi opmode extcha"
+wl_ap_basic_rule_item="enable net_mode txpower channel bisolation"
+wl5g_ap_basic_rule_item="enable net_mode txpower channel bisolation"
+wl_ap_advanced_rule_item="dtim bcn htbw gi opmode extcha"
+wl1_ap_advanced_rule_item="dtim bcn htbw gi opmode extcha"
+#wl_wds_rule_item="mode timeout"
+#wl_wps_rule_item="mode pin configured"
+#wl_wps_sta_rule_item="mode pin reg_ssid reg_auth reg_enc reg_keyindex reg_key"
+
+wlv_rule_name="wlv_basic_rule wlv_ssid_rule"
+#               wlv_sec_rule wlv_sec_wep_rule \
+#               wlv_sec_wpa_rule wlv_sec_wpa2_rule"
+wlv_basic_rule_item="enable hidden rate wme isolation"
+wlv_ssid_rule_item="ssid"
+#wlv_sec_rule_item="secmode"
+#wlv_sec_wpa2_rule_item="key crypto radius_key radius_ipaddr radius_port \
+#                        rekey_mode rekey_time_interval rekey_pkt_interval preauth \
+#                        pmkperiod wpacap"
+
+#wlv_apcli_sec_wep_rule_item="key_index key1 key2 key3 key4 keytype encmode"
+#wlv_apcli_sec_wpa_rule_item="key crypto"
+#wlv_apcli_sec_wpa2_rule_item="key crypto"
+wlv_apcli_rule_item="enable ssid bssid secmode"
+
+set_wl_var()
+{
+     wifi0_RadioOn=$wifi0_wl_enable
+     echo "WLAN_INIT_PRINT: wifi0_RadioOn is ${wifi0_RadioOn}"
+     wifi0_WirelessMode=$wifi0_wl_net_mode
+     echo "WLAN_INIT_PRINT: wifi0_WirelessMode is ${wifi0_WirelessMode}"
+     if [ $wifi0_wl_txpower = "0" ]; then
+         export TXPOWER=0
+     elif [ $wifi0_wl_txpower = "2" ]; then
+         export TXPOWER=2
+     elif [ $wifi0_wl_txpower = "4" ]; then
+         export TXPOWER=4
+     elif [ $wifi0_wl_txpower = "6" ]; then
+         export TXPOWER=6
+     elif [ $wifi0_wl_txpower = "8" ]; then
+         export TXPOWER=8
+     elif [ $wifi0_wl_txpower = "10" ]; then
+         export TXPOWER=10
+     elif [ $wifi0_wl_txpower = "12" ]; then
+         export TXPOWER=12
+     elif [ $wifi0_wl_txpower = "14" ]; then
+         export TXPOWER=14
+     elif [ $wifi0_wl_txpower = "16" ]; then
+         export TXPOWER=16
+     elif [ $wifi0_wl_txpower = "18" ]; then
+         export TXPOWER=18
+     elif [ $wifi0_wl_txpower = "20" ]; then
+         export TXPOWER=20
+     else
+         export TXPOWER=0
+     fi
+     echo "WLAN_INIT_PRINT: TXPOWER=${TXPOWER}"
+     wifi0_Channel=$wifi0_wl_channel
+     echo "WLAN_INIT_PRINT: wifi0_Channel is ${wifi0_Channel}"
+
+     wifi0_HT_BW=$wifi0_wl_htbw
+     echo "WLAN_INIT_PRINT: wifi0_HT_BW is ${wifi0_HT_BW}"
+     export SHORTGI=$wifi0_wl_gi
+     echo "WLAN_INIT_PRINT: SHORTGI=${SHORTGI}"
+
+     wifi0_HT_OpMode=$(get_wlan_mode 0)
+     #wifi0_HT_OpMode=$wifi0_wl_opmode
+     echo "WLAN_INIT_PRINT: wifi0_HT_OpMode is ${wifi0_HT_OpMode}"
+
+     if [ "${wifi0_HT_OpMode}" = "0" ]; then
+         export AP_MODE="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE=${AP_MODE}"
+         export AP_MODE_3="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_3=${AP_MODE_3}"
+         export AP_MODE_5="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_5=${AP_MODE_5}"
+         export AP_MODE_7="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_7=${AP_MODE_7}"
+         export AP_MODE_9="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_9=${AP_MODE_9}"
+         export AP_MODE_11="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_11=${AP_MODE_11}"
+         export AP_MODE_13="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_13=${AP_MODE_13}"
+         export AP_MODE_15="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_15=${AP_MODE_15}"
+         export DEF_ATH_countrycode=841
+         echo "WLAN_INIT_PRINT: DEF_ATH_countrycode=${DEF_ATH_countrycode}"
+     elif [ "${wifi0_HT_OpMode}" = "1" ]; then
+         export AP_MODE="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE=${AP_MODE}"
+         export AP_MODE_3="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_3=${AP_MODE_3}"
+         export AP_MODE_5="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_5=${AP_MODE_5}"
+         export AP_MODE_7="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_7=${AP_MODE_7}"
+         export AP_MODE_9="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_9=${AP_MODE_9}"
+         export AP_MODE_11="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_11=${AP_MODE_11}"
+         export AP_MODE_13="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_13=${AP_MODE_13}"
+         export AP_MODE_15="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_15=${AP_MODE_15}"
+         export STA0_EXT_ENABLE="1"
+         echo "WLAN_INIT_PRINT: STA0_EXT_ENABLE=${STA0_EXT_ENABLE}"
+     fi
+     wifi0_HT_EXTCHA=$wifi0_wl_extcha
+     echo "WLAN_INIT_PRINT: wifi0_HT_EXTCHA is ${wifi0_HT_EXTCHA}"
+}
+
+set_wl_var_5g()
+{
+     wifi1_RadioOn=$wifi1_wl_enable
+     echo "WLAN_INIT_PRINT: wifi1_RadioOn is ${wifi1_RadioOn}"
+     wifi1_WirelessMode=$wifi1_wl_net_mode
+     echo "WLAN_INIT_PRINT: wifi1_WirelessMode is ${wifi1_WirelessMode}"
+     if [ $wifi1_wl_txpower = "0" ]; then
+         export TXPOWER_2=0
+     elif [ $wifi1_wl_txpower = "2" ]; then
+         export TXPOWER_2=2
+     elif [ $wifi1_wl_txpower = "4" ]; then
+         export TXPOWER_2=4
+     elif [ $wifi1_wl_txpower = "6" ]; then
+         export TXPOWER_2=6
+     elif [ $wifi1_wl_txpower = "8" ]; then
+         export TXPOWER_2=8
+     elif [ $wifi1_wl_txpower = "10" ]; then
+         export TXPOWER_2=10
+     elif [ $wifi1_wl_txpower = "12" ]; then
+         export TXPOWER_2=12
+     elif [ $wifi1_wl_txpower = "14" ]; then
+         export TXPOWER_2=14
+     elif [ $wifi1_wl_txpower = "16" ]; then
+         export TXPOWER_2=16
+     elif [ $wifi1_wl_txpower = "18" ]; then
+         export TXPOWER_2=18
+     elif [ $wifi1_wl_txpower = "20" ]; then
+         export TXPOWER_2=20
+     else
+         export TXPOWER_2=0
+     fi
+     echo "WLAN_INIT_PRINT: TXPOWER_2=${TXPOWER_2}"
+     wifi1_Channel=$wifi1_wl_channel
+     echo "WLAN_INIT_PRINT: wifi1_Channel is ${wifi1_Channel}"
+
+     wifi1_HT_BW=$wifi1_wl_htbw
+     echo "WLAN_INIT_PRINT: wifi1_HT_BW is ${wifi1_HT_BW}"
+
+     export SHORTGI_2=$wifi1_wl_gi
+     echo "WLAN_INIT_PRINT: SHORTGI_2=${SHORTGI_2}"
+     wifi1_HT_OpMode=$(get_wlan_mode 1)
+     echo "WLAN_INIT_PRINT: wifi1_HT_OpMode is ${wifi1_HT_OpMode}"
+     if [ "${wifi1_HT_OpMode}" = "0" ]; then
+         export AP_MODE_2="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_2=${AP_MODE_2}"
+         export AP_MODE_4="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_4=${AP_MODE_4}"
+         export AP_MODE_6="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_6=${AP_MODE_6}"
+         export AP_MODE_8="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_8=${AP_MODE_8}"
+         export AP_MODE_10="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_10=${AP_MODE_10}"
+         export AP_MODE_12="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_12=${AP_MODE_12}"
+         export AP_MODE_14="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_14=${AP_MODE_14}"
+         export AP_MODE_16="ap"
+         echo "WLAN_INIT_PRINT: AP_MODE_16=${AP_MODE_16}"
+         export DEF_ATH_countrycode_2=841
+         echo "WLAN_INIT_PRINT: DEF_ATH_countrycode_2=${DEF_ATH_countrycode_2}"
+     elif [ "${wifi1_HT_OpMode}" = "1" ]; then
+         export AP_MODE_2="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_2=${AP_MODE_2}"
+         export AP_MODE_4="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_4=${AP_MODE_4}"
+         export AP_MODE_6="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_6=${AP_MODE_6}"
+         export AP_MODE_8="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_8=${AP_MODE_8}"
+         export AP_MODE_10="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_10=${AP_MODE_10}"
+         export AP_MODE_12="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_12=${AP_MODE_12}"
+         export AP_MODE_14="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_14=${AP_MODE_14}"
+         export AP_MODE_16="sta"
+         echo "WLAN_INIT_PRINT: AP_MODE_16=${AP_MODE_16}"
+         export STA1_EXT_ENABLE="1"
+         echo "WLAN_INIT_PRINT: STA1_EXT_ENABLE=${STA1_EXT_ENABLE}"
+     fi
+     wifi1_HT_EXTCHA=$wifi1_wl_extcha
+     echo "WLAN_INIT_PRINT: wifi1_HT_EXTCHA is ${wifi1_HT_EXTCHA}"
+}
+
+
+gethide_status()
+{
+    local ifidx=$1
+    local wlvidx=$2
+    # We hide the ssid when ssid is hiddne, ssid is disabled or wifi is off
+    if [ "$ifidx" = "0" ];then
+        [ "$(nvram show wl_basic_rule 0 enable)" = "0" -o \
+            "$(nvram show wl_ap_basic_rule 0 enable)" = "0" -o \
+          "$(nvram show wl0_basic_rule $wlvidx enable)" = "0" -o \
+          "$(nvram show wl0_basic_rule $wlvidx hidden)" = "1" ] && {
+            echo "1"
+        } || {
+            echo "0"
+        }
+    else
+        [ "$(nvram show wl5g_basic_rule 0 enable)" = "0" -o \
+            "$(nvram show wl5g_ap_basic_rule 0 enable)" = "0" -o \
+          "$(nvram show wl1_basic_rule $wlvidx enable)" = "0" -o \
+          "$(nvram show wl1_basic_rule $wlvidx hidden)" = "1" ] && {
+            echo "1"
+        } || {
+            echo "0"
+        }
+    fi
+}
+
+atheros_get_wl_rule_var()
+{
+local wl_num=$(get_rule_value "wl_rule_num" "0" "")
+
+local index_if=0
+local index_vif=0
+local index_ssid=1
+local index_rule=0
+local index_item=0
+local index_wds=0
+local index_wdsid=0
+local index_apcli=0
+local index_apcliid=0
+
+local wlv_num=0
+local wifi0_auth_str=""
+local wifi0_crypto_str=""
+local wifi0_mixedcipher_str=""
+local wifi1_auth_str=""
+local wifi1_crypto_str=""
+local wifi1_mixedcipher_str=""
+
+local key1_type_str=""
+local key2_type_str=""
+local key3_type_str=""
+local key4_type_str=""
+local key_index_str=""
+local wifi0_hide_ssid_str=""
+local wifi0_wme_str=""
+local wifi0_noforwarding_str=""
+local wifi1_hide_ssid_str=""
+local wifi1_wme_str=""
+local wifi1_noforwarding_str=""
+
+local wds_hwaddr_str=""
+local wds_crypto_str=""
+local wds_key_str=""
+
+local wifi0_RADIUS_Server_str=""
+local wifi0_RADIUS_Port_str=""
+local wifi0_RekeyMethod_str=""
+local wifi0_RekeyInterval_str=""
+local wifi1_RADIUS_Server_str=""
+local wifi1_RADIUS_Port_str=""
+local wifi1_RekeyMethod_str=""
+local wifi1_RekeyInterval_str=""
+#local prewifi0_auth_str=""
+local sepchar=""
+
+while [ $index_if -le $wl_num ]
+do
+    if [ "$index_if" = "0" ]; then
+        # evalute physical interface parameters
+        for rule in $wl_rule_name; do {
+            eval "rule_item=\$${rule}_item"
+            for item in $rule_item; do {
+                eval "wifi${index_if}_wl_${item}=$(get_rule_value ${rule} ${index_if} ${item})"
+            } done
+        } done
+    elif [ "$index_if" = "1" ]; then
+        # evalute physical interface parameters
+        for rule in $wl5g_rule_name; do {
+            eval "rule_item=\$${rule}_item"
+            for item in $rule_item; do {
+                #eval "wifi${index_if}_wl_${item}=$(get_rule_value ${rule} ${index_if} ${item})"
+                eval "wifi${index_if}_wl_${item}=$(get_rule_value ${rule} 0 ${item})"
+            } done
+        } done
+    fi
+
+
+    if [ "$index_if" = "0" ]; then
+        #wifi0_NoForwardingBTNBSSID=$wifi0_wl_bisolation
+        export BISOLATION_2G=${wifi0_wl_bisolation}
+        echo "WLAN_INIT_PRINT: BISOLATION_2G=${BISOLATION_2G}"
+    elif [ "$index_if" = "1" ]; then
+        #wifi1_NoForwardingBTNBSSID=$wifi1_wl_bisolation
+        export BISOLATION_5G=${wifi1_wl_bisolation}
+        echo "WLAN_INIT_PRINT: BISOLATION_5G=${BISOLATION_5G}"
+    fi
+
+    # evalute virtual interface parameters
+
+    index_vif=0
+    wlv_num=0
+    wlv_num=$(get_rule_value "wlv_rule_num" "0" "")
+    while [ $index_vif -lt $wlv_num ]
+    do
+        rule="wl${index_if}_basic_rule"
+        for item in $wlv_basic_rule_item; do {
+            #eval "wifi${index_if}_${item}$((${index_vif} + 1))=$(get_rule_value ${rule} ${index_vif} ${item})"
+            eval "wifi${index_if}_${item}=$(get_rule_value ${rule} ${index_vif} ${item})"
+        } done
+
+        rule="wl${index_if}_ssid_rule"
+        for item in $wlv_ssid_rule_item; do {
+            #eval "wifi${index_if}_${item}$((${index_vif} + 1))=\"$(get_rule_value ${rule} ${index_vif} ${item})\""
+            eval "wifi${index_if}_${item}=\"$(get_rule_value ${rule} ${index_vif} ${item})\""
+        } done
+
+    # Check wireless security mode 
+        rule="wl${index_if}_sec_rule"
+        for item in $wlv_sec_rule_item; do {
+            #eval "wifi${index_if}_${item}$((${index_vif} + 1))=$(get_rule_value ${rule} ${index_vif} ${item})"
+            eval "wifi${index_if}_${item}=$(get_rule_value ${rule} ${index_vif} ${item})"
+        } done
+       #the setting items are available only when ssid is enabled
+
+        if [ "$index_if" = "0" ]; then
+            if [ "${index_vif}" = "0" ]; then
+            export AP_HIDESSID="$(gethide_status 0 ${index_vif})"
+            echo "WLAN_INIT_PRINT: AP_HIDESSID=${AP_HIDESSID}"
+            else
+            export AP_HIDESSID_$((${index_vif} * 2 + 1))="$(gethide_status 0 ${index_vif})"
+            echo "WLAN_INIT_PRINT: AP_HIDESSID_$((${index_vif} * 2 + 1))=$(gethide_status 0 ${index_vif})"
+            fi
+
+
+            if [ "${index_vif}" = "0" ]; then
+            export AP_ISOLATION="${wifi0_isolation}"
+            echo "WLAN_INIT_PRINT: AP_ISOLATION=${AP_ISOLATION}"
+            else
+            export AP_ISOLATION_$((${index_vif} * 2 + 1))="${wifi0_isolation}"
+            echo "WLAN_INIT_PRINT: AP_ISOLATION_$((${index_vif} * 2 + 1))=${wifi0_isolation}"
+            fi
+
+            if [ "${index_vif}" = "0" ]; then
+            export AP_SSID="${wifi0_ssid}"
+            echo "WLAN_INIT_PRINT: AP_SSID=${AP_SSID}"
+            else
+            export AP_SSID_$((${index_vif} * 2 + 1))="${wifi0_ssid}"
+            echo "WLAN_INIT_PRINT: AP_SSID_$((${index_vif} * 2 + 1))=${wifi0_ssid}"
+            fi
+
+
+            if [ "${index_vif}" = "0" ]; then
+            export AP_ACLPOLICY="$(get_acl_policy $index_if $index_vif)"
+            echo "WLAN_INIT_PRINT: AP_ACLPOLICY=${AP_ACLPOLICY}"
+            else
+            export AP_ACLPOLICY_$((${index_vif} * 2 + 1))="$(get_acl_policy $index_if $index_vif)"
+            echo "WLAN_INIT_PRINT: AP_ACLPOLICY_$((${index_vif} * 2 + 1))=$(get_acl_policy $index_if $index_vif)"
+            fi
+
+            if [ "${index_vif}" = "0" ]; then
+            export AP_ACLLIST="$(get_acl_list $index_if $index_vif)"
+            echo "WLAN_INIT_PRINT: AP_ACLLIST=${AP_ACLLIST}"
+            else
+            export AP_ACLLIST_$((${index_vif} * 2 + 1))="$(get_acl_list $index_if $index_vif)"
+            echo "WLAN_INIT_PRINT: AP_ACLLIST_$((${index_vif} * 2 + 1))=$(get_acl_list $index_if $index_vif)"
+            fi
+
+
+            if [ "${index_vif}" = "0" ]; then
+            export AP_ENABLE_SSID="$wifi0_enable"
+            echo "WLAN_INIT_PRINT: AP_ENABLE_SSID=${AP_ENABLE_SSID}"
+            else
+            export AP_ENABLE_SSID_$((${index_vif} * 2 + 1))="$wifi0_enable"
+            echo "WLAN_INIT_PRINT: AP_ENABLE_SSID_$((${index_vif} * 2 + 1))=${wifi0_enable}"
+            fi
+        elif [ "$index_if" = "1" ]; then
+            export AP_HIDESSID_$((${index_vif} * 2 + 2))="$(gethide_status 1 ${index_vif})"
+            echo "WLAN_INIT_PRINT: AP_HIDESSID_$((${index_vif} * 2 + 2))=$(gethide_status 1 ${index_vif})"
+            export AP_SSID_$((${index_vif} * 2 + 2))="${wifi1_ssid}"
+            echo "WLAN_INIT_PRINT: AP_SSID_$((${index_vif} * 2 + 2))=${wifi1_ssid}"
+
+            export AP_ACLPOLICY_$((${index_vif} * 2 + 2))="$(get_acl_policy $index_if $index_vif)"
+            echo "WLAN_INIT_PRINT: AP_ACLPOLICY_$((${index_vif} * 2 + 2))=$(get_acl_policy $index_if $index_vif)"
+            export AP_ACLLIST_$((${index_vif} * 2 + 2))="$(get_acl_list $index_if $index_vif)"
+            echo "WLAN_INIT_PRINT: AP_ACLLIST_$((${index_vif} * 2 + 2))=$(get_acl_list $index_if $index_vif)"
+
+            export AP_ENABLE_SSID_$((${index_vif} * 2 + 2))="$wifi1_enable"
+            echo "WLAN_INIT_PRINT: AP_ENABLE_SSID_$((${index_vif} * 2 + 2))=$wifi1_enable"
+        fi
+        index_vif=$(($index_vif + 1))
+    done
+#STA START>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    apcli_num=$(get_rule_value "wl${index_if}_apcli_rule_num" "0" "") 
+    while [ $index_apcli -lt $apcli_num ]
+    do
+        rule="wl${index_if}_apcli_rule"
+        for item in $wlv_apcli_rule_item; do {
+            eval "wifi${index_if}_apcli_${item}=\"$(get_rule_value ${rule} ${index_apcli} ${item})\""
+        } done
+
+        #assign authentication mode
+        if [ "$index_if" = "0" ]; then
+            wifi0_ApCliEnable=$wifi0_apcli_enable
+            export STA0_ASSOC_SSID="$wifi0_apcli_ssid"
+            echo "WLAN_INIT_PRINT: STA0_ASSOC_SSID=${STA0_ASSOC_SSID}"
+            export STA0_ASSOC_BSSID="$wifi0_apcli_bssid"
+            echo "WLAN_INIT_PRINT: STA0_ASSOC_BSSID=${STA0_ASSOC_BSSID}"
+    
+        elif [ "$index_if" = "1" ]; then
+            wifi1_ApCliEnable=$wifi1_apcli_enable
+            export STA1_ASSOC_SSID="$wifi1_apcli_ssid"
+            echo "WLAN_INIT_PRINT: STA1_ASSOC_SSID=${STA1_ASSOC_SSID}"
+            export STA1_ASSOC_BSSID="$wifi1_apcli_bssid"
+            echo "WLAN_INIT_PRINT: STA1_ASSOC_BSSID=${STA1_ASSOC_BSSID}"
+        fi
+
+        index_apcliid=$(($index_apcliid + 1))
+        index_apcli=$(($index_apcli + 1))
+    done
+    index_apcli=0
+#STA END<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    index_vif=0
+    index_if=$(($index_if + 1))
+done
+
+set_wl_var
+export DTIM="$wifi0_wl_dtim" 
+echo "WLAN_INIT_PRINT: DTIM=${DTIM}"
+export BEACONINTERVAL="${wifi0_wl_bcn}"
+echo "WLAN_INIT_PRINT: BEACONINTERVAL=${BEACONINTERVAL}"
+
+set_wl_var_5g
+export DTIM_2="${wifi1_wl_dtim}"
+echo "WLAN_INIT_PRINT: DTIM_2=${DTIM_2}"
+export BEACONINTERVAL_2="${wifi1_wl_bcn}"
+echo "WLAN_INIT_PRINT: BEACONINTERVAL_2=${BEACONINTERVAL_2}"
+}
+
+
+########################################################################
+# Main program
+########################################################################
+atheros_get_wl_rule_var
+
+
+###################################################################################
+
+##
+## Set Network configuration
+##
+## AP_IPADDR  = IP address of the bridge
+## WAN_IPADDR = Fixed IP address of the WAN, if it's not bridged
+## WAN_MODE   = bridged for attached to bridged, Get address if dhcp, fixed address
+##              if static
+##
+###################################################################################
+##
+## First, let's see if we have the modules loaded.  If not, call the
+## rc.wlan script to load them
+##
+MODLIST=`lsmod | grep ath_hal`
+
+if [ "${MODLIST}" = "" ]; then
+    /etc/wl/rc.wlan up
+
+    ##
+    ## Check for bad return value.  If so, exit
+    ##
+
+    if [ $? != 0 ]; then
+        exit 255
+    fi
+else
+    echo "WLAN_INIT_PRINT: Modules already loaded"
+fi
+
+local WIFI0_FOUND=0
+local WIFI1_FOUND=0
+
+cat /proc/net/dev | grep wifi0
+if [ "$?" = "0" ]; then
+    WIFI0_FOUND=1
+fi  
+
+cat /proc/net/dev | grep wifi1
+if [ "$?" = "0" ]; then
+    WIFI1_FOUND=1
+fi 
+
+if [ "$WIFI0_FOUND" = "1" -a "$WIFI1_FOUND" = "1" ]; then
+    export AP_STARTMODE="dual"
+elif [ "$WIFI0_FOUND" = "1" -a "$WIFI1_FOUND" = "0" ]; then
+    export AP_STARTMODE="single"
+else
+    echo "WLAN_INIT_PRINT: ERROR:WI-FI does not init correctly......"
+fi
+
+    echo "WLAN_INIT_PRINT: AP_STARTMODE is $AP_STARTMODE"
+
+export MAC_WIFI0="00:12:21:11:33:55"
+export MAC_WIFI1="00:12:21:22:44:66"
+
+export AP_RADIO_ID=0
+export AP_RADIO_ID_3=0
+export AP_RADIO_ID_5=0
+export AP_RADIO_ID_7=0
+export AP_RADIO_ID_9=0
+export AP_RADIO_ID_11=0
+export AP_RADIO_ID_13=0
+export AP_RADIO_ID_15=0
+
+export AP_RADIO_ID_2=1
+export AP_RADIO_ID_4=1
+export AP_RADIO_ID_6=1
+export AP_RADIO_ID_8=1
+export AP_RADIO_ID_10=1
+export AP_RADIO_ID_12=1
+export AP_RADIO_ID_14=1
+export AP_RADIO_ID_16=1
+
+export NUMRADIO_AHB=1
+export AMPDUENABLE=1
+export AMPDUFRAMES=32
+export AMPDULIMIT=50000
+export AMPDUMIN=32768
+export RX_CHAINMASK=7
+export TX_CHAINMASK=7
+if [ "${AP_STARTMODE}" = "dual" ]; then
+    export AMPDUENABLE_2=1
+    export AMPDUFRAMES_2=32
+    export AMPDULIMIT_2=50000
+    export AMPDUMIN_2=32768
+    export RX_CHAINMASK_2=7
+    export TX_CHAINMASK_2=7
+fi
+
+export AP_PRIMARY_CH=${wifi0_Channel:=6}
+echo "WLAN_INIT_PRINT: AP_PRIMARY_CH=${AP_PRIMARY_CH}"
+if [ "$wifi0_WirelessMode" = "9" ]; then
+    if [ "$wifi0_HT_BW" = "0" ]; then
+        export AP_CHMODE="11NGHT20"
+    elif [ "$wifi0_HT_BW" = "1" ]; then
+        if [ "$wifi0_Channel" = "0" ]; then
+            export AP_CHMODE="11NGHT40"
+        else
+            if [ $wifi0_HT_EXTCHA = "1" ]; then
+                export AP_CHMODE="11NGHT40PLUS"
+            elif [ $wifi0_HT_EXTCHA = "0" ]; then
+                export AP_CHMODE="11NGHT40MINUS"
+            fi
+        fi
+    fi
+fi
+echo "WLAN_INIT_PRINT: AP_CHMODE=${AP_CHMODE}"
+#rewrite it
+#Get wirelessmode for 5G
+if [ "${AP_STARTMODE}" = "dual" ]; then
+    export AP_PRIMARY_CH_2=${wifi1_Channel:=40}
+    echo "WLAN_INIT_PRINT: AP_PRIMARY_CH_2=${AP_PRIMARY_CH_2}"
+    if [ "$wifi1_WirelessMode" = "8" ]; then
+        if [ "$wifi1_HT_BW" = "0" ]; then
+            export AP_CHMODE_2="11NAHT20"
+        elif [ "$wifi1_HT_BW" = "1" ]; then
+            if [ "$wifi1_Channel" = "0" ]; then
+                export AP_CHMODE_2="11NAHT40"
+            else
+                if [ $wifi1_HT_EXTCHA = "1" ]; then
+                    export AP_CHMODE_2="11NAHT40PLUS"
+                elif [ $wifi1_HT_EXTCHA = "0" ]; then
+                    export AP_CHMODE_2="11NAHT40MINUS"
+                fi
+            fi
+        fi
+    elif [ "$wifi1_WirelessMode" = "14" ]; then 
+        if [ "$wifi1_HT_BW" = "0" ]; then
+            export AP_CHMODE_2="11ACVHT20"
+        elif [ "$wifi1_HT_BW" = "1" ]; then
+            if [ "$wifi1_Channel" = "0" ]; then
+                export AP_CHMODE_2="11ACVHT40"
+            else
+                if [ $wifi1_HT_EXTCHA = "1" ]; then
+                    export AP_CHMODE_2="11ACVHT40PLUS"
+                elif [ $wifi1_HT_EXTCHA = "0" ]; then
+                    export AP_CHMODE_2="11ACVHT40MINUS"
+                fi
+            fi
+        elif [ "$wifi1_HT_BW" = "2" ]; then 
+            export AP_CHMODE_2="11ACVHT80"
+        fi
+    fi
+fi
+echo "WLAN_INIT_PRINT: AP_CHMODE_2=${AP_CHMODE_2}"
+#Set default security modes
+export MAX_VAPS_PER_RADIO=8
+
+#Set WPS as Disable
+export WPS_ENABLE="0"
+export WPS_ENABLE_3="0"
+export WPS_ENABLE_5="0"
+export WPS_ENABLE_7="0"
+export WPS_ENABLE_9="0"
+export WPS_ENABLE_11="0"
+export WPS_ENABLE_13="0"
+export WPS_ENABLE_15="0"
+if [ "${AP_STARTMODE}" = "dual" ]; then
+export WPS_ENABLE_2="0"
+export WPS_ENABLE_4="0"
+export WPS_ENABLE_6="0"
+export WPS_ENABLE_8="0"
+export WPS_ENABLE_10="0"
+export WPS_ENABLE_12="0"
+export WPS_ENABLE_14="0"
+export WPS_ENABLE_16="0"
+fi
+
+#The following parameters are board specific, and should not be modified
+export ATH_use_eeprom=0
+# SET it to 1 if no "A" band support 
+export PATH=$PATH:/etc/wl
+/etc/wl/wlan-create

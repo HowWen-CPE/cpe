@@ -1,0 +1,170 @@
+Index: u-boot-2006-04-06-1725/board/ar7240/common/athrsf1_phy.c
+===================================================================
+--- u-boot-2006-04-06-1725.orig/board/ar7240/common/athrsf1_phy.c	2013-12-14 09:58:43.238989111 +0800
++++ u-boot-2006-04-06-1725/board/ar7240/common/athrsf1_phy.c	2013-12-14 09:58:43.571338116 +0800
+@@ -63,9 +63,15 @@
+ 
+     {TRUE,   /* port 1 -- LAN port 1 */
+      FALSE,
+-     ENET_UNIT_LAN,
++//liteon modify+
++     //ENET_UNIT_LAN,
++     ENET_UNIT_WAN,
++//liteon modify-
+      0,
+-     ATHR_PHY0_ADDR,
++//liteon modify+
++     ATHR_PHY0_ADDR,
++     //ATHR_PHY4_ADDR,
++//liteon modify-
+      ATHR_LAN_PORT_VLAN
+     },
+ 
+@@ -232,7 +238,10 @@
+ 	int       phyUnit = 0;
+ 	int       liveLinks = 0;
+ 
+-	athr_auto_neg(ethUnit,phyUnit);
++//liteon modify+
++	//athr_auto_neg(ethUnit,phyUnit);
++    athr_auto_neg(ethUnit,ATHR_PHYADDR(phyUnit));
++//liteon modify-
+ 
+ 	if (athr_phy_is_link_alive(phyUnit)) {
+ 		liveLinks++;
+@@ -432,3 +441,14 @@
+    return 0;
+ }
+ 
++//liteon add+
++unsigned int f1e_rd_phy(unsigned int phy_addr, unsigned int reg_addr)
++{
++    return ((uint32_t) phy_reg_read(0, phy_addr, reg_addr));
++}
++
++void f1e_wr_phy(unsigned int phy_addr, unsigned int reg_addr, unsigned int write_data)
++{
++    phy_reg_write(0, phy_addr, reg_addr, write_data);
++}
++//liteon add-
+Index: u-boot-2006-04-06-1725/board/ar7240/db12x/Makefile
+===================================================================
+--- u-boot-2006-04-06-1725.orig/board/ar7240/db12x/Makefile	2013-12-14 09:58:43.247082714 +0800
++++ u-boot-2006-04-06-1725/board/ar7240/db12x/Makefile	2013-12-14 09:58:43.571338116 +0800
+@@ -72,6 +72,10 @@
+ OBJS	+= ../common/athrsf1_phy.o
+ endif
+ 
++ifeq ($(ETH_CONFIG2), _f1e)
++OBJS	+= ../common/athrsf1_phy.o
++endif
++
+ ifeq ($(ETH_CONFIG), _f2e)
+ OBJS	+= ../common/athrsf2_phy.o
+ endif
+Index: u-boot-2006-04-06-1725/cpu/mips/ar7240/ag934x_phy.h
+===================================================================
+--- u-boot-2006-04-06-1725.orig/cpu/mips/ar7240/ag934x_phy.h	2013-12-14 09:58:43.366990426 +0800
++++ u-boot-2006-04-06-1725/cpu/mips/ar7240/ag934x_phy.h	2013-12-14 09:58:43.575438446 +0800
+@@ -37,12 +37,18 @@
+ #endif
+     {
+ #ifdef CFG_ATHRS27_PHY
++//liteon add+
++    if (unit == 1)
++//liteon add-
+         athrs27_phy_setup(unit);
+ #endif
+ #ifdef CFG_ATHRS26_PHY
+         athrs26_phy_setup(unit);
+ #endif
+ #if defined(CONFIG_F1E_PHY) || defined(CONFIG_F2E_PHY)
++//liteon add+
++    if (unit == 0)
++//liteon add-
+         athr_phy_setup(unit);
+ #endif
+ #ifdef CONFIG_VIR_PHY
+@@ -66,12 +72,18 @@
+ #endif
+     {
+ #ifdef CFG_ATHRS27_PHY
++//liteon add+
++    if (unit == 1)
++//liteon add-
+          *link = athrs27_phy_is_up(unit);
+ #endif
+ #ifdef CFG_ATHRS26_PHY
+          *link = athrs26_phy_is_up(unit);
+ #endif
+ #if defined(CONFIG_F1E_PHY) || defined(CONFIG_F2E_PHY)
++//liteon add+
++    if (unit == 0)
++//liteon add-
+          *link = athr_phy_is_up(unit);
+ #endif
+ #ifdef CONFIG_VIR_PHY
+@@ -94,13 +106,22 @@
+ #endif
+    {
+ #ifdef CFG_ATHRS27_PHY
++//liteon add+
++    if (unit == 1)
++//liteon add-
+         *duplex = athrs27_phy_is_fdx(unit);
+ #endif
+ #ifdef CFG_ATHRS26_PHY
+         *duplex = athrs26_phy_is_fdx(unit);
+ #endif
+ #if defined(CONFIG_F1E_PHY) || defined(CONFIG_F2E_PHY)
+-        *duplex = athr_phy_is_fdx(unit);
++//liteon add+
++    if (unit == 0)
++//liteon add-
++//liteon modify+
++        //*duplex = athr_phy_is_fdx(unit);
++        *duplex = athr_phy_is_fdx(unit,unit);
++//liteon modify-
+ #endif
+ #ifdef CONFIG_VIR_PHY
+         *duplex = athr_vir_phy_is_fdx(unit);
+@@ -122,13 +143,22 @@
+ #endif
+     {
+ #ifdef CFG_ATHRS27_PHY
++//liteon add+
++    if (unit == 1)
++//liteon add-
+         *speed = athrs27_phy_speed(unit);
+ #endif
+ #ifdef CFG_ATHRS26_PHY
+         *speed = athrs26_phy_speed(unit);
+ #endif
+ #if defined(CONFIG_F1E_PHY) || defined(CONFIG_F2E_PHY)
+-        *speed = athr_phy_speed(unit);
++//liteon add+
++    if (unit == 0)
++//liteon add-
++//liteon modify+
++        //*speed = athr_phy_speed(unit);
++        *speed = athr_phy_speed(unit,unit);
++//liteon modify-
+ #endif
+ #ifdef CONFIG_VIR_PHY
+         *speed = athr_vir_phy_speed(unit);
+Index: u-boot-2006-04-06-1725/board/ar7240/common/athr_s27_phy.c
+===================================================================
+--- u-boot-2006-04-06-1725.orig/board/ar7240/common/athr_s27_phy.c	2013-12-14 10:04:15.951974072 +0800
++++ u-boot-2006-04-06-1725/board/ar7240/common/athr_s27_phy.c	2013-12-14 10:04:38.351982916 +0800
+@@ -141,7 +141,10 @@
+ 
+ #define ATHR_GLOBALREGBASE    0
+ 
+-#define ATHR_PHY_MAX 5
++//liteon modify+
++//#define ATHR_PHY_MAX 5
++#define ATHR_PHY_MAX 1
++//liteon modify-
+ 
+ /* Range of valid PHY IDs is [MIN..MAX] */
+ #define ATHR_ID_MIN 0

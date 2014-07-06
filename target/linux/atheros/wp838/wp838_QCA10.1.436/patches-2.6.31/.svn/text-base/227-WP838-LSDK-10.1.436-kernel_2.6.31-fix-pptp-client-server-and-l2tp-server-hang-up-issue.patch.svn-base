@@ -1,0 +1,22 @@
+Index: linux-2.6.31/drivers/char/pty.c
+===================================================================
+--- linux-2.6.31.orig/drivers/char/pty.c	2009-09-10 06:13:59.000000000 +0800
++++ linux-2.6.31/drivers/char/pty.c	2014-03-20 11:24:16.383464974 +0800
+@@ -119,9 +119,15 @@
+ 	if (c > 0) {
+ 		/* Stuff the data into the input queue of the other end */
+ 		c = tty_insert_flip_string(to, buf, c);
++
++                /*Here need check "c" value. when c==0, "tty_flip_buffer_push" and "tty_wakeup" should bypass, 
++                 * otherwise pptp client/server and l2tp server will lead to system hang up,sirian@liteon,2014-03-20. 
++                 */
+ 		/* And shovel */
+-		tty_flip_buffer_push(to);
+-		tty_wakeup(tty);
++                if (c) {
++		  tty_flip_buffer_push(to);
++		  tty_wakeup(tty);
++                }
+ 	}
+ 	return c;
+ }

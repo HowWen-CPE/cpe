@@ -1,0 +1,472 @@
+From 277aa4d9c12191d1bfe491f7214edb68508ee251 Mon Sep 17 00:00:00 2001
+From: Poonam Aggrwal <poonam.aggrwal@freescale.com>
+Date: Wed, 28 Oct 2009 13:24:03 +0530
+Subject: [PATCH v0] eSPI controller support under the SPI framework.
+
+This patch has been borrowed from MPC8536DS SPI Support.
+
+Signed-off-by: Poonam Aggrwal <poonam.aggrwal@freescale.com>
+Signed-off-by: Mingkai Hu <Mingkai.hu@freescale.com>
+---
+ drivers/mtd/spi/spi_flash.c |   87 ++++++++++++++++
+ drivers/spi/Makefile        |    1 +
+ drivers/spi/fsl_espi.c      |  232 +++++++++++++++++++++++++++++++++++++++++++
+ include/spi.h               |   27 +++++
+ 4 files changed, 347 insertions(+), 0 deletions(-)
+ create mode 100644 drivers/spi/fsl_espi.c
+
+diff --git a/drivers/mtd/spi/spi_flash.c b/drivers/mtd/spi/spi_flash.c
+index 25346a4..55a2a00 100644
+--- a/drivers/mtd/spi/spi_flash.c
++++ b/drivers/mtd/spi/spi_flash.c
+@@ -2,6 +2,7 @@
+  * SPI flash interface
+  *
+  * Copyright (C) 2008 Atmel Corporation
++ * Copyright 2009 Freescale Semiconductor, Inc.
+  * Licensed under the GPL-2 or later.
+  */
+ 
+@@ -17,6 +18,7 @@ int spi_flash_cmd(struct spi_slave *spi, u8 cmd, void *response, size_t len)
+ 	unsigned long flags = SPI_XFER_BEGIN;
+ 	int ret;
+ 
++#ifndef CONFIG_FSL_ESPI
+ 	if (len == 0)
+ 		flags |= SPI_XFER_END;
+ 
+@@ -32,6 +34,35 @@ int spi_flash_cmd(struct spi_slave *spi, u8 cmd, void *response, size_t len)
+ 			debug("SF: Failed to read response (%zu bytes): %d\n",
+ 					len, ret);
+ 	}
++#else
++	struct espi_transfer transfer[1];
++	unsigned char *buffer;
++
++	buffer = (unsigned char *)malloc(len + 2);
++	if (!buffer) {
++		debug("SF: Failed to malloc memory.\n");
++		return 1;
++	}
++	memcpy(buffer, &cmd, 1);
++
++	transfer[0].cmd_len = 1;
++	transfer[0].data_len = len;
++	transfer[0].tx_buf = buffer;
++	transfer[0].rx_buf = buffer + 1;
++	transfer[0].flags = flags | SPI_XFER_END;
++
++	spi->transfer = &transfer[0];
++	ret = espi_xfer(spi);
++	if (ret) {
++		debug("SF: Failed to send command %02x: %d\n", cmd, ret);
++		return ret;
++	}
++
++	if (len)
++		memcpy(response, transfer[0].rx_buf + 1, len);
++
++	free(buffer);
++#endif
+ 
+ 	return ret;
+ }
+@@ -42,6 +73,7 @@ int spi_flash_cmd_read(struct spi_slave *spi, const u8 *cmd,
+ 	unsigned long flags = SPI_XFER_BEGIN;
+ 	int ret;
+ 
++#ifndef CONFIG_FSL_ESPI
+ 	if (data_len == 0)
+ 		flags |= SPI_XFER_END;
+ 
+@@ -55,6 +87,33 @@ int spi_flash_cmd_read(struct spi_slave *spi, const u8 *cmd,
+ 			debug("SF: Failed to read %zu bytes of data: %d\n",
+ 					data_len, ret);
+ 	}
++#else
++	struct espi_transfer transfer[1];
++	unsigned char *buffer;
++
++	buffer = (unsigned char *)malloc(2 * cmd_len + data_len);
++	if (!buffer) {
++		debug("SF: Failed to malloc memory.\n");
++		return 1;
++	}
++	memcpy(buffer, cmd, cmd_len);
++
++	transfer[0].cmd_len = cmd_len;
++	transfer[0].data_len = data_len;
++	transfer[0].tx_buf = buffer;
++	transfer[0].rx_buf = buffer + cmd_len;
++	transfer[0].flags = flags | SPI_XFER_END;
++
++	spi->transfer = &transfer[0];
++	ret = espi_xfer(spi);
++	if (ret) {
++		debug("SF: Failed to read %zu bytes of data: %d\n",
++				data_len, ret);
++	}
++
++	memcpy(data, transfer[0].rx_buf + cmd_len, data_len);
++	free(buffer);
++#endif
+ 
+ 	return ret;
+ }
+@@ -65,6 +124,7 @@ int spi_flash_cmd_write(struct spi_slave *spi, const u8 *cmd, size_t cmd_len,
+ 	unsigned long flags = SPI_XFER_BEGIN;
+ 	int ret;
+ 
++#ifndef CONFIG_FSL_ESPI
+ 	if (data_len == 0)
+ 		flags |= SPI_XFER_END;
+ 
+@@ -78,6 +138,33 @@ int spi_flash_cmd_write(struct spi_slave *spi, const u8 *cmd, size_t cmd_len,
+ 			debug("SF: Failed to read %zu bytes of data: %d\n",
+ 					data_len, ret);
+ 	}
++#else
++	struct espi_transfer transfer[1];
++	unsigned char *buffer;
++
++	buffer = (unsigned char *)malloc(cmd_len + data_len);
++	if (!buffer) {
++		debug("SF: Failed to malloc memory.\n");
++		return 1;
++	}
++	memcpy(buffer, cmd, cmd_len);
++	memcpy(buffer + cmd_len, data, data_len);
++
++	transfer[0].cmd_len = cmd_len;
++	transfer[0].data_len = data_len;
++	transfer[0].tx_buf = buffer;
++	transfer[0].rx_buf = NULL;
++	transfer[0].flags = flags | SPI_XFER_END;
++
++	spi->transfer = &transfer[0];
++	ret = espi_xfer(spi);
++	if (ret) {
++		debug("SF: Failed to read %zu bytes of data: %d\n",
++				data_len, ret);
++	}
++
++	free(buffer);
++#endif
+ 
+ 	return ret;
+ }
+diff --git a/drivers/spi/Makefile b/drivers/spi/Makefile
+index 824d8e7..f3f85ba 100644
+--- a/drivers/spi/Makefile
++++ b/drivers/spi/Makefile
+@@ -34,6 +34,7 @@ COBJS-$(CONFIG_MPC52XX_SPI) += mpc52xx_spi.o
+ COBJS-$(CONFIG_MPC8XXX_SPI) += mpc8xxx_spi.o
+ COBJS-$(CONFIG_MXC_SPI) += mxc_spi.o
+ COBJS-$(CONFIG_SOFT_SPI) += soft_spi.o
++COBJS-$(CONFIG_FSL_ESPI) += fsl_espi.o
+ 
+ COBJS	:= $(COBJS-y)
+ SRCS	:= $(COBJS:.o=.c)
+diff --git a/drivers/spi/fsl_espi.c b/drivers/spi/fsl_espi.c
+new file mode 100644
+index 0000000..83740e0
+--- /dev/null
++++ b/drivers/spi/fsl_espi.c
+@@ -0,0 +1,232 @@
++/*
++ * eSPI controller driver.
++ *
++ * Copyright 2009 Freescale Semiconductor, Inc.
++ * Author: Mingkai Hu (Mingkai.hu@freescale.com)
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++
++#include <common.h>
++
++#include <malloc.h>
++#include <spi.h>
++#include <asm/immap_85xx.h>
++
++#define ESPI_MAX_CS_NUM		4
++
++#define ESPI_EV_RNE		(1 << 9)
++#define ESPI_EV_TNF		(1 << 8)
++
++#define ESPI_MODE_EN		(1 << 31)	/* Enable interface */
++#define ESPI_MODE_TXTHR(x)	((x) << 8)	/* Tx FIFO threshold */
++#define ESPI_MODE_RXTHR(x)	((x) << 0)	/* Rx FIFO threshold */
++
++#define ESPI_COM_CS(x)		((x) << 30)
++#define ESPI_COM_TRANLEN(x)	((x) << 0)
++
++#define ESPI_CSMODE_CI_INACTIVEHIGH	(1 << 31)
++#define ESPI_CSMODE_CP_BEGIN_EDGCLK	(1 << 30)
++#define ESPI_CSMODE_REV_MSB_FIRST	(1 << 29)
++#define ESPI_CSMODE_DIV16		(1 << 28)
++#define ESPI_CSMODE_PM(x)		((x) << 24)
++#define ESPI_CSMODE_POL_ASSERTED_LOW	(1 << 20)
++#define ESPI_CSMODE_LEN(x)		((x) << 16)
++#define ESPI_CSMODE_CSBEF(x)		((x) << 12)
++#define ESPI_CSMODE_CSAFT(x)		((x) << 8)
++#define ESPI_CSMODE_CSCG(x)		((x) << 3)
++
++#define ESPI_CSMODE_INIT_VAL (ESPI_CSMODE_POL_ASSERTED_LOW | \
++		ESPI_CSMODE_CSBEF(0) | ESPI_CSMODE_CSAFT(0) | \
++		ESPI_CSMODE_CSCG(1))
++
++struct spi_slave *spi_setup_slave(unsigned int bus, unsigned int cs,
++		unsigned int max_hz, unsigned int mode)
++{
++	volatile ccsr_espi_t *espi = (void *)(CONFIG_SYS_MPC85xx_ESPI_ADDR);
++	struct spi_slave *slave;
++	sys_info_t sysinfo;
++	unsigned long spibrg = 0;
++	unsigned char pm = 0;
++	int i;
++
++	if (!spi_cs_is_valid(bus, cs))
++		return NULL;
++
++	slave = malloc(sizeof(struct spi_slave));
++	if (!slave)
++		return NULL;
++
++	slave->bus = bus;
++	slave->cs = cs;
++
++	/* Enable eSPI interface */
++	espi->mode = ESPI_MODE_RXTHR(3) | ESPI_MODE_TXTHR(4) | ESPI_MODE_EN;
++
++	espi->event = 0xffffffff;	/* Clear all eSPI events */
++	espi->mask = 0x00000000;	/* Mask  all eSPI interrupts */
++
++	/* Init CS mode interface */
++	for (i = 0; i < ESPI_MAX_CS_NUM; i++)
++		espi->csmode[i] = ESPI_CSMODE_INIT_VAL;
++
++	espi->csmode[cs] &= ~(ESPI_CSMODE_PM(0xF) | ESPI_CSMODE_DIV16
++		| ESPI_CSMODE_CI_INACTIVEHIGH | ESPI_CSMODE_CP_BEGIN_EDGCLK
++		| ESPI_CSMODE_REV_MSB_FIRST | ESPI_CSMODE_LEN(0xF));
++
++	/* Set eSPI BRG clock source */
++	get_sys_info(&sysinfo);
++	spibrg = sysinfo.freqSystemBus / 2;
++	if ((spibrg / max_hz) > 32) {
++		espi->csmode[cs] |= ESPI_CSMODE_DIV16;
++		pm = spibrg / (max_hz * 16 * 2);
++		if (pm > 16) {
++			pm = 16;
++			debug("Requested speed is too low: %d Hz"
++				" %d Hz is used.\n", max_hz, spibrg / (32 * 16));
++		}
++	} else
++		pm = spibrg / (max_hz * 2);
++	if (pm)
++		pm--;
++	espi->csmode[cs] |= ESPI_CSMODE_PM(pm);
++
++	/* Set eSPI mode */
++	if (mode & SPI_CPHA)
++		espi->csmode[cs] |= ESPI_CSMODE_CP_BEGIN_EDGCLK;
++	if (mode & SPI_CPOL)
++		espi->csmode[cs] |= ESPI_CSMODE_CI_INACTIVEHIGH;
++
++	/* Character bit order: msb first */
++	espi->csmode[cs] |= ESPI_CSMODE_REV_MSB_FIRST;
++
++	/* Character length in bits, between 0x3~0xf, i.e. 4bits~16bits */
++	espi->csmode[cs] |= ESPI_CSMODE_LEN(7);
++
++	return slave;
++}
++
++void spi_free_slave(struct spi_slave *slave)
++{
++	free(slave);
++}
++
++void spi_init(void)
++{
++
++}
++
++int spi_claim_bus(struct spi_slave *slave)
++{
++	return 0;
++}
++
++void spi_release_bus(struct spi_slave *slave)
++{
++
++}
++
++int espi_xfer(struct spi_slave *slave)
++{
++	volatile ccsr_espi_t *espi = (void *)(CONFIG_SYS_MPC85xx_ESPI_ADDR);
++	unsigned int tmpdout, tmpdin, event;
++	struct espi_transfer *t = slave->transfer;
++	unsigned int len = t->cmd_len + t->data_len;
++	const void *dout = t->tx_buf;
++	void *din = t->rx_buf;
++	unsigned long flags = t->flags;
++	int numBlks = len / 4 + (len % 4 ? 1 : 0);
++	unsigned char charsize = 4;
++
++	debug("spi_xfer: slave %u:%u dout %08X(%08x) din %08X(%08x) len %u\n",
++	      slave->bus, slave->cs, *(uint *) dout, dout, *(uint *) din, din, len);
++
++	if (flags & SPI_XFER_BEGIN)
++		spi_cs_activate(slave);
++
++	/* Clear all eSPI events */
++	espi->event = 0xffffffff;
++
++	/* handle data in 32-bit chunks */
++	while (numBlks--) {
++		charsize = (len >= 4 ? 4 : len);
++
++		event = espi->event;
++		if (event & ESPI_EV_TNF) {
++			tmpdout = *(u32 *)dout;
++
++			/* Set up the next iteration if sending > 4 bytes */
++			if (len > 4) {
++				len -= 4;
++				dout += 4;
++			}
++
++			espi->tx = tmpdout;
++			espi->event |= ESPI_EV_TNF;
++		}
++		debug("*** espi_xfer: ... %08x written\n", tmpdout);
++
++		/* Wait for eSPI transmit to get out */
++		udelay(80);
++
++		event = espi->event;
++		if (event & ESPI_EV_RNE) {
++			tmpdin = espi->rx;
++			*(u32 *) din = tmpdin;
++
++			if (charsize == 4) {
++				din += 4;
++			}
++
++			espi->event |= ESPI_EV_RNE;
++		}
++		debug("*** espi_xfer: ... %08x readed\n", tmpdin);
++	}
++
++	if (flags & SPI_XFER_END)
++		spi_cs_deactivate(slave);
++
++	return 0;
++}
++
++int spi_cs_is_valid(unsigned int bus, unsigned int cs)
++{
++	return bus == 0 && cs < ESPI_MAX_CS_NUM;
++}
++
++void spi_cs_activate(struct spi_slave *slave)
++{
++	volatile ccsr_espi_t *espi = (void *)(CONFIG_SYS_MPC85xx_ESPI_ADDR);
++	struct espi_transfer *t = slave->transfer;
++	unsigned int com = 0;
++	unsigned int len = t->cmd_len + t->data_len;
++
++	com &= ~(ESPI_COM_CS(0x3) | ESPI_COM_TRANLEN(0xFFFF));
++	com |= ESPI_COM_CS(slave->cs);
++	com |= ESPI_COM_TRANLEN(len - 1);
++	espi->com = com;
++
++	return;
++}
++
++void spi_cs_deactivate(struct spi_slave *slave)
++{
++	volatile ccsr_espi_t *espi = (void *)(CONFIG_SYS_MPC85xx_ESPI_ADDR);
++
++	/* clear the RXCNT and TXCNT */
++	espi->mode &= ~ESPI_MODE_EN;
++	espi->mode |= ESPI_MODE_EN;
++}
+diff --git a/include/spi.h b/include/spi.h
+index 320e50e..4f145ed 100644
+--- a/include/spi.h
++++ b/include/spi.h
+@@ -1,6 +1,7 @@
+ /*
+  * (C) Copyright 2001
+  * Gerald Van Baren, Custom IDEAS, vanbaren@cideas.com.
++ * Copyright 2009 Freescale Semiconductor, Inc.
+  *
+  * See file CREDITS for list of people who contributed to this
+  * project.
+@@ -50,16 +51,36 @@
+ #define SPI_XFER_END	0x02			/* Deassert CS after transfer */
+ 
+ /*-----------------------------------------------------------------------
++ * Representation of a eSPI transaction, which is always embeded in
++ * structure spi_slave.
++ *
++ *   cmd_len:	Length of the command.
++ *   data_len:	Length of the transmit/receive data.
++ *   tx_buf:	Buffer to store the transmit command and data.
++ *   rx_buf:	Buffer to store the receive data.
++ *   flags:	Flags to indicate the begin/end of the transfer.
++ */
++struct espi_transfer {
++	unsigned int	cmd_len;
++	unsigned int	data_len;
++	const void	*tx_buf;
++	void		*rx_buf;
++	unsigned long	flags;
++};
++
++/*-----------------------------------------------------------------------
+  * Representation of a SPI slave, i.e. what we're communicating with.
+  *
+  * Drivers are expected to extend this with controller-specific data.
+  *
+  *   bus:	ID of the bus that the slave is attached to.
+  *   cs:	ID of the chip select connected to the slave.
++ *   transfer:	Represent an eSPI transaction.
+  */
+ struct spi_slave {
+ 	unsigned int	bus;
+ 	unsigned int	cs;
++	struct espi_transfer *transfer;
+ };
+ 
+ /*-----------------------------------------------------------------------
+@@ -148,6 +169,12 @@ int  spi_xfer(struct spi_slave *slave, unsigned int bitlen, const void *dout,
+ 		void *din, unsigned long flags);
+ 
+ /*-----------------------------------------------------------------------
++ * eSPI transfer
++ *   Returns: 0 on success, not 0 on failure
++ */
++int  espi_xfer(struct spi_slave *slave);
++
++/*-----------------------------------------------------------------------
+  * Determine if a SPI chipselect is valid.
+  * This function is provided by the board if the low-level SPI driver
+  * needs it to determine if a given chipselect is actually valid.
+-- 
+1.5.6.5
+

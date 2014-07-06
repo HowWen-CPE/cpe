@@ -1,0 +1,305 @@
+--- boot_atheros/u-boot/net/tftp.c	2013-04-03 13:42:56.000000000 +0800
++++ boot_liteon/u-boot/net/tftp.c	2013-03-29 17:59:16.000000000 +0800
+@@ -50,6 +50,10 @@
+ #define STATE_BAD_MAGIC	4
+ #define STATE_OACK	5
+ 
++/*added by sirian. 2009-11-02*/
++#define STATE_WRQ   6
++#define STATE_WR   7
++
+ #define TFTP_BLOCK_SIZE		512		    /* default TFTP block size	*/
+ #define TFTP_SEQUENCE_SIZE	((ulong)(1<<16))    /* sequence number is 16 bit */
+ 
+@@ -98,6 +102,19 @@
+ static void TftpSend (void);
+ static void TftpTimeout (void);
+ 
++
++
++char * liteon_strncpy(char * dest,const char *src,size_t count)
++{
++	char *tmp = dest;
++        while (count)
++        {
++            *dest++ = *src++;
++            count--;
++        }
++	return tmp;
++}
++
+ /**********************************************************************/
+ 
+ static void
+@@ -107,6 +124,9 @@
+ 	volatile uchar *	xp;
+ 	int			len = 0;
+ 	volatile ushort *s;
++	volatile uchar   *cpy_base_addr;
++	extern volatile ulong put_to_server_base_addr;
++	extern volatile ulong put_to_server_file_len;
+ 
+ 	/*
+ 	 *	We will always be sending some sort of packet, so
+@@ -134,7 +154,47 @@
+ 		pkt += strlen((char *)pkt) + 1;
+ 		len = pkt - xp;
+ 		break;
+-
++        case STATE_WRQ:
++                /*send write request to server.*/
++		xp = pkt;
++		s = (ushort *)pkt;
++		*s++ = htons(TFTP_WRQ);
++		pkt = (uchar *)s;
++		strcpy ((char *)pkt, tftp_filename);
++		pkt += strlen(tftp_filename) + 1;
++		strcpy ((char *)pkt, "octet");
++		pkt += 5 /*strlen("octet")*/ + 1;
++		strcpy ((char *)pkt, "timeout");
++		pkt += 7 /*strlen("timeout")*/ + 1;
++		sprintf((char *)pkt, "%d", TIMEOUT);
++        	pkt += strlen((char *)pkt) + 1;
++		len = pkt - xp;
++		break;
++        case STATE_WR: 
++                /*send data to server.*/
++                cpy_base_addr = (uchar  *)put_to_server_base_addr;
++                TftpBlock++;
++                xp = pkt;
++		s = (ushort *)pkt;
++		*s++ = htons(TFTP_DATA);       
++		*s++ = htons(TftpBlock);
++		pkt = (uchar *)s;
++                if (put_to_server_file_len < TFTP_BLOCK_SIZE)
++               {
++                    liteon_strncpy ((char *)pkt, (char *)cpy_base_addr,  put_to_server_file_len);
++                    pkt += put_to_server_file_len;
++                    len = pkt - xp;
++                    NetBootFileXferSize += put_to_server_file_len;
++		    break;
++               }
++                liteon_strncpy ((char *)pkt, (char *)cpy_base_addr,  TFTP_BLOCK_SIZE);
++                pkt += TFTP_BLOCK_SIZE;
++                put_to_server_base_addr += TFTP_BLOCK_SIZE;
++                cpy_base_addr = (uchar *)put_to_server_base_addr;
++                put_to_server_file_len = put_to_server_file_len - TFTP_BLOCK_SIZE;
++		len = pkt - xp;
++                NetBootFileXferSize += TFTP_BLOCK_SIZE;
++		break;
+ 	case STATE_DATA:
+ 	case STATE_OACK:
+ 		xp = pkt;
+@@ -296,6 +356,149 @@
+ }
+ 
+ 
++/*added by sirian. 2009-11-02.----->*/
++static void
++liteon_tftphandler (uchar * pkt, unsigned dest, unsigned src, unsigned len)
++{
++	ushort proto;
++	ushort *s;
++        extern volatile ulong put_to_server_file_len;
++        
++	if (dest != TftpOurPort) {
++		return;
++	}
++    
++	if (TftpState != STATE_WRQ && src != TftpServerPort) {
++		return;
++	}
++
++	if (len < 2) {
++		return;
++	}
++	len -= 2;
++	/* warning: don't use increment (++) in ntohs() macros!! */
++	s = (ushort *)pkt;
++	proto = *s++;
++	pkt = (uchar *)s;
++	switch (ntohs(proto)) {
++
++	case TFTP_RRQ:
++	case TFTP_WRQ:
++		break;
++	case TFTP_ACK:
++                if (put_to_server_file_len < TFTP_BLOCK_SIZE) {
++			/*We sende the whole thing.*/
++			puts ("\nUploading done\n");
++			NetState = NETLOOP_SUCCESS;
++                        TftpBlock = 0;
++                        break;
++		}
++                
++                TftpState = STATE_WR;
++		TftpServerPort = src;
++        
++                if (((TftpBlock - 1) % 100) == 0) {
++				putc ('#');
++		} else if ((TftpBlock % (100 * HASHES_PER_LINE)) == 0) {
++				puts ("\n\t ");
++		}
++            
++		TftpSend (); /* Send next data package to server*/
++		break;
++	default:
++		break;
++
++	case TFTP_OACK:
++		TftpState = STATE_WR;
++		TftpServerPort = src;
++		TftpSend (); /* Send ACK to server*/
++		break;
++	case TFTP_DATA:
++		if (len < 2)
++			return;
++		len -= 2;
++		TftpBlock = ntohs(*(ushort *)pkt);
++
++		/*
++		 * RFC1350 specifies that the first data packet will
++		 * have sequence number 1. If we receive a sequence
++		 * number of 0 this means that there was a wrap
++		 * around of the (16 bit) counter.
++		 */
++		if (TftpBlock == 0) {
++			TftpBlockWrap++;
++			TftpBlockWrapOffset += TFTP_BLOCK_SIZE * TFTP_SEQUENCE_SIZE;
++			printf ("\n\t %lu MB reveived\n\t ", TftpBlockWrapOffset>>20);
++		} else {
++			if (((TftpBlock - 1) % 100) == 0) {
++				putc ('#');
++			} else if ((TftpBlock % (100 * HASHES_PER_LINE)) == 0) {
++				puts ("\n\t ");
++			}
++		}
++
++#ifdef ET_DEBUG
++		if (TftpState == STATE_RRQ) {
++			puts ("Server did not acknowledge timeout option!\n");
++		}
++#endif
++
++		if (TftpState == STATE_RRQ || TftpState == STATE_OACK) {
++			/* first block received */
++			TftpState = STATE_DATA;
++			TftpServerPort = src;
++			TftpLastBlock = 0;
++			TftpBlockWrap = 0;
++			TftpBlockWrapOffset = 0;
++
++			if (TftpBlock != 1) {	/* Assertion */
++				printf ("\nTFTP error: "
++					"First block is not block 1 (%ld)\n"
++					"Starting again\n\n",
++					TftpBlock);
++				NetStartAgain ();
++				break;
++			}
++		}
++
++		if (TftpBlock == TftpLastBlock) {
++			/*
++			 *	Same block again; ignore it.
++			 */
++			break;
++		}
++
++		TftpLastBlock = TftpBlock;
++		NetSetTimeout (TIMEOUT * CFG_HZ, TftpTimeout);
++
++		store_block (TftpBlock - 1, pkt + 2, len);
++
++		/*
++		 *	Acknoledge the block just received, which will prompt
++		 *	the server for the next one.
++		 */
++		TftpSend ();
++
++		if (len < TFTP_BLOCK_SIZE) {
++			/*
++			 *	We received the whole thing.  Try to
++			 *	run it.
++			 */
++			puts ("\ndownloading done\n");
++			NetState = NETLOOP_SUCCESS;
++		}
++		break;
++
++	case TFTP_ERROR:
++		printf ("\nTFTP error: '%s' (%d)\n",
++					pkt + 2, ntohs(*(ushort *)pkt));
++		puts ("Starting again\n\n");
++		NetStartAgain ();
++		break;
++	}
++}
++
++/*<-----end sirian-----*/
+ static void
+ TftpTimeout (void)
+ {
+@@ -386,4 +589,62 @@
+ 	TftpSend ();
+ }
+ 
++/*added by sirian. 2009-11-02.----->*/
++void
++liteon_tftpstart (void)
++{
++    extern volatile ulong put_to_server_base_addr;
++    extern char  put_to_server_file_name[128];
++    
++    tftp_filename = put_to_server_file_name;
++    
++#if defined(CONFIG_NET_MULTI)
++	printf ("Using %s device\n", eth_get_name());
++#endif
++	puts ("TFTP to server ");	print_IPaddr (NetServerIP);
++	puts ("; our IP address is ");	print_IPaddr (NetOurIP);
++
++	/* Check if we need to send across this subnet */
++	if (NetOurGatewayIP && NetOurSubnetMask) {
++	    IPaddr_t OurNet 	= NetOurIP    & NetOurSubnetMask;
++	    IPaddr_t ServerNet 	= NetServerIP & NetOurSubnetMask;
++
++	    if (OurNet != ServerNet) {
++		puts ("; sending through gateway ");
++		print_IPaddr (NetOurGatewayIP) ;
++	    }
++	}
++	putc ('\n');
++
++	printf ("Filename '%s'.", tftp_filename);
++
++	if (NetBootFileSize) {
++		printf (" Size is 0x%x Bytes = ", NetBootFileSize<<9);
++		print_size (NetBootFileSize<<9, "");
++	}
++
++	putc ('\n');
++
++	printf ("Upload base address: 0x%lx\n", put_to_server_base_addr);
++
++	puts ("Uploading begin: *\b");
++
++	NetSetTimeout (TIMEOUT * CFG_HZ, TftpTimeout);
++    
++	NetSetHandler (liteon_tftphandler);
++
++	TftpServerPort = WELL_KNOWN_PORT;
++	TftpTimeoutCount = 0;
++	TftpState = STATE_WRQ;
++    
++	/* Use a pseudo-random port unless a specific port is set */
++	TftpOurPort = 1024 + (get_timer(0) % 3072);
++	TftpBlock = 0;
++
++	/* zero out server ether in case the server ip has changed */
++	memset(NetServerEther, 0, 6);
++
++	TftpSend ();
++}
++/*<-----end sirian------*/
+ #endif /* CFG_CMD_NET */

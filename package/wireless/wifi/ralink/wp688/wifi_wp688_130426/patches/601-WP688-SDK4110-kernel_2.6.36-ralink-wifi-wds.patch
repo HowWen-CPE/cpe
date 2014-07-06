@@ -1,0 +1,475 @@
+diff -urN a/rt2860v2/ap/ap_cfg.c b/rt2860v2/ap/ap_cfg.c
+--- a/rt2860v2/ap/ap_cfg.c	2013-05-13 17:10:53.041722827 +0800
++++ b/rt2860v2/ap/ap_cfg.c	2013-05-13 17:14:19.693760725 +0800
+@@ -1294,6 +1294,12 @@
+ #endif /* DYNAMIC_VGA_SUPPORT */
+ #endif /* defined(MICROWAVE_OVEN_SUPPORT) || defined(DYNAMIC_VGA_SUPPORT) */
+ 
++#ifndef WIFI_DRIVER_PRE_PORTING										
++#ifdef APCLI_SUPPORT
++       {"apcliAddrMode",    Set_ApcliAddrMode_proc},
++#endif
++#endif
++
+ 	{NULL,}
+ };
+ 
+diff -urN a/rt2860v2/ap/ap_data.c b/rt2860v2/ap/ap_data.c
+--- a/rt2860v2/ap/ap_data.c	2013-05-13 10:39:29.505727699 +0800
++++ b/rt2860v2/ap/ap_data.c	2013-05-13 11:35:19.213723686 +0800
+@@ -880,7 +880,20 @@
+ #ifdef APCLI_SUPPORT
+ 	if(IS_ENTRY_APCLI(pMacEntry))
+ 	{	/* The addr3 of Ap-client packet is Destination Mac address. */
+-		COPY_MAC_ADDR(pHeader80211->Addr3, pTxBlk->pSrcBufHeader);
++#ifndef WIFI_DRIVER_PRE_PORTING
++            if(1==pAd->ApCfg.ApCliTab[0].Addr_Mode)/*4 adddress acpli*/
++            {
++                COPY_MAC_ADDR(pHeader80211->Addr3, pTxBlk->pSrcBufHeader);
++                COPY_MAC_ADDR(&pHeader80211->Octet[0], pTxBlk->pSrcBufHeader + MAC_ADDR_LEN);
++                pTxBlk->MpduHeaderLen += MAC_ADDR_LEN;
++            }
++            else   // 3 address acpli
++            {          
++                COPY_MAC_ADDR(pHeader80211->Addr3, pTxBlk->pSrcBufHeader);          
++            }
++#else
++            COPY_MAC_ADDR(pHeader80211->Addr3, pTxBlk->pSrcBufHeader);          
++#endif
+ 	}
+ 	else
+ #endif /* APCLI_SUPPORT */
+@@ -941,6 +954,24 @@
+ #ifdef APCLI_SUPPORT
+ 	if (TX_BLK_TEST_FLAG(pTxBlk, fTX_bApCliPacket))
+ 	{
++#ifndef WIFI_DRIVER_PRE_PORTING
++			/*4 address apcli, but EAPOL is exceptant*/
++            if(1==pAd->ApCfg.ApCliTab[0].Addr_Mode && !(NdisEqualMemory(EAPOL, pTxBlk->pSrcBufHeader+12, 2)))
++            {
++                pHeader_802_11->FC.ToDs = 1;
++                COPY_MAC_ADDR(pHeader_802_11->Addr1, pTxBlk->pMacEntry->Addr);                  /* to AP2*/
++#ifdef MAC_REPEATER_SUPPORT
++		if (pTxBlk->pMacEntry && (pTxBlk->pMacEntry->bReptCli == TRUE))
++			COPY_MAC_ADDR(pHeader_802_11->Addr2, pTxBlk->pMacEntry->ReptCliAddr);
++		else
++#endif /* MAC_REPEATER_SUPPORT */
++                COPY_MAC_ADDR(pHeader_802_11->Addr2, pTxBlk->pApCliEntry->CurrentAddress);		/* from AP1 */
++                COPY_MAC_ADDR(pHeader_802_11->Addr3, pTxBlk->pSrcBufHeader);					/* DA */
++                COPY_MAC_ADDR(&pHeader_802_11->Octet[0], pTxBlk->pSrcBufHeader + MAC_ADDR_LEN);       /* SA*/
++                pTxBlk->MpduHeaderLen += MAC_ADDR_LEN;
++            }
++            else/*3 address apcli*/
++            {
+ 		pHeader_802_11->FC.ToDs = 1;
+ 		pHeader_802_11->FC.FrDs = 0;
+ 		COPY_MAC_ADDR(pHeader_802_11->Addr1, APCLI_ROOT_BSSID_GET(pAd, pTxBlk->Wcid));	/* to AP2 */
+@@ -951,6 +982,20 @@
+ #endif /* MAC_REPEATER_SUPPORT */
+ 		COPY_MAC_ADDR(pHeader_802_11->Addr2, pTxBlk->pApCliEntry->CurrentAddress);		/* from AP1 */
+ 		COPY_MAC_ADDR(pHeader_802_11->Addr3, pTxBlk->pSrcBufHeader);					/* DA */
++
++            }
++#else
++            pHeader_802_11->FC.ToDs = 1;
++            pHeader_802_11->FC.FrDs = 0;
++            COPY_MAC_ADDR(pHeader_802_11->Addr1, APCLI_ROOT_BSSID_GET(pAd, pTxBlk->Wcid));	/* to AP2 */
++#ifdef MAC_REPEATER_SUPPORT
++		if (pTxBlk->pMacEntry && (pTxBlk->pMacEntry->bReptCli == TRUE))
++			COPY_MAC_ADDR(pHeader_802_11->Addr2, pTxBlk->pMacEntry->ReptCliAddr);
++		else
++#endif /* MAC_REPEATER_SUPPORT */
++            COPY_MAC_ADDR(pHeader_802_11->Addr2, pTxBlk->pApCliEntry->CurrentAddress);		/* from AP1 */
++            COPY_MAC_ADDR(pHeader_802_11->Addr3, pTxBlk->pSrcBufHeader);					/* DA */
++#endif
+ 	}
+ 	else
+ #endif /* APCLI_SUPPORT */
+@@ -4174,6 +4219,11 @@
+ #if defined(WDS_SUPPORT) || defined(CLIENT_WDS)
+ 	BOOLEAN							bWdsPacket = FALSE;
+ #endif /* WDS_SUPPORT || CLIENT_WDS */
++#ifndef WIFI_DRIVER_PRE_PORTIN
++#if defined(APCLI_SUPPORT)
++       pAd->ApCfg.ApCliTab[0].Rx_Addr_Mode = FALSE;
++#endif
++#endif
+ 	FRAME_CONTROL					*pFmeCtrl = &pHeader->FC;
+ 	COUNTER_RALINK					*pCounter = &pAd->RalinkCounters;
+ 
+@@ -4238,12 +4288,11 @@
+ #ifdef WDS_SUPPORT
+ 			/* handle WDS */
+ 			{
+-				bWdsPacket = TRUE;
+ 				if (MAC_ADDR_EQUAL(pHeader->Addr1, pAd->CurrentAddress))
+ 					pEntry = FindWdsEntry(pAd, pRxWI->WirelessCliID, pHeader->Addr2, pRxWI->PHYMODE);
+ 				else
+ 					pEntry = NULL;
+-
++				if(pEntry != NULL && IS_ENTRY_WDS(pEntry)) {
+ 
+ 				/* have no valid wds entry exist, then discard the incoming packet.*/
+ 				if (!(pEntry && WDS_IF_UP_CHECK(pAd, pEntry->MatchWDSTabIdx)))
+@@ -4259,12 +4308,50 @@
+ 					pEntry->ContinueTxFailCnt = 0;
+ 					pEntry->LockEntryTx = FALSE;
+ 				}
+-		
++				bWdsPacket = TRUE;
+ 				RX_BLK_SET_FLAG(pRxBlk, fRX_WDS);
+ 				FromWhichBSSID = pEntry->MatchWDSTabIdx + MIN_NET_DEVICE_FOR_WDS;
+ 				break;
++				}
+ 			}
+ #endif /* WDS_SUPPORT */
++
++#ifndef WIFI_DRIVER_PRE_PORTING										
++#ifdef APCLI_SUPPORT
++				//handle 4 address apcli           
++                pAd->ApCfg.ApCliTab[0].Rx_Addr_Mode = TRUE;
++                if (VALID_WCID(pRxWI->WirelessCliID))
++         			pEntry = &pAd->MacTab.Content[pRxWI->WirelessCliID];
++                else
++                    pEntry = MacTableLookup(pAd, pHeader->Addr2);
++        
++                if (pEntry && IS_ENTRY_APCLI(pEntry))
++                {
++                    //pEntry = ApCliTableLookUpByWcid(pAd, pRxWI->WirelessCliID, pHeader->Addr2);
++                    UCHAR ApCliIdx = pEntry->MatchAPCLITabIdx;
++                    if (!(pEntry && APCLI_IF_UP_CHECK(pAd, pEntry->MatchAPCLITabIdx)))
++                    {
++                        goto err;
++                    }
++
++                    FromWhichBSSID = pEntry->MatchAPCLITabIdx + MIN_NET_DEVICE_FOR_APCLI;
++                    RX_BLK_SET_FLAG(pRxBlk, fRX_APCLI);
++        			
++                    // Process broadcast packets
++                    if (pRxD->Mcast || pRxD->Bcast)
++                    {
++                        // Process the received broadcast frame for AP-Client.          
++                        if (!ApCliHandleRxBroadcastFrame(pAd, pRxBlk, pEntry, FromWhichBSSID))          
++                        {
++                            // release packet
++                            RELEASE_NDIS_PACKET(pAd, pRxPacket, NDIS_STATUS_FAILURE);
++                        }
++                      
++                        return;
++                    }
++                }
++#endif 
++#endif /* WDS_SUPPORT */
+ 		} while(FALSE);
+ 
+ 		if (pEntry == NULL)
+@@ -4450,6 +4537,11 @@
+ #if defined(WDS_SUPPORT) || defined(CLIENT_WDS)
+ 		|| bWdsPacket
+ #endif /* WDS_SUPPORT || CLIENT_WDS */
++#ifndef WIFI_DRIVER_PRE_PORTING
++#if defined(APCLI_SUPPORT)
++		|| pAd->ApCfg.ApCliTab[0].Rx_Addr_Mode
++#endif
++#endif
+ 		)
+ 	{
+ 		pRxBlk->pData += LENGTH_802_11_WITH_ADDR4;
+@@ -4484,6 +4576,11 @@
+ #if defined(WDS_SUPPORT) || defined(CLIENT_WDS)
+ 				|| bWdsPacket
+ #endif /* WDS_SUPPORT || CLIENT_WDS*/
++#ifndef WIFI_DRIVER_PRE_PORTING
++#if defined(APCLI_SUPPORT)
++      || pAd->ApCfg.ApCliTab[0].Rx_Addr_Mode
++#endif
++#endif
+ 				)
+ 			{
+ 				pCounter->ReceivedOctesInAMSDUCount.QuadPart += (pRxBlk->DataSize + LENGTH_802_11_WITH_ADDR4);
+diff -urN a/rt2860v2/common/ba_action.c b/rt2860v2/common/ba_action.c
+--- a/rt2860v2/common/ba_action.c	2013-05-13 10:39:29.497728420 +0800
++++ b/rt2860v2/common/ba_action.c	2013-05-13 11:29:30.873723144 +0800
+@@ -1825,15 +1825,24 @@
+ 		b. modify pRxBlk->DataSize
+ */
+ #ifdef CONFIG_AP_SUPPORT
+-	IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
++#ifndef WIFI_DRIVER_PRE_PORTING										
++		IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
++		RTMP_AP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(pAd,pRxBlk, Header802_3);
++#else
++		IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
+ 		RTMP_AP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(pRxBlk, Header802_3);
++#endif
+ #endif /* CONFIG_AP_SUPPORT */
+ 
+ #ifdef CONFIG_STA_SUPPORT
+ #ifdef P2P_SUPPORT
+ 	if (IS_OPMODE_AP(pRxBlk))
+ 	{
++#ifndef WIFI_DRIVER_PRE_PORTING										
++		RTMP_AP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(pAd,pRxBlk, Header802_3);
++#else
+ 		RTMP_AP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(pRxBlk, Header802_3);
++#endif
+ 	}
+ 	else
+ 	{
+diff -urN a/rt2860v2/common/cmm_data.c b/rt2860v2/common/cmm_data.c
+--- a/rt2860v2/common/cmm_data.c	2013-05-13 10:39:29.497728420 +0800
++++ b/rt2860v2/common/cmm_data.c	2013-05-13 11:06:43.385730875 +0800
+@@ -4000,14 +4000,24 @@
+ 			b. modify pRxBlk->DataSize
+ 	*/
+ #ifdef CONFIG_AP_SUPPORT
+-	IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
++#ifndef WIFI_DRIVER_PRE_PORTING										
++		IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
++		RTMP_AP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(pAd,pRxBlk, Header802_3);
++#else
++		IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
+ 		RTMP_AP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(pRxBlk, Header802_3);
++
++#endif
+ #endif /* CONFIG_AP_SUPPORT */
+ #ifdef CONFIG_STA_SUPPORT
+ #ifdef P2P_SUPPORT
+ 	if (IS_OPMODE_AP(pRxBlk))
+ 	{
++#ifndef WIFI_DRIVER_PRE_PORTING										
++		RTMP_AP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(pAd,pRxBlk, Header802_3);
++#else
+ 		RTMP_AP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(pRxBlk, Header802_3);
++#endif
+ 	}
+ 	else
+ 	{
+@@ -4179,14 +4189,23 @@
+ 
+ 	/* get 802.3 Header and  remove LLC*/
+ #ifdef CONFIG_AP_SUPPORT
+-	IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
++#ifndef WIFI_DRIVER_PRE_PORTING										
++		IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
++		RTMP_AP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(pAd,pRxBlk, Header802_3);
++#else
++		IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
+ 		RTMP_AP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(pRxBlk, Header802_3);
++#endif
+ #endif /* CONFIG_AP_SUPPORT */
+ #ifdef CONFIG_STA_SUPPORT
+ #ifdef P2P_SUPPORT
+ 	if (IS_OPMODE_AP(pRxBlk))
+ 	{
++#ifndef WIFI_DRIVER_PRE_PORTING										
++		RTMP_AP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(pAd,pRxBlk, Header802_3);
++#else
+ 		RTMP_AP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(pRxBlk, Header802_3);
++#endif
+ 	}
+ 	else
+ 	{
+diff -urN a/rt2860v2/common/cmm_info.c b/rt2860v2/common/cmm_info.c
+--- a/rt2860v2/common/cmm_info.c	2013-05-13 17:12:25.181730073 +0800
++++ b/rt2860v2/common/cmm_info.c	2013-05-13 17:17:57.653723020 +0800
+@@ -7720,3 +7720,17 @@
+ 
+ #endif /* SINGLE_SKU */
+ 
++#ifndef WIFI_DRIVER_PRE_PORTING										
++#ifdef APCLI_SUPPORT
++VOID Set_ApcliAddrMode_proc(
++	IN RTMP_ADAPTER		*pAd,
++	IN PSTRING			arg)
++{
++		//set apcli address mode 
++    pAd->ApCfg.ApCliTab[0].Addr_Mode= simple_strtol(arg, 0, 10);
++    DBGPRINT(RT_DEBUG_TRACE,
++			("APCli Adrress Mode:%d adrress\n", pAd->ApCfg.ApCliTab[0].Addr_Mode?4:3));
++ }
++#endif
++#endif
++
+diff -urN a/rt2860v2/common/cmm_mat.c b/rt2860v2/common/cmm_mat.c
+--- a/rt2860v2/common/cmm_mat.c	2013-05-13 10:39:29.497728420 +0800
++++ b/rt2860v2/common/cmm_mat.c	2013-05-13 11:11:14.845723032 +0800
+@@ -212,8 +212,15 @@
+ 			pLayerHdr = bVLANPkt ? (pPktHdr + MAT_VLAN_ETH_HDR_LEN) : (pPktHdr + MAT_ETHER_HDR_LEN);
+ #ifdef CONFIG_AP_SUPPORT
+ #ifdef APCLI_SUPPORT
++#ifndef WIFI_DRIVER_PRE_PORTING										
+ 			IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
+ 			{
++				if(1==pAd->ApCfg.ApCliTab[((ifIdx-64)/16)].Addr_Mode)/*4 address apcli*/
++				{   
++					pMacAddr= pPktHdr+MAC_ADDR_LEN;
++				}
++				else/*3 address apcli*/
++				{
+ #ifdef MAC_REPEATER_SUPPORT
+ 				UCHAR tempIdx = ifIdx;
+ 				UCHAR CliIdx = 0xFF;
+@@ -227,10 +234,27 @@
+ 				}
+ 				else
+ #endif /* MAC_REPEATER_SUPPORT */
+-				{
++
+ 					pMacAddr = &pAd->ApCfg.ApCliTab[ifIdx].CurrentAddress[0];
+ 				}
+ 			}
++#else
++			IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
++#ifdef MAC_REPEATER_SUPPORT
++				UCHAR tempIdx = ifIdx;
++				UCHAR CliIdx = 0xFF;
++
++				if (tempIdx >= 64)
++				{
++					CliIdx = ((tempIdx - 64) % 16);
++					tempIdx = ((tempIdx - 64) / 16);
++
++					pMacAddr = &pAd->ApCfg.ApCliTab[tempIdx].RepeaterCli[CliIdx].CurrentAddress[0];
++				}
++				else
++#endif /* MAC_REPEATER_SUPPORT */
++				pMacAddr = &pAd->ApCfg.ApCliTab[ifIdx].CurrentAddress[0];
++#endif
+ #endif /* APCLI_SUPPORT */
+ #endif /* CONFIG_AP_SUPPORT */
+ 
+diff -urN a/rt2860v2/common/p2p_cfg.c b/rt2860v2/common/p2p_cfg.c
+--- a/rt2860v2/common/p2p_cfg.c	2013-05-13 10:39:29.493722473 +0800
++++ b/rt2860v2/common/p2p_cfg.c	2013-05-13 11:12:03.717808640 +0800
+@@ -758,6 +758,13 @@
+ 	{"p2p2ndDevTypeList", 				Set_P2P_SecDevTypeList_Proc},
+ 	{"p2pCancel", 						Set_P2P_Cancel_Proc},
+ #endif /* P2P_SUPPORT */
++
++#ifndef WIFI_DRIVER_PRE_PORTING											
++#ifdef APCLI_SUPPORT
++       {"apcliAddrMode",    Set_ApcliAddrMode_proc},
++#endif
++#endif
++
+ 	{NULL,}
+ };
+ 
+diff -urN a/rt2860v2/include/rtmp.h b/rt2860v2/include/rtmp.h
+--- a/rt2860v2/include/rtmp.h	2013-05-13 17:12:48.397748413 +0800
++++ b/rt2860v2/include/rtmp.h	2013-05-13 17:18:50.037743839 +0800
+@@ -3029,6 +3029,10 @@
+ #endif /* MAC_REPEATER_SUPPORT */
+ 	UCHAR LinkIdx;
+ 	PVOID pAd;
++#ifndef WIFI_DRIVER_PRE_PORTING
++    UCHAR  Addr_Mode; /*0-3 address(default) 1-4 address*/
++	BOOLEAN  Rx_Addr_Mode; /*FALSE:3 address; TURE:4 address*/
++#endif
+ } APCLI_STRUCT, *PAPCLI_STRUCT;
+ 
+ typedef struct _AP_ADMIN_CONFIG {
+@@ -8851,6 +8855,39 @@
+ 
+ #ifdef CONFIG_AP_SUPPORT
+ /* remove LLC and get 802_3 Header */
++#ifndef WIFI_DRIVER_PRE_PORTING						
++#define  RTMP_AP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(_pAd,_pRxBlk, _pHeader802_3)	\
++{																						\
++	PUCHAR _pRemovedLLCSNAP = NULL, _pDA, _pSA;                                 						\
++		                 																		\
++	if (RX_BLK_TEST_FLAG(_pRxBlk, fRX_WDS) || RX_BLK_TEST_FLAG(_pRxBlk, fRX_MESH)) 		\
++	{                                                                           											\
++		_pDA = _pRxBlk->pHeader->Addr3;                                         							\
++		_pSA = (PUCHAR)_pRxBlk->pHeader + sizeof(HEADER_802_11);                					\
++	}                                                                           											\
++	else if (RX_BLK_TEST_FLAG(_pRxBlk, fRX_APCLI))										\
++	{																					\
++		if(TRUE == _pAd->ApCfg.ApCliTab[0].Rx_Addr_Mode)					\
++		{														\
++			_pDA = _pRxBlk->pHeader->Addr3; 													\
++			_pSA = &(_pRxBlk->pHeader->Octet[0]);													\
++		}									\
++		else									\
++		{										\
++			_pDA = _pRxBlk->pHeader->Addr1;						\
++			_pSA = _pRxBlk->pHeader->Addr3;						\
++		}										\
++	}																					\
++	else                                                                        										\
++	{                                                                           											\
++		_pDA = _pRxBlk->pHeader->Addr3;                                         							\
++		_pSA = _pRxBlk->pHeader->Addr2;                                         							\
++	}                                                                           											\
++																				\
++	CONVERT_TO_802_3(_pHeader802_3, _pDA, _pSA, _pRxBlk->pData, 						\
++		_pRxBlk->DataSize, _pRemovedLLCSNAP);                                   						\
++}
++#else
+ #define  RTMP_AP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(_pRxBlk, _pHeader802_3)	\
+ {																						\
+ 	PUCHAR _pRemovedLLCSNAP = NULL, _pDA, _pSA;                                 						\
+@@ -8875,6 +8912,7 @@
+ 	CONVERT_TO_802_3(_pHeader802_3, _pDA, _pSA, _pRxBlk->pData, 						\
+ 		_pRxBlk->DataSize, _pRemovedLLCSNAP);                                   						\
+ }
++#endif
+ #endif /* CONFIG_AP_SUPPORT */
+ 
+ #ifdef CONFIG_STA_SUPPORT
+@@ -9996,5 +10034,14 @@
+ 	IN UCHAR bw,
+ 	IN INT32 paValue);
+ #endif /* SINGLE_SKU_V2 */
++
++#ifndef WIFI_DRIVER_PRE_PORTING										
++#ifdef APCLI_SUPPORT
++VOID Set_ApcliAddrMode_proc(
++	IN RTMP_ADAPTER		*pAd,
++	IN PSTRING			arg);
++#endif
++#endif
++
+ #endif  /* __RTMP_H__ */
+ 
+diff -urN a/rt2860v2/os/linux/Makefile.ap.soc b/rt2860v2/os/linux/Makefile.ap.soc
+--- a/rt2860v2/os/linux/Makefile.ap.soc	2013-05-13 10:39:29.509977582 +0800
++++ b/rt2860v2/os/linux/Makefile.ap.soc	2013-05-13 11:16:51.401723277 +0800
+@@ -316,7 +316,7 @@
+ endif
+ 
+ ifeq ($(CONFIG_RT2860V2_AP_WDS),y)
+-EXTRA_CFLAGS += -DWDS_SUPPORT
++EXTRA_CFLAGS += -DWDS_SUPPORT -DCLIENT_WDS
+ endif
+ 
+ ifeq ($(CONFIG_RT2860V2_AP_MBSS),y)
+diff -urN a/rt2860v2/sta/sta_cfg.c b/rt2860v2/sta/sta_cfg.c
+--- a/rt2860v2/sta/sta_cfg.c	2013-05-13 17:12:55.345779991 +0800
++++ b/rt2860v2/sta/sta_cfg.c	2013-05-13 17:19:12.009837603 +0800
+@@ -411,7 +411,11 @@
+ #ifdef SINGLE_SKU
+ 	{"ModuleTxpower",				Set_ModuleTxpower_Proc},
+ #endif /* SINGLE_SKU */
+-
++#ifndef WIFI_DRIVER_PRE_PORTING
++#ifdef APCLI_SUPPORT
++       {"apcliAddrMode",    Set_ApcliAddrMode_proc},
++#endif
++#endif
+ 
+ 	{NULL,}
+ };
+diff -urN a/rt2860v2_ap/Makefile b/rt2860v2_ap/Makefile
+--- a/rt2860v2_ap/Makefile	2013-05-13 10:39:29.513977566 +0800
++++ b/rt2860v2_ap/Makefile	2013-05-13 11:16:35.545722999 +0800
+@@ -386,7 +386,7 @@
+ endif
+ 
+ ifeq ($(CONFIG_RT2860V2_AP_WDS),y)
+-EXTRA_CFLAGS += -DWDS_SUPPORT
++EXTRA_CFLAGS += -DWDS_SUPPORT -DCLIENT_WDS
+ endif
+ 
+ ifeq ($(CONFIG_RT2860V2_AP_MBSS),y)

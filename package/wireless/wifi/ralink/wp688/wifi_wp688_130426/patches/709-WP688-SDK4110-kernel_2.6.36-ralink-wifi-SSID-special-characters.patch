@@ -1,0 +1,74 @@
+--- a/rt2860v2/ap/ap_cfg.c
++++ b/rt2860v2/ap/ap_cfg.c
+@@ -1437,48 +1437,44 @@ INT RTMPAPPrivIoctlSet(
+ 	IN RTMP_ADAPTER *pAd, 
+ 	IN RTMP_IOCTL_INPUT_STRUCT *pIoctlCmdStr)
+ {
+-	PSTRING this_char;
++	PSTRING this_char = pIoctlCmdStr->u.data.pointer;
+ 	PSTRING value;
+ 	INT Status = NDIS_STATUS_SUCCESS;
+ 
+-	while ((this_char = strsep((char **)&pIoctlCmdStr->u.data.pointer, ",")) != NULL) 
+-	{
+-		if (!*this_char)
+-			 continue;
+ 
+-		if ((value = strchr(this_char, '=')) != NULL)
+-			*value++ = 0;
++	if ((value = strchr(this_char, '=')) != NULL)
++		*value++ = 0;
+ 
+-		if (!value 
++	if (!value 
+ #ifdef WSC_AP_SUPPORT                        
+             && (
+-                 (strcmp(this_char, "WscStop") != 0) &&
+-                 (strcmp(this_char, "WscGenPinCode")!= 0)
+-               )
++            (strcmp(this_char, "WscStop") != 0) &&
++            (strcmp(this_char, "WscGenPinCode")!= 0))
+ #endif /* WSC_AP_SUPPORT */
+             )
+-			continue;  							
++	{
++		/*No valid value.*/
++		DBGPRINT(RT_DEBUG_TRACE, ("IOCTL::(iwpriv) Invalid value!!!\n"));
++	}
+ 
+-		for (PRTMP_PRIVATE_SET_PROC = RTMP_PRIVATE_SUPPORT_PROC; PRTMP_PRIVATE_SET_PROC->name; PRTMP_PRIVATE_SET_PROC++)
++	for (PRTMP_PRIVATE_SET_PROC = RTMP_PRIVATE_SUPPORT_PROC; PRTMP_PRIVATE_SET_PROC->name; PRTMP_PRIVATE_SET_PROC++)
++	{
++		if (!strcmp(this_char, PRTMP_PRIVATE_SET_PROC->name)) 
+ 		{
+-			if (!strcmp(this_char, PRTMP_PRIVATE_SET_PROC->name)) 
+-			{
+-				if(!PRTMP_PRIVATE_SET_PROC->set_proc(pAd, value))
+-				{   /*FALSE:Set private failed then return Invalid argument */
+-					Status = -EINVAL;							
+-				}
+-				break;  /*Exit for loop. */
++			if(!PRTMP_PRIVATE_SET_PROC->set_proc(pAd, value))
++			{   /*FALSE:Set private failed then return Invalid argument */
++				Status = -EINVAL;							
+ 			}
++			break;  /*Exit for loop. */
+ 		}
+-
+-		if(PRTMP_PRIVATE_SET_PROC->name == NULL)
+-		{  /*Not found argument */
+-			Status = -EINVAL;
+-			DBGPRINT(RT_DEBUG_TRACE, ("IOCTL::(iwpriv) Command not Support [%s=%s]\n", this_char, value));
+-			break;
+-		}	
+ 	}
+ 
++	if(PRTMP_PRIVATE_SET_PROC->name == NULL)
++	{  /*Not found argument */
++		Status = -EINVAL;
++		DBGPRINT(RT_DEBUG_TRACE, ("IOCTL::(iwpriv) Command not Support [%s=%s]\n", this_char, value));
++	}	
++
+ 	return Status;
+ }
+ 

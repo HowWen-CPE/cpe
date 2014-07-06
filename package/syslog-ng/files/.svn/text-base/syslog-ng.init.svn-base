@@ -1,0 +1,29 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+SED_SCRIPT=/tmp/script
+SYSLOG_TPL=/etc/syslog-ng/syslog-ng.tpl
+SYSLOG_CONF=/etc/syslog-ng/syslog-ng.conf
+
+log_msg="syslog-ng"
+START=50
+
+start() {
+#	ulimit -c unlimited
+local IP="$(nvram show log_rule 0 ipaddr)"
+local PORT="$(nvram show log_rule 0 port)"
+# IP=`nvram show log_rule 0 ipaddr`
+#PORT=`nvram show log_rule 0 port`
+    echo -n > $SED_SCRIPT
+    echo "s/\\\$ip\\\$/${IP}/g;"   >> $SED_SCRIPT
+    echo "s/\\\$port\\\$/${PORT}/g;"	   >> $SED_SCRIPT
+    echo "p;" >> $SED_SCRIPT
+
+    sed -n -f "$SED_SCRIPT" < "$SYSLOG_TPL" > "$SYSLOG_CONF"
+
+	/usr/sbin/syslog-ng -f /etc/syslog-ng/syslog-ng.conf 
+}
+
+stop() {
+	killall syslog-ng
+}
+

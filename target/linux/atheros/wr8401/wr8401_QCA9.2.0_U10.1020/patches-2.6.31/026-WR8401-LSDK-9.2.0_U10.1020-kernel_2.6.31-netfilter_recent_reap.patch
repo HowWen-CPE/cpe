@@ -1,0 +1,51 @@
+--- linux-2.6.31_atheros/net/netfilter/xt_recent.c	2013-04-03 13:34:55.000000000 +0800
++++ linux-2.6.31_liteon/net/netfilter/xt_recent.c	2013-02-07 17:02:47.000000000 +0800
+@@ -142,6 +142,25 @@
+ 	t->entries--;
+ }
+ 
++/*
++ * Drop entries with timestamps older then 'time'.
++ */
++static void recent_entry_reap(struct recent_table *t, unsigned long time)
++{
++	struct recent_entry *e;
++
++	/*
++	 * The head of the LRU list is always the oldest entry.
++	 */
++	e = list_entry(t->lru_list.next, struct recent_entry, lru_list);
++
++	/*
++	 * The last time stamp is the most recent.
++	 */
++	if (time_after(time, e->stamps[e->index-1]))
++		recent_entry_remove(t, e);
++}
++
+ static struct recent_entry *
+ recent_entry_init(struct recent_table *t, const union nf_inet_addr *addr,
+ 		  u_int16_t family, u_int8_t ttl)
+@@ -265,6 +284,10 @@
+ 				break;
+ 			}
+ 		}
++
++		/* info->seconds must be non-zero */
++		if (info->check_set & XT_RECENT_REAP)
++			recent_entry_reap(t, time);
+ 	}
+ 
+ 	if (info->check_set & XT_RECENT_SET ||
+@@ -292,7 +315,10 @@
+ 		      XT_RECENT_CHECK | XT_RECENT_UPDATE)) != 1)
+ 		return false;
+ 	if ((info->check_set & (XT_RECENT_SET | XT_RECENT_REMOVE)) &&
+-	    (info->seconds || info->hit_count))
++	    (info->seconds || info->hit_count ||
++	    (info->check_set & XT_RECENT_MODIFIERS)))
++		return false;
++	if ((info->check_set & XT_RECENT_REAP) && !info->seconds)
+ 		return false;
+ 	if (info->hit_count > ip_pkt_list_tot)
+ 		return false;

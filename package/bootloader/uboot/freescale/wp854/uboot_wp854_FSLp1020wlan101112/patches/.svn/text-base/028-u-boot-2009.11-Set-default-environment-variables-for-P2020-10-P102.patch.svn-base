@@ -1,0 +1,67 @@
+From 5cdcadde97844e74cb9e458fa6c1d4c0669b26aa Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Fri, 12 Mar 2010 14:17:20 +0530
+Subject: [PATCH] Set default environment variables for P2020/10, P1020/11
+
+Signed-off-by: Dipen Dudhat <dipen.dudhat@freescale.com>
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ include/configs/P1_P2_RDB.h |   26 ++++++++++++++++++++++++--
+ 1 files changed, 24 insertions(+), 2 deletions(-)
+
+diff --git a/include/configs/P1_P2_RDB.h b/include/configs/P1_P2_RDB.h
+index e412307..c67bff5 100644
+--- a/include/configs/P1_P2_RDB.h
++++ b/include/configs/P1_P2_RDB.h
+@@ -626,7 +626,28 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ #define CONFIG_HAS_ETH2
+ #endif
+ 
++/* Select DTB, RAMDISK_SIZE and HOSTNAME based on Platform */
++#ifdef CONFIG_P2020
++#define PLATFORM_DTB		"p2020rdb.dtb"
+ #define CONFIG_HOSTNAME		P2020RDB
++#define RAMDISK_SIZE		700000
++#endif
++#ifdef CONFIG_P2010
++#define PLATFORM_DTB		"p2010rdb.dtb"
++#define CONFIG_HOSTNAME		P2010RDB
++#define RAMDISK_SIZE		700000
++#endif
++#ifdef CONFIG_P1020
++#define PLATFORM_DTB		"p1020rdb.dtb"
++#define CONFIG_HOSTNAME		P1020RDB
++#define RAMDISK_SIZE		200000
++#endif
++#ifdef CONFIG_P1011
++#define PLATFORM_DTB		"p1011rdb.dtb"
++#define CONFIG_HOSTNAME		P1011RDB
++#define RAMDISK_SIZE		200000
++#endif
++
+ #define CONFIG_ROOTPATH		/opt/nfsroot
+ #define CONFIG_BOOTFILE		uImage
+ #define CONFIG_UBOOTPATH	u-boot.bin/* U-Boot image on TFTP server */
+@@ -654,8 +675,9 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ 	"ramdiskaddr=2000000\0"			\
+ 	"ramdiskfile=rootfs.ext2.gz.uboot\0"		\
+ 	"fdtaddr=c00000\0"				\
+-	"fdtfile=p2020rdb.dtb\0"		\
++	"fdtfile="PLATFORM_DTB"\0"		\
+ 	"bdev=sda1\0"	\
++	"hwconfig=esdhc\0"	\
+ 	"jffs2nor=mtdblock3\0"	\
+ 	"norbootaddr=ef080000\0"	\
+ 	"norfdtaddr=ef040000\0"	\
+@@ -666,7 +688,7 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ 	"nandfdtsize=100000\0"		\
+ 	"usb_phy_type=ulpi\0"		\
+ 	"vscfw_addr=ef000000\0"	\
+-	"othbootargs=ramdisk_size=700000 cache-sram-size=0x10000\0" \
++	"othbootargs=ramdisk_size="MK_STR(RAMDISK_SIZE)" cache-sram-size=0x10000\0" \
+ 	"usbfatboot=setenv bootargs root=/dev/ram rw "	\
+ 	"console=$consoledev,$baudrate $othbootargs; "	\
+ 	"usb start;"			\
+-- 
+1.5.6.3
+

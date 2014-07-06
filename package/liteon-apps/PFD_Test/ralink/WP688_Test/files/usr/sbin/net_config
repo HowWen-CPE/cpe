@@ -1,0 +1,36 @@
+#!/bin/sh
+ifconfig eth2 up
+ifconfig rai0 up
+iwpriv rai0 set HideSSID=0  
+iwpriv rai0 set NoForwarding=0  
+iwpriv rai0 set SSID=CPE_2.4G_DANIEL  
+iwpriv rai0 set AuthMode=OPEN
+iwpriv rai0 set EncrypType=NONE
+iwpriv rai0 set IEEE8021X=0
+iwpriv rai0 set AccessPolicy=0    
+iwpriv rai0 set ACLClearAll=1 
+iwpriv rai0 set ACLAddEntry= 
+iwpriv rai0 set RadioOn=1  
+iwpriv rai0 set WirelessMode=9 
+iwpriv rai0 set TxPower=0 
+iwpriv rai0 set NoForwardingBTNBSSID=1  
+iwpriv rai0 set Channel=6 
+brctl addbr br0
+brctl addif br0 eth2
+brctl addif br0 rai0
+ifconfig br0 up
+ifconfig br0 192.168.1.3
+
+
+
+
+
+
+
+
+
+
+
+
+
+

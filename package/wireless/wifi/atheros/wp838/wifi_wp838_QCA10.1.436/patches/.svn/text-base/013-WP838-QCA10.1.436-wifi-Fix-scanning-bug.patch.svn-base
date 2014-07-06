@@ -1,0 +1,21 @@
+--- a/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c
++++ b/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c
+@@ -1931,7 +1931,17 @@ ieee80211_ioctl_siwscan(struct net_devic
+         "%s: active scan request\n", __func__);
+     preempt_scan(dev, 100, 100);
+ 
+-    if ((time_after(OS_GET_TICKS(), osifp->os_last_siwscan + OS_SIWSCAN_TIMEOUT)) && (osifp->os_giwscan_count == 0)) {
++    /*
++     * In the Linux kernel, the jiffies was initialize 5 minutes (-300*HZ), 
++     * this means the 32 bit jiffies value is a negative number 
++     * wrap 5 minutes after boot. Which will leads to scanning can be 
++     * used after 5 minutes. Therefore, here we need to judge if the timestamp 
++     * of the last scanning is 0, then we use the jiffies assigned to the timestamp 
++     * of the last time.
++     * Sean@Liteon, 2014-01-23
++     */
++    if ((osifp->os_last_siwscan == 0) || 
++        ((time_after(OS_GET_TICKS(), osifp->os_last_siwscan + OS_SIWSCAN_TIMEOUT)) && (osifp->os_giwscan_count == 0))) {
+         osifp->os_last_siwscan = OS_GET_TICKS();
+     }
+ 

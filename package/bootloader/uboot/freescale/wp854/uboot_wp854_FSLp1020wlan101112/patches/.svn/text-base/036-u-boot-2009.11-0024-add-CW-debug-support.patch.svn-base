@@ -1,0 +1,99 @@
+From ac2cb05b69901309a3e32f854c755270721fc6ae Mon Sep 17 00:00:00 2001
+From: ebony.zhu@freescale.com <ebony.zhu@freescale.com>
+Date: Tue, 15 Dec 2009 17:23:03 +0800
+Subject: [PATCH 24/29] add CW debug support
+
+Signed-off-by: Li Yang <leoli@freescale.com>
+---
+ config.mk       |   26 ++++++++++++++++++++++++++
+ lib_ppc/board.c |    4 ++++
+ 2 files changed, 30 insertions(+), 0 deletions(-)
+
+diff --git a/config.mk b/config.mk
+index 8cfd60c..8ea1fd8 100644
+--- a/config.mk
++++ b/config.mk
+@@ -41,7 +41,11 @@ endif
+ 
+ # clean the slate ...
+ PLATFORM_RELFLAGS =
++ifdef CONFIG_CW
++PLATFORM_CPPFLAGS = -DCONFIG_CW
++else
+ PLATFORM_CPPFLAGS =
++endif
+ PLATFORM_LDFLAGS =
+ 
+ #########################################################################
+@@ -108,8 +112,13 @@ else
+ ARFLAGS = crv
+ endif
+ RELFLAGS= $(PLATFORM_RELFLAGS)
++ifdef CONFIG_CW
++DBGFLAGS= -g2 -gdwarf-2
++OPTFLAGS= -O1
++else
+ DBGFLAGS= -g # -DDEBUG
+ OPTFLAGS= -Os #-fomit-frame-pointer
++endif
+ ifndef LDSCRIPT
+ #LDSCRIPT := $(TOPDIR)/board/$(BOARDDIR)/u-boot.lds.debug
+ ifeq ($(CONFIG_NAND_U_BOOT),y)
+@@ -140,6 +149,17 @@ CPPFLAGS += -I$(TOPDIR)/include
+ CPPFLAGS += -fno-builtin -ffreestanding -nostdinc	\
+ 	-isystem $(gccincdir) -pipe $(PLATFORM_CPPFLAGS)
+ 
++ifdef CONFIG_CW
++
++ifdef BUILD_TAG
++CFLAGS := $(CPPFLAGS) -Wall -Wstrict-prototypes -ggdb \
++	-DBUILD_TAG='"$(BUILD_TAG)"'
++else
++CFLAGS := $(CPPFLAGS) -Wall -Wstrict-prototypes -ggdb
++endif
++
++else # !define CONFIG_CW
++
+ ifdef BUILD_TAG
+ CFLAGS := $(CPPFLAGS) -Wall -Wstrict-prototypes \
+ 	-DBUILD_TAG='"$(BUILD_TAG)"'
+@@ -149,6 +169,8 @@ endif
+ 
+ CFLAGS += $(call cc-option,-fno-stack-protector)
+ 
++endif # CONFIG_CW
++
+ # avoid trigraph warnings while parsing pci.h (produced by NIOS gcc-2.9)
+ # this option have to be placed behind -Wall -- that's why it is here
+ ifeq ($(ARCH),nios)
+@@ -159,7 +181,11 @@ endif
+ 
+ # $(CPPFLAGS) sets -g, which causes gcc to pass a suitable -g<format>
+ # option to the assembler.
++ifdef CONFIG_CW
++AFLAGS_DEBUG := -Wa,-gdwarf2
++else
+ AFLAGS_DEBUG :=
++endif
+ 
+ # turn jbsr into jsr for m68k
+ ifeq ($(ARCH),m68k)
+diff --git a/lib_ppc/board.c b/lib_ppc/board.c
+index 63f3841..7f9c899 100644
+--- a/lib_ppc/board.c
++++ b/lib_ppc/board.c
+@@ -657,7 +657,11 @@ void board_init_r (gd_t *id, ulong dest_addr)
+ 	serial_initialize();
+ #endif
+ 
++#ifdef CONFIG_CW
++	printf ("Now running in RAM - U-Boot at: %08lx\n", dest_addr);
++#else
+ 	debug ("Now running in RAM - U-Boot at: %08lx\n", dest_addr);
++#endif
+ 
+ 	WATCHDOG_RESET ();
+ 
+-- 
+1.6.6-rc1.GIT
+

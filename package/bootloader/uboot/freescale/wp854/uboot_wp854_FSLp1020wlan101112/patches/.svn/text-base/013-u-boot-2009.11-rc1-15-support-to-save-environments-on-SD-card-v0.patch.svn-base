@@ -1,0 +1,185 @@
+From 05755d1ce6ae81fa69d06ef8f7218a6e2bfc63b3 Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Thu, 29 Oct 2009 22:32:25 +0530
+Subject: [PATCH]  Add support to save environments on SD card
+
+Signed-off-by: Mingkai Hu <Mingkai.hu@freescale.com>
+---
+ common/Makefile     |    1 +
+ common/cmd_nvedit.c |    3 +-
+ common/env_sdcard.c |  135 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 138 insertions(+), 1 deletions(-)
+ create mode 100644 common/env_sdcard.c
+
+diff --git a/common/Makefile b/common/Makefile
+index 3781738..ce6a7da 100644
+--- a/common/Makefile
++++ b/common/Makefile
+@@ -61,6 +61,7 @@ COBJS-$(CONFIG_ENV_IS_IN_NAND) += env_nand.o
+ COBJS-$(CONFIG_ENV_IS_IN_NVRAM) += env_nvram.o
+ COBJS-$(CONFIG_ENV_IS_IN_ONENAND) += env_onenand.o
+ COBJS-$(CONFIG_ENV_IS_IN_SPI_FLASH) += env_sf.o
++COBJS-$(CONFIG_ENV_IS_IN_SDCARD) += env_sdcard.o
+ COBJS-$(CONFIG_ENV_IS_NOWHERE) += env_nowhere.o
+ 
+ # command
+diff --git a/common/cmd_nvedit.c b/common/cmd_nvedit.c
+index eb89e9e..ffc3c58 100644
+--- a/common/cmd_nvedit.c
++++ b/common/cmd_nvedit.c
+@@ -63,9 +63,10 @@ DECLARE_GLOBAL_DATA_PTR;
+     !defined(CONFIG_ENV_IS_IN_NVRAM)	&& \
+     !defined(CONFIG_ENV_IS_IN_ONENAND)	&& \
+     !defined(CONFIG_ENV_IS_IN_SPI_FLASH)	&& \
++    !defined(CONFIG_ENV_IS_IN_SDCARD)	&& \
+     !defined(CONFIG_ENV_IS_NOWHERE)
+ # error Define one of CONFIG_ENV_IS_IN_{EEPROM|FLASH|DATAFLASH|ONENAND|\
+-SPI_FLASH|MG_DISK|NVRAM|NOWHERE}
++SPI_FLASH|MG_DISK|NVRAM|SDCARD|NOWHERE}
+ #endif
+ 
+ #define XMK_STR(x)	#x
+diff --git a/common/env_sdcard.c b/common/env_sdcard.c
+new file mode 100644
+index 0000000..14f59b4
+--- /dev/null
++++ b/common/env_sdcard.c
+@@ -0,0 +1,135 @@
++/*
++ * Copyright 2008-2009 Freescale Semiconductor, Inc.
++ *
++ * Changelog:
++ * July 2008, Intial version.
++ * June 2009, align to the MMC framework.
++ *
++ * See file CREDITS for list of people who contributed to this
++ * project.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++#include <common.h>
++#include <mmc.h>
++
++#include <environment.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++/* references to names in env_common.c */
++extern uchar default_environment[];
++extern int mmc_get_env_addr(int dev, u32 *env_addr);
++
++char *env_name_spec = "SD CARD";
++env_t *env_ptr;
++
++uchar env_get_char_spec(int index)
++{
++	return *((uchar *)(gd->env_addr + index));
++}
++
++static int readenv(int dev, size_t offset, u_char *buf)
++{
++	int ret;
++	struct mmc *mmc = find_mmc_device(dev);
++
++	mmc_init(mmc);
++
++	ret = mmc_read(mmc, offset, buf, CONFIG_ENV_SIZE);
++	if (ret)
++		return 1;
++
++	return 0;
++}
++
++static int writeenv(int dev, size_t offset, u_char *buf)
++{
++	int env_blknr, env_blkcnt, n;
++	uint blklen;
++	struct mmc *mmc = find_mmc_device(dev);
++
++	mmc_init(mmc);
++
++	blklen = mmc->write_bl_len;
++	env_blknr = offset / blklen;
++	env_blkcnt = CONFIG_ENV_SIZE / blklen;
++
++	n = mmc->block_dev.block_write(dev, env_blknr, env_blkcnt, buf);
++	if (n != env_blkcnt)
++		return 1;
++
++	return 0;
++}
++
++int saveenv(void)
++{
++	int ret;
++	int dev = 0;
++	u32 env_addr;
++
++	ret = mmc_get_env_addr(dev, &env_addr);
++	if (ret) {
++		puts("FAILED!\n");
++		return 1;
++	}
++
++	ret = writeenv(dev, env_addr, (u_char *) env_ptr);
++	if (ret)
++		return 1;
++
++	puts("done\n");
++	gd->env_valid = 1;
++
++	return ret;
++}
++
++void env_relocate_spec(void)
++{
++	int ret;
++	int dev = 0;
++	u32 env_addr;
++
++	ret = mmc_get_env_addr(dev, &env_addr);
++	if (ret)
++		goto err_read;
++
++	ret = readenv(dev, env_addr, (u_char *) env_ptr);
++	if (ret)
++		goto err_read;
++
++	if (crc32(0, env_ptr->data, ENV_SIZE) != env_ptr->crc)
++		goto err_crc;
++
++	gd->env_valid = 1;
++
++	return;
++
++err_read:
++err_crc:
++	puts("*** Warning - bad CRC, using default environment\n\n");
++
++	set_default_env();
++}
++
++int env_init(void)
++{
++	/* eSDHC isn't usable before relocation */
++	gd->env_addr  = (ulong)&default_environment[0];
++	gd->env_valid = 1;
++
++	return 0;
++}
+-- 
+1.5.6.3
+

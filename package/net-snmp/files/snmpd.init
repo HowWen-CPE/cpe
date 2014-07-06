@@ -1,0 +1,216 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008 OpenWrt.org
+START=50
+
+DEFAULT=/etc/default/snmpd
+#LIB_D=/var/lib/snmp
+LOG_D=/var/log
+RUN_D=/var/run
+SAVE_D=/usr/share/snmp
+PID_F=$RUN_D/snmpd.pid
+RUN_C=$RUN_D/snmpd.conf
+PERSISTENT_D=$SAVE_D/snmpd.conf
+log_msg="net-snmpd"
+
+start_by_nvram() {
+	#[ -d $LIB_D ] || mkdir -p $LIB_D
+	enable=$(nvram show snmpd_user_rule 0 enable)
+	
+	[ "$enable" == "0" ] && return 0
+	
+	[ -d $LOG_D ] || mkdir -p $LOG_D
+	[ -d $RUN_D ] || mkdir -p $RUN_D
+	[ -f $RUN_C ] && rm -f $RUN_C
+	[ -L $PERSISTENT_D ] && rm -f /tmp/snmpd.conf
+	local num;
+	local i;
+	
+	v1_state=$(nvram show snmpd_user_rule 0 v1_enable)
+	v2_state=$(nvram show snmpd_user_rule 0 v2c_enable)
+	v3_state=$(nvram show snmpd_user_rule 0 usm_enable)
+
+	i=$(nvram get snmpd_com2sec_rule|tr -cd \||wc -c)
+	num=$(($i+1))
+	i=1
+	while [ "$i" -le "$num" ]
+	do
+        str=`nvram get snmpd_com2sec_rule | awk -F "|" '{print $'$i'}'` 
+		if [ "$i" == "2" ];then
+	    	community=`nvram get snmpd_rw_community`
+            echo "com2sec rw default $community"  >> $RUN_C
+        else	
+			str_ro=${str//^/' '}
+			community_ro=`nvram get snmpd_ro_community`
+			echo "$str_ro $community_ro">> $RUN_C
+		fi
+		i=$(($i+1))
+	done
+	i=$(nvram get snmpd_group_rule|tr -cd \||wc -c)
+    num=$(($i+1))
+    i=1
+	t=0
+    while [ "$i" -le "$num" ]
+    do
+        str=`nvram get snmpd_group_rule | awk -F "|" '{print $'$i'}'`
+		ver=$(nvram show snmpd_group_rule $t version)
+		[ "$ver" == "v1" ] && [ "$v1_state" == "1" ] && echo ${str//^/' '}>> $RUN_C
+		[ "$ver" == "v2c" ] && [ "$v2_state" == "1" ] && echo ${str//^/' '}>> $RUN_C
+		[ "$ver" == "usm" ] && [ "$v3_state" == "1" ] && echo ${str//^/' '}>> $RUN_C
+		i=$(($i+1))
+		t=$(($t+1))
+    done
+	view=`nvram get snmpd_view_rule`
+    echo ${view//^/' '} >> $RUN_C
+	i=$(nvram get snmpd_access_rule|tr -cd \||wc -c)
+    num=$(($i+1))
+    i=1
+    while [ "$i" -le "$num" ]
+    do
+        str=`nvram get snmpd_access_rule | awk -F "|" '{print $'$i'}'` 
+		echo ${str//^/' '} >> $RUN_C
+        i=$(($i+1))
+    done
+	
+	if [ "$v3_state" == "1" ];then
+    	ro_pass=`nvram get snmpd_ro_passwd`
+		ro_pass_num=`echo $ro_pass | tr -cd \"|wc -c`
+		[ "$ro_pass_num" != "0" ] && ro_pass=${ro_pass//\"/\\\"}
+    	rw_user=`nvram get snmpd_rw_username`
+		rw_num=`echo $rw_user | tr -cd \"|wc -c`
+		[ "$rw_num" != "0" ] && rw_user=${rw_user//\"/\\\"}
+    	rw_pass=`nvram get snmpd_rw_passwd`
+		rw_pass_num=`echo $rw_pass | tr -cd \"|wc -c`
+		[ "$rw_pass_num" != "0" ] && rw_pass=${rw_pass//\"/\\\"}
+    	
+	    local switch=`nvram get snmpd_sel_id`
+    	if [ "$switch" == "0"  ]; then
+           net-snmp-create-v3-user -a MD5 -A "$ro_pass" "$rw_user" >/dev/null
+           sleep 1       
+           cd /tmp/ ;`find -name snmpd.conf -exec sed -i 's/DES//g' {} \;`cd -                  
+    else                                          
+    	   net-snmp-create-v3-user -a MD5 -A "$ro_pass" -x DES -X "$rw_pass" "$rw_user" >/dev/null
+    	fi
+	fi
+	str=`nvram get psysservices` 
+	echo ${str//^/' '} >> $RUN_C
+	trap_ip=`nvram get snmpd_trap_ipadress`
+	echo "trap2sink $trap_ip" >> $RUN_C
+	echo "trapsink $trap_ip" >> $RUN_C
+	[ -f $DEFAULT ] && . $DEFAULT
+	$DEBUG /usr/sbin/snmpd $OPTIONS -c $RUN_C
+}
+
+snmpd_agent_add() {
+    local cfg="$1"
+
+    config_get agentaddress "$cfg" agentaddress
+    [ -n "$agentaddress" ] || return 0
+    echo "agentaddress $agentaddress" >> $RUN_C
+}
+snmpd_system_add() {
+    local cfg="$1"
+    config_get syslocation "$cfg" sysLocation
+    [ -n "$syslocation" ] && echo "sysLocation $syslocation" >> $RUN_C
+    config_get syscontact "$cfg" sysContact
+    [ -n "$syscontact" ] && echo "sysContact $syscontact" >> $RUN_C
+    config_get sysname "$cfg" sysName
+    [ -n "$sysname" ] && echo "sysName $sysname" >> $RUN_C
+    config_get sysservice "$cfg" sysService
+    [ -n "$sysservice" ] && echo "sysService $sysservice" >> $RUN_C
+    config_get sysdescr "$cfg" sysDescr
+    [ -n "$sysdescr" ] && echo "sysDescr $sysdescr" >> $RUN_C
+    config_get sysobjectid "$cfg" sysObjectID
+    [ -n "$sysobjectid" ] && echo "sysObjectID $sysobjectid" >> $RUN_C
+}
+snmpd_com2sec_add() {
+    local cfg="$1"
+    config_get secname "$cfg" secname
+    [ -n "$secname" ] || return 0
+    config_get source "$cfg" source
+    [ -n "$source" ] || return 0
+    config_get community "$cfg" community
+    [ -n "$community" ] || return 0
+    echo "com2sec $secname $source $community" >> $RUN_C
+}
+snmpd_group_add() {
+    local cfg="$1"
+    config_get group "$cfg" group
+    [ -n "$group" ] || return 0
+    config_get version "$cfg" version
+    [ -n "$version" ] || return 0
+    config_get secname "$cfg" secname
+    [ -n "$secname" ] || return 0
+    echo "group $group $version $secname" >> $RUN_C
+}
+snmpd_view_add() {
+    local cfg="$1"
+    config_get viewname "$cfg" viewname
+    [ -n "$viewname" ] || return 0
+    config_get type "$cfg" type
+    [ -n "$prefix" ] || return 0
+    config_get read "$cfg" read
+    [ -n "$read" ] || return 0
+    config_get write "$cfg" write
+    [ -n "$write" ] || return 0
+    config_get notify "$cfg" notify
+    [ -n "$notify" ] || return 0
+    echo "access $group $context $version $level $prefix $read $write $notify" >> $RUN_C
+}
+snmpd_pass_add() {
+    local cfg="$1"
+    local pass='pass'
+
+    config_get miboid "$cfg" miboid
+    [ -n "$miboid" ] || return 0
+    config_get prog "$cfg" prog
+    [ -n "$prog" ] || return 0
+    config_get_bool persist "$cfg" persist 0
+    [ $persist -ne 0 ] && pass='pass_persist'
+    config_get priority "$cfg" priority
+    priority=${priority:+-p $priority}
+    echo "$pass $priority $miboid $prog" >> $RUN_C
+}
+snmpd_exec_add() {
+    local cfg="$1"
+
+    config_get execname "$cfg" execname
+    [ -n "$execname" ] || return 0
+    config_get prog "$cfg" prog
+    [ -n "$prog" ] || return 0
+    config_get args "$cfg" args
+    config_get miboid "$cfg" miboid
+    echo "exec $miboid $execname $prog $args" >> $RUN_C
+}
+start_by_uci() {
+    [ -d $LIB_D ] || mkdir -p $LIB_D
+    [ -d $LOG_D ] || mkdir -p $LOG_D
+    [ -d $RUN_D ] || mkdir -p $RUN_D
+    [ -f $RUN_C ] && rm -f $RUN_C
+
+    config_load snmpd
+
+    config_foreach snmpd_agent_add agent
+    config_foreach snmpd_system_add system
+    config_foreach snmpd_com2sec_add com2sec
+    config_foreach snmpd_group_add group
+    config_foreach snmpd_view_add view
+    config_foreach snmpd_access_add access
+    config_foreach snmpd_pass_add pass
+    config_foreach snmpd_exec_add exec
+
+    [ -f $DEFAULT ] && . $DEFAULT
+    $DEBUG /usr/sbin/snmpd $OPTIONS
+}
+
+start() {
+	start_by_nvram
+}
+stop() {
+	[ -f $PID_F ] && kill $(cat $PID_F)
+	[ -f $RUN_C ] && rm -f $RUN_C
+}
+
+restart() {
+    stop
+    start    
+}

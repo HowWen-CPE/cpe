@@ -1,0 +1,69 @@
+From 7ab5f472859caf6aaa701894431a1b76c269780f Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Mon, 8 Feb 2010 20:21:09 +0530
+Subject: [PATCH] gianfar: Fix Fast route and Multi queue cleanup issues
+
+1. Fix updating mask value and checking for  multiple queues in
+   gfar_poll_tx under normal cleanup process.
+   This bug was basically a porting issue from 2.6.32-rc3 to
+   2.6.32.
+
+2. In try_fastroute, we always used to check if Q 0 is empty or not,
+   but the check should have been for the queue to which the skb is mapped.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/gianfar.c |   12 +++++++++---
+ 1 files changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index f37c53a..72caf81 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -2610,7 +2610,6 @@ static int gfar_start_xmit(struct sk_buff *skb, struct net_device *dev)
+ 
+ 	/* total number of fragments in the SKB */
+ 	nr_frags = skb_shinfo(skb)->nr_frags;
+-
+ #ifdef CONFIG_GFAR_SW_PKT_STEERING
+ 	if (!priv->sps)
+ #endif
+@@ -2825,7 +2824,9 @@ static inline int try_fastroute(struct sk_buff *skb,
+ 	struct rtable *rt;
+ 	struct net_device *odev;
+ 	struct gfar_private *priv = netdev_priv(dev);
++	struct netdev_queue *txq = NULL;
+ 	const struct net_device_ops *ops;
++	u16 q_idx = 0;
+ 
+ 	/* this is correct. pull padding already */
+ 	eth = (struct ethhdr *) (skb->data);
+@@ -2865,10 +2866,13 @@ static inline int try_fastroute(struct sk_buff *skb,
+ 		    && (!(eth->h_dest[0] & 0x01))
+ 		    && neigh_is_valid(rt->u.dst.neighbour)
+ 		    && iph->ttl > 1) {
++
++			q_idx = skb_get_queue_mapping(skb);
++			txq = netdev_get_tx_queue(odev, q_idx);
+ 			/* Fast Route Path: Taken if the outgoing
+ 			 * device is ready to transmit the packet now */
+-			if ((!netif_queue_stopped(odev))
+-			    && (!spin_is_locked(&odev->_tx->_xmit_lock))
++			if ((!netif_tx_queue_stopped(txq))
++			    && (!spin_is_locked(&txq->_xmit_lock))
+ 			    && (skb->len <= (odev->mtu + ETH_HLEN + 2 + 4))) {
+ 				skb->pkt_type = PACKET_FASTROUTE;
+ 				skb->protocol = __constant_htons(ETH_P_IP);
+@@ -3770,7 +3774,9 @@ static int gfar_poll_tx(struct napi_struct *napi, int budget)
+ 						(&tx_queue->txlock, flags);
+ 				}
+ 				tx_cleaned += tx_cleaned_per_queue;
++				tx_cleaned_per_queue = 0;
+ 			}
++			mask = mask >> 0x1;
+ 		}
+ 
+ 		budget = (num_act_qs * DEFAULT_TX_RING_SIZE) + 1;
+-- 
+1.5.6.3
+

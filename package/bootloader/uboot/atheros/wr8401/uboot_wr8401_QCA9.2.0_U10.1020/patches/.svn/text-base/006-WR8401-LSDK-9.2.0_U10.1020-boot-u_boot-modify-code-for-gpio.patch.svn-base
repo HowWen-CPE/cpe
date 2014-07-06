@@ -1,0 +1,21 @@
+--- boot_atheros/u-boot/board/ar7240/db12x/db12x.c	2013-04-03 13:43:13.000000000 +0800
++++ boot_liteon/u-boot/board/ar7240/db12x/db12x.c	2013-03-29 18:00:22.000000000 +0800
+@@ -61,6 +61,18 @@
+ 	ar7240_reg_rmw_clear(GPIO_OUT_FUNCTION1_ADDRESS, GPIO_OUT_FUNCTION1_ENABLE_GPIO_4_MASK);
+ 	ar7240_reg_rmw_set(GPIO_OUT_FUNCTION1_ADDRESS, GPIO_OUT_FUNCTION1_ENABLE_GPIO_4_SET(0x80));
+ 	ar7240_reg_rmw_set(GPIO_OE_ADDRESS, (1 << 4));
++
++	/* set GPIO18, GPIO19 as LNABIAS for AR9283 xLNA*/
++	ar7240_reg_wr (GPIO_OE_ADDRESS, (ar7240_reg_rd(GPIO_OE_ADDRESS) & ~(0x3 << 18)));  /* as output*/
++	ar7240_reg_wr (GPIO_OUT_FUNCTION4_ADDRESS, (ar7240_reg_rd(GPIO_OUT_FUNCTION4_ADDRESS) & 0xffff0000) | 0x2f2e0000);
++
++	/* turn LED2,3(GPIO17) on*/
++	ar7240_reg_wr(AR7240_GPIO_INT_MASK, ar7240_reg_rd(AR7240_GPIO_INT_MASK) & (~(1 << 17)));
++	ar7240_reg_wr (GPIO_OE_ADDRESS, (ar7240_reg_rd(GPIO_OE_ADDRESS) & ~(0x1 << 17)));  /* as output*/
++	//ar7240_reg_wr (GPIO_OUT_FUNCTION4_ADDRESS, (ar7240_reg_rd(GPIO_OUT_FUNCTION4_ADDRESS) & 0xffff00ff));
++	//ar7240_reg_wr(AR7240_GPIO_SET, 1<<17); //for dvt1, dvt2.
++	ar7240_reg_wr(AR7240_GPIO_CLEAR, 1<<17); // for pvt
++	
+ }
+ 
+ void ath_set_tuning_caps(void)

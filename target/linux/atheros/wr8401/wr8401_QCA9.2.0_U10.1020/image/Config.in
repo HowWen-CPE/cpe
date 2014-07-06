@@ -1,0 +1,77 @@
+# 
+# Add for rootfs image options, Sean@liteon.com
+#
+
+config UBIFS_OPTS
+	string "mkfs.ubifs"
+	depends TARGET_atheros 
+	depends TARGET_ROOTFS_UBIFS
+	default "-m 2048 -e 126976 -c 160"
+	help
+	    Options of mkfs.ubifs, If you don't know the specific meaning of these options, 
+	    please go to www.google.com to search. In addition, the wrong configuration 
+	    options to generate the root file system image is not mounted properly.
+
+config UBINIZE_OPTS
+	string "ubinize"
+	depends TARGET_atheros
+        depends TARGET_ROOTFS_UBIFS
+	default "-m 2048 -p 131072 -s 2048"
+	help
+	    Options of ubinize.
+	    
+	
+comment "Variable Definintion of ubinize.cfg"
+
+config VOLUME_ID
+	int "UBI Volume ID"
+	depends TARGET_atheros
+        depends TARGET_ROOTFS_UBIFS
+	default 0
+
+config VOLUME_ALIGNMENT
+	int "UBI Volume Alignment"
+	depends TARGET_atheros
+        depends TARGET_ROOTFS_UBIFS	
+	default 1
+
+config VOLUME_SIZE
+	int "UBI Volume Size"
+	depends TARGET_atheros
+        depends TARGET_ROOTFS_UBIFS
+	default 20
+	help
+		Volume_Size = (-p * -c)MiB
+
+config VOLUME_NAME
+	string "UBI Volume Name"
+	depends TARGET_atheros
+        depends TARGET_ROOTFS_UBIFS
+	default "rootfs_0"
+
+config UBIFS_IMAGE_NAME
+	string "UBIFS Image Name"
+	depends TARGET_atheros
+        depends TARGET_ROOTFS_UBIFS
+	default "root.ubifs"
+
+config VOLUME_FLAGS
+	string "UBI Volume Flags"
+	depends TARGET_atheros
+        depends TARGET_ROOTFS_UBIFS
+	default "autoresize"
+
+choice 
+	prompt "UBI Volume Type"
+	depends TARGET_atheros
+        depends TARGET_ROOTFS_UBIFS
+	default VOLUME_TYPE_dynamic
+
+config VOLUME_TYPE_dynamic
+	bool "dynamic"
+
+config VOLUME_TYPE_static
+	bool "static"
+
+endchoice
+

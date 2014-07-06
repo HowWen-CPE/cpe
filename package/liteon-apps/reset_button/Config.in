@@ -1,0 +1,28 @@
+
+	config   FACTORY_DEFAULT_GPIO
+		string "FACTORY_DEFAULT_GPIO"
+		default ""
+		help 
+			configure you reset_button factory gpio according to diffrent platform
+
+    config   GPIO_DEV
+        string "GPIO_DEV"
+        default ""
+        help
+          configure you reset_button gpio dev name according to diffrent platform
+
+    config   LITEON_GPIO_REG_IRQ
+        string "LITEON_GPIO_REG_IRQ"
+        default ""
+
+    config   LITEON_GPIO_ENA_INT
+        string "LITEON_GPIO_ENA_INT"
+        default ""
+
+
+
+
+
+
+
+

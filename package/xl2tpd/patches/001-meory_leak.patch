@@ -1,0 +1,23 @@
+--- a/xl2tpd.c	2014-01-16 04:58:37.000000000 +0800
++++ b/xl2tpd.c	2014-04-08 09:27:11.000000000 +0800
+@@ -641,6 +641,8 @@
+     if (t->udp_fd > -1 )
+         close (t->udp_fd);
+     free (t);
++    if (me->oldptyconf)
++    	free(me->oldptyconf);
+     free (me);
+ }
+ 
+--- a/call.c	2014-01-16 04:58:37.000000000 +0800
++++ b/call.c	2014-04-08 09:27:17.000000000 +0800
+@@ -494,7 +494,8 @@
+             c->lac->rsched = schedule (tv, magic_lac_dial, c->lac);
+         }
+     }
+-
++	if (c->oldptyconf)
++		free(c->oldptyconf);
+     free (c);
+ }
+ 

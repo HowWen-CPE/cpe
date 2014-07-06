@@ -1,0 +1,14 @@
+Index: dhcpcd-3.2.3.orig/client.c
+===================================================================
+--- dhcpcd-3.2.3.orig.orig/client.c	2014-03-24 14:21:09.284956183 +0800
++++ dhcpcd-3.2.3.orig/client.c	2014-03-24 14:22:51.748954198 +0800
+@@ -460,7 +460,8 @@
+ 
+ static void drop_config (state_t *state, const options_t *options)
+ {
+-	if (! state->persistent)
++	//do not drop config on initial procedure if no DHCP Server exists
++	if (state->interface->previous_address.s_addr !=0 && ! state->persistent)
+ 		configure (options, state->interface, state->dhcp, false);
+ 
+ 	free_dhcp (state->dhcp);

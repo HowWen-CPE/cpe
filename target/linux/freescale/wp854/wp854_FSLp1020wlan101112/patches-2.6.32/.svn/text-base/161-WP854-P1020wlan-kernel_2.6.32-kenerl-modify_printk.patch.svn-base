@@ -1,0 +1,24 @@
+--- linux-2.6.32-freescale-p1020-sku/kernel/printk.c	2012-07-13 03:19:04.293689434 -0700
++++ linux-liteon-wp854-openwrt/kernel/printk.c	2012-07-13 03:21:13.713622189 -0700
+@@ -51,12 +51,21 @@
+ 
+ #define __LOG_BUF_LEN	(1 << CONFIG_LOG_BUF_SHIFT)
+ 
++#if  0 /* Peter modify. 2008.6.6. Change printk level. */
++/* printk's without a loglevel use this.. */
++#define DEFAULT_MESSAGE_LOGLEVEL 5 /* KERN_NOTICE */
++
++/* We show everything that is MORE important than this.. */
++#define MINIMUM_CONSOLE_LOGLEVEL 1 /* Minimum loglevel we let people use */
++#define DEFAULT_CONSOLE_LOGLEVEL  5 /* anything MORE serious than KERN_NOTICE */
++#else
+ /* printk's without a loglevel use this.. */
+ #define DEFAULT_MESSAGE_LOGLEVEL 4 /* KERN_WARNING */
+ 
+ /* We show everything that is MORE important than this.. */
+ #define MINIMUM_CONSOLE_LOGLEVEL 1 /* Minimum loglevel we let people use */
+ #define DEFAULT_CONSOLE_LOGLEVEL 7 /* anything MORE serious than KERN_DEBUG */
++#endif
+ 
+ DECLARE_WAIT_QUEUE_HEAD(log_wait);
+ 

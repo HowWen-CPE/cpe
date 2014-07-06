@@ -1,0 +1,33 @@
+From 4d6152062dff9887713a6a93951c5adcba777547 Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Mon, 14 Dec 2009 11:47:50 +0530
+Subject: [PATCH 1/1] powerpc/fsl: 85xx: p1020rdb: add cell indices for pcie host/agent
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ arch/powerpc/boot/dts/p1020rdb.dts |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p1020rdb.dts b/arch/powerpc/boot/dts/p1020rdb.dts
+index cf19e33..a61c226 100644
+--- a/arch/powerpc/boot/dts/p1020rdb.dts
++++ b/arch/powerpc/boot/dts/p1020rdb.dts
+@@ -590,6 +590,7 @@
+ 	};
+ 
+ 	pci0: pcie@ffe09000 {
++		cell-index = <1>;
+ 		compatible = "fsl,mpc8548-pcie";
+ 		device_type = "pci";
+ 		#interrupt-cells = <1>;
+@@ -626,6 +627,7 @@
+ 	};
+ 
+ 	pci1: pcie@ffe0a000 {
++		cell-index = <2>;
+ 		compatible = "fsl,mpc8548-pcie";
+ 		device_type = "pci";
+ 		#interrupt-cells = <1>;
+-- 
+1.5.6.5
+

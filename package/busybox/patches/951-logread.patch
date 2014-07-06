@@ -1,0 +1,118 @@
+--- a/sysklogd/logread.c	2013-08-01 14:20:03.715333820 +0800
++++ b/sysklogd/logread.c	2013-08-01 14:46:15.363089086 +0800
+@@ -19,17 +19,19 @@
+ #include <sys/ipc.h>
+ #include <sys/sem.h>
+ #include <sys/shm.h>
++#include <ctype.h>
+ 
+ #define DEBUG 0
+ 
+ /* our shared key (syslogd.c and logread.c must be in sync) */
+-enum { KEY_ID = 0x414e4547 }; /* "GENA" */
++static long KEY_ID = 0x414e4547; /*"GENA"*/
+ 
+ struct shbuf_ds {
+-	int32_t size;           // size of data - 1
+-	int32_t tail;           // end of message list
+-	char data[1];           // messages
+-};
++    int size;           // size of data written
++    int head;           // start of message list
++    int tail;           // end of message list
++    char data[1];       // data/messages
++} ;          // shared memory pointer
+ 
+ static const struct sembuf init_sem[3] = {
+ 	{0, -1, IPC_NOWAIT | SEM_UNDO},
+@@ -73,13 +75,46 @@
+ 	exit(EXIT_SUCCESS);
+ }
+ 
++static unsigned int str2u32(unsigned char *u32str)
++{
++    unsigned int ret = 0 ;
++    if(u32str[0] == '0') {
++        if(toupper(u32str[1]) == 'X') /* Hex-decimal */
++            sscanf(u32str, "%x", &ret) ;
++        else /* Octal */
++            sscanf(u32str, "%o", &ret) ;
++    }
++    else if( isdigit( u32str[0] ) ) {/* Decimal */
++        ret = atoi(u32str) ;
++    } else { /* string, assumed to be little-endian */
++        int i ;
++        ret = 0 ;
++        for(i = 0; i < 4 && u32str[i]; i++)
++            ret |= ((unsigned int) u32str[i]) << (8*i) ;
++    }
++    return ret ;
++}
++                        
++
+ int logread_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
+ int logread_main(int argc UNUSED_PARAM, char **argv)
+ {
+-	unsigned cur;
++	unsigned int cur;
+ 	int log_semid; /* ipc semaphore id */
+ 	int log_shmid; /* ipc shared memory id */
+-	smallint follow = getopt32(argv, "f");
++    int opt , follow = 0 ;
++    while ((opt = getopt(argc, argv, "k:f")) > 0) {
++        switch (opt) {
++            case 'k':
++                KEY_ID = str2u32(optarg) ;
++                break;
++            case 'f':
++                follow = 1 ;
++                break;
++            default:
++                bb_show_usage() ;
++        }
++    }
+ 
+ 	INIT_G();
+ 
+@@ -100,12 +135,13 @@
+ 
+ 	/* Suppose atomic memory read */
+ 	/* Max possible value for tail is shbuf->size - 1 */
+-	cur = shbuf->tail;
++	cur = shbuf->head;
+ 
+ 	/* Loop for logread -f, one pass if there was no -f */
+ 	do {
+ 		unsigned shbuf_size;
+ 		unsigned shbuf_tail;
++        unsigned shbuf_head;
+ 		const char *shbuf_data;
+ #if ENABLE_FEATURE_LOGREAD_REDUCED_LOCKING
+ 		int i;
+@@ -119,10 +155,11 @@
+ 		/* Copy the info, helps gcc to realize that it doesn't change */
+ 		shbuf_size = shbuf->size;
+ 		shbuf_tail = shbuf->tail;
++		shbuf_head = shbuf->head;
+ 		shbuf_data = shbuf->data; /* pointer! */
+ 
+ 		if (DEBUG)
+-			printf("cur:%d tail:%i size:%i\n",
++			printf("cur:%d tail:%d size:%d\n",
+ 					cur, shbuf_tail, shbuf_size);
+ 
+ 		if (!follow) {
+@@ -146,6 +183,13 @@
+ 				continue;
+ 			}
+ 		}
++        if (shbuf_head == shbuf_tail || cur == shbuf_tail) {
++            if (follow) {
++                sem_up(log_semid);
++                sleep(1);   /* TODO: replace me with a sleep_on */
++                continue;
++            }
++        }
+ 
+ 		/* Read from cur to tail */
+ #if ENABLE_FEATURE_LOGREAD_REDUCED_LOCKING

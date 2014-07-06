@@ -1,0 +1,744 @@
+From c2032db9c16a2f13232e4779c0ec1ea3b260f283 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Fri, 23 Oct 2009 19:32:27 +0530
+Subject: [PATCH] kernel 2.6.32-rc3 Gianfar Fastroute
+
+This patch provides support for fast routing for
+IPV4 forwarding scenario.
+
+This patch is based on original work by Dai Haruki whose reference
+is taken from
+Based on http://bitshrine.org/gpp/0018-Fastroute.patch
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/Kconfig             |    8 ++
+ drivers/net/bonding/bond_main.c |   15 ++++
+ drivers/net/dummy.c             |   11 +++
+ drivers/net/gianfar.c           |  156 ++++++++++++++++++++++++++++++++++++++-
+ drivers/net/gianfar.h           |    6 ++
+ drivers/net/gianfar_ethtool.c   |    3 +
+ include/linux/netdevice.h       |   16 ++++-
+ kernel/sysctl_check.c           |    6 +-
+ net/core/dev.c                  |   72 ++++++++++++++++++
+ net/core/sysctl_net_core.c      |   15 ++++
+ net/ipv4/ip_forward.c           |   36 +++++++++
+ net/ipv4/route.c                |   27 +++++++
+ 12 files changed, 367 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/Kconfig b/drivers/net/Kconfig
+index 7f63a40..e949b66 100644
+--- a/drivers/net/Kconfig
++++ b/drivers/net/Kconfig
+@@ -2416,6 +2416,14 @@ config GIANFAR_L2SRAM
+ 	help
+ 	  This option supports BD alloc in L2SRAM.
+ 
++config NET_GIANFAR_FP
++	default y
++	bool "Fast Path routing"
++	depends on GIANFAR && EXPERIMENTAL
++	help
++	  Fast path routing. To enable,
++	  $ echo 1 > /proc/sys/net/core/netdev_fastroute
++
+ config UCC_GETH
+ 	tristate "Freescale QE Gigabit Ethernet"
+ 	depends on QUICC_ENGINE
+diff --git a/drivers/net/bonding/bond_main.c b/drivers/net/bonding/bond_main.c
+index 69c5b15..98f3a99 100644
+--- a/drivers/net/bonding/bond_main.c
++++ b/drivers/net/bonding/bond_main.c
+@@ -2,6 +2,7 @@
+  * originally based on the dummy device.
+  *
+  * Copyright 1999, Thomas Davis, tadavis@lbl.gov.
++ * Copyright 2009 Freescale Semiconductor, Inc.
+  * Licensed under the GPL. Based on dummy.c, and eql.c devices.
+  *
+  * bonding.c: an Ethernet Bonding driver
+@@ -4383,6 +4384,14 @@ out:
+ 	return NETDEV_TX_OK;
+ }
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++static int bond_accept_fastpath(struct net_device *bond_dev,
++				struct dst_entry *dst)
++{
++	return -1;
++}
++#endif
++
+ /*------------------------- Device initialization ---------------------------*/
+ 
+ static void bond_set_xmit_hash_policy(struct bonding *bond)
+@@ -4499,6 +4508,9 @@ static const struct net_device_ops bond_netdev_ops = {
+ 	.ndo_vlan_rx_register	= bond_vlan_rx_register,
+ 	.ndo_vlan_rx_add_vid 	= bond_vlan_rx_add_vid,
+ 	.ndo_vlan_rx_kill_vid	= bond_vlan_rx_kill_vid,
++#ifdef CONFIG_NET_GIANFAR_FP
++	.ndo_accept_fastpath	= bond_accept_fastpath,
++#endif
+ };
+ 
+ static void bond_setup(struct net_device *bond_dev)
+@@ -4523,6 +4535,9 @@ static void bond_setup(struct net_device *bond_dev)
+ 
+ 	bond_dev->destructor = free_netdev;
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++	bond_dev->accept_fastpath = bond_accept_fastpath;
++#endif
+ 	/* Initialize the device options */
+ 	bond_dev->tx_queue_len = 0;
+ 	bond_dev->flags |= IFF_MASTER|IFF_MULTICAST;
+diff --git a/drivers/net/dummy.c b/drivers/net/dummy.c
+index 37dcfdc..9798b86 100644
+--- a/drivers/net/dummy.c
++++ b/drivers/net/dummy.c
+@@ -26,6 +26,7 @@
+ 			Nick Holloway, 27th May 1994
+ 	[I tweaked this explanation a little but that's all]
+ 			Alan Cox, 30th May 1994
++	Copyright 2009 Freescale Semiconductor, Inc.
+ */
+ 
+ #include <linux/module.h>
+@@ -65,11 +66,21 @@ static netdev_tx_t dummy_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	return NETDEV_TX_OK;
+ }
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++static int dummy_accept_fastpath(struct net_device *dev, struct dst_entry *dst)
++{
++	return -1;
++}
++#endif
++
+ static const struct net_device_ops dummy_netdev_ops = {
+ 	.ndo_start_xmit		= dummy_xmit,
+ 	.ndo_validate_addr	= eth_validate_addr,
+ 	.ndo_set_multicast_list = set_multicast_list,
+ 	.ndo_set_mac_address	= dummy_set_address,
++#ifdef CONFIG_NET_GIANFAR_FP
++	.ndo_accept_fastpath 	= dummy_accept_fastpath,
++#endif
+ };
+ 
+ static void dummy_setup(struct net_device *dev)
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index b965dd2..f7e82e8 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -95,6 +95,14 @@
+ #include <linux/of.h>
+ #include <net/xfrm.h>
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++#include <linux/if_arp.h>
++#include <linux/netdevice.h>
++#include <net/route.h>
++#include <net/ip.h>
++#include <linux/jhash.h>
++#endif
++
+ #include "gianfar.h"
+ #include "fsl_pq_mdio.h"
+ 
+@@ -132,6 +140,10 @@ static int gfar_poll(struct napi_struct *napi, int budget);
+ #ifdef CONFIG_NET_POLL_CONTROLLER
+ static void gfar_netpoll(struct net_device *dev);
+ #endif
++#ifdef CONFIG_NET_GIANFAR_FP
++static int gfar_accept_fastpath(struct net_device *dev, struct dst_entry *dst);
++DECLARE_PER_CPU(struct netif_rx_stats, netdev_rx_stat);
++#endif
+ int gfar_clean_rx_ring(struct gfar_priv_rx_q *rx_queue, int rx_work_limit);
+ static int gfar_clean_tx_ring(struct gfar_priv_tx_q *tx_queue);
+ static int gfar_process_frame(struct net_device *dev, struct sk_buff *skb,
+@@ -172,6 +184,9 @@ static const struct net_device_ops gfar_netdev_ops = {
+ #ifdef CONFIG_NET_POLL_CONTROLLER
+ 	.ndo_poll_controller = gfar_netpoll,
+ #endif
++#ifdef CONFIG_NET_GIANFAR_FP
++	.ndo_accept_fastpath = gfar_accept_fastpath,
++#endif
+ };
+ 
+ unsigned int ftp_rqfpr[MAX_FILER_IDX + 1];
+@@ -2086,7 +2101,7 @@ static int gfar_start_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	/* If the next BD still needs to be cleaned up, then the bds
+ 	   are full.  We need to tell the kernel to stop sending us stuff. */
+ 	if (!tx_queue->num_txbdfree) {
+-		netif_tx_stop_queue(txq);
++		netif_stop_subqueue(dev, tx_queue->qindex);
+ 
+ 		dev->stats.tx_fifo_errors++;
+ 	}
+@@ -2127,6 +2142,141 @@ static int gfar_set_mac_address(struct net_device *dev)
+ 	return 0;
+ }
+ 
++/**********************************************************************
++ * gfar_accept_fastpath
++ *
++ * Used to authenticate to the kernel that a fast path entry can be
++ * added to device's routing table cache
++ *
++ * Input : pointer to ethernet interface network device structure and
++ *         a pointer to the designated entry to be added to the cache.
++ * Output : zero upon success, negative upon failure
++ **********************************************************************/
++#ifdef CONFIG_NET_GIANFAR_FP
++static int gfar_accept_fastpath(struct net_device *dev, struct dst_entry *dst)
++{
++	struct net_device *odev = dst->dev;
++	const struct net_device_ops *ops = odev->netdev_ops;
++
++	if ((dst->ops->protocol != __constant_htons(ETH_P_IP))
++			|| (odev->type != ARPHRD_ETHER)
++			|| (ops->ndo_accept_fastpath == NULL))
++		return -1;
++
++	return 0;
++}
++
++static inline int neigh_is_valid(struct neighbour *neigh)
++{
++	return neigh->nud_state & NUD_VALID;
++}
++
++
++u32 gfar_fastroute_hash(u8 daddr, u8 saddr)
++{
++	u32 hash;
++
++	hash = ((u32)daddr ^ saddr) & NETDEV_FASTROUTE_HMASK;
++
++	return hash;
++}
++#endif
++
++
++/* try_fastroute() -- Checks the fastroute cache to see if a given packet
++ *   can be routed immediately to another device.  If it can, we send it.
++ *   If we used a fastroute, we return 1.  Otherwise, we return 0.
++ *   Returns 0 if CONFIG_NET_GIANFAR_FP is not on
++ */
++static inline int try_fastroute(struct sk_buff *skb,
++				struct net_device *dev, int length)
++{
++#ifdef CONFIG_NET_GIANFAR_FP
++	struct ethhdr *eth;
++	struct iphdr *iph;
++	unsigned int hash;
++	struct rtable *rt;
++	struct net_device *odev;
++	struct gfar_private *priv = netdev_priv(dev);
++	const struct net_device_ops *ops;
++
++	/* this is correct. pull padding already */
++	eth = (struct ethhdr *) (skb->data);
++
++	/* Only route ethernet IP packets */
++	if (eth->h_proto != __constant_htons(ETH_P_IP))
++		return 0;
++
++	iph = (struct iphdr *)(skb->data + ETH_HLEN);
++
++	/* Generate the hash value */
++	hash = gfar_fastroute_hash((*(u8 *)&iph->daddr),
++				   (*(u8 *)&iph->saddr));
++
++#ifdef FASTPATH_DEBUG
++	printk(KERN_INFO "%s:  hash = %d (%d, %d)\n",
++	       __func__, hash, (*(u8 *)&iph->daddr), (*(u8 *)&iph->saddr));
++#endif
++	rt = (struct rtable *) (dev->fastpath[hash]);
++	/* Only support big endian */
++	if ((rt != NULL)
++	    && ((*(u32 *)(&iph->daddr))	== (*(u32 *)(&rt->rt_dst)))
++	    && ((*(u32 *)(&iph->saddr))	== (*(u32 *)(&rt->rt_src)))
++	    && !(rt->u.dst.obsolete)) {
++		odev = rt->u.dst.dev;  /* get output device */
++		ops = odev->netdev_ops;
++
++		/* Make sure the packet is:
++		 * 1) IPv4
++		 * 2) without any options (header length of 5)
++		 * 3) Not a multicast packet
++		 * 4) going to a valid destination
++		 * 5) Not out of time-to-live
++		 */
++		if (iph->version == 4
++		    && iph->ihl == 5
++		    && (!(eth->h_dest[0] & 0x01))
++		    && neigh_is_valid(rt->u.dst.neighbour)
++		    && iph->ttl > 1) {
++			/* Fast Route Path: Taken if the outgoing
++			 * device is ready to transmit the packet now */
++			if ((!netif_queue_stopped(odev))
++			    && (!spin_is_locked(&odev->_tx->_xmit_lock))
++			    && (skb->len <= (odev->mtu + ETH_HLEN + 2 + 4))) {
++				skb->pkt_type = PACKET_FASTROUTE;
++				skb->protocol = __constant_htons(ETH_P_IP);
++				skb_set_network_header(skb, ETH_HLEN);
++				ip_decrease_ttl(iph);
++
++				memcpy(eth->h_source, odev->dev_addr,
++				       MAC_ADDR_LEN);
++				memcpy(eth->h_dest, rt->u.dst.neighbour->ha,
++				       MAC_ADDR_LEN);
++				skb->dev = odev;
++				if (ops->ndo_start_xmit(skb, odev) != 0) {
++					panic("%s: FastRoute path corrupted",
++					      dev->name);
++				}
++				priv->extra_stats.rx_fast++;
++			}
++			/* Semi Fast Route Path: Mark the packet as needing
++			 * fast routing, but let the stack handle getting it
++			 * to the device */
++			else {
++				skb->pkt_type = PACKET_FASTROUTE;
++				skb_reset_network_header(skb);
++				/* Tell the skb what kind of packet this is*/
++				skb->protocol = eth_type_trans(skb, dev);
++				/* Prep the skb for the packet */
++				if (netif_receive_skb(skb) == NET_RX_DROP)
++					priv->extra_stats.kernel_dropped++;
++			}
++			return 1;
++		}
++	}
++#endif /* CONFIG_NET_GIANFAR_FP */
++	return 0;
++}
+ 
+ /* Enables and disables VLAN insertion/extraction */
+ static void gfar_vlan_rx_register(struct net_device *dev,
+@@ -2616,6 +2766,10 @@ static int gfar_process_frame(struct net_device *dev, struct sk_buff *skb,
+ 	if (priv->rx_csum_enable)
+ 		gfar_rx_checksum(skb, fcb);
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++	if (netdev_fastroute && (try_fastroute(skb, dev, skb->len) != 0))
++		return 0;
++#endif
+ 	/* Tell the skb what kind of packet this is */
+ 	skb->protocol = eth_type_trans(skb, dev);
+ 
+diff --git a/drivers/net/gianfar.h b/drivers/net/gianfar.h
+index 576f582..8053366 100644
+--- a/drivers/net/gianfar.h
++++ b/drivers/net/gianfar.h
+@@ -691,6 +691,9 @@ struct gfar_extra_stats {
+ 	u64 rx_skbr;
+ 	u64 rx_skbr_free;
+ #endif
++#ifdef CONFIG_NET_GIANFAR_FP
++	u64 rx_fast;
++#endif
+ 	u64 rx_large;
+ 	u64 rx_short;
+ 	u64 rx_nonoctet;
+@@ -1303,4 +1306,7 @@ void gfar_init_sysfs(struct net_device *dev);
+ 
+ extern const struct ethtool_ops gfar_ethtool_ops;
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++extern int netdev_fastroute;
++#endif
+ #endif /* __GIANFAR_H */
+diff --git a/drivers/net/gianfar_ethtool.c b/drivers/net/gianfar_ethtool.c
+index e77def4..ddf6451 100644
+--- a/drivers/net/gianfar_ethtool.c
++++ b/drivers/net/gianfar_ethtool.c
+@@ -61,6 +61,9 @@ static char stat_gstrings[][ETH_GSTRING_LEN] = {
+ 	"skb-recycled-frames-new",
+ 	"skb-recycled-frames-free",
+ #endif
++#ifdef CONFIG_NET_GIANFAR_FP
++	"rx-fast-path",
++#endif
+ 	"rx-large-frame-errors",
+ 	"rx-short-frame-errors",
+ 	"rx-non-octet-errors",
+diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
+index 94958c1..fa67b1f 100644
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -15,6 +15,8 @@
+  *		Bjorn Ekwall. <bj0rn@blox.se>
+  *              Pekka Riikonen <priikone@poseidon.pspt.fi>
+  *
++ *              Copyright 2009 Freescale Semiconductor, Inc.
++ *
+  *		This program is free software; you can redistribute it and/or
+  *		modify it under the terms of the GNU General Public License
+  *		as published by the Free Software Foundation; either version
+@@ -152,7 +154,7 @@ struct net_device_stats
+ 	unsigned long	tx_fifo_errors;
+ 	unsigned long	tx_heartbeat_errors;
+ 	unsigned long	tx_window_errors;
+-	
++
+ 	/* for cslip etc */
+ 	unsigned long	rx_compressed;
+ 	unsigned long	tx_compressed;
+@@ -611,6 +613,10 @@ struct net_device_ops {
+ 						  int new_mtu);
+ 	int			(*ndo_neigh_setup)(struct net_device *dev,
+ 						   struct neigh_parms *);
++#ifdef CONFIG_NET_GIANFAR_FP
++	int                     (*ndo_accept_fastpath)(struct net_device *,
++							   struct dst_entry *);
++#endif
+ #define HAVE_TX_TIMEOUT
+ 	void			(*ndo_tx_timeout) (struct net_device *dev);
+ 
+@@ -795,7 +801,7 @@ struct net_device
+ 
+ 
+ 	/* Protocol specific pointers */
+-	
++
+ #ifdef CONFIG_NET_DSA
+ 	void			*dsa_ptr;	/* dsa specific data */
+ #endif
+@@ -887,6 +893,12 @@ struct net_device
+ 
+ 	/* bridge stuff */
+ 	struct net_bridge_port	*br_port;
++#ifdef CONFIG_NET_GIANFAR_FP
++#define NETDEV_FASTROUTE_HMASK 0xF
++	/* Semi-private data. Keep it at the end of device struct. */
++	rwlock_t		fastpath_lock;
++	struct dst_entry	*fastpath[NETDEV_FASTROUTE_HMASK+1];
++#endif
+ 	/* macvlan */
+ 	struct macvlan_port	*macvlan_port;
+ 	/* GARP */
+diff --git a/kernel/sysctl_check.c b/kernel/sysctl_check.c
+index b38423c..86d3404 100644
+--- a/kernel/sysctl_check.c
++++ b/kernel/sysctl_check.c
+@@ -1,3 +1,7 @@
++/*
++ * Copyright 2009 Freescale Semiconductor, Inc.
++ */
++
+ #include <linux/stat.h>
+ #include <linux/sysctl.h>
+ #include "../fs/xfs/linux-2.6/xfs_sysctl.h"
+@@ -146,7 +150,7 @@ static const struct trans_ctl_table trans_net_core_table[] = {
+ 	{ NET_CORE_RMEM_DEFAULT,	"rmem_default" },
+ 	/* NET_CORE_DESTROY_DELAY unused */
+ 	{ NET_CORE_MAX_BACKLOG,		"netdev_max_backlog" },
+-	/* NET_CORE_FASTROUTE unused */
++	{ NET_CORE_FASTROUTE,		"netdev_fastroute" },
+ 	{ NET_CORE_MSG_COST,		"message_cost" },
+ 	{ NET_CORE_MSG_BURST,		"message_burst" },
+ 	{ NET_CORE_OPTMEM_MAX,		"optmem_max" },
+diff --git a/net/core/dev.c b/net/core/dev.c
+index b8f74cf..d23ad13 100644
+--- a/net/core/dev.c
++++ b/net/core/dev.c
+@@ -1,6 +1,8 @@
+ /*
+  * 	NET3	Protocol independent device support routines.
+  *
++ * 		Copyright 2009 Freescale Semiconductor, Inc.
++ *
+  *		This program is free software; you can redistribute it and/or
+  *		modify it under the terms of the GNU General Public License
+  *		as published by the Free Software Foundation; either version
+@@ -136,6 +138,9 @@
+ /* This should be increased if a protocol with a bigger head is added. */
+ #define GRO_MAX_HEAD (MAX_HEADER + 128)
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++static void dev_do_clear_fastroute(struct net_device *dev);
++#endif
+ /*
+  *	The list of packet types we will receive (as opposed to discard)
+  *	and the routines to invoke.
+@@ -249,6 +254,14 @@ static RAW_NOTIFIER_HEAD(netdev_chain);
+ DEFINE_PER_CPU(struct softnet_data, softnet_data);
+ EXPORT_PER_CPU_SYMBOL(softnet_data);
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++int netdev_fastroute;
++EXPORT_SYMBOL(netdev_fastroute);
++
++int netdev_fastroute_obstacles;
++EXPORT_SYMBOL(netdev_fastroute_obstacles);
++#endif
++
+ #ifdef CONFIG_LOCKDEP
+ /*
+  * register_netdevice() inits txq->_xmit_lock and sets lockdep class
+@@ -333,6 +346,38 @@ static inline void netdev_set_addr_lockdep_class(struct net_device *dev)
+ }
+ #endif
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++static void dev_do_clear_fastroute(struct net_device *dev)
++{
++	if (dev->netdev_ops->ndo_accept_fastpath) {
++		int i;
++
++		for (i = 0; i <= NETDEV_FASTROUTE_HMASK; i++) {
++			struct dst_entry *dst;
++
++			write_lock_irq(&dev->fastpath_lock);
++			dst = dev->fastpath[i];
++			dev->fastpath[i] = NULL;
++			write_unlock_irq(&dev->fastpath_lock);
++
++			dst_release(dst);
++		}
++	}
++}
++
++void dev_clear_fastroute(struct net_device *dev)
++{
++	if (dev) {
++		dev_do_clear_fastroute(dev);
++	} else {
++		read_lock(&dev_base_lock);
++		for_each_netdev(dev_net(dev), dev)
++			dev_do_clear_fastroute(dev);
++		read_unlock(&dev_base_lock);
++	}
++}
++#endif
++
+ /*******************************************************************************
+ 
+ 		Protocol management and registration routines
+@@ -373,6 +418,12 @@ void dev_add_pack(struct packet_type *pt)
+ 	int hash;
+ 
+ 	spin_lock_bh(&ptype_lock);
++#ifdef CONFIG_NET_GIANFAR_FP
++	if (pt->af_packet_priv) {
++		netdev_fastroute_obstacles++;
++		dev_clear_fastroute(pt->dev);
++	}
++#endif
+ 	if (pt->type == htons(ETH_P_ALL))
+ 		list_add_rcu(&pt->list, &ptype_all);
+ 	else {
+@@ -410,6 +461,10 @@ void __dev_remove_pack(struct packet_type *pt)
+ 
+ 	list_for_each_entry(pt1, head, list) {
+ 		if (pt == pt1) {
++#ifdef CONFIG_NET_GIANFAR_FP
++			if (pt->af_packet_priv)
++				netdev_fastroute_obstacles--;
++#endif
+ 			list_del_rcu(&pt->list);
+ 			goto out;
+ 		}
+@@ -1184,6 +1239,9 @@ int dev_close(struct net_device *dev)
+ 
+ 	dev->flags &= ~IFF_UP;
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++	dev_clear_fastroute(dev);
++#endif
+ 	/*
+ 	 * Tell people we are down
+ 	 */
+@@ -2012,6 +2070,10 @@ int netif_rx(struct sk_buff *skb)
+ 	queue = &__get_cpu_var(softnet_data);
+ 
+ 	__get_cpu_var(netdev_rx_stat).total++;
++#ifdef CONFIG_NET_GIANFAR_FP
++	if (skb->pkt_type == PACKET_FASTROUTE)
++		return dev_queue_xmit(skb);
++#endif
+ 	if (queue->input_pkt_queue.qlen <= netdev_max_backlog) {
+ 		if (queue->input_pkt_queue.qlen) {
+ enqueue:
+@@ -3394,6 +3456,13 @@ static int __dev_set_promiscuity(struct net_device *dev, int inc)
+ 		}
+ 	}
+ 	if (dev->flags != old_flags) {
++#ifdef CONFIG_NET_GIANFAR_FP
++		if (dev->flags & IFF_PROMISC) {
++			netdev_fastroute_obstacles++;
++			dev_clear_fastroute(dev);
++		} else
++			netdev_fastroute_obstacles--;
++#endif
+ 		printk(KERN_INFO "device %s %s promiscuous mode\n",
+ 		       dev->name, (dev->flags & IFF_PROMISC) ? "entered" :
+ 							       "left");
+@@ -4782,6 +4851,9 @@ int register_netdevice(struct net_device *dev)
+ 	netdev_set_addr_lockdep_class(dev);
+ 	netdev_init_queue_locks(dev);
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++	dev->fastpath_lock = __RW_LOCK_UNLOCKED();
++#endif
+ 	dev->iflink = -1;
+ 
+ 	/* Init, if this function is available */
+diff --git a/net/core/sysctl_net_core.c b/net/core/sysctl_net_core.c
+index 7db1de0..fb26e1c 100644
+--- a/net/core/sysctl_net_core.c
++++ b/net/core/sysctl_net_core.c
+@@ -3,6 +3,7 @@
+  *
+  * Begun April 1, 1996, Mike Shaver.
+  * Added /proc/sys/net/core directory entry (empty =) ). [MS]
++ * Copyright 2009 Freescale Semiconductor, Inc.
+  */
+ 
+ #include <linux/mm.h>
+@@ -14,6 +15,10 @@
+ #include <net/ip.h>
+ #include <net/sock.h>
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++extern int netdev_fastroute;
++#endif
++
+ static struct ctl_table net_core_table[] = {
+ #ifdef CONFIG_NET
+ 	{
+@@ -32,6 +37,16 @@ static struct ctl_table net_core_table[] = {
+ 		.mode		= 0644,
+ 		.proc_handler	= proc_dointvec
+ 	},
++#ifdef CONFIG_NET_GIANFAR_FP
++	{
++		.ctl_name	= NET_CORE_FASTROUTE,
++		.procname	= "netdev_fastroute",
++		.data		= &netdev_fastroute,
++		.maxlen		= sizeof(int),
++		.mode		= 0644,
++		.proc_handler	= &proc_dointvec
++	},
++#endif
+ 	{
+ 		.ctl_name	= NET_CORE_WMEM_DEFAULT,
+ 		.procname	= "wmem_default",
+diff --git a/net/ipv4/ip_forward.c b/net/ipv4/ip_forward.c
+index a2991bc..c328cb9 100644
+--- a/net/ipv4/ip_forward.c
++++ b/net/ipv4/ip_forward.c
+@@ -17,6 +17,8 @@
+  *		Jos Vos		:	Call forward firewall after routing
+  *					(always use output device).
+  *		Mike McLagan	:	Routing by source
++ *
++ *		Copyright 2009 Freescale Semiconductor, Inc.
+  */
+ 
+ #include <linux/types.h>
+@@ -38,6 +40,13 @@
+ #include <net/route.h>
+ #include <net/xfrm.h>
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++extern int netdev_fastroute;
++extern int netdev_fastroute_obstacles;
++
++extern u32 gfar_fastroute_hash(u8 daddr, u8 saddr);
++#endif
++
+ static int ip_forward_finish(struct sk_buff *skb)
+ {
+ 	struct ip_options * opt	= &(IPCB(skb)->opt);
+@@ -47,6 +56,33 @@ static int ip_forward_finish(struct sk_buff *skb)
+ 	if (unlikely(opt->optlen))
+ 		ip_forward_options(skb);
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++	else {
++		struct rtable *rt = (struct rtable *)skb->_skb_dst;
++#ifdef FASTPATH_DEBUG
++		if (printk_ratelimit())
++			printk(KERN_INFO" %s: rt = %p, rt->rt_flags = %x "
++			       "(fast=%x), netdev_fastroute_ob=%d\n",
++			       __func___, rt, rt ? rt->rt_flags : 0,
++			       RTCF_FAST, netdev_fastroute_obstacles);
++#endif
++		if ((rt->rt_flags & RTCF_FAST) && !netdev_fastroute_obstacles) {
++			struct dst_entry *old_dst;
++			unsigned h = gfar_fastroute_hash(*(u8 *)&rt->rt_dst,
++							 *(u8 *)&rt->rt_src);
++#ifdef FASTPATH_DEBUG
++			if (printk_ratelimit())
++				printk(KERN_INFO " h = %d (%d, %d)\n",
++				       h, rt->rt_dst, rt->rt_src);
++#endif
++			write_lock_irq(&skb->dev->fastpath_lock);
++			old_dst = skb->dev->fastpath[h];
++			skb->dev->fastpath[h] = dst_clone(&rt->u.dst);
++			write_unlock_irq(&skb->dev->fastpath_lock);
++			dst_release(old_dst);
++		}
++	}
++#endif
+ 	return dst_output(skb);
+ }
+ 
+diff --git a/net/ipv4/route.c b/net/ipv4/route.c
+index bb41992..e016151 100644
+--- a/net/ipv4/route.c
++++ b/net/ipv4/route.c
+@@ -56,6 +56,8 @@
+  * 	Ilia Sotnikov		:	Ignore TOS on PMTUD and Redirect
+  * 	Ilia Sotnikov		:	Removed TOS from hash calculations
+  *
++ * 		Copyright 2009 Freescale Semiconductor, Inc.
++ *
+  *		This program is free software; you can redistribute it and/or
+  *		modify it under the terms of the GNU General Public License
+  *		as published by the Free Software Foundation; either version
+@@ -1942,6 +1944,10 @@ static void ip_handle_martian_source(struct net_device *dev,
+ #endif
+ }
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++extern int netdev_fastroute;
++extern int netdev_fastroute_obstacles;
++#endif
+ static int __mkroute_input(struct sk_buff *skb,
+ 			   struct fib_result *res,
+ 			   struct in_device *in_dev,
+@@ -2030,6 +2036,27 @@ static int __mkroute_input(struct sk_buff *skb,
+ 
+ 	rth->rt_flags = flags;
+ 
++#ifdef CONFIG_NET_GIANFAR_FP
++#ifdef FASTPATH_DEBUG
++	printk(KERN_INFO" %s: netdev_fastroute = %x, flags = %x, rth = %p",
++	       __func__, netdev_fastroute, flags, rth);
++#endif
++	if (netdev_fastroute && !(flags&(RTCF_NAT|RTCF_MASQ|RTCF_DOREDIRECT))) {
++		struct net_device *odev = rth->u.dst.dev;
++		struct net_device *dev = in_dev->dev;
++
++		if (odev != dev &&
++		    dev->netdev_ops->ndo_accept_fastpath &&
++		    odev->mtu >= dev->mtu &&
++		    dev->netdev_ops->ndo_accept_fastpath(dev, &rth->u.dst)
++		    == 0) {
++			rth->rt_flags |= RTCF_FAST;
++#ifdef FASTPATH_DEBUG
++			printk(KERN_INFO "fastroute(%s) accept\n", __func__);
++#endif
++		}
++	}
++#endif
+ 	*result = rth;
+ 	err = 0;
+  cleanup:
+-- 
+1.5.6.5
+

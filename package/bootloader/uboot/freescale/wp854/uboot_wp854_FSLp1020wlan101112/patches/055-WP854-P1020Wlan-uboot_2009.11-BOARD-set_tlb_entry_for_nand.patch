@@ -1,0 +1,19 @@
+--- u-boot-freescale-p1020-sku/board/freescale/p1020_sku/tlb.c	2012-07-11 19:41:34.463244734 -0700
++++ u-boot-liteon-wp854-openwrt/board/freescale/p1020_sku/tlb.c	2011-11-08 23:26:37.678802000 -0800
+@@ -74,9 +74,16 @@
+ 			0, 5, BOOKE_PAGESZ_1M, 1),
+ #endif
+ 
++#if 0 //sirian, 2011-03-10
+ 	SET_TLB_ENTRY(1, CONFIG_SYS_CPLD_BASE, CONFIG_SYS_CPLD_BASE_PHYS,
+ 			MAS3_SX|MAS3_SW|MAS3_SR, MAS2_I|MAS2_G,
+ 			0, 7, BOOKE_PAGESZ_1M, 1),
++#else
++        /* *I*G - NAND */
++	SET_TLB_ENTRY(1, CONFIG_SYS_NAND_BASE, CONFIG_SYS_NAND_BASE_PHYS,
++			MAS3_SX|MAS3_SW|MAS3_SR, MAS2_I|MAS2_G,
++			0, 7, BOOKE_PAGESZ_1M, 1),
++#endif
+ 
+ #if defined(CONFIG_SYS_RAMBOOT)
+ #if defined(CONFIG_SYS_INIT_L2_ADDR)

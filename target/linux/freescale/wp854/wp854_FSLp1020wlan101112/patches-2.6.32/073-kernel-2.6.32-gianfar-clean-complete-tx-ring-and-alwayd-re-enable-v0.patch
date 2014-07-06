@@ -1,0 +1,45 @@
+From 03b24587a56ee08e31c7583ff571c6c2b1facf11 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Fri, 29 Jan 2010 13:58:47 +0530
+Subject: [PATCH] gianfar: clean complete tx ring and alwayd re enable intrs.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/gianfar.c |    6 ++----
+ 1 files changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index 32b01d2..4837fd2 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -2558,11 +2558,7 @@ static int gfar_clean_tx_ring(struct gfar_priv_tx_q *tx_queue)
+ 	bdp = tx_queue->dirty_tx;
+ 	skb_dirtytx = tx_queue->skb_dirtytx;
+ 
+-#ifdef CONFIG_GIANFAR_TXNAPI
+-	while ((skb = tx_queue->tx_skbuff[skb_dirtytx]) && !(--tx_work_limit < 0)) {
+-#else
+ 	while ((skb = tx_queue->tx_skbuff[skb_dirtytx])) {
+-#endif
+ 		frags = skb_shinfo(skb)->nr_frags;
+ 		lbdp = skip_txbd(bdp, frags, base, tx_ring_size);
+ 
+@@ -3128,6 +3124,7 @@ static int gfar_poll_tx(struct napi_struct *napi, int budget)
+ 		}
+ 	}
+ 
++	budget = (num_act_qs * DEFAULT_TX_RING_SIZE) + 1;
+ 	if (tx_cleaned < budget) {
+ 		napi_complete(napi);
+ 		spin_lock_irq(&gfargrp->grplock);
+@@ -3137,6 +3134,7 @@ static int gfar_poll_tx(struct napi_struct *napi, int budget)
+ 		gfar_write(&regs->imask, imask);
+ 		spin_unlock_irq(&gfargrp->grplock);
+ 		gfar_configure_tx_coalescing(priv, gfargrp->tx_bit_map);
++		return 1;
+ 	}
+ 
+ 	return tx_cleaned;
+-- 
+1.5.6.3
+

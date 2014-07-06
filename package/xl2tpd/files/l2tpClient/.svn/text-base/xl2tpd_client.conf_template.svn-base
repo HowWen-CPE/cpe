@@ -1,0 +1,14 @@
+[global]
+port = 1701
+auth file = /etc/xl2tpd/xl2tp-secrets
+access control = no 
+
+[lac l2tp_conn]
+lns = L2TP_HOST 
+;refuse authentication = yes
+;name = l2tp 
+;ppp debug = yes
+pppoptfile = /etc/ppp/l2tpClient/options.xl2tpd_client
+length bit = yes
+redial = yes
+redial timeout = 1 

@@ -1,0 +1,26 @@
+#!/bin/sh
+# EZPacket
+# This script do nothing but check lock state and unlock
+# If original pppd finished and meet this script, it will
+# uneffect to previous behavior. 
+# Only serializing lock will be effected and unlocked
+
+. /etc/functions.sh
+. /etc/network.sh
+
+iface_name=${1}
+lock_file="/tmp/.iface.changestate.${iface_name}.lock"
+
+if_serialize_ulock $lock_file
+
+# remove demand state file
+PPP_DEMAND_STATE_FILE="/tmp/ppp-${iface_name}-demand.tmp"
+[ -f "${PPP_DEMAND_STATE_FILE}" ] && {
+    # Because in demand mode without being connected, the pppd will not
+    # invoking ip-down and we don't know the pppd stoped.
+    [ "$(cat ${PPP_DEMAND_STATE_FILE})" = "demand-start" ] && {
+    	iface_down "${iface_name}"
+    }
+    rm -f "${PPP_DEMAND_STATE_FILE}"
+}
+

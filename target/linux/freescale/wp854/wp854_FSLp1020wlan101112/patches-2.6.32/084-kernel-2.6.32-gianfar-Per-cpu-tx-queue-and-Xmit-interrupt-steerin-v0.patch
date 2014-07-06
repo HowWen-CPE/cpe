@@ -1,0 +1,519 @@
+From 47f98ab6ec8da586eefc374428322409c177279b Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Tue, 2 Feb 2010 19:22:15 +0530
+Subject: [PATCH] gianfar: Per cpu tx queue and Xmit interrupt steering
+
+This patch aims at improving IP forwarding performance
+for devices with two cpus and without ETSEC 2.0 .
+
+In this patch, we create per cpu tx queue for each gianfar
+device while there is a single rx queue. Each cpu only
+transmits into its dedicated queue as well as cleans it.
+This removes locking overhead.
+
+This patch depends on separate TX NAPI patch.
+
+Signed-off-by: Tarun Garg <b10794@freescale.com>
+---
+ drivers/net/gianfar.c |  283 ++++++++++++++++++++++++++++++++++++++++++-------
+ drivers/net/gianfar.h |    8 ++
+ 2 files changed, 254 insertions(+), 37 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index ed12657..fd14938 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -280,7 +280,13 @@ static inline int gfar_uses_fcb(struct gfar_private *priv)
+ 
+ u16 gfar_select_queue(struct net_device *dev, struct sk_buff *skb)
+ {
+-	return skb_get_queue_mapping(skb);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	struct gfar_private *priv = netdev_priv(dev);
++	if (priv->sps)
++		return smp_processor_id();
++	else
++#endif
++		return skb_get_queue_mapping(skb);
+ }
+ static void free_tx_pointers(struct gfar_private *priv)
+ {
+@@ -311,8 +317,17 @@ static void disable_napi(struct gfar_private *priv)
+ {
+ 	int i = 0;
+ #ifdef CONFIG_GIANFAR_TXNAPI
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	int j;
++	int cpus  = num_online_cpus();
++#endif
+ 	for (i = 0; i < priv->num_grps; i++) {
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++		for (j = 0; j < cpus; j++)
++			napi_disable(&priv->gfargrp[i].napi_tx[j]);
++#else
+ 		napi_disable(&priv->gfargrp[i].napi_tx);
++#endif
+ 		napi_disable(&priv->gfargrp[i].napi_rx);
+ 	}
+ #else
+@@ -326,8 +341,17 @@ static void enable_napi(struct gfar_private *priv)
+ 	int i = 0;
+ 
+ #ifdef CONFIG_GIANFAR_TXNAPI
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	int j;
++	int cpus = num_online_cpus();
++#endif
+ 	for (i = 0; i < priv->num_grps; i++) {
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++		for (j = 0; j < cpus; j++)
++			napi_enable(&priv->gfargrp[i].napi_tx[j]);
++#else
+ 		napi_enable(&priv->gfargrp[i].napi_tx);
++#endif
+ 		napi_enable(&priv->gfargrp[i].napi_rx);
+ 	}
+ #else
+@@ -341,6 +365,10 @@ static int gfar_parse_group(struct device_node *np,
+ {
+ 	u32 *queue_mask;
+ 	u64 addr, size;
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	int i;
++	int cpus = num_online_cpus();
++#endif
+ 
+ 	addr = of_translate_address(np,
+ 			of_get_address(np, 0, &size, NULL));
+@@ -381,6 +409,24 @@ static int gfar_parse_group(struct device_node *np,
+ 		priv->gfargrp[priv->num_grps].rx_bit_map = 0xFF;
+ 		priv->gfargrp[priv->num_grps].tx_bit_map = 0xFF;
+ 	}
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	if (priv->sps) {
++		/* register msg unit for virtual tx interrupt for each cpu */
++		for (i = 0; i < cpus; i++) { /* for each cpu */
++			priv->gfargrp[priv->num_grps].msg_virtual_tx[i]
++				= fsl_get_msg_unit();
++			if (IS_ERR
++			(priv->gfargrp[priv->num_grps].msg_virtual_tx[i])) {
++				priv->sps = 0;
++				printk(KERN_WARNING
++				"%s: unable to allocate msg interrupt for pkt"
++				"steering, error = %ld!\n", __func__,
++				PTR_ERR(priv->gfargrp[priv->num_grps].
++				msg_virtual_tx[i]));
++			}
++		}
++	}
++#endif
+ 	priv->num_grps++;
+ 
+ 	return 0;
+@@ -425,6 +471,7 @@ static int gfar_of_init(struct of_device *ofdev, struct net_device **pdev)
+ 	if ((num_online_cpus() == 2) &&
+ 		(!of_device_is_compatible(np, "fsl,etsec2"))) {
+ 		printk(KERN_INFO "ETSEC: IPS Enabled\n");
++		num_tx_qs = num_online_cpus();
+ 		sps = 1;
+ 	}
+ #endif
+@@ -1019,6 +1066,25 @@ int distribute_packet(struct net_device *dev,
+ 	}
+ 	return 0;
+ }
++
++static irqreturn_t gfar_virtual_transmit(int irq, void *grp_id)
++{
++	unsigned long flags;
++	int cpu = smp_processor_id();
++	struct gfar_priv_grp *grp = (struct gfar_priv_grp *)grp_id;
++
++	/* clear the status bit */
++	setbits32(grp->msg_virtual_tx[cpu]->msr,
++		(1 << grp->msg_virtual_tx[cpu]->msg_num));
++
++	local_irq_save(flags);
++	if (napi_schedule_prep(&grp->napi_tx[cpu]))
++		__napi_schedule(&grp->napi_tx[cpu]);
++
++	local_irq_restore(flags);
++
++	return IRQ_HANDLED;
++}
+ #endif
+ 
+ /* Set up the ethernet device structure, private data,
+@@ -1035,6 +1101,10 @@ static int gfar_probe(struct of_device *ofdev,
+ 	u32 rstat = 0, tstat = 0, rqueue = 0, tqueue = 0;
+ 	u32 isrg = 0;
+ 	u32 __iomem *baddr;
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	int j;
++	int cpus = num_online_cpus();
++#endif
+ 
+ 	err = gfar_of_init(ofdev, &dev);
+ 
+@@ -1097,8 +1167,13 @@ static int gfar_probe(struct of_device *ofdev,
+ #ifdef CONFIG_GIANFAR_TXNAPI
+ 	/* Seperate napi for tx and rx for each group */
+ 	for (i = 0; i < priv->num_grps; i++) {
+-		netif_napi_add(dev, &priv->gfargrp[i].napi_tx, gfar_poll_tx,
+-				GFAR_DEV_WEIGHT);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++		for (j = 0; j < cpus; j++)
++			netif_napi_add(dev, &priv->gfargrp[i].napi_tx[j],
++#else
++			netif_napi_add(dev, &priv->gfargrp[i].napi_tx,
++#endif
++				gfar_poll_tx, GFAR_DEV_WEIGHT);
+ 		netif_napi_add(dev, &priv->gfargrp[i].napi_rx, gfar_poll_rx,
+ 				GFAR_DEV_WEIGHT);
+ 	}
+@@ -1670,6 +1745,16 @@ void gfar_halt(struct net_device *dev)
+ 
+ static void free_grp_irqs(struct gfar_priv_grp *grp)
+ {
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	int i;
++	struct gfar_private *priv = grp->priv;
++	int cpus = num_online_cpus();
++
++	if (priv->sps) {
++		for (i = 0; i < cpus; i++)
++			free_irq(grp->msg_virtual_tx[i]->irq, grp);
++	}
++#endif
+ 	free_irq(grp->interruptError, grp);
+ 	free_irq(grp->interruptTransmit, grp);
+ 	free_irq(grp->interruptReceive, grp);
+@@ -1963,6 +2048,10 @@ static int register_grp_irqs(struct gfar_priv_grp *grp)
+ 	struct gfar_private *priv = grp->priv;
+ 	struct net_device *dev = priv->ndev;
+ 	int err;
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	int i, j;
++	int cpus = num_online_cpus();
++#endif
+ 
+ 	/* If the device has multiple interrupts, register for
+ 	 * them.  Otherwise, only register for the one */
+@@ -2003,8 +2092,38 @@ static int register_grp_irqs(struct gfar_priv_grp *grp)
+ 		}
+ 	}
+ 
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	if (priv->sps) {
++		for (i = 0; i < cpus; i++) {
++			sprintf(grp->int_name_vtx[i], "%s_g%d_vtx%d",
++				priv->ndev->name, grp->grp_id, i);
++			err = request_irq(grp->msg_virtual_tx[i]->irq,
++						gfar_virtual_transmit, 0,
++						grp->int_name_vtx[i], grp);
++			if (err < 0) {
++				priv->sps = 0;
++				printk(KERN_WARNING
++				"%s: Can't request msg IRQ %d for dev %s\n",
++				__func__,
++				grp->msg_virtual_tx[i]->irq, dev->name);
++				for (j = 0; j < i; j++) {
++					free_irq(grp->msg_virtual_tx[j]->irq,
++						grp);
++					clrbits32(grp->msg_virtual_tx[j]->mer,
++					1 << grp->msg_virtual_tx[j]->msg_num);
++				}
++				goto vtx_irq_fail;
++			}
++			fsl_enable_msg(grp->msg_virtual_tx[i]);
++		}
++	}
++#endif
+ 	return 0;
+ 
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++vtx_irq_fail:
++	free_irq(grp->interruptReceive, grp);
++#endif
+ rx_irq_fail:
+ 	free_irq(grp->interruptTransmit, grp);
+ tx_irq_fail:
+@@ -2420,7 +2539,12 @@ static int gfar_start_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	unsigned int nr_frags, length;
+ 
+ 
+-	rq = skb->queue_mapping;
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	if (priv->sps)
++		rq = smp_processor_id();
++	else
++#endif
++		rq = skb->queue_mapping;
+ 	tx_queue = priv->tx_queue[rq];
+ 	txq = netdev_get_tx_queue(dev, rq);
+ 	base = tx_queue->tx_bd_base;
+@@ -2445,14 +2569,20 @@ static int gfar_start_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	/* total number of fragments in the SKB */
+ 	nr_frags = skb_shinfo(skb)->nr_frags;
+ 
+-	spin_lock_irqsave(&tx_queue->txlock, flags);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	if (!priv->sps)
++#endif
++		spin_lock_irqsave(&tx_queue->txlock, flags);
+ 
+ 	/* check if there is space to queue this packet */
+ 	if ((nr_frags+1) > tx_queue->num_txbdfree) {
+ 		/* no space, stop the queue */
+ 		netif_tx_stop_queue(txq);
+ 		dev->stats.tx_fifo_errors++;
+-		spin_unlock_irqrestore(&tx_queue->txlock, flags);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++		if (!priv->sps)
++#endif
++			spin_unlock_irqrestore(&tx_queue->txlock, flags);
+ 		return NETDEV_TX_BUSY;
+ 	}
+ 
+@@ -2562,7 +2692,10 @@ static int gfar_start_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	gfar_write(&regs->tstat, TSTAT_CLEAR_THALT >> tx_queue->qindex);
+ 
+ 	/* Unlock priv */
+-	spin_unlock_irqrestore(&tx_queue->txlock, flags);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	if (!priv->sps)
++#endif
++		spin_unlock_irqrestore(&tx_queue->txlock, flags);
+ 
+ 	return NETDEV_TX_OK;
+ }
+@@ -2976,13 +3109,24 @@ static void gfar_schedule_cleanup_tx(struct gfar_priv_grp *gfargrp)
+ {
+ 	unsigned long flags;
+ 	u32 imask = 0;
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	int cpu = smp_processor_id();
++#endif
+ 
+ 	spin_lock_irqsave(&gfargrp->grplock, flags);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	if (napi_schedule_prep(&gfargrp->napi_tx[cpu])) {
++#else
+ 	if (napi_schedule_prep(&gfargrp->napi_tx)) {
++#endif
+ 		imask = gfar_read(&gfargrp->regs->imask);
+ 		imask = imask & IMASK_TX_DISABLED;
+ 		gfar_write(&gfargrp->regs->imask, imask);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++		__napi_schedule(&gfargrp->napi_tx[cpu]);
++#else
+ 		__napi_schedule(&gfargrp->napi_tx);
++#endif
+ 	} else {
+ 		gfar_write(&gfargrp->regs->ievent, IEVENT_TX_MASK);
+ 	}
+@@ -3013,7 +3157,34 @@ static void gfar_schedule_cleanup(struct gfar_priv_grp *gfargrp)
+ static irqreturn_t gfar_transmit(int irq, void *grp_id)
+ {
+ #ifdef CONFIG_GIANFAR_TXNAPI
+-	gfar_schedule_cleanup_tx((struct gfar_priv_grp *)grp_id);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	struct gfar_priv_grp *grp = (struct gfar_priv_grp *)grp_id;
++	struct gfar_private *priv = grp->priv;
++	unsigned int tstat  = gfar_read(&grp->regs->tstat);
++	int cpu = smp_processor_id();
++	unsigned long flags;
++
++	if (priv->sps) {
++		spin_lock_irqsave(&grp->grplock, flags);
++		if (tstat & (0x8000 >> !cpu))
++			fsl_send_msg(grp->msg_virtual_tx[!cpu], 0x1);
++
++		if (tstat & (0x8000 >> cpu))
++			if (napi_schedule_prep(&grp->napi_tx[cpu]))
++				__napi_schedule(&grp->napi_tx[cpu]);
++
++		gfar_write(&grp->regs->ievent, IEVENT_TX_MASK);
++
++		/* clear TXF0,TXF1 in TSTAT */
++		gfar_write(&grp->regs->tstat, (tstat & 0xC000));
++
++		spin_unlock_irqrestore(&grp->grplock, flags);
++	} else {
++#endif
++		gfar_schedule_cleanup_tx((struct gfar_priv_grp *)grp_id);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	}
++#endif
+ #else
+ 	gfar_schedule_cleanup((struct gfar_priv_grp *)grp_id);
+ #endif
+@@ -3123,6 +3294,10 @@ static int gfar_kfree_skb(struct sk_buff *skb, int qindex)
+ 			goto _normal_free;
+ 
+ 	priv = netdev_priv(skb->skb_owner);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	if (priv->sps)
++		qindex = 0;
++#endif
+ 	if (skb->truesize == priv->rx_queue[qindex]->rx_skbuff_truesize) {
+ 		sh = per_cpu_ptr(priv->rx_queue[qindex]->local_sh,
+ 							smp_processor_id());
+@@ -3249,7 +3424,12 @@ static int gfar_process_frame(struct net_device *dev, struct sk_buff *skb,
+ 	fcb = (struct rxfcb *)skb->data;
+ 
+ 	/* Remove the FCB from the skb */
+-	skb_set_queue_mapping(skb, fcb->rq);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	if (priv->sps)
++		skb_set_queue_mapping(skb, smp_processor_id());
++	else
++#endif
++		skb_set_queue_mapping(skb, fcb->rq);
+ 
+ 	/* Remove the padded bytes, if there are any */
+ 	if (amount_pull)
+@@ -3446,8 +3626,14 @@ int gfar_clean_rx_ring(struct gfar_priv_rx_q *rx_queue, int rx_work_limit)
+ #ifdef CONFIG_GIANFAR_TXNAPI
+ static int gfar_poll_tx(struct napi_struct *napi, int budget)
+ {
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	int cpu = smp_processor_id();
++	struct gfar_priv_grp *gfargrp = container_of(napi,
++					struct gfar_priv_grp, napi_tx[cpu]);
++#else
+ 	struct gfar_priv_grp *gfargrp = container_of(napi,
+ 					struct gfar_priv_grp, napi_tx);
++#endif
+ 	struct gfar_private *priv = gfargrp->priv;
+ 	struct gfar __iomem *regs = gfargrp->regs;
+ 	struct gfar_priv_tx_q *tx_queue = NULL;
+@@ -3456,47 +3642,70 @@ static int gfar_poll_tx(struct napi_struct *napi, int budget)
+ 	unsigned long flags;
+ 	u32 imask, tstat, tstat_local;
+ 
+-	tstat = gfar_read(&regs->tstat);
+-	tstat = tstat & TSTAT_TXF_MASK_ALL;
+-	tstat_local = tstat;
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	if (priv->sps) {
++		tx_queue = priv->tx_queue[cpu];
++		tx_cleaned = gfar_clean_tx_ring(tx_queue, budget);
++	} else {
++#endif
++		tstat = gfar_read(&regs->tstat);
++		tstat = tstat & TSTAT_TXF_MASK_ALL;
++		tstat_local = tstat;
+ 
+-	while (tstat_local) {
+-		num_act_qs++;
+-		tstat_local &= (tstat_local - 1);
+-	}
++		while (tstat_local) {
++			num_act_qs++;
++			tstat_local &= (tstat_local - 1);
++		}
+ 
+-	budget_per_queue = budget/num_act_qs;
++		budget_per_queue = budget/num_act_qs;
+ 
+-	gfar_write(&regs->ievent, IEVENT_TX_MASK);
++		gfar_write(&regs->ievent, IEVENT_TX_MASK);
+ 
+-	for (i = 0; i < priv->num_tx_queues; i++) {
+-		if (tstat & mask) {
+-			tx_queue = priv->tx_queue[i];
+-			if (spin_trylock_irqsave(&tx_queue->txlock, flags)) {
+-				tx_cleaned_per_queue =
+-					gfar_clean_tx_ring(tx_queue,
++		for (i = 0; i < priv->num_tx_queues; i++) {
++			if (tstat & mask) {
++				tx_queue = priv->tx_queue[i];
++				if (spin_trylock_irqsave
++					(&tx_queue->txlock, flags)) {
++					tx_cleaned_per_queue =
++						gfar_clean_tx_ring(tx_queue,
+ 							budget_per_queue);
+-				spin_unlock_irqrestore(&tx_queue->txlock,
+-							flags);
++					spin_unlock_irqrestore
++						(&tx_queue->txlock, flags);
++				}
++				tx_cleaned += tx_cleaned_per_queue;
+ 			}
+-			tx_cleaned += tx_cleaned_per_queue;
+ 		}
+-	}
+ 
+-	budget = (num_act_qs * DEFAULT_TX_RING_SIZE) + 1;
++		budget = (num_act_qs * DEFAULT_TX_RING_SIZE) + 1;
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	}
++#endif
+ 	if (tx_cleaned < budget) {
+ 		napi_complete(napi);
+-		spin_lock_irq(&gfargrp->grplock);
+-		imask = gfar_read(&regs->imask);
+-		imask |= IMASK_DEFAULT_TX;
+-		gfar_write(&regs->ievent, IEVENT_TX_MASK);
+-		gfar_write(&regs->imask, imask);
+-		spin_unlock_irq(&gfargrp->grplock);
+-		gfar_configure_tx_coalescing(priv, gfargrp->tx_bit_map);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++		if (!priv->sps) {
++#endif
++			spin_lock_irq(&gfargrp->grplock);
++			imask = gfar_read(&regs->imask);
++			imask |= IMASK_DEFAULT_TX;
++			gfar_write(&regs->ievent, IEVENT_TX_MASK);
++			gfar_write(&regs->imask, imask);
++			spin_unlock_irq(&gfargrp->grplock);
++			gfar_configure_tx_coalescing(priv, gfargrp->tx_bit_map);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++		} else {
++			gfar_write(&regs->ievent, IEVENT_TX_MASK);
++		}
++#endif
+ 		return 1;
+ 	}
+ 
+-	return tx_cleaned;
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	if (priv->sps)
++		return 1;
++	else
++#endif
++		return tx_cleaned;
+ }
+ 
+ static int gfar_poll_rx(struct napi_struct *napi, int budget)
+diff --git a/drivers/net/gianfar.h b/drivers/net/gianfar.h
+index 79a3462..3d5425b 100644
+--- a/drivers/net/gianfar.h
++++ b/drivers/net/gianfar.h
+@@ -1180,7 +1180,11 @@ struct gfar_priv_rx_q {
+ struct gfar_priv_grp {
+ 	spinlock_t grplock __attribute__ ((aligned (SMP_CACHE_BYTES)));
+ #ifdef CONFIG_GIANFAR_TXNAPI
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	struct napi_struct napi_tx[NR_CPUS];
++#else
+ 	struct napi_struct napi_tx;
++#endif
+ 	struct napi_struct napi_rx;
+ #else
+ 	struct	napi_struct napi;
+@@ -1203,6 +1207,10 @@ struct gfar_priv_grp {
+ 	char int_name_tx[GFAR_INT_NAME_MAX];
+ 	char int_name_rx[GFAR_INT_NAME_MAX];
+ 	char int_name_er[GFAR_INT_NAME_MAX];
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	struct fsl_msg_unit *msg_virtual_tx[NR_CPUS];
++	char int_name_vtx[NR_CPUS][GFAR_INT_NAME_MAX];
++#endif
+ };
+ 
+ /* Struct stolen almost completely (and shamelessly) from the FCC enet source
+-- 
+1.5.6.3
+

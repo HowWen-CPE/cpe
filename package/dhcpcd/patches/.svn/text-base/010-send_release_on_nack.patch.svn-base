@@ -1,0 +1,12 @@
+Index: dhcpcd-3.2.3.orig/client.c
+===================================================================
+--- dhcpcd-3.2.3.orig.orig/client.c	2014-03-24 14:18:29.685705516 +0800
++++ dhcpcd-3.2.3.orig/client.c	2014-03-24 14:19:03.805470185 +0800
+@@ -787,6 +787,7 @@
+ 	/* We should restart on a NAK */
+ 	if (type == DHCP_NAK) {
+ 		logger (LOG_INFO, "received NAK: %s", dhcp->message);
++		_send_message (state, DHCP_RELEASE, options);
+ 		state->state = STATE_INIT;
+ 		state->timeout = 0;
+ 		state->xid = 0;

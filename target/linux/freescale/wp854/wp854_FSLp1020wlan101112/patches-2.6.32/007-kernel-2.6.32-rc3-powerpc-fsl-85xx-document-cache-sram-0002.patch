@@ -1,0 +1,58 @@
+From bea1530f83be7b91c362b73979ddfc3c2a8eb7df Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Wed, 23 Sep 2009 15:58:01 +0530
+Subject: [PATCH v2 2/3] powerpc/fsl: 85xx: document cache-sram
+
+Adds documentation for Freescale's QorIQ based cache-sram as under:-
+
+* How to enable it from a low level driver
+* How to set its size
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+v2: No change
+
+ Documentation/powerpc/fsl_85xx_cache_sram.txt |   31 +++++++++++++++++++++++++
+ 1 files changed, 31 insertions(+), 0 deletions(-)
+ create mode 100644 Documentation/powerpc/fsl_85xx_cache_sram.txt
+
+diff --git a/Documentation/powerpc/fsl_85xx_cache_sram.txt b/Documentation/powerpc/fsl_85xx_cache_sram.txt
+new file mode 100644
+index 0000000..7f43e2a
+--- /dev/null
++++ b/Documentation/powerpc/fsl_85xx_cache_sram.txt
+@@ -0,0 +1,31 @@
++* Freescale QorIQ based Cache SRAM
++
++Freescale's QorIQ platforms provide an option of configuring
++a part of (or full) cache memory as SRAM. Any low level
++driver can use its APIs via selecting FSL_85XX_CACHE_SRAM as
++under for the case of gianfar ethernet driver:-
++
++In drivers/net/Kconfig:-
++
++config GIANFAR
++      ....
++      select FSL_85XX_CACHE_SRAM if MPC85xx
++      ....
++
++FSL_85XX_CACHE_SRAM and its base address are defined in
++arch/powerpc/platforms/85xx/Kconfig as under:-
++
++config FSL_85XX_CACHE_SRAM
++	bool
++	select PPC_LIB_RHEAP
++
++config FSL_85XX_CACHE_SRAM_BASE
++	hex
++	depends on FSL_85XX_CACHE_SRAM
++	default "0xfff00000"
++
++The size of the above cache SRAM memory window is passed via the
++kernel command line as <cache-sram-size=....>
++
++Absence of the above parameter in the kernel command line is
++treated as no cache SRAM.
+-- 
+1.5.6.5
+

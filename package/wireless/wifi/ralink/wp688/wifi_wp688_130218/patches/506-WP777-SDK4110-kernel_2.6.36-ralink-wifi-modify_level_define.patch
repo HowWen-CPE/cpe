@@ -1,0 +1,11 @@
+--- mt7620_wifidriver_20130111/rt2860v2/include/rtmp_comm.h	2013-01-11 18:47:37.000000000 +0800
++++ mt7620_wifidriver_20130111_modified/rt2860v2/include/rtmp_comm.h	2013-01-16 16:54:07.627339186 +0800
+@@ -72,7 +72,7 @@
+ /* */
+ /*  Debug information verbosity: lower values indicate higher urgency */
+ /* */
+-#define RT_DEBUG_OFF        0
++#define RT_DEBUG_OFF        5
+ #define RT_DEBUG_ERROR      1
+ #define RT_DEBUG_WARN       2
+ #define RT_DEBUG_TRACE      3

@@ -1,0 +1,113 @@
+--- a/board/atheros/board955x/board955x.c
++++ b/board/atheros/board955x/board955x.c
+@@ -115,6 +115,9 @@ void ath_gpio_config(void)
+ 	/* Turn off JUMPST_LED and 5Gz LED during bootup */
+ 	ath_reg_rmw_set(GPIO_OE_ADDRESS, (1 << 15));
+ 	ath_reg_rmw_set(GPIO_OE_ADDRESS, (1 << 12));
++	/* Set GPIO#17 as input for SWRST function during bootup, Sean@Liteon, 2013-12-18 */
++	ath_reg_rmw_set(GPIO_OE_ADDRESS, (1 << 17));
++
+ }
+ 
+ int
+--- a/common/main.c
++++ b/common/main.c
+@@ -84,6 +84,64 @@ int do_mdm_init = 0;
+ extern void mdm_init(void); /* defined in board.c */
+ #endif
+ 
++/* Listening to the SWRST button, Sean@Liteon, 2013-12-18 */
++#define GPIO_IN_FUNCTION_ADDRESS					0x18040004
++#define IS_RESET_BUTTON_DOWN	\
++	(((*(volatile unsigned int *)GPIO_IN_FUNCTION_ADDRESS) >> 17) & 0x1)
++
++#define NO		1
++#define YES		0
++
++int listen_reset_button(void)
++{
++	unsigned int rst_button_down_sec = 0;
++	unsigned int len1, len2;
++        char *bootargs, *tmp;
++	char press_button_sec[22];
++	char *pbs = NULL;
++
++	while (IS_RESET_BUTTON_DOWN == YES) {
++		/*Timer.*/
++		udelay(1000000);
++		rst_button_down_sec++;
++		//printf("\n\nPress reset button %u seconds...\n", rst_button_down_sec);
++	}
++
++	if (rst_button_down_sec > 3600)
++		rst_button_down_sec = 3600;
++	else if (rst_button_down_sec == 0)
++		return NO;
++
++	sprintf(press_button_sec, "press_button_sec=%u", rst_button_down_sec);
++
++	tmp = getenv ("bootargs");
++	if (!tmp){
++		setenv("bootargs", press_button_sec);
++	} else {
++		pbs = strstr(tmp, "press_button_sec=");
++		if (!pbs) {
++			bootargs = malloc(strlen(tmp) + strlen(press_button_sec) + 1/* \0 */);
++			if (!bootargs) {
++				printf("!!!There is no memory valid!!!\n");
++				return -1;
++			}
++			
++			sprintf(bootargs, "%s %s", tmp, press_button_sec);
++			setenv("bootargs", bootargs);
++		} else {
++			sprintf(pbs, "%s", press_button_sec);
++		}
++
++	}
++
++	if (bootargs)
++		free(bootargs);
++	
++	return YES;
++	
++}
++/* End, Sean@Liteon */
++
+ /***************************************************************************
+  * Watch for 'delay' seconds for autoboot stop or autoboot delay string.
+  * returns: 0 -  no key string, allow autoboot
+@@ -271,6 +329,9 @@ static __inline__ int abortboot(int boot
+ 			udelay (10000);
+ 		}
+ 
++		/* Listening to the SWRST button, Sean@Liteon, 2013-12-17 */
++		//listen_reset_button();
++
+ 		printf ("\b\b\b%2d ", bootdelay);
+ 	}
+ 
+@@ -427,12 +488,19 @@ void main_loop (void)
+ # ifdef CONFIG_AUTOBOOT_KEYED
+ 		int prev = disable_ctrlc(1);	/* disable Control C checking */
+ # endif
+-
++                /* 
++                 * When the Reset button is pressed, the new "bootargs" parameter is set, 
++                 * this will overwrite the pointer points to the content of "bootcmd" ,
++                 * So, we need to get "bootcmd" parameter again. 
++                 * Sean@Liteon, 2014-01-15
++                 */
++		s = getenv ("bootcmd");
++                if (s)
+ # ifndef CFG_HUSH_PARSER
+-		run_command (s, 0);
++        		run_command (s, 0);
+ # else
+-		parse_string_outer(s, FLAG_PARSE_SEMICOLON |
+-				    FLAG_EXIT_FROM_LOOP);
++        		parse_string_outer(s, FLAG_PARSE_SEMICOLON |
++        				    FLAG_EXIT_FROM_LOOP);
+ # endif
+ 
+ # ifdef CONFIG_AUTOBOOT_KEYED

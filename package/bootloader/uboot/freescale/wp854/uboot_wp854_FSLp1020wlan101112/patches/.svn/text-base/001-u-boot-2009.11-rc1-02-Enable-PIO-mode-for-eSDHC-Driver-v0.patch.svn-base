@@ -1,0 +1,186 @@
+From 71dd7ea25844e3bfe0c73ae5e1fb01832f9a0d44 Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Wed, 28 Oct 2009 13:04:44 +0530
+Subject: [PATCH v0] Enable PIO mode for eSDHC Driver
+
+On some Freescale SoCs, internal DMA of eSDHC controller has
+a bug. Hence, CPU Programmed I/O mode has been introduced
+for data transfer.
+
+Signed-off-by: Dipen Dudhat <dipen.dudhat@freescale.com>
+---
+ drivers/mmc/fsl_esdhc.c |   89 +++++++++++++++++++++++++++++++++++++++++++++--
+ include/fsl_esdhc.h     |    4 ++-
+ 2 files changed, 89 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/mmc/fsl_esdhc.c b/drivers/mmc/fsl_esdhc.c
+index c6e9e6e..18f92d0 100644
+--- a/drivers/mmc/fsl_esdhc.c
++++ b/drivers/mmc/fsl_esdhc.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright 2007, Freescale Semiconductor, Inc
++ * Copyright 2007, 2009 Freescale Semiconductor, Inc.
+  * Andy Fleming
+  *
+  * Based vaguely on the pxa mmc code:
+@@ -73,8 +73,10 @@ uint esdhc_xfertyp(struct mmc_cmd *cmd, struct mmc_data *data)
+ 	uint xfertyp = 0;
+ 
+ 	if (data) {
+-		xfertyp |= XFERTYP_DPSEL | XFERTYP_DMAEN;
+-
++		xfertyp |= XFERTYP_DPSEL;
++#ifndef CONFIG_SYS_FSL_ESDHC_USE_PIO
++		xfertyp |= XFERTYP_DMAEN;
++#endif
+ 		if (data->blocks > 1) {
+ 			xfertyp |= XFERTYP_MSBSEL;
+ 			xfertyp |= XFERTYP_BCEN;
+@@ -98,12 +100,88 @@ uint esdhc_xfertyp(struct mmc_cmd *cmd, struct mmc_data *data)
+ 	return XFERTYP_CMD(cmd->cmdidx) | xfertyp;
+ }
+ 
++#ifdef CONFIG_SYS_FSL_ESDHC_USE_PIO
++/*
++ * PIO Read/Write Mode reduce the performace as DMA is not used in this mode.
++ */
++static int
++esdhc_pio_read_write(struct mmc *mmc, struct mmc_data *data)
++{
++	struct fsl_esdhc *regs = mmc->priv;
++	uint blocks;
++	char *buffer;
++	uint databuf;
++	uint size;
++	uint irqstat;
++	uint timeout;
++
++	if (data->flags & MMC_DATA_READ) {
++		blocks = data->blocks;
++		buffer = data->dest;
++		while (blocks) {
++			timeout = PIO_TIMEOUT;
++			size = data->blocksize;
++			irqstat = in_be32(&regs->irqstat);
++			while (!(in_be32(&regs->prsstat) & PRSSTAT_BREN)
++				&& --timeout);
++			if (timeout <= 0) {
++				printf("\nData Read Failed in PIO Mode.");
++				return timeout;
++			}
++			while (size && (!(irqstat & IRQSTAT_TC))) {
++				udelay(100); /* Wait before last byte transfer complete */
++				irqstat = in_be32(&regs->irqstat);
++				databuf = in_le32(&regs->datport);
++				*((uint *)buffer) = databuf;
++				buffer += 4;
++				size -= 4;
++			}
++			blocks--;
++		}
++	} else {
++		blocks = data->blocks;
++		buffer = data->src;
++		while (blocks) {
++			timeout = PIO_TIMEOUT;
++			size = data->blocksize;
++			irqstat = in_be32(&regs->irqstat);
++			while (!(in_be32(&regs->prsstat) & PRSSTAT_BWEN)
++				&& --timeout);
++			if (timeout <= 0) {
++				printf("\nData Write Failed in PIO Mode.");
++				return timeout;
++			}
++			while (size && (!(irqstat & IRQSTAT_TC))) {
++				udelay(100); /* Wait before last byte transfer complete */
++				databuf = *((uint *)buffer);
++				buffer += 4;
++				size -= 4;
++				irqstat = in_be32(&regs->irqstat);
++				out_le32(&regs->datport, databuf);
++			}
++			blocks--;
++		}
++	}
++}
++#endif
++
+ static int esdhc_setup_data(struct mmc *mmc, struct mmc_data *data)
+ {
+ 	uint wml_value;
+ 	int timeout;
+ 	struct fsl_esdhc *regs = mmc->priv;
+ 
++#ifdef CONFIG_SYS_FSL_ESDHC_USE_PIO
++	if (!(data->flags & MMC_DATA_READ)) {
++		if ((in_be32(&regs->prsstat) & PRSSTAT_WPSPL) == 0) {
++			printf("\nThe SD card is locked. "
++				"Can not write to a locked card.\n\n");
++			return TIMEOUT;
++		}
++		out_be32(&regs->dsaddr, (u32)data->src);
++	} else
++		out_be32(&regs->dsaddr, (u32)data->dest);
++#else
+ 	wml_value = data->blocksize/4;
+ 
+ 	if (data->flags & MMC_DATA_READ) {
+@@ -125,6 +203,7 @@ static int esdhc_setup_data(struct mmc *mmc, struct mmc_data *data)
+ 	}
+ 
+ 	out_be32(&regs->wml, wml_value);
++#endif
+ 
+ 	out_be32(&regs->blkattr, data->blocks << 16 | data->blocksize);
+ 
+@@ -217,6 +296,9 @@ esdhc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
+ 
+ 	/* Wait until all of the blocks are transferred */
+ 	if (data) {
++#ifdef CONFIG_SYS_FSL_ESDHC_USE_PIO
++		esdhc_pio_read_write(mmc, data);
++#else
+ 		do {
+ 			irqstat = in_be32(&regs->irqstat);
+ 
+@@ -227,6 +309,7 @@ esdhc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
+ 				return TIMEOUT;
+ 		} while (!(irqstat & IRQSTAT_TC) &&
+ 				(in_be32(&regs->prsstat) & PRSSTAT_DLA));
++#endif
+ 	}
+ 
+ 	out_be32(&regs->irqstat, -1);
+diff --git a/include/fsl_esdhc.h b/include/fsl_esdhc.h
+index 89b8304..72ad84d 100644
+--- a/include/fsl_esdhc.h
++++ b/include/fsl_esdhc.h
+@@ -2,7 +2,7 @@
+  * FSL SD/MMC Defines
+  *-------------------------------------------------------------------
+  *
+- * Copyright 2007-2008, Freescale Semiconductor, Inc
++ * Copyright 2007-2009 Freescale Semiconductor, Inc.
+  *
+  * This program is free software; you can redistribute it and/or
+  * modify it under the terms of the GNU General Public License as
+@@ -86,6 +86,7 @@
+ #define PRSSTAT_CDPL		(0x00040000)
+ #define PRSSTAT_CINS		(0x00010000)
+ #define PRSSTAT_BREN		(0x00000800)
++#define PRSSTAT_BWEN		(0x00000400)
+ #define PRSSTAT_DLA		(0x00000004)
+ #define PRSSTAT_CICHB		(0x00000002)
+ #define PRSSTAT_CIDHB		(0x00000001)
+@@ -117,6 +118,7 @@
+ #define XFERTYP_DMAEN		0x00000001
+ 
+ #define CINS_TIMEOUT		1000
++#define PIO_TIMEOUT		100000
+ 
+ #define DSADDR		0x2e004
+ 
+-- 
+1.5.6.5
+

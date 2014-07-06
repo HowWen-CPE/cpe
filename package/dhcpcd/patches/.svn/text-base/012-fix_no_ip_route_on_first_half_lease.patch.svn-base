@@ -1,0 +1,33 @@
+Index: dhcpcd-3.2.3.orig/configure.c
+===================================================================
+--- dhcpcd-3.2.3.orig.orig/configure.c	2014-03-24 14:24:33.536957395 +0800
++++ dhcpcd-3.2.3.orig/configure.c	2014-03-24 14:26:41.017459342 +0800
+@@ -611,12 +611,8 @@
+ 				iface->previous_mtu = mtu;
+ 		}
+ 	}
+-
+-	/* This also changes netmask */
+-	if (! options->doinform || ! has_address (iface->name, dhcp->address))
+-		if (add_address (iface->name, dhcp->address, dhcp->netmask,
+-				 dhcp->broadcast) == -1 && errno != EEXIST)
+-			return (false);
++	/* del_address before add_address, in case add_route fail on 
++	 * first half lease, by frank */
+ 
+ 	/* Now delete the old address if different */
+ 	if (iface->previous_address.s_addr != dhcp->address.s_addr &&
+@@ -625,6 +621,13 @@
+ 		del_address (iface->name,
+ 			     iface->previous_address, iface->previous_netmask);
+ 
++	/* This also changes netmask */
++	if (! options->doinform || ! has_address (iface->name, dhcp->address))
++		if (add_address (iface->name, dhcp->address, dhcp->netmask,
++				 dhcp->broadcast) == -1 && errno != EEXIST)
++			return (false);
++
++
+ #ifdef __linux__
+ 	/* On linux, we need to change the subnet route to have our metric. */
+ 	if (iface->previous_address.s_addr != dhcp->address.s_addr &&

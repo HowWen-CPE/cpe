@@ -1,0 +1,24 @@
+--- linux-2.6.31_atheros/arch/mips/kernel/machine_kexec.c	2013-04-03 13:33:52.000000000 +0800
++++ linux-2.6.31_liteon/arch/mips/kernel/machine_kexec.c	2013-02-04 09:37:54.000000000 +0800
+@@ -52,7 +52,8 @@
+ 	reboot_code_buffer =
+ 	  (unsigned long)page_address(image->control_code_page);
+ 
+-	kexec_start_address = image->start;
++	//kexec_start_address = image->start;
++	kexec_start_address = KSEG0ADDR(image->start);
+ 	kexec_indirection_page =
+ 		(unsigned long) phys_to_virt(image->head & PAGE_MASK);
+ 
+@@ -78,8 +79,9 @@
+ 	 */
+ 	local_irq_disable();
+ 
+-	printk("Will call new kernel at %08lx\n", image->start);
++	printk("Will call new kernel at %08lx\n", kexec_start_address);
+ 	printk("Bye ...\n");
+-	__flush_cache_all();
++	//__flush_cache_all();
++        flush_icache_range(reboot_code_buffer, relocate_new_kernel_size);
+ 	((noretfun_t) reboot_code_buffer)();
+ }

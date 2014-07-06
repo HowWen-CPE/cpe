@@ -1,0 +1,26 @@
+From 68816916534736cf9d212802695847b1a97f2ddb Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Wed, 17 Feb 2010 16:21:50 +0530
+Subject: [PATCH] gianfar: Resolve sysfs crash wne dumping recyle_max
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/gianfar_sysfs.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/gianfar_sysfs.c b/drivers/net/gianfar_sysfs.c
+index acdc310..23e9c94 100644
+--- a/drivers/net/gianfar_sysfs.c
++++ b/drivers/net/gianfar_sysfs.c
+@@ -326,7 +326,7 @@ static ssize_t gfar_show_recycle_max(struct device *dev,
+ {
+ 	struct gfar_private *priv = netdev_priv(to_net_dev(dev));
+ 	return sprintf(buf, "%d\n",
+-		priv->rx_queue[smp_processor_id()]->skb_handler.recycle_max);
++		priv->rx_queue[0]->skb_handler.recycle_max);
+ }
+ 
+ static ssize_t gfar_set_recycle_max(struct device *dev,
+-- 
+1.5.6.3
+

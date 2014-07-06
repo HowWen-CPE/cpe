@@ -1,0 +1,28 @@
+#!/bin/sh
+
+initSSID()
+{
+	boarddata get mac 2>&1 > /dev/null
+	[ $? = 0 ] || return
+
+	local mac="$(boarddata get mac|sed -e 's/://g')"
+	local fc="$(nvram get FirstConfig)"		
+	local ssid0="$(nvram show wl0_ssid_rule 0 ssid)"
+	local ssid0_orig="$(nvram show default wl0_ssid_rule 0 ssid)"
+	local num="$(nvram get wlv_rule_max)"
+	num=$(($num - 1))
+
+	if [ $fc = "1" -a  $ssid0 = $ssid0_orig ]; then
+		for i in `seq 0 $num`; do 
+		local mac_ti=$((0x$mac+$i));
+		local mac_ti_5g=$((0x$mac+$i+8));
+		local mac_t=`printf "%X" $mac_ti`
+		local mac_t_5g=`printf "%X" $mac_ti_5g`
+		
+		nvram replace attr wl0_ssid_rule $i ssid `nvram show wl0_ssid_rule $i ssid`_$mac_t
+		nvram replace attr wl1_ssid_rule $i ssid `nvram show wl1_ssid_rule $i ssid`_$mac_t_5g
+		done
+	fi
+}
+
+initSSID

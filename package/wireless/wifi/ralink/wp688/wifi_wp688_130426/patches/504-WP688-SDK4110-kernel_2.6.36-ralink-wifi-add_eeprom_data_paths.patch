@@ -1,0 +1,39 @@
+--- mt7620_wifidriver_20121217/rt2860v2/include/iface/rtmp_rbs.h	2012-12-17 16:27:02.000000000 +0800
++++ mt7620_wifidriver_20121217_modified_for_wp777/rt2860v2/include/iface/rtmp_rbs.h	2012-12-27 11:20:05.596686690 +0800
+@@ -82,10 +82,36 @@
+ #define EEPROM_DEFAULT_FILE_PATH                     "/etc_ro/wlan/RT2880_RT2850_AP_2T3R_V1_6.bin"
+ #endif /* CONFIG_RT2860V2_2850 */
+ 
++
+ #if defined (CONFIG_RALINK_RT6352)  || defined (CONFIG_RALINK_MT7620)
++/*modify for use specific file,daniel@liteon, 2012-12-26>*/
++
++#ifndef LITEON_SRC_VALID
++
+ #define EEPROM_DEFAULT_FILE_PATH                     "/etc_ro/wlan/MT7620_AP_2T2R-4L_V15.BIN"
++
++#else
++
++#if defined (CONFIG_INTERNAL_PA_INTERNAL_LNA) 
++#define EEPROM_DEFAULT_FILE_PATH                "/etc/wl/MT7620_AP_2T2R-4L_internal_LNA_internal_PA_V15.BIN"
++#endif /* defined (CONFIG_INTERNAL_PA_INTERNAL_LNA) */
++
++#if defined (CONFIG_INTERNAL_PA_EXTERNAL_LNA) 
++#define EEPROM_DEFAULT_FILE_PATH                "/etc/wl/MT7620_AP_2T2R-4L_external_LNA_internal_PA_V15.BIN"
++#endif /* defined (CONFIG_INTERNAL_PA_EXTERNAL_LNA) */
++
++#if defined (CONFIG_EXTERNAL_PA_EXTERNAL_LNA) 
++#define EEPROM_DEFAULT_FILE_PATH                "/etc/wl/MT7620_AP_2T2R-4L_external_LNA_external_PA_V15.BIN"
++#endif /* defined (CONFIG_EXTERNAL_PA_EXTERNAL_LNA) */
++
++#endif//LITEON_SRC_VALID
++/*<----- daniel@liteon, 2012-12-26*/
++
+ #endif /* defined (CONFIG_RALINK_RT6352)  || defined (CONFIG_RALINK_MT7620) */
+ 
++
++
++
+ #ifndef EEPROM_DEFAULT_FILE_PATH
+ /* RFIC 2820 */
+ #define EEPROM_DEFAULT_FILE_PATH                     "/etc_ro/wlan/RT2880_RT2820_AP_2T3R_V1_6.bin"

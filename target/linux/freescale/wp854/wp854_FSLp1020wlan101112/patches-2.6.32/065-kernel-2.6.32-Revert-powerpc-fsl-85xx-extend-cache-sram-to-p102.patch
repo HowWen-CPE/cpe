@@ -1,0 +1,32 @@
+From 82bb45750d1cf3f9c0d461117cbc93f866cad7a3 Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Mon, 4 Jan 2010 16:59:31 +0530
+Subject: [PATCH 1/1] Revert "powerpc/fsl: 85xx: extend cache-sram to p1020/p2010"
+
+This reverts commit 5905657b681ac7cdc6f15e935a996e2982614cc9.
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ arch/powerpc/sysdev/fsl_85xx_l2ctlr.c |    6 ------
+ 1 files changed, 0 insertions(+), 6 deletions(-)
+
+diff --git a/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c b/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c
+index 56b0863..c851547 100644
+--- a/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c
++++ b/arch/powerpc/sysdev/fsl_85xx_l2ctlr.c
+@@ -157,12 +157,6 @@ static struct of_device_id mpc85xx_l2ctlr_of_match[] = {
+ 	{
+ 		.compatible = "fsl,p2020-l2-cache-controller",
+ 	},
+-	{
+-		.compatible = "fsl,p2010-l2-cache-controller",
+-	},
+-	{
+-		.compatible = "fsl,p1020-l2-cache-controller",
+-	},
+ 	{},
+ };
+ 
+-- 
+1.5.6.5
+

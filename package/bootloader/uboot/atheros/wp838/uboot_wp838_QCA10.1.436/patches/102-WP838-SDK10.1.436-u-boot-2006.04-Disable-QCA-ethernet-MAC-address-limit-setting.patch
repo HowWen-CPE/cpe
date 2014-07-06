@@ -1,0 +1,81 @@
+--- a/board/atheros/common/qca-eth-955x.c
++++ b/board/atheros/common/qca-eth-955x.c
+@@ -729,7 +729,10 @@ static void ath_gmac_get_ethaddr(struct 
+ 	}
+ #endif  /* CONFIG_ATH_NAND_BR */
+ 	/* Use fixed address if the above address is invalid */
+-	if (mac[0] != 0x00 || (mac[0] == 0xff && mac[5] == 0xff))
++//liteon modify+
++	if ( mac[0] == 0xff && mac[5] == 0xff )
++	//if (mac[0] != 0x00 || (mac[0] == 0xff && mac[5] == 0xff))
++//liteon modify-
+ #else
+ 	if (1)
+ #endif
+--- a/cpu/mips/ar7240/ag934x.c
++++ b/cpu/mips/ar7240/ag934x.c
+@@ -74,8 +74,12 @@ extern int athrs27_mdc_check(void);
+ #if defined(CONFIG_F1E_PHY) || defined(CONFIG_F2E_PHY)
+ extern int athr_phy_setup(int unit);
+ extern int athr_phy_is_up(int unit);
+-extern int athr_phy_is_fdx(int unit);
+-extern int athr_phy_speed(int unit);
++//liteon modify+
++//extern int athr_phy_is_fdx(int unit);
++//extern int athr_phy_speed(int unit);
++extern int athr_phy_is_fdx(int ethUnit, int phyUnit);
++extern int athr_phy_speed(int ethUnit, int phyUnit);
++//liteon modify-
+ extern void athr_reg_init(void);
+ #endif
+ 
+@@ -196,7 +200,10 @@ void ag7240_mii_setup(ag7240_mac_t *mac)
+ #endif
+ 
+ #ifdef CFG_ATHRS27_PHY
+-    if (is_wasp()) {
++//liteon modify+
++    //if (is_wasp()) {
++    if (is_wasp() && mac->mac_unit == 1) {
++//liteon modify-
+         printf("WASP ----> S27 PHY \n");
+         mgmt_cfg_val = 2;
+         ag7240_reg_wr(ag7240_macs[1], AG7240_MAC_MII_MGMT_CFG, mgmt_cfg_val | (1 << 31));
+@@ -222,7 +229,10 @@ void ag7240_mii_setup(ag7240_mac_t *mac)
+ 
+ 
+ #if defined(CONFIG_F1E_PHY) || defined(CONFIG_VIR_PHY)
+-    if (is_wasp()) {
++//liteon modify+
++    //if (is_wasp()) {
++    if (is_wasp() && mac->mac_unit == 0) {
++//liteon modify-
+ #ifdef CONFIG_VIR_PHY
+         printf("WASP  ----> VIR PHY *\n");
+ #else
+@@ -648,7 +658,10 @@ static void ag7240_get_ethaddr(struct et
+     }
+ #endif  /* CONFIG_ATH_NAND_BR */
+     /* Use fixed address if the above address is invalid */
+-    if (mac[0] != 0x00 || (mac[0] == 0xff && mac[5] == 0xff)) {
++//liteon modify+
++    if ( mac[0] == 0xff && mac[5] == 0xff ) {
++    //if (mac[0] != 0x00 || (mac[0] == 0xff && mac[5] == 0xff)) {
++//liteon modify-
+ #else
+     if (1) {
+ #endif 
+@@ -768,9 +781,13 @@ int ag7240_enet_initialize(bd_t * bis)
+                 athrs26_reg_init();
+ #endif
+ #ifdef CFG_ATHRS27_PHY
++//liteon remove+
++#if 0
+                 printf("s27 reg init \n");
+                 athrs27_reg_init();
+ #endif
++//liteon remove-
++#endif
+ #ifdef CONFIG_F1E_PHY
+                printf("F1Phy reg init \n");
+                athr_reg_init();

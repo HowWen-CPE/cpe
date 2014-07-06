@@ -1,0 +1,156 @@
+--- a/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c
++++ b/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c
+@@ -2165,6 +2165,27 @@ struct iwscanreq
+ #define CURRENT_EV current_ev
+ #endif
+ 
++
++/*add for display scanned AP's Protocol(B/G/N/A/AC), daniel@liteon,2013-01-06----->*/
++
++static int search_rogue_ap_rate_in_table(const u_int8_t *l_se_rates,
++	const int rate_table[], const int  size_table)
++{
++	int i, j;	
++	for(i = 0; i < size_table; i++){
++		for(j = 0; j < l_se_rates[1]; j++){
++			if(l_se_rates[2+j] == rate_table[i])
++				return 1;    /* match*/
++		}
++	}
++	return 0;    /* not match*/
++}
++
++
++/*<-----daniel@liteon,2013-01-06*/
++
++
++
+ static int
+ giwscan_cb(void *arg, wlan_scan_entry_t se)
+ {
+@@ -2172,6 +2193,14 @@ giwscan_cb(void *arg, wlan_scan_entry_t 
+     struct net_device *dev = req->dev;
+     osif_dev *osifp = ath_netdev_priv(dev);
+     wlan_if_t vap = osifp->os_if;
++	
++    /*add for display scanned AP's Protocol(B/G/N/A/AC), daniel@liteon,2013-01-06----->*/
++	
++    struct ieee80211com *ic = vap->iv_ic;
++    struct ieee80211_channel *ic_curchan=ic->ic_curchan;
++	
++    /*<-----daniel@liteon,2013-01-06*/
++	
+     char *current_ev = req->current_ev;
+     char *end_buf = req->end_buf;
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION (2,6,27)
+@@ -2222,8 +2251,18 @@ giwscan_cb(void *arg, wlan_scan_entry_t 
+     u_int8_t *se_wmeparam = wlan_scan_entry_wmeparam_ie(se);
+     u_int8_t *se_wmeinfo = wlan_scan_entry_wmeinfo_ie(se);
+     u_int8_t *se_ath_ie = wlan_scan_entry_athcaps(se);
+-
+-
++    
++    /*add for display scanned AP's Protocol(B/G/N/A/AC), daniel@liteon,2013-01-06----->*/
++	
++    //11n
++    u_int8_t *se_htcap=wlan_scan_entry_htcap(se);
++    u_int8_t *se_htinfo=wlan_scan_entry_htinfo(se);
++    //11ac
++    u_int8_t *se_vhtcap=ieee80211_scan_entry_vhtcap(se);
++    u_int8_t *se_vhtop=ieee80211_scan_entry_vhtop(se);
++	
++   /*<-----daniel@liteon,2013-01-06*/
++   
+     if (current_ev >= end_buf) {
+         return E2BIG;
+     }
+@@ -2376,6 +2415,89 @@ giwscan_cb(void *arg, wlan_scan_entry_t 
+             return E2BIG;
+     }
+ 
++
++     /*add for display scanned AP's Protocol(B/G/N/A/AC), daniel@liteon,2013-01-06----->*/
++	
++
++   #define N(i)  sizeof(i)/sizeof(i[0])
++   
++   int rate_code_B[]={0x82, 0x84, 0x8B, 0x96};   /*1M     2M     5.5M   11M */
++   //int rate_code_G[]={0x0C, 0x12, 0x18, 0x24};  /*6M     9M     12M    18M*/
++   int rate_code_G[]={0x0C,0x8c, 0x12,0x92,0x18, 0x98, 0x24,0xA4};  /*6M   6M,  9M  ,9M,   12M  12M  18M 18M*/
++//some for cisco
++   int rate_code_A[]={0x8c, 0x12, 0x98, 0x24,     /* 6M    9M     12M    18M*/
++	                                   0xB0, 0x48, 0x60, 0x6c};  /*24M    36M   48M     54M*/
++
++   int  have_b, have_g, have_a;	
++   char iwe_u_name_buffer[IFNAMSIZ];
++   
++   OS_MEMZERO(iwe_u_name_buffer,IFNAMSIZ);
++   
++    if(IEEE80211_IS_CHAN_2GHZ(ic_curchan)){		
++       have_b = search_rogue_ap_rate_in_table(se_rates, rate_code_B, N(rate_code_B));
++       have_g = search_rogue_ap_rate_in_table(se_rates, rate_code_G, N(rate_code_G));
++		/* if has htcap, assume it is a N type AP*/
++		if(se_htcap && se_htinfo){
++			/* N, GN, BN, or BGN*/
++			if(have_b && have_g)
++				strcpy(iwe_u_name_buffer, "B/G/N");
++			else if(!have_b && have_g)
++				strcpy(iwe_u_name_buffer, "G/N");
++			else if(have_b && !have_g)
++				strcpy(iwe_u_name_buffer, "B/N");
++			else if(!have_b && !have_g)
++				strcpy(iwe_u_name_buffer, "N");
++			}
++			else{
++			/* B, BG, or Pure G*/
++			if(have_b && !have_g)
++				strcpy(iwe_u_name_buffer, "B");
++			else if(!have_b && have_g)
++				strcpy(iwe_u_name_buffer, "G");
++			else if(have_b && have_g)
++				strcpy(iwe_u_name_buffer, "B/G");
++		       }
++	}	
++   else if(IEEE80211_IS_CHAN_5GHZ(ic_curchan)){
++   	have_a = search_rogue_ap_rate_in_table(se_rates, rate_code_A, N(rate_code_A));
++		if(se_vhtcap && se_vhtop){
++                     if ((se_htcap && se_htinfo) && have_a) 
++			strcpy(iwe_u_name_buffer, "A/N/AC");
++		      else if  (!(se_htcap &&se_htinfo) && have_a) 
++			 strcpy(iwe_u_name_buffer, "A/AC");
++		      else if  ((se_htcap && se_htinfo) && !have_a) 
++			 strcpy(iwe_u_name_buffer, "N/AC");
++		      else if  (!(se_htcap&& se_htinfo) && !have_a) 
++			 strcpy(iwe_u_name_buffer, "AC");
++		}
++		else if (se_htcap && se_htinfo){
++			if (have_a)
++				strcpy(iwe_u_name_buffer, "A/N");
++			else
++				strcpy(iwe_u_name_buffer, "N");
++		}else{
++			 strcpy(iwe_u_name_buffer, "A");
++		}
++			
++	}
++   
++      #undef  N
++
++	OS_MEMZERO(&iwe, sizeof(iwe));
++	last_ev = current_ev;
++	iwe.cmd = SIOCGIWNAME;	
++	memcpy(iwe.u.name,iwe_u_name_buffer,IFNAMSIZ);
++	
++	current_ev = iwe_stream_add_event(CURRENT_EV, end_buf, &iwe, IW_EV_CHAR_LEN);
++	if (last_ev == current_ev) {
++			 return E2BIG;
++	}
++	
++		 
++       /*<-----daniel@liteon,2013-12-26*/
++
++	
++
+ #if WIRELESS_EXT > 14
+     OS_MEMZERO(&iwe, sizeof(iwe));
+     last_ev = current_ev;

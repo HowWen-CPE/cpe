@@ -1,0 +1,10 @@
+#!/bin/sh
+a=`cat /proc/cmdline`
+b=`echo ${a##*press_button_sec=}| awk '{print $1}'`
+if [ $b -gt 5 ];then
+echo "press time sec is larger than 5 sec, need to nvram factory"
+nvram factory
+else
+echo "DO nothing"
+fi
+

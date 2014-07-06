@@ -1,0 +1,17 @@
+--- linux-2.6.31_atheros/net/netfilter/nf_conntrack_core.c	2013-04-03 13:34:55.000000000 +0800
++++ linux-2.6.31_liteon/net/netfilter/nf_conntrack_core.c	2013-02-07 16:38:16.000000000 +0800
+@@ -219,6 +219,14 @@
+ 	 * too. */
+ 	nf_ct_remove_expectations(ct);
+ 
++	#if defined(CONFIG_NETFILTER_XT_MATCH_LAYER7) || defined(CONFIG_NETFILTER_XT_MATCH_LAYER7_MODULE)
++	if(ct->layer7.app_proto)
++		kfree(ct->layer7.app_proto);
++	if(ct->layer7.app_data)
++	kfree(ct->layer7.app_data);
++	#endif
++
++
+ 	/* We overload first tuple to link into unconfirmed list. */
+ 	if (!nf_ct_is_confirmed(ct)) {
+ 		BUG_ON(hlist_nulls_unhashed(&ct->tuplehash[IP_CT_DIR_ORIGINAL].hnnode));

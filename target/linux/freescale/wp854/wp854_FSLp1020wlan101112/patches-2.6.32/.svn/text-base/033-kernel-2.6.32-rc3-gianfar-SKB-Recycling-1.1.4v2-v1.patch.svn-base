@@ -1,0 +1,708 @@
+From b73e965b0bae6a322a11906150d32251ae8bceb2 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Wed, 21 Oct 2009 20:28:56 +0530
+Subject: [PATCH] gianfar: SKB Recycling 1.1.4v2
+
+This patch was ported to 2.6.32-rc3 from the original at:-
+http://bitshrine.org/gpp/0017-SKB-recycling-version-1-1-4.patch
+
+This is based on the patches submitted from Freescale Semiconductor, Inc.
+over the years against these files on Linux-2.6 stable release tree.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/Kconfig           |    9 ++
+ drivers/net/gianfar.c         |  288 ++++++++++++++++++++++++++++++++++++-----
+ drivers/net/gianfar.h         |   51 +++++++-
+ drivers/net/gianfar_ethtool.c |    4 +
+ drivers/net/gianfar_sysfs.c   |   30 +++++
+ include/linux/skbuff.h        |    6 +
+ net/core/skbuff.c             |    9 ++
+ 7 files changed, 363 insertions(+), 34 deletions(-)
+
+diff --git a/drivers/net/Kconfig b/drivers/net/Kconfig
+index 01f5bb7..8ed497e 100644
+--- a/drivers/net/Kconfig
++++ b/drivers/net/Kconfig
+@@ -2382,6 +2382,15 @@ config GIANFAR
+ 	  This driver supports the Gigabit TSEC on the MPC83xx, MPC85xx,
+ 	  and MPC86xx family of chips, and the FEC on the 8540.
+ 
++config GFAR_SKBUFF_RECYCLING
++	default y
++	bool "Socket Buffer Recycling Support (v1.1.4) (EXPERIMENTAL)"
++	depends on GIANFAR && EXPERIMENTAL
++	help
++	 This implements a new private socket data buffer recycling algorithm
++	 used for fast IPv4 packet forwarding. Select this if you would like
++	 to improve your latency and throughput performance.
++
+ config 1588_MUX_eTSEC1
+ 	bool "Selecting 1588 signals over eTSEC1 signals"
+ 	depends on GIANFAR
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index 13284d6..d795da8 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -93,6 +93,7 @@
+ #include <linux/phy.h>
+ #include <linux/phy_fixed.h>
+ #include <linux/of.h>
++#include <net/xfrm.h>
+ 
+ #include "gianfar.h"
+ #include "fsl_pq_mdio.h"
+@@ -102,7 +103,7 @@
+ #undef VERBOSE_GFAR_ERRORS
+ 
+ const char gfar_driver_name[] = "Gianfar Ethernet";
+-const char gfar_driver_version[] = "1.3";
++const char gfar_driver_version[] = "1.4-skbr1.1.4";
+ 
+ static int gfar_enet_open(struct net_device *dev);
+ static int gfar_start_xmit(struct sk_buff *skb, struct net_device *dev);
+@@ -145,6 +146,13 @@ static void gfar_set_mac_for_addr(struct net_device *dev, int num, u8 *addr);
+ static int gfar_ioctl(struct net_device *dev, struct ifreq *rq, int cmd);
+ u16 gfar_select_queue(struct net_device *dev, struct sk_buff *skb);
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++static unsigned int skbuff_truesize(unsigned int buffer_size);
++static void gfar_skbr_register_truesize(struct gfar_private *priv);
++static int gfar_kfree_skb(struct sk_buff *skb);
++static void gfar_reset_skb_handler(struct gfar_skb_handler *sh);
++#endif
++
+ MODULE_AUTHOR("Freescale Semiconductor, Inc");
+ MODULE_DESCRIPTION("Gianfar Ethernet Driver");
+ MODULE_LICENSE("GPL");
+@@ -1272,6 +1280,50 @@ void stop_gfar(struct net_device *dev)
+ 			gfar_read(&regs->tbase0));
+ }
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++/*
++ * function: gfar_reset_skb_handler
++ * Resetting skb handler spin lock entry in the driver initialization.
++ * Execute only once.
++ */
++static void gfar_reset_skb_handler(struct gfar_skb_handler *sh)
++{
++	spin_lock_init(&sh->lock);
++	sh->recycle_max = GFAR_DEFAULT_RECYCLE_MAX;
++	sh->recycle_count = 0;
++	sh->recycle_queue = NULL;
++}
++
++/*
++ * function: gfar_free_recycle_queue
++ * Reset SKB handler struction and free existance socket buffer
++ * and data buffer in the recycling queue.
++ */
++void gfar_free_recycle_queue(struct gfar_skb_handler *sh, int lock_flag)
++{
++	unsigned long flags = 0;
++	struct sk_buff *clist = NULL;
++	struct sk_buff *skb;
++	/* Get recycling queue */
++	/* just for making sure there is recycle_queue */
++	if (lock_flag)
++		spin_lock_irqsave(&sh->lock, flags);
++	if (sh->recycle_queue) {
++		/* pick one from head; most recent one */
++		clist = sh->recycle_queue;
++		sh->recycle_count = 0;
++		sh->recycle_queue = NULL;
++	}
++	if (lock_flag)
++		spin_unlock_irqrestore(&sh->lock, flags);
++	while (clist) {
++		skb = clist;
++		clist = clist->next;
++		dev_kfree_skb_any(skb);
++	}
++}
++#endif
++
+ static void free_skb_tx_queue(struct gfar_priv_tx_q *tx_queue)
+ {
+ 	struct txbd8 *txbdp;
+@@ -1339,6 +1391,16 @@ static void free_skb_resources(struct gfar_private *priv)
+ 	struct gfar_priv_rx_q *rx_queue = NULL;
+ 	int i;
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	/* 1: spinlocking of skb_handler is required */
++	gfar_free_recycle_queue(&priv->skb_handler, 1);
++	for_each_possible_cpu(i) {
++		gfar_free_recycle_queue(
++			per_cpu_ptr(priv->local_sh, i), 0);
++	}
++	free_percpu(priv->local_sh);
++#endif
++
+ 	/* Go through all the buffer descriptors and free their data buffers */
+ 	for (i = 0; i < priv->num_tx_queues; i++) {
+ 		tx_queue = priv->tx_queue[i];
+@@ -1610,6 +1672,17 @@ int startup_gfar(struct net_device *dev)
+ 		txbdp->status |= TXBD_WRAP;
+ 	}
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	priv->rx_skbuff_truesize = GFAR_DEFAULT_RECYCLE_TRUESIZE;
++	gfar_reset_skb_handler(&priv->skb_handler);
++	priv->local_sh = alloc_percpu(struct gfar_skb_handler);
++
++	for_each_possible_cpu(i) {
++		gfar_reset_skb_handler(
++				per_cpu_ptr(priv->local_sh, i));
++	}
++#endif
++
+ 	for (i = 0; i < priv->num_rx_queues; i++) {
+ 		rx_queue = priv->rx_queue[i];
+ 		rx_queue->cur_rx = rx_queue->rx_bd_base;
+@@ -1751,8 +1824,6 @@ static int gfar_enet_open(struct net_device *dev)
+ 
+ 	enable_napi(priv);
+ 
+-	skb_queue_head_init(&priv->rx_recycle);
+-
+ 	/* Initialize a bunch of registers */
+ 	init_registers(dev);
+ 
+@@ -2005,7 +2076,6 @@ static int gfar_close(struct net_device *dev)
+ 
+ 	disable_napi(priv);
+ 
+-	skb_queue_purge(&priv->rx_recycle);
+ 	cancel_work_sync(&priv->reset_task);
+ 	stop_gfar(dev);
+ 
+@@ -2112,6 +2182,13 @@ static int gfar_change_mtu(struct net_device *dev, int new_mtu)
+ 
+ 	dev->mtu = new_mtu;
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	gfar_skbr_register_truesize(priv);
++	printk(KERN_INFO"%s: MTU = %d (frame size=%d, truesize=%d)\n",
++			dev->name, dev->mtu, frame_size,
++			priv->rx_skbuff_truesize);
++#endif /*CONFIG_GFAR_SKBUFF_RECYCLING*/
++
+ 	gfar_write(&regs->mrblr, priv->rx_buffer_size);
+ 	gfar_write(&regs->maxfrm, priv->rx_buffer_size);
+ 
+@@ -2179,6 +2256,10 @@ static int gfar_clean_tx_ring(struct gfar_priv_tx_q *tx_queue)
+ 	int howmany = 0;
+ 	u32 lstatus;
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	int howmany_recycle = 0;
++#endif
++
+ 	rx_queue = priv->rx_queue[tx_queue->qindex];
+ 	bdp = tx_queue->dirty_tx;
+ 	skb_dirtytx = tx_queue->skb_dirtytx;
+@@ -2211,17 +2292,11 @@ static int gfar_clean_tx_ring(struct gfar_priv_tx_q *tx_queue)
+ 			bdp = next_txbd(bdp, base, tx_ring_size);
+ 		}
+ 
+-		/*
+-		 * If there's room in the queue (limit it to rx_buffer_size)
+-		 * we add this skb back into the pool, if it's the right size
+-		 */
+-		if (skb_queue_len(&priv->rx_recycle) < rx_queue->rx_ring_size &&
+-				skb_recycle_check(skb, priv->rx_buffer_size +
+-					RXBUF_ALIGNMENT))
+-			__skb_queue_head(&priv->rx_recycle, skb);
+-		else
+-			dev_kfree_skb_any(skb);
+-
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++		howmany_recycle += gfar_kfree_skb(skb);
++#else
++		dev_kfree_skb_any(skb);
++#endif
+ 		tx_queue->tx_skbuff[skb_dirtytx] = NULL;
+ 
+ 		skb_dirtytx = (skb_dirtytx + 1) &
+@@ -2239,6 +2314,9 @@ static int gfar_clean_tx_ring(struct gfar_priv_tx_q *tx_queue)
+ 	tx_queue->skb_dirtytx = skb_dirtytx;
+ 	tx_queue->dirty_tx = bdp;
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	priv->extra_stats.rx_skbr_free += howmany_recycle;
++#endif
+ 	dev->stats.tx_packets += howmany;
+ 
+ 	return howmany;
+@@ -2290,17 +2368,119 @@ static void gfar_new_rxbdp(struct gfar_priv_rx_q *rx_queue, struct rxbd8 *bdp,
+ 	bdp->lstatus = lstatus;
+ }
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++static unsigned int skbuff_truesize(unsigned int buffer_size)
++{
++	return SKB_DATA_ALIGN(buffer_size + RXBUF_ALIGNMENT +
++				NET_SKB_PAD) + sizeof(struct sk_buff);
++}
++
++static void gfar_skbr_register_truesize(struct gfar_private *priv)
++{
++	priv->rx_skbuff_truesize = skbuff_truesize(priv->rx_buffer_size);
++}
++
++static inline void gfar_clean_reclaim_skb(struct sk_buff *skb)
++{
++	unsigned int truesize;
++	unsigned int size;
++	unsigned int alignamount;
++	struct net_device *owner;
++
++	dst_release((struct dst_entry *)skb->_skb_dst);
++	skb->_skb_dst = 0;
++#ifdef CONFIG_XFRM
++	if (skb->sp) {
++		secpath_put(skb->sp);
++		skb->sp = NULL;
++	}
++#endif
++#if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
++	nf_conntrack_put(skb->nfct);
++	nf_conntrack_put_reasm(skb->nfct_reasm);
++	skb->nfct = NULL;
++	skb->nfct_reasm = NULL;
++#endif
++#ifdef CONFIG_BRIDGE_NETFILTER
++	nf_bridge_put(skb->nf_bridge);
++	skb->nf_bridge = NULL;
++#endif
++#ifdef CONFIG_NET_SCHED
++	skb->tc_index = 0;
++#ifdef CONFIG_NET_CLS_ACT
++	skb->tc_verd = 0;
++#endif
++#endif
++	/* re-initialization
++	 * We are not going to touch the buffer size, so
++	 * skb->truesize can be used as the truesize again
++	 */
++	owner = skb->skb_owner;
++	truesize = skb->truesize;
++	size = truesize - sizeof(struct sk_buff);
++	/* clear structure by &tail */
++	cacheable_memzero(skb, offsetof(struct sk_buff, tail));
++	atomic_set(&skb->users, 1);
++	/* reset data and tail pointers */
++	skb->data = skb->head + NET_SKB_PAD;
++	skb_reset_tail_pointer(skb);
++	/* shared info clean up */
++	atomic_set(&(skb_shinfo(skb)->dataref), 1);
++	/* We need the data buffer to be aligned properly.  We will
++	 * reserve as many bytes as needed to align the data properly
++	 */
++	alignamount = ((unsigned)skb->data) & (RXBUF_ALIGNMENT-1);
++	skb_reserve(skb, RXBUF_ALIGNMENT - alignamount);
++	skb->dev = owner;
++	/* Keep incoming device pointer for recycling */
++	skb->skb_owner = owner;
++}
++
++static int gfar_kfree_skb(struct sk_buff *skb)
++{
++	unsigned long int flags;
++	struct gfar_private *priv;
++	struct gfar_skb_handler *sh;
++
++	if ((skb->skb_owner == NULL) ||
++		(skb->destructor) ||
++		(skb_shinfo(skb)->nr_frags))
++			goto _normal_free;
++
++	priv = netdev_priv(skb->skb_owner);
++	if (skb->truesize == priv->rx_skbuff_truesize) {
++		sh = &priv->skb_handler;
++		/* loosly checking */
++		if (likely(sh->recycle_count < sh->recycle_max)) {
++			if (!atomic_dec_and_test(&skb->users))
++				return 0;
++			gfar_clean_reclaim_skb(skb);
++			/* lock sh for add one */
++			spin_lock_irqsave(&sh->lock, flags);
++			skb->next = sh->recycle_queue;
++			sh->recycle_queue = skb;
++			sh->recycle_count++;
++			spin_unlock_irqrestore(&sh->lock, flags);
++			return 1;
++		}
++	}
++_normal_free:
++	/* skb is not recyclable */
++	dev_kfree_skb_any(skb);
++	return 0;
++}
++#endif /* RECYCLING */
+ 
++/*
++ * normal new skb routine
++ */
+ struct sk_buff * gfar_new_skb(struct net_device *dev)
+ {
+ 	unsigned int alignamount;
+ 	struct gfar_private *priv = netdev_priv(dev);
+ 	struct sk_buff *skb = NULL;
+ 
+-	skb = __skb_dequeue(&priv->rx_recycle);
+-	if (!skb)
+-		skb = netdev_alloc_skb(dev,
+-				priv->rx_buffer_size + RXBUF_ALIGNMENT);
++	skb = netdev_alloc_skb(dev, priv->rx_buffer_size + RXBUF_ALIGNMENT);
+ 
+ 	if (!skb)
+ 		return NULL;
+@@ -2313,6 +2493,11 @@ struct sk_buff * gfar_new_skb(struct net_device *dev)
+ 	 */
+ 	skb_reserve(skb, alignamount);
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	skb->dev = dev;
++	/* Keep incoming device pointer for recycling */
++	skb->skb_owner = dev;
++#endif
+ 	return skb;
+ }
+ 
+@@ -2428,6 +2613,14 @@ int gfar_clean_rx_ring(struct gfar_priv_rx_q *rx_queue, int rx_work_limit)
+ 	int amount_pull;
+ 	int howmany = 0;
+ 	struct gfar_private *priv = netdev_priv(dev);
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	int howmany_reuse = 0;
++	struct gfar_skb_handler *sh;
++	int free_skb;
++	struct sk_buff *local_head;
++	unsigned long flags;
++	struct gfar_skb_handler *local_sh;
++#endif
+ 
+ 	/* Get the first full descriptor */
+ 	bdp = rx_queue->cur_rx;
+@@ -2439,12 +2632,47 @@ int gfar_clean_rx_ring(struct gfar_priv_rx_q *rx_queue, int rx_work_limit)
+ 		amount_pull = (gfar_uses_fcb(priv) ? GMAC_FCB_LEN : 0) +
+ 				priv->padding;
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	local_sh = per_cpu_ptr(priv->local_sh, smp_processor_id());
++	if (local_sh->recycle_queue) {
++		local_head = local_sh->recycle_queue;
++		free_skb = local_sh->recycle_count;
++		local_sh->recycle_queue = NULL;
++		local_sh->recycle_count = 0;
++	} else {
++		local_head = NULL;
++		free_skb = 0;
++	}
++	/* global skb_handler for this device */
++	sh = &priv->skb_handler;
++#endif
++
+ 	while (!((bdp->status & RXBD_EMPTY) || (--rx_work_limit < 0))) {
+ 		struct sk_buff *newskb;
+ 		rmb();
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++		if (!free_skb && sh->recycle_count) {
++			/* refill local buffer */
++			spin_lock_irqsave(&sh->lock, flags);
++			local_head = sh->recycle_queue;
++			free_skb = sh->recycle_count;
++			sh->recycle_queue = NULL;
++			sh->recycle_count = 0;
++			spin_unlock_irqrestore(&sh->lock, flags);
++		}
++		if (local_head) {
++			newskb = local_head;
++			local_head = newskb->next;
++			newskb->next = NULL;
++			free_skb--;
++			howmany_reuse++;
++		} else
++			newskb = gfar_new_skb(dev);
++#else
+ 		/* Add another skb for the future */
+ 		newskb = gfar_new_skb(dev);
++#endif
+ 
+ 		skb = rx_queue->rx_skbuff[rx_queue->skb_currx];
+ 
+@@ -2458,17 +2686,8 @@ int gfar_clean_rx_ring(struct gfar_priv_rx_q *rx_queue, int rx_work_limit)
+ 
+ 			if (unlikely(!newskb))
+ 				newskb = skb;
+-			else if (skb) {
+-				/*
+-				 * We need to reset ->data to what it
+-				 * was before gfar_new_skb() re-aligned
+-				 * it to an RXBUF_ALIGNMENT boundary
+-				 * before we put the skb back on the
+-				 * recycle list.
+-				 */
+-				skb->data = skb->head + NET_SKB_PAD;
+-				__skb_queue_head(&priv->rx_recycle, skb);
+-			}
++			else if (skb)
++				dev_kfree_skb_any(skb);
+ 		} else {
+ 			/* Increment the number of packets */
+ 			dev->stats.rx_packets++;
+@@ -2508,6 +2727,15 @@ int gfar_clean_rx_ring(struct gfar_priv_rx_q *rx_queue, int rx_work_limit)
+ 		    RX_RING_MOD_MASK(rx_queue->rx_ring_size);
+ 	}
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	if (free_skb) {
++		/* return to local_sh for next time */
++		local_sh->recycle_queue = local_head;
++		local_sh->recycle_count = free_skb;
++	}
++	priv->extra_stats.rx_skbr += howmany_reuse;
++#endif
++
+ 	/* Update the current rxbd pointer to be the next one */
+ 	rx_queue->cur_rx = bdp;
+ 
+diff --git a/drivers/net/gianfar.h b/drivers/net/gianfar.h
+index a544d92..e19846e 100644
+--- a/drivers/net/gianfar.h
++++ b/drivers/net/gianfar.h
+@@ -48,7 +48,11 @@
+ #include <linux/ethtool.h>
+ 
+ /* The maximum number of packets to be handled in one call of gfar_poll */
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++#define GFAR_DEV_WEIGHT 16
++#else
+ #define GFAR_DEV_WEIGHT 64
++#endif
+ 
+ /* Length for FCB */
+ #define GMAC_FCB_LEN 8
+@@ -70,7 +74,7 @@
+ #define PHY_INIT_TIMEOUT 100000
+ #define GFAR_PHY_CHANGE_TIME 2
+ 
+-#define DEVICE_NAME "%s: Gianfar Ethernet Controller Version 1.2, "
++#define DEVICE_NAME "%s: Gianfar Ethernet Controller Version 1.4-skbr1.1.4, "
+ #define DRV_NAME "gfar-enet"
+ extern const char gfar_driver_name[];
+ extern const char gfar_driver_version[];
+@@ -83,8 +87,13 @@ extern const char gfar_driver_version[];
+ #define MAXGROUPS 0x2
+ 
+ /* These need to be powers of 2 for this driver */
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++#define DEFAULT_TX_RING_SIZE	128
++#define DEFAULT_RX_RING_SIZE	128
++#else
+ #define DEFAULT_TX_RING_SIZE	256
+ #define DEFAULT_RX_RING_SIZE	256
++#endif
+ 
+ #define GFAR_RX_MAX_RING_SIZE   256
+ #define GFAR_TX_MAX_RING_SIZE   256
+@@ -155,8 +164,13 @@ extern const char gfar_driver_version[];
+ #define GFAR_10_TIME    25600
+ 
+ #define DEFAULT_TX_COALESCE 1
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++#define DEFAULT_TXCOUNT	22
++#define DEFAULT_TXTIME	64
++#else
+ #define DEFAULT_TXCOUNT	16
+ #define DEFAULT_TXTIME	21
++#endif
+ 
+ #define DEFAULT_RXTIME	21
+ 
+@@ -668,6 +682,10 @@ struct rmon_mib
+ 
+ struct gfar_extra_stats {
+ 	u64 kernel_dropped;
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	u64 rx_skbr;
++	u64 rx_skbr_free;
++#endif
+ 	u64 rx_large;
+ 	u64 rx_short;
+ 	u64 rx_nonoctet;
+@@ -962,6 +980,29 @@ struct gfar {
+ 	u8	res27[208];
+ };
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++#define GFAR_DEFAULT_RECYCLE_MAX 64
++#define GFAR_DEFAULT_RECYCLE_TRUESIZE (SKB_DATA_ALIGN(DEFAULT_RX_BUFFER_SIZE \
++		+ RXBUF_ALIGNMENT + NET_SKB_PAD) + sizeof(struct sk_buff))
++
++/* Socket buffer recycling handler for Gianfar driver. This structure has own
++ * spinlock to prevent simultaneous access. The member recycle_queue holds
++ * top of recyclable socket buffer which are owned by this interface.
++ * Maximu size of recyclable buffers are defined by recycle_max, and
++ * current size of list is recycle_count.
++ */
++struct gfar_skb_handler {
++	/* Lock for buffer recycling queue */
++	spinlock_t	lock;
++	short int	recycle_max;
++	short int	recycle_count;
++	struct sk_buff *recycle_queue;
++};
++
++extern void gfar_free_recycle_queue(struct gfar_skb_handler *sh,
++		int lock_flag);
++#endif
++
+ /* Structure for PTP Time Stamp */
+ struct gfar_ptp_time {
+ 	u32	high;
+@@ -1154,11 +1195,13 @@ struct gfar_private {
+ 
+ 	u32 cur_filer_idx;
+ 
+-	struct sk_buff_head rx_recycle;
+-
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	unsigned int rx_skbuff_truesize;
++	struct gfar_skb_handler skb_handler;
++	struct gfar_skb_handler *local_sh; /*per_cpu*/
++#endif
+ 	struct vlan_group *vlgrp;
+ 
+-
+ 	/* Hash registers and their width */
+ 	u32 __iomem *hash_regs[16];
+ 	int hash_width;
+diff --git a/drivers/net/gianfar_ethtool.c b/drivers/net/gianfar_ethtool.c
+index 1010367..e77def4 100644
+--- a/drivers/net/gianfar_ethtool.c
++++ b/drivers/net/gianfar_ethtool.c
+@@ -57,6 +57,10 @@ static void gfar_gdrvinfo(struct net_device *dev, struct ethtool_drvinfo *drvinf
+ 
+ static char stat_gstrings[][ETH_GSTRING_LEN] = {
+ 	"rx-dropped-by-kernel",
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	"skb-recycled-frames-new",
++	"skb-recycled-frames-free",
++#endif
+ 	"rx-large-frame-errors",
+ 	"rx-short-frame-errors",
+ 	"rx-non-octet-errors",
+diff --git a/drivers/net/gianfar_sysfs.c b/drivers/net/gianfar_sysfs.c
+index 3724835..aca00f9 100644
+--- a/drivers/net/gianfar_sysfs.c
++++ b/drivers/net/gianfar_sysfs.c
+@@ -320,6 +320,33 @@ static ssize_t gfar_set_fifo_starve_off(struct device *dev,
+ static DEVICE_ATTR(fifo_starve_off, 0644, gfar_show_fifo_starve_off,
+ 		   gfar_set_fifo_starve_off);
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++static ssize_t gfar_show_recycle_max(struct device *dev,
++		struct device_attribute *attr, char *buf)
++{
++	struct gfar_private *priv = netdev_priv(to_net_dev(dev));
++	return sprintf(buf, "%d\n", priv->skb_handler.recycle_max);
++}
++
++static ssize_t gfar_set_recycle_max(struct device *dev,
++				struct device_attribute *attr,
++				const char *buf, size_t count)
++{
++	struct gfar_private *priv = netdev_priv(to_net_dev(dev));
++	unsigned int length = simple_strtoul(buf, NULL, 0);
++
++	/* recycling max management is loosely done. If the count is more
++	 * than max, simply don't keep the buffer until the current amount
++	 * lower than max.
++	 */
++	priv->skb_handler.recycle_max = length;
++	return count;
++}
++
++static DEVICE_ATTR(recycle_max, 0644, gfar_show_recycle_max,
++				gfar_set_recycle_max);
++#endif
++
+ void gfar_init_sysfs(struct net_device *dev)
+ {
+ 	struct gfar_private *priv = netdev_priv(dev);
+@@ -337,6 +364,9 @@ void gfar_init_sysfs(struct net_device *dev)
+ 	rc |= device_create_file(&dev->dev, &dev_attr_fifo_threshold);
+ 	rc |= device_create_file(&dev->dev, &dev_attr_fifo_starve);
+ 	rc |= device_create_file(&dev->dev, &dev_attr_fifo_starve_off);
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	rc |= device_create_file(&dev->dev, &dev_attr_recycle_max);
++#endif
+ 	if (rc)
+ 		dev_err(&dev->dev, "Error creating gianfar sysfs files.\n");
+ }
+diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
+index df7b23a..21c5624 100644
+--- a/include/linux/skbuff.h
++++ b/include/linux/skbuff.h
+@@ -5,6 +5,8 @@
+  *		Alan Cox, <gw4pts@gw4pts.ampr.org>
+  *		Florian La Roche, <rzsfl@rz.uni-sb.de>
+  *
++ * 	Copyright 2009 Freescale Semiconductor, Inc.
++ *
+  *	This program is free software; you can redistribute it and/or
+  *	modify it under the terms of the GNU General Public License
+  *	as published by the Free Software Foundation; either version
+@@ -366,6 +368,10 @@ struct sk_buff {
+ 	struct nf_bridge_info	*nf_bridge;
+ #endif
+ 
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	void		*skb_owner;
++#endif
++
+ 	int			iif;
+ 	__u16			queue_mapping;
+ #ifdef CONFIG_NET_SCHED
+diff --git a/net/core/skbuff.c b/net/core/skbuff.c
+index 80a9616..31fbb31 100644
+--- a/net/core/skbuff.c
++++ b/net/core/skbuff.c
+@@ -20,6 +20,8 @@
+  *		Andi Kleen	:	slabified it.
+  *		Robert Olsson	:	Removed skb_head_pool
+  *
++ * 	Copyright 2009 Freescale Semiconductor, Inc.
++ *
+  *	NOTE:
+  *		The __skb_ routines should be called with interrupts
+  *	disabled, or you better be *real* sure that the operation is atomic
+@@ -545,6 +547,9 @@ static void __copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
+ 	new->ipvs_property	= old->ipvs_property;
+ #endif
+ 	new->protocol		= old->protocol;
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	new->skb_owner		= NULL;
++#endif
+ 	new->mark		= old->mark;
+ 	new->iif		= old->iif;
+ 	__nf_copy(new, old);
+@@ -582,6 +587,10 @@ static struct sk_buff *__skb_clone(struct sk_buff *n, struct sk_buff *skb)
+ 	n->cloned = 1;
+ 	n->nohdr = 0;
+ 	n->destructor = NULL;
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	n->skb_owner = NULL;
++	skb->skb_owner = NULL;
++#endif
+ 	C(tail);
+ 	C(end);
+ 	C(head);
+-- 
+1.5.2.2
+

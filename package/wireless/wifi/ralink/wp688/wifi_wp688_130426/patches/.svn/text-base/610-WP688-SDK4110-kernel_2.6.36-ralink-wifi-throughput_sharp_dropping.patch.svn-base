@@ -1,0 +1,13 @@
+diff -urN a/rt2860v2/common/rtmp_init.c b/rt2860v2/common/rtmp_init.c
+--- a/rt2860v2/common/rtmp_init.c	2013-05-13 18:00:29.765972728 +0800
++++ b/rt2860v2/common/rtmp_init.c	2013-05-13 18:01:57.354222816 +0800
+@@ -3421,7 +3421,8 @@
+ 	pAd->CommonCfg.HT_DisallowTKIP = TRUE;
+ 
+ 	/* Frequency for rate adaptation */
+-	pAd->ra_interval = DEF_RA_TIME_INTRVAL;
++	/*pAd->ra_interval = DEF_RA_TIME_INTRVAL; */
++	pAd->ra_interval = 100; /* Change from 500 to 100ms, for throughput sharp dropping issue */
+ 	pAd->ra_fast_interval = DEF_QUICK_RA_TIME_INTERVAL;
+ 
+ 	/* Tx Sw queue length setting */

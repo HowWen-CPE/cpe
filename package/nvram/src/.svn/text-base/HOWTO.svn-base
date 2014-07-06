@@ -1,0 +1,132 @@
+HOW TO USE 
+
+1.Structure:
+	cli.c				(1)
+	cli.h				(2)
+	crc.c				(3)
+	Makefile			(M)
+	nvram.c				(4)
+	nvram_factory.h		(5)
+	nvram_fw.c			(6)
+	nvram_fw.h			(7)
+	nvram.h				(8)
+	nvram_public.c		(9)
+	nvram_rule.c		(10)
+	nvram_rule.h		(11)
+
+(1)Command line of nvram, a demo on how to call nvram_XXX functions from libnvram.so
+I use #if/#else/#endif to disable the original version MAIN function and enable the 
+current EZP integrated version MAIN.
+
+(2)Command line header of nvram. The original version MAIN will call the inner function
+interface of nvram, while my wrapped version version will call the public function of 
+nvram. Using the later public interface, you can forget the management of nvram_handle_t.
+
+(M)All nvram interfaces (public or inner) are compiled into a single dynamic library called
+libnvram.so.0.1. If you want to use nvram_XXX functions in your code, do as what the Makefile
+do.
+
+(3)CRC related functions
+
+(4)In nvram.c, the inner functions of nvram are implemented.
+
+(5)In nvram_factory.h, the factory default key-value pairs are defined. A bunch of pairs will 
+be stored in the libnvram.so.0.1. In this current version, I only write 'abc' and 'abc_rule' for 
+demo.
+
+(6)(7) nvram_upgrade/nvram_downgrade related function will be defined here. Currently the 2 file 
+are copyed from EZP-NVRAM.
+
+(8)In nvram.h, both the inner functions and public functions of nvram are defined here.
+
+(9)In nvram_public.c, the public functions of nvram are implemented.
+
+(10)(11)Rule/SubRule/Attribute related function are defined/implemented here. You can refer to
+ezp-lib.c/ezp-lib.h in EZP-NVRAM. Which we will explain it later.
+
+2.Rule/SubRule/Attribute
+The Rule/SubRule/Attribute is defined in EZP-NVRAM. You can treat them as:
+Rule	-	Rule is the whole value of key-value pair.
+SubRule	-	If the Rule is connected by several '|' character, then each part of it is a SubRule;
+			If there is no '|' character, the whole Rule is a SubRule of itself.
+			Each SubRule has similar sturcture. 
+			SubRule can be treated like Array. The first index of the SubRule is 0. 
+Attribute -	The Rule/SubRule is made up of short concatenated characters. And the Attr seperate is '^'.
+
+Given the lan_main_rule as an example(Refers to nvram_ezpacket.h in EZP-NVRAM):
+			lan_main_rule="LAN1^1^1500^1^1^0|GuestLAN^0^1500^1^1^0"
+
+Rule	-	LAN1^1^1500^1^1^0|GuestLAN^0^1500^1^1^0	
+SubRule	-	LAN1^1^1500^1^1^0				//0
+			GuestLAN^0^1500^1^1^0			//1
+Attribute - LAN1							//name
+			1								//enable
+			1500							//mtu
+			...  
+
+In our code, me DO NOT include all the factory from EZP-NVRAM, but we DO include the attribute structure and
+its default key name in nvram_rule.c. The code snippet is shown below.
+
+	...
+	/* name^enable[0|1]^mtu^stp^weight */
+	struct attr lan_main_rule_attr[] = {
+		{ "name", show_value, show_value },
+		{ "enable", show_value, show_value },
+		{ "mtu", show_value, show_value },
+		{ "stp", show_value, show_value },
+		{ "weight", show_value, show_value },
+		{ "snooping", show_value, show_value},
+		{ NULL, NULL, NULL }
+	};
+	...
+	struct rule rules[] = {
+		...
+		{ "lan_main_rule", lan_main_rule_attr },
+		...
+		{ NULL, NULL }
+	};
+	...
+
+So after you can run nvram in your board. You can define your own LAN_MAIN_RULE rule in your factory default by
+doing the belowings in your nvram_factory.h:
+
+	...
+	#define LAN_MAIN_RULE "LAN1^1^1500^1^1^0|GuestLAN^0^1500^1^1^0"
+	...
+	nvram_tuple_t nvram_factory_default[] = {                        
+		...
+		{ "lan_main_rule", LAN_MAIN_RULE, 
+			EZPLIB_NONE,
+			0 
+		},  /* name^enable[0|1]^mtu^stp^weight */
+		...
+		{0,0,0,0}
+	};
+	...
+
+Currently the nvram_factory interface is not implemented yet. So if you want to use the get/set functions(or the 
+rule/subrule/attr advanced functions), just set it manually by doing:
+
+	@(none):/tmp# nvram set "lan_main_rule=LAN1^1^1500^1^1^0|GuestLAN^0^1500^1^1^0"
+	@(none):/tmp# nvram commit
+
+After doing this you can use attribute related functions as followings:
+
+	@(none):/tmp# nvram show lan_main_rule 0 name
+	LAN1
+	@(none):/tmp# nvram replace attr lan_main_rule 0 name HELLO_WORLD
+	@(none):/tmp# nvram show lan_main_rule 0 name 
+	HELLO_WORLD	
+	@(none):/tmp# nvram get lan_main_rule
+	HELLO_WORLD^1^1500^1^1^0|GuestLAN^0^1500^1^1^0
+
+
+3.TODOs
+Currently please set&commit your settings manually by using the nvram command line. It may be good to record your
+'nvram set' history in a script so it's easy to manage.
+
+Please do not commit your svn update of factory defaults values now. Just update in your own working directory.
+
+Some nvram interfaces have to be checked(attribute related ones) and implemented(factory/upgrade/downgrade).
+
+About any question, please refers to Frank Zhou(8146).

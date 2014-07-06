@@ -1,0 +1,29 @@
+From 57cb7e418404720a29920cb59ce42643739215de Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Mon, 29 Mar 2010 11:57:48 +0530
+Subject: [PATCH] P1011-DTS: Fix crypto node issue wrt "fsl,multi-host-mode" property
+
+For non SMP versions the "fsl,multi-host-mode" should be set to
+"primary"
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ arch/powerpc/boot/dts/p1011rdb.dts |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p1011rdb.dts b/arch/powerpc/boot/dts/p1011rdb.dts
+index a26118c..d6debf6 100644
+--- a/arch/powerpc/boot/dts/p1011rdb.dts
++++ b/arch/powerpc/boot/dts/p1011rdb.dts
+@@ -527,7 +527,7 @@
+ 			fsl,channel-fifo-len = <24>;
+ 			fsl,exec-units-mask = <0x97c>;
+ 			fsl,descriptor-types-mask = <0x3a30abf>;
+-			fsl,multi-host-mode = "dual";
++			fsl,multi-host-mode = "primary";
+ 			fsl,channel-remap = <0x3>;
+ 		};
+ 
+-- 
+1.5.6.3
+

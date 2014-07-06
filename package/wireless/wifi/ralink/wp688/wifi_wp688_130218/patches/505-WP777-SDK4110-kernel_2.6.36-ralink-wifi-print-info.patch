@@ -1,0 +1,11 @@
+--- mt7620_wifidriver_20130122/rt2860v2/common/rtmp_init.c	2013-01-22 16:29:08.000000000 +0800
++++ mt7620_wifidriver_20130122_modified/rt2860v2/common/rtmp_init.c	2013-01-29 10:21:00.131914090 +0800
+@@ -4147,7 +4147,7 @@
+ 	{
+ 		pObj->pRscObj = pRsc;
+ 		insertTailList(pRscList, (LIST_ENTRY *)pObj);
+-		DBGPRINT(RT_DEBUG_ERROR, ("%s: add timer obj %lx!\n", __FUNCTION__, (ULONG)pRsc));
++		DBGPRINT(RT_DEBUG_INFO, ("%s: add timer obj %lx!\n", __FUNCTION__, (ULONG)pRsc));
+ 	}
+ }
+ 

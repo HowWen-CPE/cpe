@@ -1,0 +1,116 @@
+--- uboot-ra4110-old/cpu/ralink_soc/start.S	2012-11-28 15:36:35.000000000 +0800
++++ uboot-ra4110/cpu/ralink_soc/start.S	2012-12-27 14:17:15.000000000 +0800
+@@ -1837,6 +1837,21 @@
+ 
+ #endif
+ 
++/*added by sean. Nov 2012,28*/
++#ifdef LITEON_SRC_VALID
++	//Set the I2C pins to operate in GPIO mode.
++	or t6, 0x1
++	//Set the RGMII1 and RGMII2 pins to operate in GPIO mode.
++	or t6, 0x3<<9
++	//Set the PA_G to normal mode.
++	and t6, ~(0x1<<20)
++	//Set the EPHY_LED to normal mode.
++	and t6, ~(0x1<<15)
++	//Set the WLED to normal mode.
++	and t6, ~(0x1<<13)
++#endif //LITEON_SRC_VALID
++/*End Sean.*/
++
+ 	//set GPIOMODE
+ 	nop
+ 	sw t6, 0(t5)
+@@ -1860,20 +1875,90 @@
+ 	//set all GPIO to output high
+         li t5, RALINK_PIO_BASE + 0x24
+ #if defined(MT7620_ASIC_BOARD) || defined(MT7620_FPGA_BOARD)
++/*added by sean. Nov 2012,28*/
++#ifdef LITEON_SRC_VALID
++	//Set UARTF pins to output mode and GPIO#14 to input mode.
++	li t6, 0xffbfff
++#else
++/*End Sean.*/
+ 	/* for MT7620 RFB power saving, change UARTF pins to input mode */
+         li t6, 0x00ff807f
++#endif //LITEON_SRC_VALID
+ #else
+         li t6, 0xffffbfff
+ #endif
+         nop
+         sw t6, 0(t5)
+         nop
++        
++/*added by sean. Nov 2012,28*/
++#ifdef LITEON_SRC_VALID
++	//Set RGMII1 pins to output mode
++        li t5, RALINK_PIO_BASE + 0x4C
++	lw t6, 0(t5)
++	or t6, 0xfff
++	sw t6, 0(t5)
++	nop
++		
++	//Set RGMII2 pins to output mode
++        li t5, RALINK_PIO_BASE + 0x74
++	lw t6, 0(t5)
++	or t6, 0xfff<<20
++	//Set GPIO#61 -> FLG pin to input mode
++	and t6, ~(1 << 21)
++	sw t6, 0(t5)
++	nop
++#endif //LITEON_SRC_VALID
++/*End Sean.*/
++
+         li t5, RALINK_PIO_BASE + 0x2C
+         li t6, 0xffffffff
+         nop
+         sw t6, 0(t5)
+         nop
+-		
++        
++/*added by sean. Nov 2012,28*/
++#ifdef LITEON_SRC_VALID
++	//Disable Watchdog.
++	li t5, RALINK_PIO_BASE + 0x30
++	lw t6, 0(t5)
++	or t6, (1 << 12)
++	sw t6, 0(t5)
++	nop
++	
++#endif //LITEON_SRC_VALID
++/*End Sean.*/
++
++/*Add by Sean. Nov 2012, 19*/
++#ifdef LITEON_SRC_VALID
++	//Enable USB
++	li t5, RALINK_PIO_BASE + 0x80
++	lw t6, 0(t5)
++	or t6, (1 << 20)
++	sw t6, 0(t5)
++	nop
++	
++#endif //LITEON_SRC_VALID
++/* End Sean */
++
++/* Power on red LED and off green LED, Sean@liteon, 2012-12-27-----> */
++#ifdef LITEON_SRC_VALID
++	//Power on red LED(GPIO#9).
++	li t5, RALINK_PIO_BASE + 0x2c
++	lw t6, 0(t5)
++	or t6, (1 << 9)
++	sw t6, 0(t5)
++	nop
++
++	//Power off green LED(GPIO#69).
++	li t5, RALINK_PIO_BASE + 0x58
++	lw t6, 0(t5)
++	and t6, ~(1 << 29)
++	sw t6, 0(t5)
++        nop
++#endif //LITEON_SRC_VALID
++/* <-----Sean@liteon, 2012-12-27 */
++
+ #if defined(RT3052_ASIC_BOARD) || defined (RT3052_FPGA_BOARD)
+ #if defined(ON_BOARD_16BIT_DRAM_BUS)
+ 	//if sdram bus is 16bits,set gpio24~gpio39 to output high

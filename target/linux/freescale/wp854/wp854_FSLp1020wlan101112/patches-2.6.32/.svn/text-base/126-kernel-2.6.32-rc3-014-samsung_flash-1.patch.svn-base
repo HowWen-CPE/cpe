@@ -1,0 +1,59 @@
+From d50fd8378f131caf11acbf9bea06b30f0ace9cda Mon Sep 17 00:00:00 2001
+From: yanfei.zhang <yanfei.zhang@freescale.com>
+Date: Wed, 10 Nov 2010 14:08:02 +0800
+Subject: [PATCH] add samsung flash support
+
+Signed-off-by: yanfei.zhang <yanfei.zhang@freescale.com>
+---
+ drivers/mtd/chips/cfi_cmdset_0002.c |   21 +++++++++++++++------
+ 1 files changed, 15 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/mtd/chips/cfi_cmdset_0002.c b/drivers/mtd/chips/cfi_cmdset_0002.c
+index 94bb61e..2019cc2 100644
+--- a/drivers/mtd/chips/cfi_cmdset_0002.c
++++ b/drivers/mtd/chips/cfi_cmdset_0002.c
+@@ -5,6 +5,7 @@
+  * Copyright (C) 2000 Crossnet Co. <info@crossnet.co.jp>
+  * Copyright (C) 2004 Arcom Control Systems Ltd <linux@arcom.com>
+  * Copyright (C) 2005 MontaVista Software Inc. <source@mvista.com>
++ * Copyright (C) 2008 Freescale Semiconductor, Inc. All rights reserved. <b21500@freescale.com>
+  *
+  * 2_by_8 routines added by Simon Munton
+  *
+@@ -51,6 +52,7 @@
+ #define SST49LF040B	        0x0050
+ #define SST49LF008A		0x005a
+ #define AT49BV6416		0x00d6
++#define MANUFACTURER_SAMSUNG	0x00ec
+ 
+ static int cfi_amdstd_read (struct mtd_info *, loff_t, size_t, size_t *, u_char *);
+ static int cfi_amdstd_write_words(struct mtd_info *, loff_t, size_t, size_t *, const u_char *);
+@@ -375,12 +377,19 @@ struct mtd_info *cfi_cmdset_0002(struct map_info *map, int primary)
+ 
+ 		if (extp->MajorVersion != '1' ||
+ 		    (extp->MinorVersion < '0' || extp->MinorVersion > '4')) {
+-			printk(KERN_ERR "  Unknown Amd/Fujitsu Extended Query "
+-			       "version %c.%c.\n",  extp->MajorVersion,
+-			       extp->MinorVersion);
+-			kfree(extp);
+-			kfree(mtd);
+-			return NULL;
++		        if (cfi->mfr == MANUFACTURER_SAMSUNG &&
++			    (extp->MajorVersion == '3' && extp->MinorVersion == '3')) {
++			    printk(KERN_NOTICE "  Newer Samsung flash detected, "
++			           "should be compatibile with Amd/Fujitsu.\n");
++		        }
++		        else {
++			    printk(KERN_ERR "  Unknown Amd/Fujitsu Extended Query "
++			           "version %c.%c.\n",  extp->MajorVersion,
++			           extp->MinorVersion);
++			    kfree(extp);
++			    kfree(mtd);
++			    return NULL;
++		        }
+ 		}
+ 
+ 		/* Install our own private info structure */
+-- 
+1.5.6.5
+

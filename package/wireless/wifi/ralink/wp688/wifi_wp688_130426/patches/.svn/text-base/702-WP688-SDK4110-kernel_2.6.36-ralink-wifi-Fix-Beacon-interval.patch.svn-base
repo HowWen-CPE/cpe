@@ -1,0 +1,23 @@
+--- a/rt2860v2/ap/ap_cfg.c
++++ b/rt2860v2/ap/ap_cfg.c
+@@ -5186,6 +5186,7 @@ INT	Set_BeaconPeriod_Proc(
+ {
+ 	USHORT BeaconPeriod;
+ 	INT   success = FALSE;
++	INT i;
+ 
+ 	BeaconPeriod = (USHORT) simple_strtol(arg, 0, 10);
+ 	if((BeaconPeriod >= 20) && (BeaconPeriod < 1024))
+@@ -5201,6 +5202,12 @@ INT	Set_BeaconPeriod_Proc(
+ 	else
+ 		success = FALSE;
+ 
++	for(i=0; i<pAd->ApCfg.BssidNum; i++)
++	{
++		APMakeBssBeacon(pAd, i);
++		AsicEnableBssSync(pAd);
++	}
++
+ 	DBGPRINT(RT_DEBUG_TRACE, ("Set_BeaconPeriod_Proc::(BeaconPeriod=%d)\n", pAd->CommonCfg.BeaconPeriod));
+ 
+ 	return success;

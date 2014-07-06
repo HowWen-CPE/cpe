@@ -1,0 +1,7 @@
+--- linux-2.6.32-freescale-p1020-sku/fs/Makefile	2012-07-13 03:18:51.037501819 -0700
++++ linux-liteon-wp854-openwrt/fs/Makefile	2012-07-13 03:21:01.789589433 -0700
+@@ -125,3 +125,4 @@
+ obj-$(CONFIG_BTRFS_FS)		+= btrfs/
+ obj-$(CONFIG_GFS2_FS)           += gfs2/
+ obj-$(CONFIG_EXOFS_FS)          += exofs/
++obj-$(CONFIG_YAFFS_FS)		+= yaffs2/

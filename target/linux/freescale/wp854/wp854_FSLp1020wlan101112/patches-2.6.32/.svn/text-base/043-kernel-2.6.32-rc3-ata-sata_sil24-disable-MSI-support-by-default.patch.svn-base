@@ -1,0 +1,41 @@
+From bad706af205f64a30ad1d0c0dcf4953569226a2c Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Mon, 9 Nov 2009 17:18:06 +0530
+Subject: [PATCH 1/1] ata/sata_sil24: disable MSI support by default
+
+MSI support is disabled by default, which was unconditionally
+enabled in the earlier sata_sil24 patch. This patch is intended
+only for the P2020RDB BSP.
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ drivers/ata/sata_sil24.c |    6 +++++-
+ 1 files changed, 5 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/ata/sata_sil24.c b/drivers/ata/sata_sil24.c
+index 6d67911..1370df6 100644
+--- a/drivers/ata/sata_sil24.c
++++ b/drivers/ata/sata_sil24.c
+@@ -417,6 +417,10 @@ static struct ata_port_operations sil24_ops = {
+ #endif
+ };
+ 
++static int sata_sil24_msi;    /* Disable MSI */
++module_param_named(msi, sata_sil24_msi, bool, S_IRUGO);
++MODULE_PARM_DESC(msi, "Enable MSI (Default: false)");
++
+ /*
+  * Use bits 30-31 of port_flags to encode available port numbers.
+  * Current maxium is 4.
+@@ -1340,7 +1344,7 @@ static int sil24_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
+ 
+ 	sil24_init_controller(host);
+ 
+-	if (!pci_enable_msi(pdev)) {
++	if (sata_sil24_msi && !pci_enable_msi(pdev)) {
+ 		dev_printk(KERN_INFO, &pdev->dev, "Using MSI\n");
+ 		pci_intx(pdev, 0);
+ 	}
+-- 
+1.5.6.5
+

@@ -1,0 +1,77 @@
+From 487ee2c5ef149244a806bc56407aa1c47dd8ab31 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Thu, 11 Mar 2010 15:43:32 +0530
+Subject: [PATCH] 85xx/p1_p2_rdb: p1020: DDR changes
+
+Signed-off-by: Maneesh Gupta <maneesh.gupta@freescale.com>
+---
+ board/freescale/p1_p2_rdb/ddr.c                |   12 ++++++++++--
+ nand_spl/board/freescale/p1_p2_rdb/nand_boot.c |    9 ++++++++-
+ 2 files changed, 18 insertions(+), 3 deletions(-)
+
+diff --git a/board/freescale/p1_p2_rdb/ddr.c b/board/freescale/p1_p2_rdb/ddr.c
+index cc09046..3938b45 100644
+--- a/board/freescale/p1_p2_rdb/ddr.c
++++ b/board/freescale/p1_p2_rdb/ddr.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright 2009 Freescale Semiconductor, Inc.
++ * Copyright 2009-2010 Freescale Semiconductor, Inc.
+  *
+  * See file CREDITS for list of people who contributed to this
+  * project.
+@@ -245,9 +245,17 @@ phys_size_t fixed_sdram (void)
+ phys_size_t initdram(int board_type)
+ {
+ 	phys_size_t dram_size = 0;
++	struct cpu_type *cpu;
+ 
+ #if defined(CONFIG_SYS_RAMBOOT) && defined(CONFIG_SYS_FSL_BOOT_DDR)
+-	return CONFIG_SYS_SDRAM_SIZE * 1024 * 1024;
++	cpu = gd->cpu;
++
++	/* P1020 and it's derivatives support max 32bit DDR width */
++	if (cpu->soc_ver == SVR_P1020 || cpu->soc_ver == SVR_P1020_E ||
++		cpu->soc_ver == SVR_P1011 || cpu->soc_ver == SVR_P1011_E)
++		return (CONFIG_SYS_SDRAM_SIZE * 1024 * 1024) / 2;
++	else
++		return CONFIG_SYS_SDRAM_SIZE * 1024 * 1024;
+ #endif
+ 	dram_size = fixed_sdram();
+ 	set_ddr_laws(0, dram_size, LAW_TRGT_IF_DDR_1);
+diff --git a/nand_spl/board/freescale/p1_p2_rdb/nand_boot.c b/nand_spl/board/freescale/p1_p2_rdb/nand_boot.c
+index 1dabb3c..35e58a3 100644
+--- a/nand_spl/board/freescale/p1_p2_rdb/nand_boot.c
++++ b/nand_spl/board/freescale/p1_p2_rdb/nand_boot.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright 2009 Freescale Semiconductor, Inc.
++ * Copyright 2009-2010 Freescale Semiconductor, Inc.
+  *
+  * This program is free software; you can redistribute it and/or
+  * modify it under the terms of the GNU General Public License as
+@@ -54,6 +54,7 @@ DECLARE_GLOBAL_DATA_PTR;
+ #define CONFIG_SYS_DDR_MODE_1_667	0x00040852
+ #define CONFIG_SYS_DDR_MODE_2_667	0x00000000
+ #define CONFIG_SYS_DDR_INTERVAL_667	0x0a280100
++#define SDRAM_CFG_32_BE			0x00080000
+ 
+ #define udelay(x) {int i, j; for (i = 0; i < x; i++) for (j = 0; j < 10000; j++); }
+ 
+@@ -81,7 +82,13 @@ void initsdram(void)
+ 	out_be32(&ddr->sdram_mode_2, CONFIG_SYS_DDR_MODE_2_667);
+ 	out_be32(&ddr->sdram_interval, CONFIG_SYS_DDR_INTERVAL_667);
+ 	out_be32(&ddr->sdram_clk_cntl, CONFIG_SYS_DDR_CLK_CTRL_667);
++
++#if defined(CONFIG_P2020) || defined(CONFIG_P2010)
+ 	out_be32(&ddr->sdram_cfg, CONFIG_SYS_DDR_CONTROL);
++#elif defined(CONFIG_P1020) || defined(CONFIG_P1011)
++	out_be32(&ddr->sdram_cfg, CONFIG_SYS_DDR_CONTROL | SDRAM_CFG_32_BE);
++#endif
++
+ 	out_be32(&ddr->sdram_cfg_2, CONFIG_SYS_DDR_CONTROL_2);
+ 
+ 	asm("sync;isync");
+-- 
+1.5.6.3
+

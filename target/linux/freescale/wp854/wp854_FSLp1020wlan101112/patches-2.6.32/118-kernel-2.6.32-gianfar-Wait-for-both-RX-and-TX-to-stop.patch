@@ -1,0 +1,33 @@
+From 43afd57e4f5bba1a35d43f2ba054212ffda58a4a Mon Sep 17 00:00:00 2001
+From: Andy Fleming <afleming@freescale.com>
+Date: Tue, 20 Apr 2010 12:23:04 +0530
+Subject: [PATCH] gianfar: Wait for both RX and TX to stop
+
+When gracefully stopping the controller, the driver was continuing if
+*either* RX or TX had stopped.  We need to wait for both, or the
+controller could get into an invalid state.
+
+Signed-off-by: Andy Fleming <afleming@freescale.com>
+---
+ drivers/net/gianfar.c |    5 +++--
+ 1 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index b72920b..0a143fb 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -1756,8 +1756,9 @@ static void gfar_halt_nodisable(struct net_device *dev)
+ 		tempval |= (DMACTRL_GRS | DMACTRL_GTS);
+ 		gfar_write(&regs->dmactrl, tempval);
+ 
+-		while (!(gfar_read(&regs->ievent) &
+-			 (IEVENT_GRSC | IEVENT_GTSC)))
++		while ((gfar_read(&regs->ievent) &
++			(IEVENT_GRSC | IEVENT_GTSC)) !=
++			(IEVENT_GRSC | IEVENT_GTSC))
+ 			cpu_relax();
+ 	}
+ }
+-- 
+1.5.6.3
+

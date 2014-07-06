@@ -1,0 +1,23 @@
+Index: linux-2.6.31/net/ipv4/ip_sockglue.c
+===================================================================
+--- linux-2.6.31.orig/net/ipv4/ip_sockglue.c	2009-09-10 06:13:59.000000000 +0800
++++ linux-2.6.31/net/ipv4/ip_sockglue.c	2014-03-20 11:36:23.039474738 +0800
+@@ -389,9 +389,15 @@
+ 	sin = (struct sockaddr_in *)msg->msg_name;
+ 	if (sin) {
+ 		sin->sin_family = AF_INET;
+-		sin->sin_addr.s_addr = *(__be32 *)(skb_network_header(skb) +
+-						   serr->addr_offset);
+-		sin->sin_port = serr->port;
++
++                /*Fix unalignment access leads to IPsec deamon reboot under 5G wifi radio,
++                 * Sirian@liteon, 2014-03-20 ----->*/
++		//sin->sin_addr.s_addr = *(__be32 *)(skb_network_header(skb) +
++		//				   serr->addr_offset);
++                sin->sin_addr.s_addr = ip_hdr(skb)->saddr;
++                /*<-----sirian@liteon,2014-03-20*/
++                
++                sin->sin_port = serr->port;
+ 		memset(&sin->sin_zero, 0, sizeof(sin->sin_zero));
+ 	}
+ 

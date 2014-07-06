@@ -1,0 +1,8 @@
+--- wifi_wp688_MTK4110/rt2860v2_ap/Makefile	2013-04-27 14:12:05.000000000 +0800
++++ wifi_wp688_MTK4110_new/rt2860v2_ap/Makefile	2013-04-27 15:44:51.000000000 +0800
+@@ -1,4 +1,4 @@
+-EXTRA_CFLAGS = -Idrivers/net/wireless/rt2860v2/include -Idrivers/net/wireless/rt2860v2/ate/include
++EXTRA_CFLAGS = -I../$(MTK_WIFI_DIR)/rt2860v2/include -I../$(MTK_WIFI_DIR)/rt2860v2/ate/include
+ 
+ obj-$(CONFIG_RT2860V2_AP) += rt2860v2_ap.o
+ 

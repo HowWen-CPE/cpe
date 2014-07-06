@@ -1,0 +1,274 @@
+<po>
+<message msgid="firewall disable" msgstr="Disable" />
+<message msgid="firewall enable" msgstr="Enable" />
+<message msgid="firewall apply" msgstr="Apply" />
+<message msgid="firewall reset" msgstr="Cancel" />
+<message msgid="firewall del select" msgstr="Delete Selected" />
+<message msgid="firewall no" msgstr=" No." />
+<message msgid="firewall protocol" msgstr="Protocol" />
+<message msgid="firewall comment" msgstr="Comment" />
+<message msgid="firewall default drop" msgstr="Others would be dropped" />
+<message msgid="firewall default accept" msgstr="Others would be accepted" />
+<message msgid="port title" msgstr="MAC/IP/Port Filtering Settings " />
+<message msgid="port introduction" msgstr=" You may setup firewall rules to protect your network from virus,worm and malicious activity on the Internet." />
+<message msgid="port basic setting" msgstr="Basic Settings" />
+<message msgid="port basic filter" msgstr="MAC/IP/Port Filtering" />
+<message msgid="port basic default policy" msgstr="Default Policy -- The packet that don't match with any rules would be:" />
+<message msgid="port basic default policy accepted" msgstr="Accepted." />
+<message msgid="port basic default policy dropped" msgstr="Dropped." />
+<message msgid="port filter setting" msgstr="MAC/IP/Port Filter Settings" />
+<message msgid="port filter macaddr" msgstr="MAC address" />
+<message msgid="port filter source ipaddr" msgstr="Source IP Address" />
+<message msgid="port filter port range" msgstr="Port Range" />
+<message msgid="port filter dest ipaddr" msgstr="Dest IP Address" />
+<message msgid="port filter action" msgstr="Action" />
+<message msgid="port filter action drop" msgstr="Drop" />
+<message msgid="port filter action accept" msgstr="Accept" />
+<message msgid="port current filter" msgstr="Current MAC/IP/Port filtering rules in system: " />
+<message msgid="port filter source port range" msgstr="Source Port Range" />
+<message msgid="port filter dest port range" msgstr="Dest Port Range" />
+<message msgid="port filter packetcount" msgstr="Pkt Cnt" />
+<!--new add-->
+<message msgid="nat setup" msgstr=" NAT Setup " />
+<message msgid="nat translation" msgstr=" Enable Network Address Translation " />
+<message msgid="nat default server setup" msgstr=" Default Server Setup " />
+<message msgid="nat server ip" msgstr=" Server IP Address : " />
+<message msgid="nat apply" msgstr=" Apply " />
+<message msgid="nat reset" msgstr=" Cancel " />
+<message msgid="application add app" msgstr=" Add Application Rule " />
+<message msgid="application active" msgstr=" Active " />
+<message msgid="application service name" msgstr=" Service Name " />
+<message msgid="application port" msgstr=" Port " />
+<message msgid="application server ip" msgstr=" Server IP Address " />
+<message msgid="application app rule sum" msgstr=" Application Rules Summary " />
+<message msgid="application app rule sum2" msgstr=" Application Rules Summary " />  
+<message msgid="application td active" msgstr=" Active " />
+<message msgid="application td name" msgstr=" Name " />
+<message msgid="application td port" msgstr=" Port " />
+<message msgid="application td server ip" msgstr=" Server IP Address " />  
+<message msgid="application td modify" msgstr=" Modify " />
+<message msgid="nat rule note" msgstr=" The max number of application rules is 10." />
+<message msgid="nat advance app rule sum" msgstr=" Application Rules Summary " />
+<message msgid="nat advance port trigger rule" msgstr=" Port Triggering Rules " />
+<message msgid="nat advance name" msgstr=" Name " />
+<message msgid="nat advance incoming" msgstr=" Incoming " />
+<message msgid="nat advance trigger" msgstr=" Trigger " />
+<message msgid="nat advance port1" msgstr=" Port " />
+<message msgid="nat advance endport1" msgstr=" End Port " />
+<message msgid="nat advance port2" msgstr=" Port " />
+<message msgid="nat advance endport2" msgstr=" End Port " />
+<message msgid="firewall setup" msgstr=" Firewall Setup " />
+<message msgid="firewall enable" msgstr=" Enable Firewall " />
+<message msgid="spi setup" msgstr=" SPI Setup " />
+<message msgid="spi enable" msgstr=" Enable SPI " />
+<message msgid="sc filter restrict" msgstr=" Restrict Web Features  " />
+<message msgid="sc filter keyword blocking" msgstr=" Keyword Blocking " />
+<message msgid="sc filter enable keyword blocking" msgstr=" Enable URL Keyword Blocking " />
+<message msgid="sc filter keyword" msgstr=" Keyword " />
+<message msgid="sc filter keyword list" msgstr=" Keyword List " />
+<message msgid="sc filter add" msgstr=" Add " />
+<message msgid="sc filter delete" msgstr=" Delete " />
+<message msgid="sc filter clear" msgstr=" Clear All " />
+<message msgid="sc filter trusted ip" msgstr=" Trusted IP Setup  " />
+<message msgid="sc filter str1" msgstr=" A trusted computer has full access to all blocked resources. 0.0.0.0 means there is no trusted computer. " />
+<message msgid="sc filter str2" msgstr=" Trusted Computer IP Address: " />
+<message msgid="remote management server port" msgstr=" Server Port :" />
+<message msgid="remote management server access" msgstr=" Server Access : " />
+<message msgid="remote management secured ip" msgstr=" Secured Client IP Address : " />
+<message msgid="remote management secured ip all" msgstr=" All " />
+<message msgid="remote management secured ip sel" msgstr=" Selected " />
+<message msgid="port filter Respon To Ping On" msgstr="Respond to Ping on: " />
+<message msgid="port filter PingFrmWANFilter WAN" msgstr=" WAN " />
+<message msgid="port filter PingFrmWANFilter Disable" msgstr=" Disable " />
+<message msgid="port filter enable firewall rule1" msgstr=" Enable Firewall Rule " />
+<message msgid="port filter enable firewall rule2" msgstr=" Enable Firewall Rule " />
+<message msgid="port filter firewall rule" msgstr=" Firewall Rule " />
+<message msgid="port filter add firewall rule" msgstr=" Add Firewall Rule " />
+<message msgid="port filter service name" msgstr=" Service Name : " />
+<message msgid="port filter apply1" msgstr=" Apply " />
+<message msgid="port filter apply2" msgstr=" Apply " />
+<message msgid="port filter add Rule" msgstr=" Add Rule " />
+<message msgid="port filter table service name" msgstr=" Service Name " />
+<message msgid="port filter table mac address" msgstr=" MAC Address " />
+<message msgid="port filter table dest ip" msgstr=" Dest IP " />
+<message msgid="port filter table source ip" msgstr=" Source IP " />
+<message msgid="port filter table source prorocol" msgstr=" Protocol  " />
+<message msgid="port filter table dest port range" msgstr=" Dest Port Range " />
+<message msgid="port filter table source port range" msgstr=" Source Port Range " />
+<message msgid="port filter table source action" msgstr=" Action " />
+<message msgid="port filter table source delete" msgstr=" Delete " />
+<message msgid="User_Defined" msgstr="User Defined" />
+<message msgid="Services" msgstr="---Service---" />
+<!-- one-to-one NAT message, add by wind 2013-12-11 -->
+<message msgid="OneToOne Rule Add" msgstr=" Add One-To-One NAT Rule " />
+<message msgid="OneToOne Active" msgstr=" Active " />
+<message msgid="OneToOne Service Name" msgstr=" Service Name " />
+<message msgid="OneToOne Port" msgstr=" Forward Port " />
+<message msgid="Internal IP" msgstr=" Internal IP Address " />
+<message msgid="External IP" msgstr=" External Mapping IP Address " />
+<message msgid="Server Forward" msgstr=" Server Forwarding " />
+<message msgid="Forward Enable" msgstr=" Enable " />
+<message msgid="Forward Disable" msgstr=" Disable " />
+<message msgid="OneToOne App Rule Sum" msgstr=" One-To-One NAT Rules Summary " />
+<message msgid="OneToOne App Rule Sum2" msgstr=" One-To-One NAT Rules Summary " />
+<message msgid="OneToOne Td Active" msgstr=" Active " />
+<message msgid="OneToOne Td Name" msgstr=" Name " />
+<message msgid="OneToOne Td IntIP" msgstr=" Internal IP " />
+<message msgid="OneToOne Td ExtIP" msgstr=" External IP " />
+<message msgid="OneToOne Td Port" msgstr=" Port " />
+<message msgid="OneToOne Td ServerForward" msgstr=" Server Forwarding " />
+<message msgid="OneToOne Td Modify" msgstr=" Modify " />
+<message msgid="Alert note" msgstr=" The max number of rules is 10. " />
+<!-- pptp server message, add by wind 2014-01-14 -->
+<message msgid="application AddApp" msgstr=" PPTP Server " />
+<message msgid="pptp Server Rule" msgstr=" PPTP Server Rule " />
+<message msgid="pptp MTU" msgstr=" MTU " />
+<message msgid="pptp LocalIP" msgstr=" VPN Local IP Address " />
+<message msgid="start IP" msgstr=" VPN Start IP Address " />
+<message msgid="max Num" msgstr=" Max VPN Client " />
+<message msgid="auto Dns" msgstr=" Auto DNS " />
+<message msgid="pptp Dns" msgstr=" DNS " />
+<message msgid="chap Enable" msgstr=" CHAP Enable " />
+<message msgid="mscharp Enable" msgstr=" MSCHAP Enable " />
+<message msgid="mscharp V2" msgstr=" MSCHAP v2 Enable " />
+<message msgid="mppe 128" msgstr=" MPPE128 Enable " />
+<message msgid="proxy ARP" msgstr=" Proxy ARP Enable " />
+<message msgid="nat Enable" msgstr=" NAT Enable " />
+<message msgid="add Rules" msgstr=" Add User Rules " />
+<message msgid="rule Enable" msgstr=" Rules Enable " />
+<message msgid="pptpd User Name" msgstr=" User Name " />
+<message msgid="pptpd Password" msgstr=" Password " />
+<message msgid="table Add" msgstr=" Add " />
+<message msgid="user RuleSum" msgstr=" User Rules Summary " />
+<message msgid="pptpd Modify" msgstr=" Modify " />
+<!-- l2tp server message, add by kissth 2014-03-13 -->
+<message msgid="l2tp AddApp" msgstr=" L2TP Server " />
+<message msgid="l2tp Server Rule" msgstr=" L2TP Server Rule " />
+<message msgid="L2tpOIPsec Rule" msgstr=" L2tpOIPsec Enable " />
+<message msgid="PSK Rule" msgstr=" Preshared Key " />
+<!--  NAT note message, add by wind 2014-01-03 -->
+<message msgid="nat dmz note" msgstr=" Note: When NAT mode disable, the DMZ setting is invalid. " />
+<message msgid="nat note" msgstr=" Note: " />
+<message msgid="nat port note" msgstr=" When NAT mode disable, the port forwarding application rules setting is invalid. " />
+<message msgid="nat trigger note" msgstr=" Note: when NAT mode disable, the trigger rules setting is invalid. " />
+<message msgid="one note" msgstr=" Note: " />
+<message msgid="one2one note" msgstr=" When NAT mode disable, the One-To-One NAT rules setting is invalid. " />
+<!-- alert message -->
+<message msgid="Please input any IP or/and port value." msgstr="Please input any IP or/and port value." />
+<message msgid="Invalid port number: source port." msgstr="Invalid port number: source port." />
+<message msgid="Invalid source port number." msgstr="Invalid source port number." />
+<message msgid="Invalid source port range setting." msgstr="Invalid source port range setting." />
+<message msgid="Invalid port number: dest port." msgstr="Invalid port number: dest port." />
+<message msgid="Invalid dest port number." msgstr="Invalid dest port number." />
+<message msgid="Invalid dest port range setting." msgstr="Invalid dest port range setting." />
+<message msgid="Source IP address format error." msgstr="Source IP address format error." />
+<message msgid="Dest IP address format error." msgstr="Dest IP address format error." />
+<message msgid="Error. IP address is empty." msgstr="Error. IP address is empty." />
+<message msgid="It should be a [0-9] number." msgstr="It should be a [0-9] number." />
+<message msgid="IP adress format error." msgstr="IP adress format error." />
+<message msgid="Incoming End port is error" msgstr="Incoming End port is error" />
+<message msgid="Trigger port should not be zero" msgstr="Trigger port should not be zero" />
+<message msgid="Trigger End port is error" msgstr="Trigger End port is error" />
+<message msgid="Incoming port is exist" msgstr="Incoming port is exist" />
+<message msgid="Incoming End port is exist" msgstr="Incoming End port is exist" />
+<message msgid="Trigger port is exist" msgstr="Trigger port is exist" />
+<message msgid="Port Service is exist" msgstr="Port Service is exist" />
+<message msgid="The value is invalid" msgstr="The value is invalid" />
+<message msgid="Key word is exist" msgstr="Key word is exist" />
+<message msgid="The rule number is exceeded." msgstr="The rule number is exceeded." />
+<!-- alert message add by wind 2013-12-26 -->
+<message msgid="Invalid server ip address!It should be located in the same subnet of current LAN IP address." msgstr="Invalid server ip address!It should be located in the same subnet of current LAN IP address." />
+<message msgid="Duplicate port not allowed to be set!" msgstr="Duplicate port not allowed to be set!" />
+<message msgid="Duplicate rule not allowed to be set!" msgstr="Duplicate rule not allowed to be set!" />
+<message msgid="Internal ip could not be lan ip" msgstr="Internal ip couldn't be lan ip!" />
+<message msgid="External mapping ip could not be wan ip" msgstr="External mapping ip couldn't be wan ip!" />
+<message msgid="server ip could not be lan ip" msgstr="server ip couldn't be lan ip!" />
+<!-- alert message add by kissth 2014-02-10 -->
+<message msgid="Invalid MTU! Valid MTU value is [1280,1460]." msgstr="Invalid MTU! Valid MTU value is [1280,1460]." />
+<message msgid="Max VPN Client number should not be empty." msgstr="Max VPN Client number should not be empty." />
+<message msgid="Please disable PPTP Server function." msgstr="Please disable PPTP Server function." />
+<message msgid="Please disable IPsec function." msgstr="Please disable IPsec function." />
+<message msgid="Could not change l2tp server settings,at least one authentication protocol should be specified." msgstr="Could not change l2tp server settings,at least one authentication protocol should be specified." />
+<message msgid="Enter letters digits or underline. Preshared Key length should be from 8 to 40!" msgstr="Enter letters digits or underline. Preshared Key length should be from 8 to 40!" />
+<message msgid="Preshared Key length should be from 8 to 40 digits letters or underline." msgstr="Preshared Key length should be from 8 to 40 digits letters or underline." />
+<message msgid="User name repeats." msgstr="User name repeats." />
+<message msgid="The max number of the rule is 32!" msgstr="The max number of the rule is 32!" />
+<message msgid="MTU value is empty!" msgstr="MTU value is empty!" />
+<message msgid="MTU should be a number." msgstr="MTU should be a number." />
+<message msgid="Invalid MTU! Valid MTU value is [1280,1444]." msgstr="Invalid MTU! Valid MTU value is [1280,1444]." />
+<message msgid="Authentication error.In the case that MPPE enable, the authentication way must include MSCHAP or MSCHAPV2." msgstr="Authentication error.In the case that MPPE enable, authentication way must include MSCHAP or MSCHAPV2." />
+<message msgid="Authentication error.In the case that MPPE disable, you must enable anyone authentication way." msgstr="Authentication error.In the case that MPPE disable, you must enable anyone authentication way." />
+<message msgid="Invalid VPN Clients range, The clients number must be a digit." msgstr="Invalid VPN Clients range, The clients number must be a digit." />
+<message msgid="Invalid VPN Clients range, the min clients number is 1, and the max clients number is 32." msgstr="Invalid VPN Clients range, the min clients number is 1, and the max clients number is 32." />
+<message msgid="Invalid VPN Clients range." msgstr="Invalid VPN Clients range.The VPN Clients should be compatible with VPN start IP" />
+<message msgid="User name is required." msgstr="User name is required." />
+<message msgid="Password is required." msgstr="Password is required." />
+<message msgid="User name error. Chatacter Caret,Pile Sign and Double Quote are not supported in this field." msgstr="User name error. Chatacter Caret,Pile Sign and Double Quote are not supported in this field." />
+<message msgid="Password error. Chatacter Caret,Pile Sign and Double Quote are not supported in this field." msgstr="Password error. Chatacter Caret,Pile Sign and Double Quote are not supported in this field." />
+<!-- alert message from c file-->
+<message msgid="MAC is invaild" msgstr="MAC is invaild" />
+<message msgid="IP error" msgstr="IP error" />
+<message msgid="Invaild setting" msgstr="Invaild setting " />
+<message msgid="IP is invaild" msgstr="IP is invaild" />
+<message msgid="Please set port between 1~65535" msgstr="Please set port between 1~65535" />
+<message msgid="Length is too log." msgstr="Length is too log." />
+<!-- alert message from c file-->
+<message msgid="main Ready" msgstr="Ready"/>
+<message msgid="main ConfigurationSuccess" msgstr="Configuration updated successfully."/>
+<message msgid="main ConfigurationProceeding" msgstr="Configuration Update is proceeding. Please Wait..."/>
+<message msgid="main firmware download in progress" msgstr="Firmware download in progress. Please wait . . ."/>
+<message msgid="main firmware upgrade is proceeding" msgstr="Firmware upgrade is proceeding. Please wait and do NOT power off your device."/>
+<!-- 4615 SCFilter.asp-->
+<message msgid="sc filter rwf activex" msgstr=" ActiveX " />
+<message msgid="sc filter rwf java" msgstr=" Java " />
+<message msgid="sc filter rwf cookies" msgstr=" Cookies " />
+<message msgid="sc filter rwf web" msgstr=" Web Proxy " />
+<!-- 4615 remote_web.asp-->
+<message msgid="remote management www" msgstr=" WWW " />
+<!--Steve add and reference other page-->
+<message msgid="System do not support specific invalid characters." msgstr="System does not support specific invalid characters." />
+
+<message msgid="contact" msgstr="Contact:"/>
+<message msgid="community read" msgstr="Community Name(read only):"/>
+<message msgid="community write" msgstr="Community Name(read/write):"/>
+<message msgid="trap ip" msgstr="Trap IP(full 0 disable server):"/>
+<message msgid="snmp enable" msgstr="Enable"/>
+<message msgid="snmp disable" msgstr="Disable"/>
+<message msgid="snmpversion" msgstr="SNMP Version Support :"/>
+<message msgid="User_Name" msgstr="User Name:"/>
+<message msgid="Security_Level" msgstr="Security Level:"/>
+<message msgid="snmp_user_ro_passwd_td" msgstr="Auth password(Numbers and Letters, Length 8-15):"/>
+<message msgid="snmp_user_rw_passwd_td" msgstr="Privacy Password(Numbers and Letters, Length 8-15):"/>
+<message msgid="ssh enable" msgstr="Enable"/>
+<message msgid="ssh disable" msgstr="Disable"/>
+<message msgid="telnet enable" msgstr="Enable"/>
+<message msgid="telnet disable" msgstr="Disable"/>
+<message msgid="https enable" msgstr="Enable"/>
+<message msgid="https disable" msgstr="Disable"/>
+<message msgid="ssh server port" msgstr="Server Port:"/>
+<message msgid="telnet server port" msgstr="Server Port:"/>
+<message msgid="https server port" msgstr="Server Port:"/>
+<message msgid="service apply" msgstr="Apply"/>
+<message msgid="service reset" msgstr="Cancel"/>
+<message msgid="firmware transport failure" msgstr="firmware transport failure"/>
+<message msgid="firmware transport timeout" msgstr="firmware transport timeout,please check your network or do it in ap mode under ethernet"/>
+<!--vpn passthrough-->
+<message msgid="vpn Pass Setup" msgstr="VPN Passthrough Setup"/>
+<message msgid="ipsec Enable" msgstr="Enable"/>
+<message msgid="ipsec Disable" msgstr="Disable"/>
+<message msgid="ipsec Set" msgstr="IPsec Passthrough"/>
+<message msgid="pptp Enable" msgstr="Enable"/>
+<message msgid="pptp Disable" msgstr="Disable"/>
+<message msgid="pptp Set" msgstr="PPTP Passthrough"/>
+<message msgid="l2tp Enable" msgstr="Enable"/>
+<message msgid="l2tp Disable" msgstr="Disable"/>
+<message msgid="l2tp Set" msgstr="L2TP Passthrough"/>
+<message msgid="pppoe Enable" msgstr="Enable"/>
+<message msgid="pppoe Disable" msgstr="Disable"/>
+<message msgid="pppoe Set" msgstr="PPPOE Passthrough"/>
+<message msgid="VPN Apply" msgstr="Apply"/>
+<message msgid="VPN Reset" msgstr="Cancel"/>
+<!-- firmware upgrade-->
+<message msgid="firmware size is too large to write down" msgstr="firmware size is too large to write down"/>
+<message msgid="Port has been occupied" msgstr="Port has been occupied"/>
+</po>

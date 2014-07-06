@@ -1,0 +1,63 @@
+Subject: [PATCH] eSDHC: add the reset function to reset the eSDHC controller
+
+Reset the eSDHC controller first before initialize the eSDHC controller.
+
+Signed-off-by: Jerry Huang <Chang-Ming.Huang@freescale.com>
+Signed-off-by: Dipen Dudhat <dipen.dudhat@freescale.com>
+---
+ drivers/mmc/fsl_esdhc.c |   20 ++++++++++++++++++++
+ include/fsl_esdhc.h     |    1 +
+ 2 files changed, 21 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/mmc/fsl_esdhc.c b/drivers/mmc/fsl_esdhc.c
+index 0dff226..835fbe3 100644
+--- a/drivers/mmc/fsl_esdhc.c
++++ b/drivers/mmc/fsl_esdhc.c
+@@ -405,12 +405,32 @@ static int esdhc_init(struct mmc *mmc)
+ 	return 0;
+ }
+ 
++static void esdhc_reset(struct fsl_esdhc *regs)
++{
++	unsigned long timeout;
++
++	/* reset the controller */
++	out_be32(&regs->sysctl, SYSCTL_RSTA);
++
++	/* wait max 100 ms */
++	timeout = 100;
++	/* hardware clears the bit when it is done */
++	while ((in_be32(&regs->sysctl) & SYSCTL_RSTA) && timeout--)
++		udelay(1000);
++	if (!timeout)
++	printf("MMC/SD: Reset never completed.\n");
++	udelay(1000);
++}
++
+ static int esdhc_initialize(bd_t *bis)
+ {
+ 	struct fsl_esdhc *regs = (struct fsl_esdhc *)CONFIG_SYS_FSL_ESDHC_ADDR;
+ 	struct mmc *mmc;
+ 	u32 caps, voltage_caps;
+ 
++	/* First reset the eSDHC controller */
++	esdhc_reset(regs);
++
+ 	mmc = malloc(sizeof(struct mmc));
+ 
+ 	sprintf(mmc->name, "FSL_ESDHC");
+diff --git a/include/fsl_esdhc.h b/include/fsl_esdhc.h
+index a061bcd..2d3b1e7 100644
+--- a/include/fsl_esdhc.h
++++ b/include/fsl_esdhc.h
+@@ -36,6 +36,7 @@
+ #define SYSCTL_PEREN		0x00000004
+ #define SYSCTL_HCKEN		0x00000002
+ #define SYSCTL_IPGEN		0x00000001
++#define SYSCTL_RSTA		0x01000000
+ 
+ #define IRQSTAT			0x0002e030
+ #define IRQSTAT_DMAE		(0x10000000)
+-- 
+1.6.4
+

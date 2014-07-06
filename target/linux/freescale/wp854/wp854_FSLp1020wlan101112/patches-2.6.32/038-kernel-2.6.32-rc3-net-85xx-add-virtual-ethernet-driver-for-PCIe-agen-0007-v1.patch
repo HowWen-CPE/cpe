@@ -1,0 +1,1568 @@
+From e352a3f473bd8928d6df8659f02f61f4671f64aa Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Fri, 23 Oct 2009 20:59:00 +0530
+Subject: [PATCH] net: 85xx: add virtual ethernet driver for PCIe agent mode
+
+Originally written by Jason Jin and Mingkai Hu for mpc8536.
+
+This patch provide a virtual ethernet driver to demonstrate the 85xx
+PCIe Agent mode funtionality.
+
+This requires two QorIQ based boards, One act as Host/RC and the
+other one act as Agent/EP. The two boards are connected via a PCIe cable.
+The patch provides two modules, one for the RC called 'boardnet' and the
+other for the EP side named as 'cardnet'.  The RC acts as a board and
+the EP as a card.
+
+A shared mem page is defined in the cardnet. The boardnet and the
+cardnet exchange the packets and other informations through this share
+memory, Two message interrupts in the cardnet are used to provide the
+necessary interrupt between these two boards. One was used by the boardnet
+to interrupt the cardnet, and the other was routed to the IRQ_OUT which
+will act as the interrupt from cardnet to boardnet. The IRQ_OUT on the
+cardnet should be connected to the boardnet on PCI based system. On
+PCIe based system, IRQ_OUT can trigger MSI to the host side.
+
+This is a demo driver for QorIQ (P2020RDB) BSP release. The buffer struct
+for packet exchange is very simple, only one packet can be sent out in one
+interrupt and the packet exchange rate is restricted. Since shared memory is
+set in the cardnet, so the EP has to brought up first and get its cardnet
+module loaded before loading boardnet module on RC.
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ arch/powerpc/boot/dts/p2020rdb.dts      |    2 +
+ drivers/net/Kconfig                     |    4 +
+ drivers/net/Makefile                    |    5 +
+ drivers/net/fsl_pci_veth/Kconfig        |   45 ++
+ drivers/net/fsl_pci_veth/Makefile       |    5 +
+ drivers/net/fsl_pci_veth/pci_boardnet.c |  722 +++++++++++++++++++++++++++++++
+ drivers/net/fsl_pci_veth/pci_cardnet.c  |  604 ++++++++++++++++++++++++++
+ drivers/net/fsl_pci_veth/pci_veth.h     |   60 +++
+ 8 files changed, 1447 insertions(+), 0 deletions(-)
+ create mode 100644 drivers/net/fsl_pci_veth/Kconfig
+ create mode 100644 drivers/net/fsl_pci_veth/Makefile
+ create mode 100644 drivers/net/fsl_pci_veth/pci_boardnet.c
+ create mode 100644 drivers/net/fsl_pci_veth/pci_cardnet.c
+ create mode 100644 drivers/net/fsl_pci_veth/pci_veth.h
+
+diff --git a/arch/powerpc/boot/dts/p2020rdb.dts b/arch/powerpc/boot/dts/p2020rdb.dts
+index a3ca92f..f7658c7 100644
+--- a/arch/powerpc/boot/dts/p2020rdb.dts
++++ b/arch/powerpc/boot/dts/p2020rdb.dts
+@@ -560,6 +560,7 @@
+ 	};
+ 
+ 	pci0: pcie@ffe09000 {
++		cell-index = <1>;
+ 		compatible = "fsl,mpc8548-pcie";
+ 		device_type = "pci";
+ 		#interrupt-cells = <1>;
+@@ -588,6 +589,7 @@
+ 	};
+ 
+ 	pci1: pcie@ffe0a000 {
++		cell-index = <2>;
+ 		compatible = "fsl,mpc8548-pcie";
+ 		device_type = "pci";
+ 		#interrupt-cells = <1>;
+diff --git a/drivers/net/Kconfig b/drivers/net/Kconfig
+index e949b66..ac642af 100644
+--- a/drivers/net/Kconfig
++++ b/drivers/net/Kconfig
+@@ -163,6 +163,10 @@ config NET_SB1000
+ 
+ 	  If you don't have this card, of course say N.
+ 
++if MPC85xx
++	source "drivers/net/fsl_pci_veth/Kconfig"
++endif
++
+ source "drivers/net/arcnet/Kconfig"
+ 
+ source "drivers/net/phy/Kconfig"
+diff --git a/drivers/net/Makefile b/drivers/net/Makefile
+index 5b4df53..37d0211 100644
+--- a/drivers/net/Makefile
++++ b/drivers/net/Makefile
+@@ -37,6 +37,11 @@ ucc_geth_driver-objs := ucc_geth.o ucc_geth_ethtool.o
+ 
+ obj-$(CONFIG_FSL_PQ_MDIO) += fsl_pq_mdio.o
+ 
++ifeq ($(CONFIG_MPC85xx),y)
++	obj-$(CONFIG_BOARDNET) += fsl_pci_veth/
++	obj-$(CONFIG_CARDNET) += fsl_pci_veth/
++endif
++
+ #
+ # link order important here
+ #
+diff --git a/drivers/net/fsl_pci_veth/Kconfig b/drivers/net/fsl_pci_veth/Kconfig
+new file mode 100644
+index 0000000..1bd8a6a
+--- /dev/null
++++ b/drivers/net/fsl_pci_veth/Kconfig
+@@ -0,0 +1,45 @@
++#
++# Boardnet configuration
++#
++
++menu "MPC85xx PCI agent mode driver"
++	depends on NETDEVICES && MPC85xx && PCI && m
++
++config CARDNET
++	tristate "Cardnet driver support"
++	select FSL_MPIC_MSG_INTS
++	---help---
++	  cardnet driver is a simulating ethernet driver for MPC85xx
++	  board when it acts as Agent/EP device.
++	  If MPC85xx board acts as PCI Agent/EP and want to communicate with
++	  the Host/RC through PCI interface, enable this cardnet driver and there
++	  will be an ethernet device named cethx in the system. Corporating with
++	  another ethernet device named bethx in the Host/RC system, the Host/RC and
++	  Agent/EP can send package to each other.
++
++config PCI_EP_N
++	int "Default PCI port configured as Agent/EP"
++	default "1"
++	depends on CARDNET
++	help
++	  The default pci port which configured as Agent/EP.
++
++endmenu
++
++menu "MPC85xx board PCI demo driver"
++	depends on NETDEVICES && MPC85xx && PCI && m
++
++config BOARDNET
++	tristate "Boardnet driver support"
++	select FSL_MPIC_MSG_INTS
++	---help---
++	  Boardnet driver is a simulate ethernet driver for MPC85xx board
++	  when it act as PCI host/RC.
++	  If MPC85xx board acts as PCI Host/RC and want to communicate
++	  with another MPC85xx board(act as Agent/EP) through PCI interface,
++	  enable this boardnet driver and there will be an ethernet device named
++	  bethx in the system. Corporating with another ethernet device named
++	  cethx in the Agent/EP system,the Host/RC and Agent/EP can send package
++	  to each other.
++
++endmenu
+diff --git a/drivers/net/fsl_pci_veth/Makefile b/drivers/net/fsl_pci_veth/Makefile
+new file mode 100644
+index 0000000..c5d68d1
+--- /dev/null
++++ b/drivers/net/fsl_pci_veth/Makefile
+@@ -0,0 +1,5 @@
++#
++# Makefile for the MPC85xx PCI Agent/EP driver
++#
++obj-$(CONFIG_CARDNET) += pci_cardnet.o
++obj-$(CONFIG_BOARDNET) += pci_boardnet.o
+diff --git a/drivers/net/fsl_pci_veth/pci_boardnet.c b/drivers/net/fsl_pci_veth/pci_boardnet.c
+new file mode 100644
+index 0000000..df82f38
+--- /dev/null
++++ b/drivers/net/fsl_pci_veth/pci_boardnet.c
+@@ -0,0 +1,722 @@
++/*
++ * Copyright 2005-2009 Freescale Semiconductor, Inc.
++ *
++ * Author: Xiaobo Xie <r63061@freescale.com>
++ *	Roy Zang <tie-fei.zang@freescale.com>
++ *	Jason Jin <jason.jin@freescale.com>
++ *
++ * Description:
++ * PCI Agent/EP Demo Driver for Freescale QorIQ based platform (Host)
++ *
++ * This program is free software; you can redistribute  it and/or modify it
++ * under  the terms of  the GNU General  Public License as published by the
++ * Free Software Foundation;  either version 2 of the  License, or (at your
++ * option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the
++ * Free Software Foundation, Inc.,
++ * 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
++ */
++
++#include <linux/module.h>
++#include <linux/kernel.h>
++#include <linux/errno.h>
++#include <linux/io.h>
++#include <linux/netdevice.h>
++#include <linux/etherdevice.h>
++#include <linux/ip.h>
++#include <linux/delay.h>
++#include <linux/skbuff.h>
++#include <linux/pci.h>
++#include <linux/of_platform.h>
++#include <asm/fsl_msg.h>
++#include "pci_veth.h"
++
++#define HAVE_TX_TIMEOUT
++#undef BOARDNET_NDEBUG
++
++#ifdef BOARDNET_NDEBUG
++# define assert(expr) do {} while (0)
++#else
++# define assert(expr) \
++	if (unlikely(!(expr))) {					\
++		printk(KERN_ERR "Assertion failed! %s,%s,%s,line=%d\n",	\
++		#expr, __FILE__, __func__, __LINE__);			\
++	}
++#endif
++
++struct share_mem {
++	u32	share_flag;
++	u32	msg_group_host2ep;
++	u32 	msg_num_host2ep;
++	u32	msg_group_ep2host;
++	u32 	msg_num_ep2host;
++	u32	hstatus;
++	u32	astatus;
++
++	u32	tx_flags;
++	u32	tx_packetlen;
++	u8	txbuf[2*1024 - 22];
++
++	u32	rx_flags;
++	u32	rx_packetlen;
++	u8	rxbuf[2*1024 - 22];
++};
++
++struct boardnet_private {
++	u32 m_immrbar;
++	void *m_ioaddr;
++	struct net_device_stats stats;
++	struct pci_dev *pci_dev;
++	int irq;
++	spinlock_t lock; /* lock for set private data */
++	struct sk_buff *skb;
++};
++
++static int boardnet_open(struct net_device *dev);
++static int boardnet_release(struct net_device *dev);
++static int boardnet_config(struct net_device *dev, struct ifmap *map);
++static void boardnet_hw_tx(char *buf, int len, struct net_device *dev);
++static int boardnet_start_xmit(struct sk_buff *skb, struct net_device *dev);
++static void boardnet_rx(struct net_device *dev);
++static void boardnet_tx_timeout(struct net_device *dev);
++static int boardnet_ioctl(struct net_device *dev, struct ifreq *rq, int cmd);
++static struct net_device_stats *boardnet_get_stats(struct net_device *dev);
++static int boardnet_rebuild_header(struct sk_buff *skb);
++static int boardnet_header(struct sk_buff *skb, struct net_device *dev,
++			unsigned short type, const void *daddr,
++			const void *saddr, unsigned int len);
++static int boardnet_change_mtu(struct net_device *dev, int new_mtu);
++static irqreturn_t boardnet_interrupt(int irq, void *dev_id);
++
++static int eth;
++static struct fsl_msg_unit msg_unit_host2ep;
++static struct fsl_msg_unit msg_unit_ep2host;
++static int link_up;
++static int agent_open;
++
++static const struct header_ops boardnet_header_ops = {
++	.create		= boardnet_header,
++	.rebuild	= boardnet_rebuild_header,
++	.cache  	= NULL,
++	.cache_update	= NULL,
++	.parse		= NULL,
++};
++
++static const struct net_device_ops boardnet_netdev_ops = {
++	.ndo_open = boardnet_open,
++	.ndo_start_xmit = boardnet_start_xmit,
++	.ndo_stop = boardnet_release,
++	.ndo_change_mtu = boardnet_change_mtu,
++	.ndo_tx_timeout = boardnet_tx_timeout,
++	.ndo_do_ioctl = boardnet_ioctl,
++	.ndo_set_config = boardnet_config,
++	.ndo_get_stats = boardnet_get_stats,
++};
++
++static int boardnet_open(struct net_device *dev)
++{
++	int retval;
++
++	/* Clear the message intr from host */
++	fsl_clear_msg(&msg_unit_ep2host);
++
++	if (agent_open) {
++		netif_carrier_on(dev);
++		netif_start_queue(dev);
++		link_up = 1;
++		dev_info(&dev->dev, "%s is up\n", dev->name);
++	} else {
++		/* Donot know if EP is open, Looks like a ping,
++		 * If the EP is open, this will make it link_up,
++		 * otherwise, both keep link_down.
++		 * If the agent was removed. The host also should remove.
++		 */
++		fsl_send_msg(&msg_unit_host2ep, HOST_UP);
++	}
++
++	retval = request_irq(dev->irq, boardnet_interrupt, 0,
++				dev->name, dev);
++	if (retval) {
++		dev_err(&dev->dev, "can not request irq %d\n", dev->irq);
++		return retval;
++	}
++
++	return 0;
++}
++
++static int boardnet_release(struct net_device *dev)
++{
++	struct boardnet_private *priv = netdev_priv(dev);
++	struct share_mem *shmem = priv->m_ioaddr;
++
++	netif_stop_queue(dev); /* can't transmit any more */
++	netif_carrier_off(dev);
++	link_up = 0;
++
++	synchronize_irq(dev->irq);
++	free_irq(dev->irq, dev);
++	fsl_clear_msg(&msg_unit_host2ep);
++	shmem->astatus = 0; /*clear the pending data for agent*/
++	if (agent_open) {
++		fsl_send_msg(&msg_unit_host2ep, HOST_DOWN);
++		agent_open = 0;
++	}
++
++	printk(KERN_INFO "%s is down\n", dev->name);
++	return 0;
++}
++
++static int boardnet_config(struct net_device *dev, struct ifmap *map)
++{
++	if (dev->flags & IFF_UP)
++		return -EBUSY;
++
++	/* Don't allow the I/O address to change */
++	if (map->base_addr != dev->base_addr) {
++		dev_warn(&dev->dev, "Boardnet: Can't change I/O address\n");
++		return -EOPNOTSUPP;
++	}
++
++	/* Allow IRQ to change */
++	if (map->irq != dev->irq)
++		dev->irq = map->irq;
++
++	return 0;
++}
++
++static void boardnet_rx(struct net_device *dev)
++{
++	struct boardnet_private *priv = netdev_priv(dev);
++	struct share_mem *shmem = priv->m_ioaddr;
++	int len = 0;
++	struct sk_buff *skb;
++	u32 *src;
++	u32 *dest;
++	u32 skblen, temp;
++
++	len = shmem->rx_packetlen;
++	if (len < sizeof(struct ethhdr) + sizeof(struct iphdr)) {
++		pr_debug("Packet is too short (%i octets)\n",
++			shmem->rx_packetlen);
++		shmem->hstatus = HOST_GET;
++		priv->stats.rx_errors++;
++		return;
++	}
++
++	skb = dev_alloc_skb(len + 2);
++	if (!skb) {
++		dev_warn(&dev->dev, "Rx: low on mem-packet dropped\n");
++		priv->stats.rx_dropped++;
++		return;
++	}
++	skb_reserve(skb, 2); /* align IP on 16B boundary */
++
++	dest = (u32 *)skb_put(skb, len);
++	src = (u32 *)shmem->rxbuf;
++	skblen = len;
++
++	while (skblen > 0) {
++		if (skblen < 4) {
++			temp = in_be32(src);
++			memcpy(dest, &(temp), skblen);
++			break;
++		} else
++			*dest = in_be32(src);
++
++		src++;
++		dest++;
++		skblen = skblen - 4;
++	}
++
++	/* Write metadata, and then pass it to the receive level */
++	skb->dev = dev;
++	skb->protocol = eth_type_trans(skb, dev);
++	skb->ip_summed = CHECKSUM_UNNECESSARY; /* don't check it */
++	priv->stats.rx_packets++;
++	priv->stats.rx_bytes += len;
++
++	shmem->hstatus = HOST_GET;
++	netif_rx(skb);
++}
++
++/*
++ * The interrupt entry point
++ */
++static irqreturn_t boardnet_interrupt(int irq, void *dev_id)
++{
++	uint32_t statusword;
++
++	struct net_device *dev = (struct net_device *)dev_id;
++	struct boardnet_private *priv = netdev_priv(dev);
++	struct share_mem *smem;
++
++	if (!dev)
++		return IRQ_NONE;
++
++	smem = (struct share_mem *)priv->m_ioaddr;
++
++	/* Lock the device */
++	spin_lock(&priv->lock);
++
++	fsl_read_msg(&msg_unit_ep2host, &statusword);
++
++	if (statusword & AGENT_SENT) {
++		if (!link_up) {
++			netif_carrier_on(dev);
++			netif_start_queue(dev);
++			link_up = 1;
++			agent_open = 1;
++		}
++		boardnet_rx(dev);
++	} else if (statusword & AGENT_UP) {
++		if (!link_up) {
++			netif_carrier_on(dev);
++			netif_start_queue(dev);
++			link_up = 1;
++
++			/*
++			 * Sometimes, agent only send a mesage but
++			 * did not really up.
++			 */
++			fsl_send_msg(&msg_unit_host2ep, HOST_UP);
++			agent_open = 1;
++		}
++	} else if (statusword & AGENT_DOWN) {
++		netif_carrier_off(dev);
++		netif_stop_queue(dev);
++		link_up = 0;
++		agent_open = 0;
++	} else {
++		dev_info(&dev->dev, "This message is not for me! msg=0x%x\n",
++						statusword);
++		spin_unlock(&priv->lock);
++		return IRQ_NONE;
++	}
++
++	spin_unlock(&priv->lock);
++	return IRQ_HANDLED;
++}
++
++/*
++ * Transmit a packet (low level interface)
++ */
++static void boardnet_hw_tx(char *buf, int len, struct net_device *dev)
++{
++	struct boardnet_private *priv = netdev_priv(dev);
++	struct share_mem *shmem = priv->m_ioaddr;
++	u32 *src;
++	u32 *dest;
++	u32 skblen, temp;
++
++	if (len < sizeof(struct ethhdr) + sizeof(struct iphdr)) {
++		pr_debug("Packet is too short (%i octets)\n", len);
++		priv->stats.tx_errors++;
++		dev_kfree_skb(priv->skb);
++		return;
++	}
++
++	if (len > 2026) {
++		pr_debug(KERN_INFO "Packet too long (%i octets)\n", len);
++		priv->stats.tx_dropped++;
++		dev_kfree_skb(priv->skb);
++		return;
++	}
++
++	/* Send out the packet */
++	src = (u32 *)buf;
++	dest = (u32 *)shmem->txbuf;
++	skblen = len;
++
++	while (skblen > 0) {
++		if (skblen < 4) {
++			memcpy(&(temp), src, skblen);
++			out_be32(dest, temp);
++			break;
++		} else {
++			out_be32(dest, *src);
++		}
++		src++;
++		dest++;
++		skblen -= 4;
++	}
++
++	shmem->tx_packetlen = len;
++
++	/* Update the statitic data */
++	priv->stats.tx_packets++;
++	priv->stats.tx_bytes += len;
++
++	/* Set the flag, indicating the peer that the packet has been sent */
++	shmem->astatus = HOST_SENT;
++	fsl_send_msg(&msg_unit_host2ep, HOST_SENT);
++
++	dev_kfree_skb(priv->skb);
++}
++
++static int boardnet_start_xmit(struct sk_buff *skb, struct net_device *dev)
++{
++	struct boardnet_private *priv = netdev_priv(dev);
++	struct share_mem *shmem = priv->m_ioaddr;
++	char *data, shortpkt[ETH_ZLEN];
++	int time_out = 100;
++	int len;
++
++	while (shmem->astatus) {
++		udelay(2);
++		time_out--;
++		if (!time_out) {
++			dev_dbg(&dev->dev, "Timeout, agent busy!\n");
++			netif_stop_queue(dev);
++			priv->stats.tx_dropped++;
++			dev_kfree_skb(skb);
++			return 0;
++		}
++	}
++
++	data = skb->data;
++	len = skb->len;
++	if (len < ETH_ZLEN) {
++		memset(shortpkt, 0, ETH_ZLEN);
++		memcpy(shortpkt, skb->data, skb->len);
++		len = ETH_ZLEN;
++		data = shortpkt;
++	}
++	dev->trans_start = jiffies; /* save the timestamp */
++
++	/* Remember the skb, so we can free it at interrupt time */
++	priv->skb = skb;
++
++	/* actual deliver of data is device-specific, and not shown here */
++	boardnet_hw_tx(data, len, dev);
++	return 0;
++}
++
++/*
++ * Deal with a transmit timeout.
++ */
++static void boardnet_tx_timeout(struct net_device *dev)
++{
++	struct boardnet_private *priv = netdev_priv(dev);
++
++	dev_info(&dev->dev, "Transmit timeout at %ld, latency %ld\n",
++		jiffies, jiffies - dev->trans_start);
++
++	priv->stats.tx_errors++;
++	fsl_clear_msg(&msg_unit_host2ep);
++
++	/* When timed out, try to kick the EP */
++	fsl_send_msg(&msg_unit_host2ep, HOST_UP);
++
++	netif_wake_queue(dev);
++}
++
++static int boardnet_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
++{
++	pr_debug("ioctl\n");
++	return 0;
++}
++
++static struct net_device_stats *boardnet_get_stats(struct net_device *dev)
++{
++	struct boardnet_private *priv = netdev_priv(dev);
++	return &priv->stats;
++}
++
++static int boardnet_rebuild_header(struct sk_buff *skb)
++{
++	struct ethhdr *eth = (struct ethhdr *) skb->data;
++	struct net_device *dev = skb->dev;
++
++	memcpy(eth->h_source, dev->dev_addr, dev->addr_len);
++	memcpy(eth->h_dest, dev->dev_addr, dev->addr_len);
++	eth->h_dest[ETH_ALEN-1] ^= 0x01; /* dest is us xor 1 */
++	return 0;
++}
++
++/*
++ * This function is called to fill up an eth header, since arp is not
++ * available on the interface
++ */
++static int
++boardnet_header(struct sk_buff *skb, struct net_device *dev,
++		unsigned short type, const void *daddr, const void *saddr,
++		unsigned int len)
++{
++	struct ethhdr *eth = (struct ethhdr *)skb_push(skb, ETH_HLEN);
++
++	eth->h_proto = htons(type);
++	memcpy(eth->h_source, dev->dev_addr, dev->addr_len);
++	memcpy(eth->h_dest, dev->dev_addr, dev->addr_len);
++	eth->h_dest[ETH_ALEN-1] ^= 0x01; /* dest is us xor 1 */
++
++	return dev->hard_header_len;
++}
++
++static int boardnet_change_mtu(struct net_device *dev, int new_mtu)
++{
++	struct boardnet_private *priv = netdev_priv(dev);
++	spinlock_t *lock = &priv->lock;
++	unsigned long flags;
++
++	if ((new_mtu < 68) || (new_mtu > 1500))
++		return -EINVAL;
++
++	spin_lock_irqsave(lock, flags);
++	dev->mtu = new_mtu;
++	spin_unlock_irqrestore(lock, flags);
++	return 0;
++}
++
++static void boardnet_cleanup(struct pci_dev *pdev)
++{
++	struct net_device *dev;
++	struct boardnet_private *priv;
++
++	dev = pci_get_drvdata(pdev);
++	priv = netdev_priv(dev);
++
++	/* Unmap the space address */
++	iounmap((void *)(priv->m_immrbar));
++	iounmap((void *)(priv->m_ioaddr));
++	free_netdev(dev);
++	pci_disable_msi(pdev);
++
++	/* Release region */
++	pci_release_regions(pdev);
++	pci_disable_device(pdev);
++}
++
++static __devexit void boardnet_remove(struct pci_dev *pdev)
++{
++	struct net_device *dev;
++
++	dev = pci_get_drvdata(pdev);
++	unregister_netdev(dev);
++	boardnet_cleanup(pdev);
++
++	/* Clear the device pointer in PCI */
++	pci_set_drvdata(pdev, NULL);
++}
++
++static __devinit int
++boardnet_board_init(struct pci_dev *pdev, struct net_device **dev_out)
++{
++	struct net_device *dev;
++	struct boardnet_private *priv;
++	void *mapped_immrbar;
++	int retval;
++
++	retval = pci_enable_device(pdev);
++	if (retval) {
++		printk(KERN_ERR PFX "Cannot enable device\n");
++		return retval;
++	}
++
++	retval = pci_request_regions(pdev, PPC85XX_NETDRV_NAME);
++	if (retval) {
++		printk(KERN_ERR "%s: Cannot reserve region, aborting\n",
++			pci_name(pdev));
++		pci_disable_device(pdev);
++		return -ENODEV;
++	}
++
++	pci_set_master(pdev);
++	*dev_out = NULL;
++
++	/*
++	 * Allocate and set up an ethernet device.
++	 * dev and dev->priv zeroed in alloc_etherdev.
++	 */
++	dev = alloc_etherdev(sizeof(struct boardnet_private));
++	if (dev == NULL) {
++		printk(KERN_ERR PFX "%s: Unable to alloc new net device\n",
++			pci_name(pdev));
++		pci_release_regions(pdev);
++		pci_disable_device(pdev);
++		return -ENODEV;
++	}
++
++	priv = netdev_priv(dev);
++	memset(priv, 0, sizeof(struct boardnet_private));
++
++	mapped_immrbar = pci_ioremap_bar(pdev, 0);
++	if (!mapped_immrbar) {
++		printk(KERN_ERR "%s: Cannot remap memory, aborting\n",
++			pci_name(pdev));
++		pci_release_regions(pdev);
++		pci_disable_device(pdev);
++		retval = -EIO;
++	}
++	priv->m_immrbar = (uint32_t)mapped_immrbar;
++
++	/* BAR1 is used for the shared mem */
++	priv->m_ioaddr = ioremap(pci_resource_start(pdev, 1), AGENT_MEM_SIZE);
++	priv->pci_dev = pdev;
++	*dev_out = dev;
++
++	return 0;
++}
++
++static int __devinit boardnet_probe(struct pci_dev *pdev,
++					const struct pci_device_id *id)
++{
++	struct net_device *dev = NULL;
++	struct boardnet_private *priv;
++	int boardnet_eth = eth;
++	int retval;
++	struct share_mem *shmem;
++
++	assert(pdev != NULL);
++	assert(id != NULL);
++
++	retval = boardnet_board_init(pdev, &dev);
++	if (retval)
++		return retval;
++
++	assert(dev != NULL);
++	priv = netdev_priv(dev);
++	assert(priv != NULL);
++
++	if (!boardnet_eth)
++		strcpy(dev->name, "beth%d");
++	else
++		strcpy(dev->name, "eth%d");
++
++	dev->watchdog_timeo	= 5 * HZ;
++	dev->netdev_ops		= &boardnet_netdev_ops;
++	dev->header_ops		= &boardnet_header_ops;
++	dev->addr_len		= ETH_ALEN;
++	dev->hard_header_len 	= ETH_HLEN;
++
++	/* keep the default flags, just add NOARP */
++	dev->flags		|= IFF_NOARP;
++	dev->features		|= NETIF_F_NO_CSUM;
++
++	/*
++	 * For PCIe EP, enable MSI
++	 *
++	 * For PCI agent, the agent irq_out line should connect to the
++	 * host intA~intD.
++	 */
++#ifdef CONFIG_PCI_MSI
++	if (pci_enable_msi(pdev)) {
++		printk(KERN_ERR "Can not enable MSI for PCIe EP device!");
++		iounmap((void *)(priv->m_immrbar));
++		iounmap((void *)(priv->m_ioaddr));
++		free_netdev(dev);
++		pci_release_regions(pdev);
++		return -1;
++	}
++#endif
++	dev->irq		= pdev->irq;
++	memcpy(dev->dev_addr, "\0FSLD1", ETH_ALEN);
++
++	spin_lock_init(&(priv->lock));
++	pci_set_drvdata(pdev, dev);
++
++	shmem = (struct share_mem *)priv->m_ioaddr;
++	if (shmem->share_flag != SHARE_FLAG) {
++		printk(KERN_INFO "Something error in share memory! "
++				"Please check the RC and EP settings\n");
++		boardnet_cleanup(pdev);
++		return -1;
++	}
++
++	netif_carrier_off(dev);
++	retval = register_netdev(dev);
++	if (retval) {
++		printk(KERN_ERR "%s: Cannot register device, aborting\n",
++			dev->name);
++		boardnet_cleanup(pdev);
++		return retval;
++	}
++
++	/*
++	 * The message unit host2ep used to trig the message to ep
++	 * when sending the packet to ep.
++	 */
++	memset(&msg_unit_host2ep, 0, sizeof(msg_unit_host2ep));
++	msg_unit_host2ep.msg_addr = (u32 __iomem *)(priv->m_immrbar
++				 + shmem->msg_group_host2ep
++				 + 0x10 * shmem->msg_num_host2ep);
++	msg_unit_host2ep.msg_num = shmem->msg_num_host2ep;
++	msg_unit_host2ep.mer = (u32 __iomem *) (priv->m_immrbar +
++			shmem->msg_group_host2ep + 0x100);
++	msg_unit_host2ep.msr = (u32 __iomem *) (priv->m_immrbar +
++			shmem->msg_group_host2ep + 0x110);
++
++	/*
++	 * We need the message unit ep2host to read the message which
++	 * written by the EP
++	 */
++	memset(&msg_unit_ep2host, 0, sizeof(msg_unit_ep2host));
++	msg_unit_ep2host.msg_addr = (u32 __iomem *)(priv->m_immrbar
++				 + shmem->msg_group_ep2host
++				 + 0x10 * shmem->msg_num_ep2host);
++	msg_unit_ep2host.msg_num = shmem->msg_num_ep2host;
++	msg_unit_ep2host.mer = (u32 __iomem *) (priv->m_immrbar +
++			shmem->msg_group_ep2host + 0x100);
++	msg_unit_ep2host.msr = (u32 __iomem *) (priv->m_immrbar +
++			shmem->msg_group_ep2host + 0x110);
++
++	printk(KERN_INFO "register device named-----%s\n", dev->name);
++	return 0;
++}
++
++static int boardnet_suspend(struct pci_dev *pdev, pm_message_t state)
++{
++	return 0;
++}
++
++static int boardnet_resume(struct pci_dev *pdev)
++{
++	return 0;
++}
++
++/*
++ * List devices that this driver support
++ */
++static struct pci_device_id boardnet_id_table[] = {
++	{PCI_VENDOR_ID_FREESCALE, PCI_DEVICE_ID_P2020E,
++	 PCI_ANY_ID, PCI_ANY_ID, 0x0b2001, 0xffffff, 0},
++	{PCI_VENDOR_ID_FREESCALE, PCI_DEVICE_ID_P2020,
++	 PCI_ANY_ID, PCI_ANY_ID, 0x0b2001, 0xffffff, 0},
++	{ }
++};
++MODULE_DEVICE_TABLE(pci, boardnet_id_table);
++
++/*
++ * PCI Device info
++ */
++static struct pci_driver boardnet_pci_driver = {
++	.name		= PPC85XX_NETDRV_NAME,
++	.id_table	= boardnet_id_table,
++	.probe		= boardnet_probe,
++	.remove		= __devexit_p(boardnet_remove),
++	.suspend	= boardnet_suspend,
++	.resume		= boardnet_resume
++};
++
++static int __init boardnet_pci_init(void)
++{
++	return pci_register_driver(&boardnet_pci_driver);
++}
++
++static void __exit boardnet_pci_exit(void)
++{
++	pci_unregister_driver(&boardnet_pci_driver);
++}
++
++module_init(boardnet_pci_init);
++module_exit(boardnet_pci_exit);
++
++MODULE_AUTHOR("Xiaobo Xie<X.Xie@freescale.com>");
++MODULE_LICENSE("GPL");
++MODULE_DESCRIPTION("QorIQ PCI EP/Agent Demo Driver(Host/RC side)");
+diff --git a/drivers/net/fsl_pci_veth/pci_cardnet.c b/drivers/net/fsl_pci_veth/pci_cardnet.c
+new file mode 100644
+index 0000000..14cae66
+--- /dev/null
++++ b/drivers/net/fsl_pci_veth/pci_cardnet.c
+@@ -0,0 +1,604 @@
++/*
++ * Copyright 2005-2009 Freescale Semiconductor, Inc.
++ *
++ * Author: Xiaobo Xie <X.Xie@freescale.com>
++ *	Roy Zang <tie-fei.zang@freescale.com>
++ *	Jason Jin <jason.jin@freescale.com>
++ *
++ * Description:
++ * PCI Agent/EP Demo Driver for Freescale QorIQ based platform (Agent)
++ *
++ * This program is free software; you can redistribute  it and/or modify it
++ * under  the terms of  the GNU General  Public License as published by the
++ * Free Software Foundation;  either version 2 of the  License, or (at your
++ * option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to
++ * Free Software Foundation, Inc.,
++ * 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
++ */
++
++#include <linux/module.h>
++#include <linux/kernel.h>
++#include <linux/errno.h>
++#include <linux/io.h>
++#include <linux/netdevice.h>
++#include <linux/etherdevice.h>
++#include <linux/ip.h>
++#include <linux/delay.h>
++#include <linux/skbuff.h>
++#include <linux/moduleparam.h>
++#include <linux/of_platform.h>
++
++#include <asm/page.h>
++#include <asm/fsl_msg.h>
++#include <sysdev/fsl_pci.h>
++
++#include "pci_veth.h"
++
++static int eth;
++module_param(eth, int, 0);
++
++/* Define which pci/pcie port is configured as Agent/EP */
++#if !defined(CONFIG_PCI_EP_N)
++static unsigned int pci_ep_n = 1;
++#else
++static unsigned int pci_ep_n = CONFIG_PCI_EP_N;
++#endif
++
++static int link_up;
++static int host_open;
++
++#define HAVE_TX_TIMEOUT
++
++struct share_mem {
++	u32	share_flag;
++	u32	msg_group_host2ep;
++	u32 	msg_num_host2ep;
++	u32	msg_group_ep2host;
++	u32 	msg_num_ep2host;
++	u32	hstatus;
++	u32	astatus;
++
++	u32	rx_flags;
++	u32	rx_packetlen;
++	u8	rxbuf[2*1024 - 22];
++
++	u32	tx_flags;
++	u32	tx_packetlen;
++	u8	txbuf[2*1024 - 22];
++};
++
++struct pci_agent_dev {
++	u32	local_addr;
++	u32	local_mem_size;
++	u32	shmem_inb_win_num;
++	u32	irq;
++	struct  fsl_msg_unit *msg_host2ep;
++	struct  fsl_msg_unit *msg_ep2host;
++	void __iomem *pci_agent_regs;
++};
++
++struct card_priv {
++	struct share_mem *share_mem;
++	struct sk_buff *cur_tx_skb;
++	int rx_packetlen;
++	int tx_packetlen;
++	spinlock_t lock; /* lock for set card_priv */
++	struct net_device_stats stats;
++	struct pci_agent_dev *pci_agent_dev;
++};
++
++static int card_open(struct net_device *dev);
++static int card_release(struct net_device *dev);
++static int card_config(struct net_device *dev, struct ifmap *map);
++static void card_rx(struct net_device *dev, int len, unsigned char *buf);
++static int card_tx(struct sk_buff *skb, struct net_device *dev);
++static void card_tx_timeout(struct net_device *dev);
++static int card_ioctl(struct net_device *dev, struct ifreq *rq, int cmd);
++static struct net_device_stats *card_stats(struct net_device *dev);
++static int card_rebuild_header(struct sk_buff *skb);
++static int card_header(struct sk_buff *skb, struct net_device *dev,
++		unsigned short type, const void *daddr, const void *saddr,
++		unsigned int len);
++static int card_change_mtu(struct net_device *dev, int new_mtu);
++static irqreturn_t card_interrupt(int irq, void *dev_id);
++
++static const struct header_ops card_header_ops = {
++	.create		= card_header,
++	.rebuild	= card_rebuild_header,
++	.cache  	= NULL,
++	.cache_update	= NULL,
++	.parse		= NULL,
++};
++
++static const struct net_device_ops card_netdev_ops = {
++	.ndo_open = card_open,
++	.ndo_start_xmit = card_tx,
++	.ndo_stop = card_release,
++	.ndo_change_mtu = card_change_mtu,
++	.ndo_tx_timeout = card_tx_timeout,
++	.ndo_do_ioctl = card_ioctl,
++	.ndo_set_config = card_config,
++	.ndo_get_stats = card_stats,
++};
++
++void setup_agent_shmem_inb_win(struct pci_agent_dev *dev)
++{
++	struct ccsr_pci __iomem *pci;
++	u32 winno = dev->shmem_inb_win_num;
++
++	/*
++	 * The inb piwbar was set the host during enum,
++	 * we only need to set the piwtar
++	 */
++	pci = (struct ccsr_pci *)dev->pci_agent_regs;
++	out_be32(&pci->piw[winno].pitar, dev->local_addr>>12);
++	out_be32(&pci->piw[winno].piwar, PIWAR_EN | PIWAR_TRGT_MEM |
++			PIWAR_RTT_SNOOP | PIWAR_WTT_SNOOP |
++			(__ilog2(dev->local_mem_size) - 1));
++}
++
++static int card_open(struct net_device *dev)
++{
++	int retval;
++	struct card_priv *tp = netdev_priv(dev);
++
++	fsl_clear_msg(tp->pci_agent_dev->msg_host2ep);
++
++	if (host_open) {
++		netif_carrier_on(dev);
++		netif_start_queue(dev);
++		link_up = 1;
++		printk(KERN_INFO "%s is up\n", dev->name);
++	} else {
++		/* Do not know if host is Open, Ping it.*/
++		fsl_send_msg(tp->pci_agent_dev->msg_ep2host, AGENT_UP);
++	}
++
++	retval = request_irq(dev->irq, card_interrupt, 0,
++					dev->name, dev);
++	if (retval) {
++		dev_err(&dev->dev, "Can not request irq for cardnet!\n");
++		return retval;
++	}
++
++	return 0;
++}
++
++static int card_release(struct net_device *dev)
++{
++	struct card_priv *tp = netdev_priv(dev);
++	struct pci_agent_dev *pci_dev = tp->pci_agent_dev;
++
++	netif_stop_queue(dev); /* can't transmit any more */
++	netif_carrier_off(dev);
++	link_up = 0;
++
++	synchronize_irq(dev->irq);
++	free_irq(dev->irq, dev);
++	tp->share_mem->hstatus = 0; /*clear the pending data for host*/
++	fsl_clear_msg(pci_dev->msg_ep2host);
++
++	if (host_open) {
++		fsl_send_msg(pci_dev->msg_ep2host, AGENT_DOWN);
++		host_open = 0;
++	}
++
++	printk(KERN_INFO "%s is down\n", dev->name);
++	return 0;
++}
++
++static int card_config(struct net_device *dev, struct ifmap *map)
++{
++	if (dev->flags & IFF_UP) /* can't act on a running interface */
++		return -EBUSY;
++
++	/* Don't allow changing the I/O address */
++	if (map->base_addr != dev->base_addr) {
++		dev_warn(&dev->dev, "cardnet: Can't change I/O address\n");
++		return -EOPNOTSUPP;
++	}
++
++	/* Allow changing the IRQ */
++	if (map->irq != dev->irq)
++		dev->irq = map->irq;
++
++	return 0;
++}
++
++/*
++ * Receive a packet: retrieve, encapsulate and pass over to upper levels
++ */
++static void card_rx(struct net_device *dev, int len, unsigned char *buf)
++{
++	struct card_priv *priv = netdev_priv(dev);
++	struct sk_buff *skb;
++
++	skb = dev_alloc_skb(len+2);
++	if (!skb) {
++		dev_err(&dev->dev, "card rx: low on mem - packet dropped\n");
++		priv->stats.rx_dropped++;
++		return;
++	}
++
++	skb_reserve(skb, 2);
++	memcpy(skb_put(skb, len), buf, len);
++
++	/* Write metadata, and then pass to the receive level */
++	skb->dev = dev;
++	skb->protocol = eth_type_trans(skb, dev);
++	skb->ip_summed = CHECKSUM_UNNECESSARY; /* don't check it */
++	priv->stats.rx_packets++;
++	priv->stats.rx_bytes += len;
++
++	netif_rx(skb);
++}
++
++static irqreturn_t card_interrupt(int irq, void *dev_id)
++{
++	struct card_priv *priv;
++	struct share_mem *shmem;
++	u32  statusword = 0;
++	int len;
++	struct net_device *dev = (struct net_device *)dev_id;
++
++	if (!dev)
++		return IRQ_NONE;
++	priv =  netdev_priv(dev);
++
++	spin_lock(&priv->lock);
++	shmem = (struct share_mem *) priv->share_mem;
++
++	fsl_read_msg(priv->pci_agent_dev->msg_host2ep, &statusword);
++
++	if (statusword & HOST_SENT) {
++		if (!link_up) {
++			netif_carrier_on(dev);
++			netif_start_queue(dev);
++			link_up = 1;
++			host_open = 1;
++		}
++		len = shmem->rx_packetlen;
++		card_rx(dev, len, shmem->rxbuf);
++		shmem->astatus = AGENT_GET;
++	} else if (statusword & HOST_UP) {
++		if (!link_up) {
++			netif_carrier_on(dev);
++			netif_start_queue(dev);
++			link_up = 1;
++			fsl_send_msg(priv->pci_agent_dev->msg_ep2host,
++						AGENT_UP);
++			host_open = 1;
++		}
++	} else if (statusword & HOST_DOWN) {
++		if (link_up) {
++			link_up = 0;
++			host_open = 0;
++			netif_carrier_off(dev);
++			netif_stop_queue(dev);
++		}
++	} else {
++		dev_info(&dev->dev, "The message is not for me! msg=0x%x\n",
++					statusword);
++		spin_unlock(&priv->lock);
++		return IRQ_NONE;
++	}
++
++	spin_unlock(&priv->lock);
++	return IRQ_HANDLED;
++}
++
++static int card_tx(struct sk_buff *skb, struct net_device *dev)
++{
++	int len;
++	int time_out = 1000;
++	int count = 0;
++	char *data;
++	struct card_priv *priv = netdev_priv(dev);
++	struct share_mem *shmem = (struct share_mem *)priv->share_mem;
++
++	while (shmem->hstatus) {
++		udelay(5);
++		time_out--;
++		if (!time_out) {
++			dev_err(&dev->dev, "Timeout, host busy!\n");
++			netif_stop_queue(dev);
++			priv->stats.tx_dropped++;
++			dev_kfree_skb(skb);
++			return 0;
++		}
++	}
++
++	len = skb->len < ETH_ZLEN ? ETH_ZLEN : skb->len;
++	if (len < sizeof(struct ethhdr) + sizeof(struct iphdr)) {
++		dev_info(&dev->dev, "packet too short (%i octets)\n", len);
++		priv->stats.tx_dropped++;
++		dev_kfree_skb(skb);
++		return 0;
++	}
++	if (len > 2026) {
++		dev_info(&dev->dev, "packet too long (%i octets)\n", len);
++		priv->stats.tx_dropped++;
++		dev_kfree_skb(skb);
++		return 0;
++	}
++
++	data = skb->data;
++	dev->trans_start = jiffies; /* save the timestamp */
++	priv->cur_tx_skb = skb;
++	priv->tx_packetlen = len;
++
++	shmem->tx_flags = ++count;
++	shmem->tx_packetlen = len;
++	memcpy(shmem->txbuf, data, len);
++	shmem->hstatus = AGENT_SENT;
++
++	priv->stats.tx_packets++;
++	priv->stats.tx_bytes += priv->tx_packetlen;
++
++	fsl_send_msg(priv->pci_agent_dev->msg_ep2host, AGENT_SENT);
++	dev_kfree_skb(priv->cur_tx_skb);
++
++	return 0;
++}
++
++/*
++ * Deal with a transmit timeout.
++ */
++static void card_tx_timeout(struct net_device *dev)
++{
++	struct card_priv *priv = netdev_priv(dev);
++
++	dev_info(&dev->dev, "Transmit timeout at %ld, latency %ld\n",
++		jiffies, jiffies - dev->trans_start);
++
++	priv->stats.tx_errors++;
++	fsl_clear_msg(priv->pci_agent_dev->msg_ep2host);
++
++	/* Try to kick the other side when timeout */
++	fsl_send_msg(priv->pci_agent_dev->msg_ep2host, AGENT_UP);
++
++	netif_wake_queue(dev);
++}
++
++static int card_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
++{
++	return 0;
++}
++
++static struct net_device_stats *card_stats(struct net_device *dev)
++{
++	struct card_priv *priv = netdev_priv(dev);
++	return &priv->stats;
++}
++
++static int card_rebuild_header(struct sk_buff *skb)
++{
++	struct ethhdr *eth = (struct ethhdr *) skb->data;
++	struct net_device *dev = skb->dev;
++
++	memcpy(eth->h_source, dev->dev_addr, dev->addr_len);
++	memcpy(eth->h_dest, dev->dev_addr, dev->addr_len);
++	eth->h_dest[ETH_ALEN-1] ^= 0x01; /* dest is us xor 1 */
++
++	return 0;
++}
++
++static int card_header(struct sk_buff *skb, struct net_device *dev,
++		unsigned short type, const void *daddr, const void *saddr,
++		unsigned int len)
++{
++	struct ethhdr *eth = (struct ethhdr *)skb_push(skb, ETH_HLEN);
++
++	eth->h_proto = htons(type);
++	memcpy(eth->h_source, dev->dev_addr, dev->addr_len);
++	memcpy(eth->h_dest,   dev->dev_addr, dev->addr_len);
++	eth->h_dest[ETH_ALEN-1]   ^= 0x01;
++	return dev->hard_header_len;
++}
++
++static int card_change_mtu(struct net_device *dev, int new_mtu)
++{
++	spinlock_t *lock = &((struct card_priv *)netdev_priv(dev))->lock;
++	unsigned long flags;
++
++	if ((new_mtu < 68) || (new_mtu > 1500))
++		return -EINVAL;
++
++	spin_lock_irqsave(lock, flags);
++	dev->mtu = new_mtu;
++	spin_unlock_irqrestore(lock, flags);
++	return 0;
++}
++
++static void card_init(struct net_device *dev)
++{
++	ether_setup(dev);
++	dev->netdev_ops	= &card_netdev_ops;
++	dev->header_ops	= &card_header_ops;
++
++	memcpy(dev->dev_addr, "\0FSLD0", ETH_ALEN);
++	dev->watchdog_timeo	= 5 * HZ;
++
++	/* keep the default flags, just add NOARP */
++	dev->flags	|= IFF_NOARP;
++	dev->features	|= NETIF_F_NO_CSUM;
++}
++
++static int cardnet_priv_init(struct net_device *dev)
++{
++	struct card_priv *priv;
++	struct fsl_msg_unit *msg_unit_host2ep = NULL, *msg_unit_ep2host = NULL;
++	struct pci_agent_dev *pci_agent_dev;
++	struct device_node *np;
++	const unsigned int *cell_index = NULL;
++	u32 shmem_phys_addr;
++
++	/* Allocate the priv field. */
++	priv = netdev_priv(dev);
++	memset(priv, 0, sizeof(struct card_priv));
++
++	spin_lock_init(&((struct card_priv *)netdev_priv(dev))->lock);
++
++	priv->share_mem = (struct share_mem *)
++				__get_free_pages(GFP_ATOMIC, NEED_LOCAL_PAGE);
++	if (priv->share_mem == NULL) {
++		dev_err(&dev->dev, "Can not allocate pages for sharing mem!\n");
++		return -ENOMEM;
++	}
++
++	shmem_phys_addr = virt_to_phys((void *)priv->share_mem);
++	memset(priv->share_mem, 0, PAGE_SIZE << NEED_LOCAL_PAGE);
++
++	priv->pci_agent_dev = (struct pci_agent_dev *)
++			kmalloc(sizeof(struct pci_agent_dev), GFP_KERNEL);
++	if (priv->pci_agent_dev == NULL) {
++		dev_err(&dev->dev, "Can not allocate memory!\n");
++		goto err_out2;
++	}
++
++	memset(priv->pci_agent_dev, 0, sizeof(struct pci_agent_dev));
++
++	pci_agent_dev = priv->pci_agent_dev;
++	pci_agent_dev->local_addr = shmem_phys_addr;
++
++	for_each_node_by_type(np, "pci") {
++		if (of_device_is_compatible(np, "fsl,mpc8540-pci") ||
++		    of_device_is_compatible(np, "fsl,mpc8548-pcie")) {
++			cell_index = of_get_property(np, "cell-index", NULL);
++			if (cell_index && (*cell_index == pci_ep_n))
++				break;
++		}
++	}
++	if (!cell_index || *cell_index != pci_ep_n) {
++		dev_err(&dev->dev, "Can not find the assigned EP node!\n");
++		goto err_out1;
++	}
++
++	pci_agent_dev->pci_agent_regs = of_iomap(np, 0);
++	of_node_put(np);
++	if (!pci_agent_dev->pci_agent_regs) {
++		dev_err(&dev->dev, "Can not map the pci resoure for EP!\n");
++		goto err_out1;
++	}
++
++	/*
++	 * inbound winno 3, is the only inbound window for 32bit mem,
++	 * used to map the share mem
++	 */
++	pci_agent_dev->local_mem_size = AGENT_MEM_SIZE;
++	pci_agent_dev->shmem_inb_win_num = 2;
++	setup_agent_shmem_inb_win(pci_agent_dev);
++
++	/* Request message interrupt resource */
++	msg_unit_host2ep = fsl_get_msg_unit();
++	msg_unit_ep2host = fsl_get_msg_unit();
++	if (!msg_unit_host2ep || !msg_unit_ep2host ||
++		(msg_unit_host2ep->requested == false) ||
++		(msg_unit_ep2host->requested == false)) {
++			dev_info(&dev->dev, "can't allocate msg interrupt!");
++			goto err_out1;
++	}
++
++	fsl_clear_msg(msg_unit_host2ep);
++	fsl_enable_msg(msg_unit_host2ep);
++
++	fsl_clear_msg(msg_unit_ep2host);
++	fsl_enable_msg(msg_unit_ep2host);
++
++	/* Set the message for ep2host routing to irq_out */
++	fsl_msg_route_int_to_irqout(msg_unit_ep2host);
++
++	priv->share_mem->msg_group_host2ep =
++		msg_unit_host2ep->msg_group_addr_offset;
++	priv->share_mem->msg_group_host2ep =
++		msg_unit_host2ep->msg_group_addr_offset;
++
++	priv->share_mem->msg_num_host2ep = msg_unit_host2ep->msg_num;
++	priv->share_mem->msg_group_ep2host =
++		msg_unit_ep2host->msg_group_addr_offset;
++	priv->share_mem->msg_num_ep2host = msg_unit_ep2host->msg_num;
++
++	pci_agent_dev->msg_host2ep = msg_unit_host2ep;
++	pci_agent_dev->msg_ep2host = msg_unit_ep2host;
++
++	dev->irq = msg_unit_host2ep->irq;
++
++	/* Put a flag in the header of the share_mem */
++	priv->share_mem->share_flag = SHARE_FLAG;
++	return 0;
++
++err_out1:
++	kfree(priv->pci_agent_dev);
++err_out2:
++	kfree(priv->share_mem);
++	return -1;
++}
++
++static struct net_device *card_devs;
++
++static __init int card_init_module(void)
++{
++	int result, device_present = 0;
++	int card_eth;
++	char interface_name[16];
++
++	card_eth = eth; /* copy the cfg datum in the non-static place */
++	if (!card_eth)
++		strcpy(interface_name, "ceth%d");
++	else
++		strcpy(interface_name, "eth%d");
++
++	card_devs = alloc_netdev(sizeof(struct card_priv),
++					interface_name, card_init);
++	if (card_devs == NULL)
++		return -ENODEV;
++
++	if (cardnet_priv_init(card_devs))
++		return -ENODEV;
++
++	netif_carrier_off(card_devs);
++	result = register_netdev(card_devs);
++	if (result) {
++		printk(KERN_ERR "card: error %i registering device \"%s\"\n",
++			result, interface_name);
++		free_netdev(card_devs);
++	} else
++		device_present++;
++
++	printk(KERN_INFO "register device named-----%s\n", card_devs->name);
++	printk(KERN_INFO "mpc85xx agent drvier init succeed\n");
++	return device_present ? 0 : -ENODEV;
++}
++
++static __exit void card_cleanup(void)
++{
++	struct card_priv *tp = netdev_priv(card_devs);
++	struct share_mem *share_mem = (struct share_mem *)tp->share_mem;
++	struct pci_agent_dev *pci_dev = tp->pci_agent_dev;
++
++	free_pages((unsigned long)share_mem, NEED_LOCAL_PAGE);
++
++	iounmap(pci_dev->pci_agent_regs);
++	kfree(tp->pci_agent_dev);
++
++	fsl_release_msg_unit(pci_dev->msg_ep2host);
++	fsl_release_msg_unit(pci_dev->msg_host2ep);
++
++	unregister_netdev(card_devs);
++	free_netdev(card_devs);
++}
++
++module_init(card_init_module);
++module_exit(card_cleanup);
++
++MODULE_AUTHOR("Xiaobo Xie<X.Xie@freescale.com>");
++MODULE_LICENSE("GPL");
++MODULE_DESCRIPTION("QorIQ PCI Agent/EP Demo Driver(Agent/EP side)");
+diff --git a/drivers/net/fsl_pci_veth/pci_veth.h b/drivers/net/fsl_pci_veth/pci_veth.h
+new file mode 100644
+index 0000000..a12a88d
+--- /dev/null
++++ b/drivers/net/fsl_pci_veth/pci_veth.h
+@@ -0,0 +1,60 @@
++/*
++ * Copyright 2005-2009 Freescale Semiconductor, Inc.
++ *
++ * QorIQ based PCIe host/agent based defines
++ *
++ * Author: Xiaobo Xie <r63061@freescale.com>
++ *	Roy Zang <tie-fei.zang@freescale.com>
++ *	Jason Jin <jason.jin@freescale.com>
++ *
++ * This program is free software; you can redistribute  it and/or modify it
++ * under  the terms of  the GNU General  Public License as published by the
++ * Free Software Foundation;  either version 2 of the  License, or (at your
++ * option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to
++ * Free Software Foundation, Inc.,
++ * 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
++ */
++
++#ifndef PCI_AGENT_LIB_H
++#define PCI_AGENT_LIB_H
++
++#define PPC85XX_NETDRV_NAME	"Boardnet: PPC85xx PCI Agent Demo Driver"
++#define DRV_VERSION		"2.0"
++#define PFX PPC85XX_NETDRV_NAME ": "
++
++/* For inbound window */
++#define PIWAR_EN		0x80000000
++#define PIWAR_TRGT_MEM		0x00f00000
++#define PIWAR_RTT_SNOOP		0x00050000
++#define PIWAR_WTT_SNOOP		0x00005000
++
++/* These are the flags in the message register */
++/* tx, rx and device flags */
++#define	AGENT_SENT		0x00000001
++#define	AGENT_GET		0x00000000
++#define	HOST_SENT		0x00000001
++#define HOST_GET		0x00000000
++#define	DEV_TBUSY		0x00000001
++
++#define SHARE_FLAG		0xA367CF5A
++
++#define AGENT_UP		0x2
++#define AGENT_DOWN		0x4
++#define HOST_UP			0x8
++#define HOST_DOWN		0x10
++
++/*Define one page for shared memory*/
++#define NEED_LOCAL_PAGE		0
++
++/*The agent defined 4K mem for sharing*/
++#define	AGENT_MEM_SIZE	((NEED_LOCAL_PAGE + 1) * PAGE_SIZE)
++
++#endif
+-- 
+1.5.6.5
+

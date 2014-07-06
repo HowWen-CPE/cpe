@@ -1,0 +1,18 @@
+--- linux-2.6.31_atheros/arch/mips/atheros/gpio.c	2013-04-03 13:34:13.000000000 +0800
++++ linux-2.6.31_liteon/arch/mips/atheros/gpio.c	2013-02-04 09:37:56.000000000 +0800
+@@ -132,6 +132,7 @@
+ 
+ 	ath_reg_rmw_set(ATH_GPIO_INT_ENABLE, (1 << gpio));
+ }
++EXPORT_SYMBOL(ath_gpio_config_int);
+ 
+ void ath_gpio_config_output(int gpio)
+ {
+@@ -151,6 +152,7 @@
+ 	ath_reg_rmw_clear(ATH_GPIO_OE, (1 << gpio));
+ #endif
+ }
++EXPORT_SYMBOL(ath_gpio_config_input);
+ 
+ void ath_gpio_out_val(int gpio, int val)
+ {

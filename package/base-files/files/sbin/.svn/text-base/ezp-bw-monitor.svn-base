@@ -1,0 +1,52 @@
+#!/bin/sh
+
+# Enable to start bandwidth monitor function
+# application mark is recorded in /tmp/appmark
+# application flow is recorded in /tmp/appmarkflow
+
+[ "$(nvram show bw_monitor_rule 0 enable)" = "1" ] || exit
+getmaskflow()
+{
+local monitormark=$1
+iptables -nvL -t mangle | grep "$monitormark" | grep "RETURN" | {
+local upbytecount=""
+local downbytecount=""
+while :;
+do
+    read inpline
+    [ -n "$(echo $inpline | grep $(nvram get wan0_ifname))" ] && {
+#        uppktcount="$(echo $inpline | grep $(nvram get wan0_ifname) | awk '{print $1}')"
+        upbytecount="$(echo $inpline | grep $(nvram get wan0_ifname) | awk '{print $2}')"
+    }
+    [ -n "$(echo $inpline | grep $(nvram get lan0_ifname))" ] && {
+#        downpktcount="$(echo $inpline | grep $(nvram get lan0_ifname) | awk '{print $1}')"
+        downbytecount="$(echo $inpline | grep $(nvram get lan0_ifname) | awk '{print $2}')"
+    }
+    [ -n "$upbytecount" -a -n "$downbytecount" ] && break
+    [ -z "$inpline" ] && break;
+#    pktcount="$(echo $inpline | awk '{print $1}')"
+#    bytecount="$(echo $inpline | awk '{print $2}')"
+#    break;
+done
+
+echo "$upbytecount $downbytecount"
+}
+}
+
+cat /tmp/appmark | {
+echo -n "" > /tmp/appmarkflow
+while :;
+do
+    read inpline
+    [ -z "$inpline" ] && break
+    mmark=$(echo "$inpline" | awk 'BEGIN { FS = "|" } { print $4 }')
+    mmark=$(printf "%x" "0x$mmark")
+    bytecount="$(getmaskflow $mmark)"
+    upbytecount="$(echo $bytecount | awk '{ print $1 }' | sed 's/K/000/g' | sed 's/M/000000/g' )"
+    downbytecount="$(echo $bytecount | awk '{ print $2 }' | sed 's/K/000/g' | sed 's/M/000000/g' )"
+    upflowrate=$(($upbytecount / 60))
+    downflowrate=$(($downbytecount / 60))
+    echo "$inpline|$upbytecount|$upflowrate|$downbytecount|$downflowrate" >> /tmp/appmarkflow
+done
+iptables -t mangle -Z EZP_BW_MARK
+}

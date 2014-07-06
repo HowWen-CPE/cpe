@@ -1,0 +1,29 @@
+--- linux-2.6.31/arch/mips/atheros/gpio.c	2014-05-18 05:03:42.525371316 -0700
++++ linux-2.6.31-new/arch/mips/atheros/gpio.c	2014-05-18 05:01:59.765291949 -0700
+@@ -1207,8 +1207,8 @@ int __init ath_simple_config_init(void)
+ #else
+ 	ath_gpio_config_input(JUMPSTART_GPIO);
+ 	/* configure Jumpstart GPIO as level triggered interrupt */
+-	ath_gpio_config_int(JUMPSTART_GPIO, INT_TYPE_LEVEL,
+-				INT_POL_ACTIVE_LOW);
++	//ath_gpio_config_int(JUMPSTART_GPIO, INT_TYPE_LEVEL, //disable jumpstart
++	//			INT_POL_ACTIVE_LOW);
+ 	printk("%s (%s) JUMPSTART_GPIO: %d\n", __FILE__, __func__,
+ 		JUMPSTART_GPIO);
+ #ifndef CONFIG_MACH_AR934x
+@@ -1218,11 +1218,12 @@ int __init ath_simple_config_init(void)
+ #endif
+ #endif
+ 
+-	req = request_irq(ATH_GPIO_IRQn(JUMPSTART_GPIO), jumpstart_irq, 0,
++	//req = request_irq(ATH_GPIO_IRQn(JUMPSTART_GPIO), jumpstart_irq, 0,
++	req = -1; //don't register IRQ
+ #ifdef AP_RESET_GPIO
+-			"SW JUMPSTART", NULL);
++			//"SW JUMPSTART", NULL);
+ #else
+-			"SW JUMPSTART/FACTORY RESET", NULL);
++			//"SW JUMPSTART/FACTORY RESET", NULL);
+ #endif
+ 	if (req != 0) {
+ 		printk("request_irq for jumpstart failed (error %d)\n", req);

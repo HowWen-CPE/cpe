@@ -1,0 +1,26 @@
+From 2f7d2f8d2399af7909a3892e5c859e81843b77e1 Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Mon, 21 Dec 2009 17:30:41 +0530
+Subject: [PATCH] 85xx/p1_p2_rdb: enable hwconfig
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ include/configs/P1_P2_RDB.h |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/include/configs/P1_P2_RDB.h b/include/configs/P1_P2_RDB.h
+index 37297fb..bf467f0 100644
+--- a/include/configs/P1_P2_RDB.h
++++ b/include/configs/P1_P2_RDB.h
+@@ -130,6 +130,8 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ #define CONFIG_TSECV2
+ #endif
+ 
++#define CONFIG_HWCONFIG
++
+ /*
+  * These can be toggled for performance analysis, otherwise use default.
+  */
+-- 
+1.5.6.3
+

@@ -1,0 +1,103 @@
+--- wifi_QCA_10.1.436-old/drivers/wlan_modules/umac/mlme/ieee80211_mgmt.c	2014-06-04 17:23:53.156162163 -0700
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/mlme/ieee80211_mgmt.c	2014-06-08 06:02:40.070240315 -0700
+@@ -4053,7 +4053,12 @@
+         {
+             for(i=0;i<vap->iv_beacon_info_count;i++)
+             {
+-                if(!OS_MEMCMP(vap->iv_beacon_info[i].essid,vap->iv_essid,vap->iv_esslen))
++                #if 0 /* only compare bssid, added by peter, 2014-6-8*/
++                if(!OS_MEMCMP(vap->iv_beacon_info[i].essid,vap->iv_essid,vap->iv_esslen) 
++                    && strlen(vap->iv_beacon_info[i].essid) == vap->iv_esslen)
++                #else
++                if(!OS_MEMCMP(vap->iv_beacon_info[i].bssid, wh->i_addr2, 6))
++                #endif
+                 {
+                     eq=1;
+                     vap->iv_beacon_info[i].rssi_ctl_0=rs->rs_rssictl[0];
+@@ -4064,6 +4069,9 @@
+             }
+             if(!eq)
+             {
++                /* record bssid, added by peter, 2014-6-8*/
++                OS_MEMCPY(vap->iv_beacon_info[vap->iv_beacon_info_count].bssid, wh->i_addr2, 6);
++                
+                 OS_MEMCPY(vap->iv_beacon_info[vap->iv_beacon_info_count].essid, vap->iv_essid,vap->iv_esslen);
+                 vap->iv_beacon_info[vap->iv_beacon_info_count].esslen = vap->iv_esslen;
+                 vap->iv_beacon_info[vap->iv_beacon_info_count].rssi_ctl_0=rs->rs_rssictl[0];
+@@ -4075,6 +4083,9 @@
+         }
+         else
+         {
++            /* record bssid, added by peter, 2014-6-8*/
++            OS_MEMCPY(vap->iv_beacon_info[vap->iv_beacon_info_count].bssid, wh->i_addr2, 6);
++            
+             OS_MEMCPY(vap->iv_beacon_info[vap->iv_beacon_info_count].essid, vap->iv_essid,vap->iv_esslen);
+             vap->iv_beacon_info[vap->iv_beacon_info_count].esslen = vap->iv_esslen;
+             vap->iv_beacon_info[vap->iv_beacon_info_count].rssi_ctl_0=rs->rs_rssictl[0];
+--- wifi_QCA_10.1.436-old/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c	2014-06-04 17:23:59.632163282 -0700
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c	2014-06-08 05:59:56.245075784 -0700
+@@ -12583,7 +12583,7 @@
+     void *p;
+     IEEE80211_BSS_ENTRY *pbss = &(vap->iv_ap_info);
+     char security_str[32];
+-    char rssi0, rssi1, rssi2;
++    char rssi0=-94, rssi1=-94, rssi2=-94;
+     u_char  zero_ssid[IEEE80211_ADDR_LEN] = {0x00};
+     u_int8_t beacon_info_count = vap->iv_beacon_info_count;
+ 
+@@ -12628,7 +12628,13 @@
+     /* RSSI */
+     if (!strcmp(vap->iv_ic->ic_osdev->netdev->name, "wifi0")) {
+         while (beacon_info_count--) {
+-            if(!OS_MEMCMP(vap->iv_beacon_info[beacon_info_count].essid,vap->iv_essid,vap->iv_esslen)) {
++            #if 0 /* only compare bssid, added by peter, 2014-6-8*/
++            if(!OS_MEMCMP(vap->iv_beacon_info[beacon_info_count].essid,vap->iv_essid,vap->iv_esslen)
++                    && strlen(vap->iv_beacon_info[beacon_info_count].essid) == vap->iv_esslen) 
++            #else
++            if(!OS_MEMCMP(vap->iv_beacon_info[beacon_info_count].bssid,vap->iv_bss->ni_bssid,6))
++            #endif
++            {
+                 rssi0 = vap->iv_beacon_info[beacon_info_count].rssi_ctl_0 + ATH_DEFAULT_NOISE_FLOOR;
+                 rssi1 = vap->iv_beacon_info[beacon_info_count].rssi_ctl_1 + ATH_DEFAULT_NOISE_FLOOR;
+                 rssi2 = vap->iv_beacon_info[beacon_info_count].rssi_ctl_2 + ATH_DEFAULT_NOISE_FLOOR;
+@@ -12643,9 +12649,27 @@
+ 
+     }
+ 
+-    sprintf(p + strlen(p), "Chain0 RSSI:%ddBm\n", rssi0);
+-    sprintf(p + strlen(p), "Chain1 RSSI:%ddBm\n", rssi1);
+-    sprintf(p + strlen(p), "Chain2 RSSI:%ddBm\n", rssi2);
++    /* rssi according to chainmask*/
++    switch(vap->iv_ic->ic_rx_chainmask)
++    {
++    case 1:
++        sprintf(p + strlen(p), "Chain0 RSSI:%ddBm\n", rssi0);
++        break;
++    case 3:
++        sprintf(p + strlen(p), "Chain0 RSSI:%ddBm\n", rssi0);
++        sprintf(p + strlen(p), "Chain1 RSSI:%ddBm\n", rssi1);
++        break;
++    case 5:
++        sprintf(p + strlen(p), "Chain0 RSSI:%ddBm\n", rssi0);
++        sprintf(p + strlen(p), "Chain1 RSSI:%ddBm\n", rssi2);
++        break;
++    case 7:
++    default:
++        sprintf(p + strlen(p), "Chain0 RSSI:%ddBm\n", rssi0);
++        sprintf(p + strlen(p), "Chain1 RSSI:%ddBm\n", rssi1);
++        sprintf(p + strlen(p), "Chain2 RSSI:%ddBm\n", rssi2);
++        break;
++    }
+ 
+     iwr->u.data.length = strlen(p);
+     error = _copy_to_user(iwr->u.data.pointer, p, iwr->u.data.length);
+--- wifi_QCA_10.1.436-old/drivers/wlan_modules/include/_ieee80211.h	2014-06-04 17:23:44.208163924 -0700
++++ wifi_QCA_10.1.436/drivers/wlan_modules/include/_ieee80211.h	2014-06-08 05:24:54.376469986 -0700
+@@ -484,6 +484,7 @@
+ };
+ 
+ struct ieee80211_beacon_info{
++    u_int8_t    bssid[6];  /* bssid, added by peter, 2014-6-8*/
+     u_int8_t    essid[IEEE80211_NWID_LEN+1];
+     u_int8_t    esslen;
+     u_int8_t	rssi_ctl_0;

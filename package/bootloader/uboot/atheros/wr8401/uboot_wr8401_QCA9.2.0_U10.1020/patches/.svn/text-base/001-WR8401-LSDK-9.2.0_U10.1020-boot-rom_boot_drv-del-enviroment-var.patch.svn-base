@@ -1,0 +1,27 @@
+--- boot_atheros/rom-boot-drv/Makefile	2013-04-03 13:43:14.000000000 +0800
++++ boot_liteon/rom-boot-drv/Makefile	2013-04-01 14:10:05.000000000 +0800
+@@ -1,8 +1,9 @@
+-export TOPDIR=$(PWD)/
+-export TOOLPATH=$(TOPDIR)/../../build/gcc-4.3.3/build_mips/staging_dir/usr/
+-export KERNELPATH=$(TOPDIR)/../../linux/kernels/mips-linux-2.6.15
+-export UTILPATH=$(TOPDIR)/../utility/bin
+-export PATH:=$(TOPDIR)/tools:$(TOOLPATH)/bin:$(TOPDIR)/src:${PATH}
++# Modify by Sean@liteon.com
++#export TOPDIR=$(PWD)/
++#export TOOLPATH=$(TOPDIR)/../../build/gcc-4.3.3/build_mips/staging_dir/usr/
++#export KERNELPATH=$(TOPDIR)/../../linux/kernels/mips-linux-2.6.15
++#export UTILPATH=$(TOPDIR)/../utility/bin
++#export PATH:=$(TOPDIR)/tools:$(TOOLPATH)/bin:$(TOPDIR)/src:${PATH}
+ 
+ PRJ_NAME = rombootdrv
+ 
+@@ -59,7 +60,8 @@
+ 
+ $(PRJ_NAME).bin : $(PRJ_NAME).elf
+ 	$(OBJCOPY) -S -O binary $(strip-flags) $(PRJ_NAME).elf $(PRJ_NAME).bin
+-	../utility/bin/bin2hex $(PRJ_NAME).bin fwu_$(PRJ_NAME).c 0 usb waspRomInitFw
++	# Modify by Sean@liteon.com
++	$(UTILPATH)/bin2hex $(PRJ_NAME).bin fwu_$(PRJ_NAME).c 0 usb waspRomInitFw
+ 
+ clean:
+ 	rm -f *~ *.o $(PRJ_NAME).elf $(PRJ_NAME).srec $(PRJ_NAME).bin fwu_$(PRJ_NAME).c

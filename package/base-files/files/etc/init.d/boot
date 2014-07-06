@@ -1,0 +1,63 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=10
+STOP=98
+
+start() {
+	[ -f /proc/mounts ] || /sbin/mount_root
+	[ -f /proc/jffs2_bbc ] && echo "S" > /proc/jffs2_bbc
+	[ -f /proc/net/vlan/config ] && vconfig set_name_type DEV_PLUS_VID_NO_PAD
+
+	mkdir -p /var/run
+	mkdir -p /var/log
+	mkdir -p /var/lock
+	mkdir -p /var/state
+	touch /var/ethers
+	touch /var/log/wtmp
+	touch /var/log/lastlog
+	touch /tmp/resolv.conf.auto
+	ifconfig lo 127.0.0.1
+	ln -sf /tmp/resolv.conf.auto /tmp/resolv.conf
+	ln -sf /var/ethers /etc/ethers
+	grep -q debugfs /proc/filesystems && mount -t debugfs debugfs /sys/kernel/debug
+	[ "$FAILSAFE" = "true" ] && touch /tmp/.failsafe
+
+	load_modules /etc/modules.d/*    
+
+	killall -q hotplug2
+	[ -x /sbin/hotplug2 ] && /sbin/hotplug2 --override --persistent \
+			--set-rules-file /etc/hotplug2.rules \
+			--set-coldplug-cmd /sbin/udevtrigger \
+			--max-children 1 >/dev/null 2>&1 &
+
+	# create /dev/root if it doesn't exist
+	[ -e /dev/root -o -h /dev/root ] || {
+		rootdev=$(awk 'BEGIN { RS=" "; FS="="; } $1 == "root" { print $2 }' < /proc/cmdline)
+		[ -n "$rootdev" ] && ln -s "$rootdev" /dev/root
+	}
+
+	mknod /dev/nvram c 250 0
+# Reset Button from bootloader by kevin
+	resetbutton
+
+# NVRAM upgrade/boot by kevin
+	nvram upgrade
+	nvram boot
+	initSSID
+	inithostname
+	
+	cp -rf  /etc/syslog-ng.*  /tmp/
+# Set hostname by kevin
+	hostname=$(nvram get hostname)
+        echo "$hostname" > /proc/sys/kernel/hostname
+
+# set link by kevin
+	echo "0.0.0.0" > /tmp/accessip
+	echo "0.0.0.0" > /tmp/faccessip
+}
+
+stop() {
+	service_stop /sbin/klogd
+	service_stop /sbin/syslogd
+}

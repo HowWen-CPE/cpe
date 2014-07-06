@@ -1,0 +1,165 @@
+#!/bin/sh
+nvram set wifi_mode=ap
+##1,2,3,...,8
+nvram set wlv_rule_num=1
+##0,1,4,6,7,9
+nvram set rai_wireless_mode=9
+##0,1,2...
+nvram set rai_txpower=0
+##0,1
+nvram set rai_no_forwarding_btn_bssid=1
+##0 ,1, ..,11
+nvram set rai_channel=6
+##0,1
+nvram set rai_ht_gi=0 
+##0,1
+
+nvram set rai_HtBw=1
+nvram set rai_HtExtcha=1
+
+nvram set rai_DtimPeriod=1
+nvram set rai_HtGi=1
+
+nvram set rai0_EnableNetwork=1
+##none,wep,wpapsk,wpa2psk,wpa,wpa2,disabled
+nvram set rai0_secmode=none
+nvram set rai0_HideSSID=0
+nvram set rai0_NoForwarding=0
+nvram set rai0_access_policy=0
+nvram set rai0_SSID=GPSDK_DANIEL_0_DEBUG
+nvram set rai0_NoForwarding=0
+nvram set rai0_HideSSID=0
+
+nvram set rai0_wpa2_psk_key=12345678
+nvram set rai0_wpa2_psk_wpacap=1
+
+
+
+nvram set rai1_EnableNetwork=1
+##none,wep,wpapsk,wpa2psk,wpa,wpa2,disabled
+nvram set rai1_secmode=none
+nvram set rai1_HideSSID=0
+nvram set rai1_NoForwarding=0
+nvram set rai1_access_policy=0
+nvram set rai1_SSID=GPSDK_DANIEL_1
+nvram set rai1_NoForwarding=0
+nvram set rai1_HideSSID=0
+
+
+nvram set rai2_EnableNetwork=1
+##none,wep,wpapsk,wpa2psk,wpa,wpa2,disabled
+nvram set rai2_secmode=none
+nvram set rai2_HideSSID=0
+nvram set rai2_NoForwarding=0
+nvram set rai2_access_policy=0
+nvram set rai2_SSID=GPSDK_DANIEL_2
+nvram set rai2_NoForwarding=0
+nvram set rai2_HideSSID=0
+
+
+
+nvram set rai3_EnableNetwork=1
+##none,wep,wpapsk,wpa2psk,wpa,wpa2,disabled
+nvram set rai3_secmode=none
+nvram set rai3_HideSSID=0
+nvram set rai3_NoForwarding=0
+nvram set rai3_access_policy=0
+nvram set rai3_SSID=GPSDK_DANIEL_3
+nvram set rai3_NoForwarding=0
+nvram set rai3_HideSSID=0
+
+nvram set rai4_EnableNetwork=1
+##none,wep,wpapsk,wpa2psk,wpa,wpa2,disabled
+nvram set rai4_secmode=none
+nvram set rai4_HideSSID=0
+nvram set rai4_NoForwarding=0
+nvram set rai4_access_policy=0
+nvram set rai4_SSID=GPSDK_DANIEL_4
+nvram set rai4_NoForwarding=0
+nvram set rai4_HideSSID=0
+
+
+nvram set rai5_EnableNetwork=1
+##none,wep,wpapsk,wpa2psk,wpa,wpa2,disabled
+nvram set rai5_secmode=none
+nvram set rai5_HideSSID=0
+nvram set rai5_NoForwarding=0
+nvram set rai5_access_policy=0
+nvram set rai5_SSID=GPSDK_DANIEL_5
+nvram set rai5_NoForwarding=0
+nvram set rai5_HideSSID=0
+
+
+nvram set rai6_EnableNetwork=1
+##none,wep,wpapsk,wpa2psk,wpa,wpa2,disabled
+nvram set rai6_secmode=none
+nvram set rai6_HideSSID=0
+nvram set rai6_NoForwarding=0
+nvram set rai6_access_policy=0
+nvram set rai6_SSID=GPSDK_DANIEL_6
+nvram set rai6_NoForwarding=0
+nvram set rai6_HideSSID=0
+
+
+nvram set rai7_EnableNetwork=1
+##none,wep,wpapsk,wpa2psk,wpa,wpa2,disabled
+nvram set rai7_secmode=none
+nvram set rai7_HideSSID=0
+nvram set rai7_NoForwarding=0
+nvram set rai7_access_policy=0
+nvram set rai7_SSID=GPSDK_DANIEL_7
+nvram set rai7_NoForwarding=0
+nvram set rai7_HideSSID=0
+
+
+
+nvram set apclii0_secmode=none
+nvram set apclii0_addrmode=0
+nvram set apclii0_macrepeater=0
+nvram set apclii0_ssid=CPE_2.4G_DANIEL_DEBUG
+nvram set apclii0_lockmac=0
+nvram set rai_BeaconPeriod=100
+
+
+
+nvram set repeater_SSID=CPE_2.4G_DANIEL_DEBUG
+
+#none,open,wpapsk,wpa2psk
+nvram set repeater_secmode=none
+
+#nvram set repeater_secmode=wep
+#open or shared
+nvram set repeater_wep_encmode=open
+#1 2 3 4 (dell note book can only connect use 1)
+nvram set repeater_wep_keyindex=1
+#(10 or 26 hexadecimal characters eg:0123456789;5 or 13ASCII characters eg:abcde)
+nvram set repeater_wep_key1=0123456789
+nvram set repeater_wep_key2=abcde
+nvram set repeater_wep_key3=
+nvram set repeater_wep_key4=
+
+
+#nvram set repeater_secmode=wpapsk 
+#(8~63 ASCII characters or 64 hexadecimal characters)
+nvram set repeater_wpapsk_key=12345678
+#es or tkip   
+nvram set repeater_wpapsk_crypto=aes
+
+
+#nvram set repeater_secmode=wpa2psk
+# (8~63 ASCII characters or 64 hexadecimal characters)
+nvram set repeater_wpa2psk_key=12345678
+#aes or tkip 
+nvram set repeater_wpa2psk_crypto=aes
+
+nvram set repeater_channel=6
+# 0 or 1 
+nvram set repeater_HtBw=0 
+# 0 or 1 
+nvram set repeater_HtExtcha=0 
+# 0 or 1
+nvram set repeater_lockmac=1
+nvram set repeater_BSSID=
+
+nvram commit
+

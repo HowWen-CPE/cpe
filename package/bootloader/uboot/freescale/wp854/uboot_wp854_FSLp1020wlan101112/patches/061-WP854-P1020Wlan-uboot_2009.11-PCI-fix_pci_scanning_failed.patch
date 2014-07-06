@@ -1,0 +1,28 @@
+--- u-boot-freescale-p1020-sku/drivers/pci/pci.c	2009-12-15 14:20:54.000000000 -0800
++++ u-boot-liteon-wp854-openwrt/drivers/pci/pci.c	2011-11-08 23:26:37.678802000 -0800
+@@ -627,14 +627,23 @@
+ 
+ void pci_init(void)
+ {
++
++/*To fix pci scanning failed, added by sirian, 2011-06-22 ----->*/
++#if defined (CONFIG_P1020) ||defined (CONFIG_P2020)
++        void *regs = (void *)CONFIG_SYS_MPC85xx_SERDES3_ADDR;
++	out_be32(regs + FSL_SRDSCR3_OFFS, 0x00001313);
++#endif
++/*<-----end sirian*/
++
+ #if defined(CONFIG_PCI_BOOTDELAY)
+ 	char *s;
+-	int i;
++	unsigned long i;
+ 
+ 	/* wait "pcidelay" ms (if defined)... */
+ 	s = getenv ("pcidelay");
++
+ 	if (s) {
+-		int val = simple_strtoul (s, NULL, 10);
++		unsigned long val = simple_strtoul (s, NULL, 10);
+ 		for (i=0; i<val; i++)
+ 			udelay (1000);
+ 	}

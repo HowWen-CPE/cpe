@@ -1,0 +1,45 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+# $NUM is optional.
+
+. /etc/network.sh
+
+START=40
+STOP=40
+boot() {
+    start
+}
+
+start() {
+    num=0
+    limit=$(nvram get lan_num)
+    while [ $num -lt $limit ];
+    do 
+    [ "$(nvram show lan_main_rule $num enable)" = "1" ] && {
+      ifup lan$num
+      #[ "$num" = "0" ] && ifupv6 lan$num
+    }
+    num=$(($num + 1))
+    done
+    return $err
+}
+
+stop() {
+    num=0
+    limit=$(nvram get lan_num)
+    while [ $num -lt $limit ];
+    do 
+    [ "$(nvram show lan_main_rule $num enable)" = "1" ] && {
+       ifdown lan$num
+    }
+    num=$(($num + 1))
+    done
+    return $err
+}
+
+restart() {
+    stop
+    start    
+    return $err
+}
+

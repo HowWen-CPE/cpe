@@ -1,0 +1,11 @@
+--- boot_atheros/u-boot/net/tftp.h	2013-04-03 13:42:56.000000000 +0800
++++ boot_liteon/u-boot/net/tftp.h	2013-03-29 17:59:16.000000000 +0800
+@@ -16,6 +16,8 @@
+ /* tftp.c */
+ extern void	TftpStart (void);	/* Begin TFTP get */
+ 
++/*added by sirian. 2009-11-01*/
++extern void liteon_tftpstart (void);
+ /**********************************************************************/
+ 
+ #endif /* __TFTP_H__ */

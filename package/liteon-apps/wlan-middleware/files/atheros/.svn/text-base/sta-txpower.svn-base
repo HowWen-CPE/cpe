@@ -1,0 +1,124 @@
+#!/bin/sh
+# This file is used to txpower setting when radio is in client mode
+
+start_sta_txpower()
+{
+	local POWER_NV=""
+   	local POWER_MIN=""
+   	local POWER_MAX=""
+   	local chain_num=""
+   	local TXPOWER=""
+   	local wireless_mode_2g=$(nvram show wl_mode_rule 0 mode);
+	local wireless_mode_5g=$(nvram show wl1_mode_rule 0 mode);
+
+   	if [ "$wireless_mode_2g" == "client" ]; then
+		sta_device=$(nvram show wl_sta_device_rule 0 sta_device);
+   		POWER_NV=$(nvram show wl_basic_rule 0 txpower)
+
+  		chain_num=`iwpriv wifi0 get_txchainmask | awk '{print substr($2,17)}'`	
+  		if [ "${chain_num}" = "7" ]; then
+  			POWER_MIN=5
+  		elif [ "${chain_num}" = "5" ]; then
+  			POWER_MIN=3
+  		elif [ "${chain_num}" = "3" ]; then
+  			POWER_MIN=0
+  		else
+  			POWER_MIN=5
+  		fi
+
+  		iwconfig $sta_device txpower 100
+  		sleep 2
+  		POWER_MAX=`iwconfig $sta_device | awk '/Tx-Power/{print substr($4,10);}'`
+	
+		case  $POWER_NV in 
+		0)
+			TXPOWER="$POWER_MAX";;
+		2)
+			TXPOWER="$(($POWER_MAX - 1))";;
+		4)
+			TXPOWER="$(($POWER_MAX - 2))";;
+		6)
+			TXPOWER="$(($POWER_MAX - 3))";;
+		8)
+			TXPOWER="$(($POWER_MAX - 4))";;
+		10)
+			TXPOWER="$(($POWER_MAX - 5))";;
+		12)
+			TXPOWER="$(($POWER_MAX - 6))";;
+		14)
+			TXPOWER="$(($POWER_MAX - 7))";;
+		16)
+			TXPOWER="$(($POWER_MAX - 8))";;
+		18)
+			TXPOWER="$(($POWER_MAX - 9))";;
+		20)
+			TXPOWER="$POWER_MIN";;
+		*)
+			TXPOWER="$POWER_MAX";;
+		esac
+
+   	elif [ "$wireless_mode_5g" == "client" ]; then
+		sta_device=$(nvram show wl_sta_device_rule 1 sta_device);
+   		POWER_NV=$(nvram show wl5g_basic_rule 0 txpower)
+
+		chain_num=`iwpriv wifi1 get_txchainmask | awk '{print substr($2,17)}'`	
+  		if [ "${chain_num}" = "7" ]; then
+  			POWER_MIN=5
+  		elif [ "${chain_num}" = "5" ]; then
+  			POWER_MIN=3
+  		elif [ "${chain_num}" = "3" ]; then
+  			POWER_MIN=0
+  		else
+  			POWER_MIN=5
+  		fi
+
+		iwconfig $sta_device txpower 100
+  		sleep 2
+  		POWER_MAX=`iwconfig $sta_device | awk '/Tx-Power/{print substr($4,10);}'`
+
+		case  $POWER_NV in 
+		0)
+			TXPOWER="$POWER_MAX";;
+		2)
+			TXPOWER="$(($POWER_MAX - 1))";;
+		4)
+			TXPOWER="$(($POWER_MAX - 2))";;
+		6)
+			TXPOWER="$(($POWER_MAX - 3))";;
+		8)
+			TXPOWER="$(($POWER_MAX - 4))";;
+		10)
+			TXPOWER="$(($POWER_MAX - 5))";;
+		12)
+			TXPOWER="$(($POWER_MAX - 6))";;
+		14)
+			TXPOWER="$(($POWER_MAX - 7))";;
+		16)
+			TXPOWER="$(($POWER_MAX - 8))";;
+		18)
+			TXPOWER="$(($POWER_MAX - 9))";;
+		20)
+			TXPOWER="$POWER_MIN";;
+		*)
+			TXPOWER="$POWER_MAX";;
+		esac
+	fi
+
+	echo "POWER_NV is ${POWER_NV}"
+	echo "POWER_MIN is ${POWER_MIN}"
+	echo "POWER_MAX is ${POWER_MAX}"
+	echo "TXPOWER is ${TXPOWER}"
+	iwconfig ${sta_device} txpower ${TXPOWER}
+}
+
+start_sta_txpower
+
+
+
+#paraget=$1
+
+#case "$paraget" in 
+#start)
+#start
+#;;
+#esac

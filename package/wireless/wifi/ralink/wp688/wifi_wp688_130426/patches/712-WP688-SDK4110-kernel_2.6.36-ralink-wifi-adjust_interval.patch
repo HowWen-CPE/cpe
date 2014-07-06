@@ -1,0 +1,254 @@
+--- a/rt2860v2/ap/ap_cfg.c
++++ b/rt2860v2/ap/ap_cfg.c
+@@ -1258,6 +1258,9 @@ static struct {
+ 	{"ra_interval",					Set_RateAdaptInterval},
+ 	{"txcount",				        Set_TxCount},
+ 
++/* Add dynamic adjust timer, Sean@Liteon, 2013-09-26 */
++	{"adjustInterval",              Set_AdjustInterval},
++/* Sean@Liteon */
+ 
+ 	{"memdebug",					Set_MemDebug_Proc},
+ 
+@@ -9061,6 +9064,9 @@ VOID RTMPIoctlStatistics(
+     			(LONG)(pAd->ApCfg.RssiSample.LastRssi1 - pAd->BbpRssiToDbmDelta),
+     			(LONG)(pAd->ApCfg.RssiSample.LastRssi2 - pAd->BbpRssiToDbmDelta));
+ 
++	/* Sean@Liteon, 2013-09-26 */
++	sprintf(msg+strlen(msg), "Ra_Interval                     = %d ms\n", pAd->ra_interval);
++
+ #ifndef WIFI_DRIVER_PRE_PORTING
+ 		/* Display Last Rx Rate and BF SNR of first Associated entry in MAC table */
+ 		if (pAd->MacTab.Size > 0)
+--- a/rt2860v2/common/cmm_data.c
++++ b/rt2860v2/common/cmm_data.c
+@@ -3945,10 +3945,20 @@ VOID Update_Rssi_Sample(
+ 		{
+ 			pRssi->AvgRssi0X8 = pRssi->LastRssi0 << 3;
+ 			pRssi->AvgRssi0  = pRssi->LastRssi0;
++/* Get last avg RSSI, Sean@Liteon, 2013-09-26 */
++#ifndef WIFI_DRIVER_PRE_PORTING
++			pRssi->LastAvgRssi0 = pRssi->LastRssi0;
++#endif
++/* Sean@Liteon, 2013-09-26 */
+ 		}
+ 		else
+ 		{
+ 			pRssi->AvgRssi0X8 = (pRssi->AvgRssi0X8 - pRssi->AvgRssi0) + pRssi->LastRssi0;
++/* Get last avg RSSI, Sean@Liteon, 2013-09-26 */
++#ifndef WIFI_DRIVER_PRE_PORTING
++			pRssi->LastAvgRssi0 = pRssi->AvgRssi0;
++#endif
++/* Sean@Liteon, 2013-09-26 */
+ 		}
+  
+ 		pRssi->AvgRssi0 = pRssi->AvgRssi0X8 >> 3;
+@@ -3980,10 +3990,20 @@ VOID Update_Rssi_Sample(
+ 		{
+ 			pRssi->AvgRssi1X8 = pRssi->LastRssi1 << 3;
+ 			pRssi->AvgRssi1  = pRssi->LastRssi1;
++/* Get last avg RSSI, Sean@Liteon, 2013-09-26 */
++#ifndef WIFI_DRIVER_PRE_PORTING
++			pRssi->LastAvgRssi1 = pRssi->LastRssi1;
++#endif
++/* Sean@Liteon, 2013-09-26 */
+ 		}
+ 		else
+ 		{
+ 			pRssi->AvgRssi1X8 = (pRssi->AvgRssi1X8 - pRssi->AvgRssi1) + pRssi->LastRssi1;
++/* Get last avg RSSI, Sean@Liteon, 2013-09-26 */
++#ifndef WIFI_DRIVER_PRE_PORTING
++			pRssi->LastAvgRssi1 = pRssi->AvgRssi1;
++#endif
++/* Sean@Liteon, 2013-09-26 */
+ 		}
+ 
+ 		pRssi->AvgRssi1 = pRssi->AvgRssi1X8 >> 3;
+@@ -4015,10 +4035,20 @@ VOID Update_Rssi_Sample(
+ 		{
+ 			pRssi->AvgRssi2X8 = pRssi->LastRssi2 << 3;
+ 			pRssi->AvgRssi2  = pRssi->LastRssi2;
++/* Get last avg RSSI, Sean@Liteon, 2013-09-26 */
++#ifndef WIFI_DRIVER_PRE_PORTING
++			pRssi->LastAvgRssi2 = pRssi->LastRssi2;
++#endif
++/* Sean@Liteon, 2013-09-26 */
+ 		}
+ 		else
+ 		{
+ 			pRssi->AvgRssi2X8 = (pRssi->AvgRssi2X8 - pRssi->AvgRssi2) + pRssi->LastRssi2;
++/* Get last avg RSSI, Sean@Liteon, 2013-09-26 */
++#ifndef WIFI_DRIVER_PRE_PORTING
++			pRssi->LastAvgRssi2 = pRssi->AvgRssi2;
++#endif
++/* Sean@Liteon, 2013-09-26 */
+ 		}
+ 
+ 		pRssi->AvgRssi2 = pRssi->AvgRssi2X8 >> 3;
+--- a/rt2860v2/common/cmm_info.c
++++ b/rt2860v2/common/cmm_info.c
+@@ -7794,6 +7794,23 @@ INT Set_TxCount(
+ 
+ }
+ 
++/* Dynamic adjust interval, Sean@Liteon, 2013-09-26 */
++INT Set_AdjustInterval(
++	IN RTMP_ADAPTER *pAd,
++	IN PSTRING arg)
++{
++	INT32 flag;
++	
++	DBGPRINT(RT_DEBUG_TRACE,("%s():%s\n", __FUNCTION__, arg));
++	
++	flag = simple_strtol(arg, 0, 10);
++	pAd->adjust_interval = flag;
++
++	return TRUE;
++
++}
++/* Sean@Liteon, 2013-09-26 */
++
+ INT Set_VcoPeriod_Proc(
+ 	IN RTMP_ADAPTER		*pAd,
+ 	IN PSTRING			arg)
+--- a/rt2860v2/common/mlme.c
++++ b/rt2860v2/common/mlme.c
+@@ -6193,6 +6193,31 @@ CHAR RTMPAvgRssi(
+ 	return Rssi;
+ }
+ 
++/* Get last avg RSSI, Sean@Liteon, 2013-09-26 */
++#ifndef WIFI_DRIVER_PRE_PORTING
++CHAR RTMPLastAvgRssi(
++	IN PRTMP_ADAPTER	pAd,
++	IN RSSI_SAMPLE 		*pRssi)
++{
++	CHAR Rssi;
++
++	if(pAd->Antenna.field.RxPath == 3)
++	{
++		Rssi = (pRssi->LastAvgRssi0 + pRssi->LastAvgRssi1 + pRssi->LastAvgRssi2)/3;
++	}
++	else if(pAd->Antenna.field.RxPath == 2)
++	{
++		Rssi = (pRssi->LastAvgRssi0 + pRssi->LastAvgRssi1)>>1;
++	}
++	else
++	{
++		Rssi = pRssi->LastAvgRssi0;
++	}
++
++	return Rssi;
++}
++#endif
++/* Sean@Liteon, 2013-09-26 */
+ 
+ CHAR RTMPMaxRssi(
+ 	IN PRTMP_ADAPTER	pAd,
+--- a/rt2860v2/common/rtmp_init.c
++++ b/rt2860v2/common/rtmp_init.c
+@@ -3426,6 +3426,8 @@ VOID	UserCfgInit(
+ 	pAd->ra_interval = 100; /* Change from 500 to 100ms, for throughput sharp dropping issue */
+ 	pAd->ra_fast_interval = DEF_QUICK_RA_TIME_INTERVAL;
+ 	pAd->ra_txcnt = 15;
++/* Initial interval, Sean@Liteon, 2013-09-25 */
++	pAd->adjust_interval = 2;
+ 
+ 	/* Tx Sw queue length setting */
+ 	pAd->TxSwQMaxLen = MAX_PACKETS_IN_QUEUE;
+--- a/rt2860v2/include/rtmp.h
++++ b/rt2860v2/include/rtmp.h
+@@ -227,6 +227,11 @@ typedef struct _RSSI_SAMPLE {
+ 	CHAR AvgRssi0;
+ 	CHAR AvgRssi1;
+ 	CHAR AvgRssi2;
++#ifndef	WIFI_DRIVER_PRE_PORTING
++	CHAR LastAvgRssi0;		/* Last received avg RSSI, Sean@Liteon, 2013-09-25 */
++	CHAR LastAvgRssi1;		/* Last received avg RSSI, Sean@Liteon, 2013-09-25 */
++	CHAR LastAvgRssi2;		/* Last received avg RSSI, Sean@Liteon, 2013-09-25 */
++#endif	
+ 	SHORT AvgRssi0X8;
+ 	SHORT AvgRssi1X8;
+ 	SHORT AvgRssi2X8;
+@@ -3909,6 +3914,7 @@ struct _RTMP_ADAPTER {
+ 	UINT32			ra_interval;
+ 	UINT32			ra_fast_interval;
+ 	UINT32			ra_txcnt;
++	UINT32			adjust_interval;	/* Sean@Liteon, 2013-09-25 */
+ 
+ 	/* configuration: read from Registry & E2PROM */
+ 	BOOLEAN bLocalAdminMAC;	/* Use user changed MAC */
+@@ -7041,6 +7047,13 @@ CHAR RTMPAvgRssi(
+         IN PRTMP_ADAPTER	pAd,
+         IN RSSI_SAMPLE		*pRssi);
+ 
++/* Get last received avg RSSI, Sean@Liteon, 2013-09-25 */
++#ifndef WIFI_DRIVER_PRE_PORTING
++CHAR RTMPLastAvgRssi(
++        IN PRTMP_ADAPTER	pAd,
++        IN RSSI_SAMPLE		*pRssi);
++#endif
++/* Sean@Liteon, 2013-09-25 */
+ 
+ CHAR RTMPMinSnr(
+ 	IN PRTMP_ADAPTER	pAd,
+@@ -8534,6 +8547,11 @@ INT	Set_TxCount(
+ 	IN	PRTMP_ADAPTER	pAdapter, 
+ 	IN	PSTRING			arg);
+ 
++/* Dynamic adjust interval, Sean@Liteon, 2013-09-25 */
++INT Set_AdjustInterval(
++	IN	PRTMP_ADAPTER	pAdapter, 
++	IN	PSTRING			arg);
++/* Sean@Liteon, 2013-09-25 */
+ 
+ #ifdef PRE_ANT_SWITCH
+ INT Set_PreAntSwitch_Proc(
+--- a/rt2860v2/rate_ctrl/alg_legacy.c
++++ b/rt2860v2/rate_ctrl/alg_legacy.c
+@@ -49,7 +49,7 @@ VOID APMlmeDynamicTxRateSwitching(
+ 	MAC_TABLE_ENTRY			*pEntry;
+ 	PRTMP_TX_RATE_SWITCH	pCurrTxRate, pTmpTxRate = NULL;
+ 	UCHAR					InitTxRateIdx, TrainUp, TrainDown;
+-	CHAR					Rssi, TmpIdx = 0;
++	CHAR					Rssi, LastRssi, TmpIdx = 0; /* Add LastRssi, Sean@Liteon, 2013-09-27 */
+ 	ULONG					TxSuccess, TxRetransmit, TxFailCount;
+ 	UINT32					MaxWcidNum = MAX_LEN_OF_MAC_TABLE;
+ 
+@@ -172,6 +172,36 @@ VOID APMlmeDynamicTxRateSwitching(
+ 		/* Rssi = RTMPMaxRssi(pAd, (CHAR)pEntry->RssiSample.AvgRssi0, (CHAR)pEntry->RssiSample.AvgRssi1, (CHAR)pEntry->RssiSample.AvgRssi2); */
+ 		Rssi = RTMPAvgRssi(pAd, &pEntry->RssiSample);
+ 
++/* Dynamic adjust interval, Sean@Liteon, 2013-09-27 */
++#ifndef WIFI_DRIVER_PRE_PORTING
++		if(pAd->adjust_interval == 1) {
++			
++			LastRssi = RTMPLastAvgRssi(pAd, &pEntry->RssiSample);
++			if(Rssi < -46 && LastRssi < -46 && pAd->ra_interval == 100) {
++					pAd->ra_interval = 500;
++			}
++			else if(Rssi > -46 && LastRssi > -46 && pAd->ra_interval == 500) {
++					pAd->ra_interval = 100;
++			}
++			else {	
++				if(Rssi - LastRssi > 8) {
++					if(Rssi > -46) 
++						pAd->ra_interval = 100;
++				}
++				else if(Rssi - LastRssi < -8) {
++					if(Rssi < -46 )
++						pAd->ra_interval = 500;
++				}
++			}
++		}else if(pAd->adjust_interval == 2) {
++			if(Rssi < -50)			
++				pAd->ra_interval = 500;		
++			else if(Rssi > -42)			
++				pAd->ra_interval = 100;
++		}
++#endif
++/* Sean@Liteon, 2013-09-27 */
++
+ 		CurrRateIdx = UpRateIdx = DownRateIdx = pEntry->CurrTxRateIndex;
+ 
+ 		/* decide the next upgrade rate and downgrade rate, if any */

@@ -1,0 +1,151 @@
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/lmac/ath_dev/ath_main.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/lmac/ath_dev/ath_main.c	2014-01-26 19:10:20.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/lmac/ath_dev/ath_main.c	2014-01-26 19:10:20.000000000 +0800
+@@ -7063,12 +7063,17 @@
+     OS_MEMZERO(sc, sizeof(struct ath_softc));
+ 
+     *dev = (ath_dev_t)sc;
+-#if ATH_TX_COMPACT
+-    sc->sc_nodebug =1;
+-#else
+-    sc->sc_nodebug =0;
+-#endif    
+-    
++	/* default open stats, Felix@liteon, 2014-1-25 -----> */
++	#ifdef	LITEON_SRC_VALID
++	sc->sc_nodebug = 0;
++	#else
++	#if ATH_TX_COMPACT
++	sc->sc_nodebug =1;
++	#else
++	sc->sc_nodebug =0;
++	#endif    
++	#endif
++	/* <----- Felix@liteon, 2014-1-25 */
+ 
+     /* Initialize DPRINTF control object */
+     ath_dprintf_init(sc);
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/ath_linux.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/os/linux/src/ath_linux.c	2013-08-27 07:05:25.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/ath_linux.c	2014-01-26 19:10:20.000000000 +0800
+@@ -1185,15 +1185,29 @@
+             + as->ast_tx_encap
+             + as->ast_tx_nonode
+             + as->ast_tx_nobufmgt;
+-    /* Add tx beacons, tx mgmt, tx, 11n tx */
+-    stats->tx_packets = as->ast_be_xmit
++
++	/* Add txrx bytes display and modify txrx re-added packets, Felix@liteon, 2014-1-25 -----> */
++    #ifdef LITEON_SRC_VALID
++	stats->tx_packets = as->ast_be_xmit
++            + as->ast_tx_mgmt
++            + as->ast_tx_packets;
++
++    stats->rx_packets = as->ast_rx_packets;
++
++	stats->tx_bytes = as->ast_tx_bytes;
++	stats->rx_bytes = as->ast_rx_bytes;
++	#else
++	/* Add tx beacons, tx mgmt, tx, 11n tx */
++	stats->tx_packets = as->ast_be_xmit
+             + as->ast_tx_mgmt
+             + as->ast_tx_packets
+             + ans->tx_pkts;
+     /* Add rx, 11n rx (rx mgmt is included) */
+     stats->rx_packets = as->ast_rx_packets
+             + ans->rx_pkts;
+-
++	#endif
++	/* <----- Felix@liteon, 2014-1-25 */
++	
+     for (wmode = 0; wmode < WIRELESS_MODE_MAX; wmode++) {
+         ps = scn->sc_ops->get_phy_stats(scn->sc_dev, wmode);
+         
+Index: wifi_QCA_10.1.436/perf_pwr_offload/drivers/host/os/linux/ol_ath_linux.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/perf_pwr_offload/drivers/host/os/linux/ol_ath_linux.c	2014-01-26 19:10:20.000000000 +0800
++++ wifi_QCA_10.1.436/perf_pwr_offload/drivers/host/os/linux/ol_ath_linux.c	2014-01-26 19:10:20.000000000 +0800
+@@ -930,6 +930,19 @@
+     struct ol_ath_softc_net80211 *scn = ath_netdev_priv(dev);
+     struct net_device_stats *stats = NULL;
+     stats = &scn->sc_osdev->devstats;
++	
++	/* Add wifi1 stats display, Felix@liteon, 2014-1-25 ----->*/
++	#ifdef LITEON_SRC_VALID
++	stats->tx_packets = scn->scn_stats.tx_beacon \
++						+scn->scn_stats.tx_mgmt \
++						+scn->scn_stats.tx_packets;
++	stats->rx_packets = scn->scn_stats.rx_packets \
++						+scn->scn_stats.rx_mgmt;
++	stats->tx_bytes = scn->scn_stats.tx_bytes;
++	stats->rx_bytes = scn->scn_stats.rx_bytes;
++	#endif
++	/* <----- Felix@liteon, 2014-1-25 */
++	
+ #if 0
+     struct ath_stats *as;
+     struct ath_phy_stats *ps;
+Index: wifi_QCA_10.1.436/perf_pwr_offload/drivers/host/wlan/lmac_offload_if/ol_if_stats.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/perf_pwr_offload/drivers/host/wlan/lmac_offload_if/ol_if_stats.c	2013-08-27 07:08:14.000000000 +0800
++++ wifi_QCA_10.1.436/perf_pwr_offload/drivers/host/wlan/lmac_offload_if/ol_if_stats.c	2014-01-26 19:10:20.000000000 +0800
+@@ -612,7 +612,10 @@
+ 
+             num_msdus = peer->peer_data_stats.data_packets;
+             byte_cnt = peer->peer_data_stats.data_bytes;
+-            scn->scn_stats.tx_num_data += num_msdus;
++			#ifdef LITEON_SRC_VALID
++			scn->scn_stats.tx_packets++;	//update tx_packets, Felix@liteon, 2014-1-25
++			#endif
++			scn->scn_stats.tx_num_data += num_msdus;
+             scn->scn_stats.tx_bytes += byte_cnt;
+             mac_stats = peer->bss_peer ? &vap->iv_multicast_stats :
+                                          &vap->iv_unicast_stats;
+@@ -817,7 +820,12 @@
+     ic->ic_ath_send_rssi = ol_ath_send_rssi;
+     /* Enable and disable stats*/
+     ic->ic_ath_enable_ap_stats = ol_ath_enable_ap_stats;
+-    /* register target stats event handler */
++
++	#ifdef LITEON_SRC_VALID
++	ol_ath_enable_ap_stats(ic, 1); // default open the stats, Felix@liteon, 2014-1-25
++	#endif
++
++	/* register target stats event handler */
+     wmi_unified_register_event_handler(scn->wmi_handle, WMI_UPDATE_STATS_EVENTID,
+                                        wmi_unified_update_stats_event_handler, NULL);
+     wmi_unified_register_event_handler(scn->wmi_handle,
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/lmac/ath_dev/ath_xmit_ht.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/lmac/ath_dev/ath_xmit_ht.c	2014-01-26 19:11:18.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/lmac/ath_dev/ath_xmit_ht.c	2014-01-26 19:15:11.000000000 +0800
+@@ -655,6 +655,13 @@
+     bf->bf_seqno = txctl->seqno;
+ 
+     __11nstats(sc, tx_pkts);
++	
++	/* Add the tx statistics, Felix@liteon, 2014-1-25 -----> */
++#ifdef LITEON_SRC_VALID
++	sc->sc_stats.ast_tx_bytes += wbuf_get_pktlen(bf->bf_mpdu);
++	sc->sc_stats.ast_tx_packets++;
++#endif
++	/* <----- Felix@liteon, 2014-1-25 */
+ 
+     /* 
+      * In case of fragments, wait until all fragments coming.
+@@ -856,6 +863,13 @@
+     bf->bf_tidno = txctl->tidno;
+ 
+     __11nstats(sc, tx_pkts);
++	
++	/* Add the tx statistics, Felix@liteon, 2014-1-25 -----> */
++#ifdef LITEON_SRC_VALID
++	sc->sc_stats.ast_tx_bytes += wbuf_get_pktlen(bf->bf_mpdu);
++	sc->sc_stats.ast_tx_packets++;
++#endif
++	/* <----- Felix@liteon, 2014-1-25 */
+ 
+     /*
+      * Do not queue to h/w when any of the following conditions is true:

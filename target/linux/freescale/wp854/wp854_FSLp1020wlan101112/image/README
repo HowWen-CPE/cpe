@@ -1,0 +1,3 @@
+Note:
+1)Linux kernel size:    this size decied by "mkimage -o kernel_size", and "this size must match partition size in dts file";  
+2)Squashfs rootfs size: this size only decided by parttition size in dts file;

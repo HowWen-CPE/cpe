@@ -1,0 +1,100 @@
+From 3f5e163b16a43f07d56d63ffd22a9241f3a6a4ac Mon Sep 17 00:00:00 2001
+From: Tarun Garg <b10794@freescale.com>
+Date: Wed, 17 Feb 2010 09:56:24 +0530
+Subject: [PATCH] gianfar: multiple fixes in receive packet steering code.
+
+    There was a random crash in receive packet steering code
+    at high traffic rate. The main reason of the crash was found to be
+    out of program order memory accesses leading to inconsistent
+    state in case of shared memory access in producer consumer buffer.
+    Few other minor fixes are also done to ensure stability.
+
+    - added memory barrier instructions while using
+      producer-consumer buffer.
+
+    - using producer/consumer buffer upto SIZE-1 only to
+      avoid producer to overwrite an entry before consumer
+      has consumed it.
+
+    - using safer function dev_kfree_skb_any() instead of kfree_skb()
+      for freeing skb.
+
+    - removed spinlock in receive packet steering which is
+      not required after memory barrier fix.
+
+    - setting skb->next = NULL after taking a free skb from
+      recycle buffer in gfar_cpu_poll().
+---
+ drivers/net/gianfar.c |   13 +++++--------
+ 1 files changed, 5 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index 1a1e510..afde621 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -831,21 +831,20 @@ static int gfar_cpu_poll(struct napi_struct *napi, int budget)
+ 	struct shared_buffer *buf = &per_cpu(gfar_cpu_dev, !cpu).tx_queue;
+ #ifdef CONFIG_GFAR_SKBUFF_RECYCLING
+ 	struct gfar_skb_handler *sh = &cpu_dev->sh;
+-	unsigned long flags;
+ #endif
+ 
+ 	while (budget--) {
++		smp_rmb();
+ 		if (atomic_read(&buf->buff_cnt) == 0) {
+ 			break;
+ 		} else {
+ 			skb = buf->buffer[buf->out];
+ #ifdef CONFIG_GFAR_SKBUFF_RECYCLING
+ 			if (sh->recycle_count > 0) {
+-				spin_lock_irqsave(&sh->lock, flags);
+ 				buf->buffer[buf->out] = sh->recycle_queue;
+ 				sh->recycle_queue = buf->buffer[buf->out]->next;
++				buf->buffer[buf->out]->next = NULL;
+ 				sh->recycle_count--;
+-				spin_unlock_irqrestore(&sh->lock, flags);
+ 			} else {
+ 				buf->buffer[buf->out] = NULL;
+ 			}
+@@ -1020,7 +1019,6 @@ int distribute_packet(struct net_device *dev,
+ #ifdef CONFIG_GFAR_SKBUFF_RECYCLING
+ 	struct gfar_skb_handler *sh;
+ 	struct sk_buff *new_skb;
+-	unsigned long flags;
+ #endif
+ 
+ 	skb_data = skb->data;
+@@ -1047,8 +1045,8 @@ int distribute_packet(struct net_device *dev,
+ 		return -1;
+ 
+ 	buf = &cpu_dev->tx_queue;
+-	if (atomic_read(&buf->buff_cnt) == GFAR_CPU_BUFF_SIZE) {
+-		kfree_skb(skb);    /* buffer full, drop packet */
++	if (atomic_read(&buf->buff_cnt) == (GFAR_CPU_BUFF_SIZE - 1)) {
++		dev_kfree_skb_any(skb);    /* buffer full, drop packet */
+ 		return 0;
+ 	}
+ #ifdef CONFIG_GFAR_SKBUFF_RECYCLING
+@@ -1062,11 +1060,9 @@ int distribute_packet(struct net_device *dev,
+ 		/* put the obtained/allocated skb into
+ 		current cpu's recycle buffer */
+ 		if (new_skb) {
+-			spin_lock_irqsave(&sh->lock, flags);
+ 			new_skb->next = sh->recycle_queue;
+ 			sh->recycle_queue = new_skb;
+ 			sh->recycle_count++;
+-			spin_unlock_irqrestore(&sh->lock, flags);
+ 		}
+ 	}
+ #endif
+@@ -1075,6 +1071,7 @@ int distribute_packet(struct net_device *dev,
+ 	skb->dev = dev;
+ 	buf->buffer[buf->in] = skb;
+ 	buf->in = (buf->in + 1) % GFAR_CPU_BUFF_SIZE;
++	smp_wmb();
+ 	atomic_inc(&buf->buff_cnt);
+ 
+ 	/* raise other core's msg intr */
+-- 
+1.5.6.3
+

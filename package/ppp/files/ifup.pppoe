@@ -1,0 +1,84 @@
+#!/bin/sh
+[ $# = 0 ] && { echo "  $0 <group>"; exit; }
+. /etc/functions.sh
+type=$1
+
+[ "$(nvram show ${type}_proto 0 curr)" = "pppoe" ] || {
+	echo "$0: ${type}_proto isn't pppoe"
+	exit
+}
+
+mkdir -p /var/lock
+
+for module in slhc ppp_generic pppox pppoe; do
+	/sbin/insmod $module 2>&- >&-
+done
+
+#(while :; do
+	IFNAME=$4
+    AUTH=$(nvram show wan_pppoe_rule $3 auth)
+	USERNAME=$(nvram show wan_pppoe_rule $3 username)
+	PASSWORD=$(nvram show wan_pppoe_rule $3 passwd)
+	DEMAND=$(nvram show wan_pppoe_rule $3 demand)
+    SERVNAME=$(nvram show wan_pppoe_rule $3 servname)
+    #SERVNAME=${SERVNAME:+rp_pppoe_service $SERVNAME}
+	case "$DEMAND" in
+		on|1|enabled)
+			DEMAND=$(nvram show wan_pppoe_rule $3 idletime)
+			DEMAND=${DEMAND:+demand idle $DEMAND}
+			[ -f /etc/ppp/filter ] && DEMAND=${DEMAND:+precompiled-active-filter /etc/ppp/filter $DEMAND}
+			# set up a dummy nameserver for dial on demand
+			# FIXME! echo "nameserver 1.1.1.1" > /tmp/resolv.conf
+			KEEPALIVE=""
+		;;
+        off|0|disabled)
+	        KEEPALIVE=$(nvram show wan_pppoe_rule $3 redialperiod)
+            FAILURE=$(nvram show wan_pppoe_rule $3 echo_failure)
+	        KEEPALIVE=${KEEPALIVE:+lcp-echo-failure $FAILURE lcp-echo-interval $KEEPALIVE}
+            DEMAND=""
+        ;;
+		*) 
+            DEMAND=""
+            KEEPALIVE=""
+        ;;
+	esac
+			
+    [ "$AUTH" = "pap" ] && AUTH_OPT="refuse-chap "
+    [ "$AUTH" = "none" ] && AUTH_OPT="refuse-chap refuse-pap "
+    if [ "$(nvram show wan_pppoe_rule $3 pppiptype)" = "custom" -a \
+         -n "$(nvram show wan_pppoe_rule $3 custom_ipaddr)" ]; then
+        LOCAL_IPADDR_OPT="$(nvram show wan_pppoe_rule $3 custom_ipaddr):"
+    else
+        LOCAL_IPADDR_OPT="ipcp-accept-local"
+    fi
+
+	MTU=$(nvram show wan_pppoe_rule $3 mtu)
+	MTU=${MTU:-1492}
+
+	ifconfig $IFNAME up
+	# Remove "nodetach" to run as a daemon.
+	[ -n `pidof pppd` ] && kill -9 `pidof pppd`
+	/usr/sbin/pppd \
+        ${AUTH_OPT} \
+		plugin rp-pppoe.so \
+        rp_pppoe_service "$SERVNAME" \
+		connect /bin/true \
+        noauth \
+        ipcp-accept-remote \
+        ${LOCAL_IPADDR_OPT} \
+        ktune \
+		usepeerdns \
+		defaultroute \
+		ipparam "$type" \
+		linkname "$type" \
+		user "$USERNAME" \
+		password "$PASSWORD" \
+		mtu $MTU \
+		mru $MTU \
+		$DEMAND \
+		$KEEPALIVE \
+		nic-$IFNAME \
+		unit $3 \
+		persist & \
+		2>&1 >/dev/null
+#done 2>&1 >/dev/null ) &

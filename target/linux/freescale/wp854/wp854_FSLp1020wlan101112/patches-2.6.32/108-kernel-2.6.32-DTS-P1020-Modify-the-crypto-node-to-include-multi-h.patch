@@ -1,0 +1,88 @@
+From 4d58e710da73424c9868e49b67030a6ccbfa4b17 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Sat, 6 Mar 2010 00:46:29 +0530
+Subject: [PATCH] DTS-P1020: Modify the crypto node to include multi-host-node property
+
+To support SEC in AMP mode, a new property has been introduced
+which will distinguish SMP from AMP.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ arch/powerpc/boot/dts/p1020rdb.dts            |    2 ++
+ arch/powerpc/boot/dts/p1020rdb_camp_core0.dts |    4 +++-
+ arch/powerpc/boot/dts/p1020rdb_camp_core1.dts |   17 ++++++++++++++++-
+ 3 files changed, 21 insertions(+), 2 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p1020rdb.dts b/arch/powerpc/boot/dts/p1020rdb.dts
+index 6fb6970..d8b662e 100644
+--- a/arch/powerpc/boot/dts/p1020rdb.dts
++++ b/arch/powerpc/boot/dts/p1020rdb.dts
+@@ -533,6 +533,8 @@
+ 			fsl,channel-fifo-len = <24>;
+ 			fsl,exec-units-mask = <0x97c>;
+ 			fsl,descriptor-types-mask = <0x3a30abf>;
++			fsl,multi-host-mode = "dual";
++			fsl,channel-remap = <0x3>;
+ 		};
+ 
+ 		mpic: pic@40000 {
+diff --git a/arch/powerpc/boot/dts/p1020rdb_camp_core0.dts b/arch/powerpc/boot/dts/p1020rdb_camp_core0.dts
+index aa06deb..e364944 100644
+--- a/arch/powerpc/boot/dts/p1020rdb_camp_core0.dts
++++ b/arch/powerpc/boot/dts/p1020rdb_camp_core0.dts
+@@ -371,6 +371,8 @@
+ 			fsl,channel-fifo-len = <24>;
+ 			fsl,exec-units-mask = <0x97c>;
+ 			fsl,descriptor-types-mask = <0x3a30abf>;
++			fsl,multi-host-mode = "primary";
++			fsl,channel-remap = <0x3>;
+ 		};
+ 
+ 		mpic: pic@40000 {
+@@ -382,7 +384,7 @@
+ 			device_type = "open-pic";
+ 			protected-sources = <
+ 			42 29 30 34	/* serial1, enet0-queue-group0 */
+-			17 18 24 26	/* enet0-queue-group1, pci1 */
++			17 18 24 26 58	/* enet0-queue-group1, pci1 */
+ 			0xe0 0xe1 0xe2	/* msi */
+ 			0xe3 0xe4 0xe5
+ 			0xe6 0xe7
+diff --git a/arch/powerpc/boot/dts/p1020rdb_camp_core1.dts b/arch/powerpc/boot/dts/p1020rdb_camp_core1.dts
+index 327d183..9404bb4 100644
+--- a/arch/powerpc/boot/dts/p1020rdb_camp_core1.dts
++++ b/arch/powerpc/boot/dts/p1020rdb_camp_core1.dts
+@@ -98,6 +98,21 @@
+ 			};
+ 		};
+ 
++		crypto@30000 {
++			compatible = "fsl,sec3.3", "fsl,sec3.1",
++				 "fsl,sec3.0", "fsl,sec2.4",
++				 "fsl,sec2.2", "fsl,sec2.1", "fsl,sec2.0";
++			reg = <0x30000 0x10000>;
++			interrupts = <45 2 58 2>;
++			interrupt-parent = <&mpic>;
++			fsl,num-channels = <4>;
++			fsl,channel-fifo-len = <24>;
++			fsl,exec-units-mask = <0x97c>;
++			fsl,descriptor-types-mask = <0x3a30abf>;
++			fsl,multi-host-mode = "secondary";
++			fsl,channel-remap = <0x3>;
++		};
++
+ 		mpic: pic@40000 {
+ 			interrupt-controller;
+ 			#address-cells = <0>;
+@@ -114,7 +129,7 @@
+ 			51 52 67	/* enet1-queue-group1 */
+ 			31 31 33	/* enet2-queue-group0 */
+ 			25 26 27	/* enet2-queue-group1 */
+-			28 72 45 58	/* usb, sdhci, crypto */
++			28 72 45 	/* usb, sdhci, crypto */
+ 			0xb0 0xb1 0xb2	/* message */
+ 			0xb3 0xb4 0xb5
+ 			0xb6 0xb7
+-- 
+1.5.6.3
+

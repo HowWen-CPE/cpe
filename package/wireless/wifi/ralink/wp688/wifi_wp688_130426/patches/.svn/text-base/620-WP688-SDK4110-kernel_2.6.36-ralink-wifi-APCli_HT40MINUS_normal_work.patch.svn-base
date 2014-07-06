@@ -1,0 +1,370 @@
+diff -urN b/rt2860v2/ap/ap_cfg.c a/rt2860v2/ap/ap_cfg.c
+--- b/rt2860v2/ap/ap_cfg.c	2013-08-12 14:44:02.000000000 +0800
++++ a/rt2860v2/ap/ap_cfg.c	2013-08-12 14:41:31.000000000 +0800
+@@ -923,6 +923,8 @@
+ #endif /* DOT1X_SUPPORT */	
+ #ifdef DBG	
+ 	{"Debug",					Set_Debug_Proc},
++	{"BBPRead",					Set_ApcliBBPRead_Proc},
++	//{"BBPWrite",					Set_BBPWrite_Proc},
+ #endif /* DBG */
+ 
+ #if defined(DFS_SUPPORT) || defined(CARRIER_DETECTION_SUPPORT)
+diff -urN b/rt2860v2/ap/apcli_sync.c a/rt2860v2/ap/apcli_sync.c
+--- b/rt2860v2/ap/apcli_sync.c	2013-08-12 14:43:34.000000000 +0800
++++ a/rt2860v2/ap/apcli_sync.c	2013-08-13 17:40:35.000000000 +0800
+@@ -171,6 +171,267 @@
+ 	return;
+ }
+ 
++
++/*
++  *  Added by Bruce Liu, 2013-8-12.
++  *  It is used to change 2.4G mode or adjust bandwidth:
++  *                                      1) From 20M to 40M (MINUS or PLUS);
++  *                                      2) From 40M to 20M;
++  */
++VOID APCliAdjustChannelRelatedValue(
++	IN PRTMP_ADAPTER pAd,
++	OUT UCHAR *pBwFallBack,
++	IN USHORT ifIndex,
++	IN BOOLEAN BandWidth,
++	IN UCHAR PriCh,
++	IN UCHAR ExtraCh)
++{
++	UINT32	Value = 0;
++	UCHAR	BBPValue = 0;
++	UCHAR	BBP3Value = 0;
++#ifdef P2P_SUPPORT
++	PAPCLI_STRUCT pApCliEntry = NULL;
++#endif /* P2P_SUPPORT */
++	BOOLEAN bChangeInitBW = FALSE;
++
++	*pBwFallBack = 0;
++
++	if (RTMP_TEST_FLAG(pAd, fRTMP_ADAPTER_BSS_SCAN_IN_PROGRESS))
++		return;
++
++	DBGPRINT(RT_DEBUG_ERROR, ("%s, CentralChannel = %d, Channel %d, ChannelWidth = %d\n", __FUNCTION__, 
++			ExtraCh, PriCh, BandWidth));
++
++#ifdef P2P_SUPPORT
++	pApCliEntry = &pAd->ApCfg.ApCliTab[ifIndex];
++#endif /* P2P_SUPPORT */
++
++	if (!INFRA_ON(pAd)
++#ifdef P2P_SUPPORT
++		&& !P2P_GO_ON(pAd) && (pApCliEntry->Valid == FALSE)
++#endif /* P2P_SUPPORT */
++		)
++	{
++		bChangeInitBW = TRUE;
++	}
++#ifdef P2P_SUPPORT
++	else
++	{
++		if ((P2P_GO_ON(pAd) || (pApCliEntry->Valid == TRUE)) && (pAd->CommonCfg.Channel != PriCh))
++		{
++			bChangeInitBW = TRUE;
++		}
++	}
++#endif /* P2P_SUPPORT */
++
++	if (bChangeInitBW == TRUE)
++	{
++		UCHAR Value = 0;
++		UINT32	Data = 0, MTxCycle, macStatus = 0;
++		
++		//Disable MAC Tx/Rx
++		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Data);
++		Data &= (~0x0C);
++		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Data);
++		
++		// Check MAC Tx/Rx idle
++		for (MTxCycle = 0; MTxCycle < 10000; MTxCycle++)
++		{
++			RTMP_IO_READ32(pAd, MAC_STATUS_CFG, &macStatus);
++			if (macStatus & 0x3)
++				RTMPusecDelay(50);
++			else
++				break;
++		}
++		
++		pAd->CommonCfg.CentralChannel = ExtraCh;
++		pAd->CommonCfg.Channel = PriCh;
++#ifdef DOT11_N_SUPPORT
++		/* Change to AP channel */
++		if ((pAd->CommonCfg.CentralChannel > pAd->CommonCfg.Channel) && (BandWidth == BW_40))
++		{
++			/* Must using 40MHz. */
++			pAd->CommonCfg.HtCapability.HtCapInfo.ChannelWidth = BW_40;
++			pAd->CommonCfg.DesiredHtPhy.ChannelWidth = BW_40;
++			//pAd->CommonCfg.AddHTInfo.AddHtInfo.RecomWidth = 0;
++			pAd->CommonCfg.AddHTInfo.AddHtInfo.ExtChanOffset = EXTCHA_ABOVE;
++			
++			pAd->CommonCfg.BBPCurrentBW = BW_40;
++			AsicSwitchChannel(pAd, pAd->CommonCfg.CentralChannel, FALSE);
++			AsicLockChannel(pAd, pAd->CommonCfg.CentralChannel);
++
++			RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R4, &Value);
++			Value &= (~0x18);
++			Value |= 0x10;
++			RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R4, Value);
++			RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R4, &Value);
++
++			/*	RX : control channel at lower */
++			RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R3, &Value);
++			Value &= (~0x20);
++			RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R3, Value);
++
++			RTMP_IO_READ32(pAd, TX_BAND_CFG, &Data);
++			Data &= 0xfffffffe;
++			RTMP_IO_WRITE32(pAd, TX_BAND_CFG, Data);
++
++			if (pAd->MACVersion == 0x28600100)
++			{
++				RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R69, 0x1A);
++				RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R70, 0x0A);
++				RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R73, 0x16);
++				DBGPRINT(RT_DEBUG_TRACE, ("!!!rt2860C !!! \n"));
++			}
++		
++			DBGPRINT(RT_DEBUG_TRACE,
++					 ("!!!40MHz Lower !!! Control Channel at Below. Central = %d \n",
++					  pAd->CommonCfg.CentralChannel));
++			DBGPRINT(RT_DEBUG_ERROR,
++					 ("%s: !!!40MHz Lower !!! Control Channel at Below. Central = %d \n", __FUNCTION__, 
++					  pAd->CommonCfg.CentralChannel));
++		} 
++		else if ((pAd->CommonCfg.CentralChannel < pAd->CommonCfg.Channel) && (BandWidth == BW_40))
++		{
++			/* Must using 40MHz. */
++			pAd->CommonCfg.HtCapability.HtCapInfo.ChannelWidth = BW_40;
++			pAd->CommonCfg.DesiredHtPhy.ChannelWidth = BW_40;
++			//pAd->CommonCfg.AddHTInfo.AddHtInfo.RecomWidth = 0;
++			pAd->CommonCfg.AddHTInfo.AddHtInfo.ExtChanOffset = EXTCHA_BELOW;
++			
++			pAd->CommonCfg.BBPCurrentBW = BW_40;
++			AsicSwitchChannel(pAd, pAd->CommonCfg.CentralChannel, FALSE);
++			AsicLockChannel(pAd, pAd->CommonCfg.CentralChannel);
++
++			RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R4, &Value);
++			Value &= (~0x18);
++			Value |= 0x10;
++			RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R4, Value);
++
++			RTMP_IO_READ32(pAd, TX_BAND_CFG, &Data);
++			Data |= 0x1;
++			RTMP_IO_WRITE32(pAd, TX_BAND_CFG, Data);
++
++			RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R3, &Value);
++			Value |= (0x20);
++			RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R3, Value);
++
++			if (pAd->MACVersion == 0x28600100) {
++				RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R69, 0x1A);
++				RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R70, 0x0A);
++				RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R73, 0x16);
++				DBGPRINT(RT_DEBUG_TRACE, ("!!!rt2860C !!! \n"));
++			}
++
++			DBGPRINT(RT_DEBUG_TRACE,
++					 ("!!! 40MHz Upper !!! Control Channel at UpperCentral = %d \n",
++					  pAd->CommonCfg.CentralChannel));
++			DBGPRINT(RT_DEBUG_ERROR,
++					 ("%s, !!! 40MHz Upper !!! Control Channel at UpperCentral = %d \n", __FUNCTION__, 
++					  pAd->CommonCfg.CentralChannel));
++		}
++		else
++#endif /* DOT11_N_SUPPORT */
++		{
++			pAd->CommonCfg.HtCapability.HtCapInfo.ChannelWidth = BW_20;
++			pAd->CommonCfg.DesiredHtPhy.ChannelWidth = BW_20;
++			//pAd->CommonCfg.AddHTInfo.AddHtInfo.RecomWidth = 0;
++			pAd->CommonCfg.AddHTInfo.AddHtInfo.ExtChanOffset = EXTCHA_NONE;
++		
++			pAd->CommonCfg.BBPCurrentBW = BW_20;
++			pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel;
++			AsicSwitchChannel(pAd, pAd->CommonCfg.Channel, FALSE);
++			AsicLockChannel(pAd, pAd->CommonCfg.Channel);
++		
++			RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R4, &Value);
++			Value &= (~0x18);
++			RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R4, Value);
++
++			RTMP_IO_READ32(pAd, TX_BAND_CFG, &Data);
++			Data &= 0xfffffffe;
++			RTMP_IO_WRITE32(pAd, TX_BAND_CFG, Data);
++
++			RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R3, &Value);
++			Value &= (~0x20);
++			RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R3, Value);
++
++			if (pAd->MACVersion == 0x28600100) {
++				RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R69, 0x16);
++				RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R70, 0x08);
++				RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R73, 0x11);
++				DBGPRINT(RT_DEBUG_TRACE, ("!!!rt2860C !!! \n"));
++			}
++			
++			DBGPRINT(RT_DEBUG_TRACE, ("!!! 20MHz !!! \n"));
++			DBGPRINT(RT_DEBUG_ERROR, ("%s, !!! 20MHz !!! \n", __FUNCTION__ ));
++		}
++		
++		RTMPSetAGCInitValue(pAd, pAd->CommonCfg.BBPCurrentBW);
++
++		//Enable MAC Tx/Rx
++		RTMP_IO_READ32(pAd, MAC_SYS_CTRL, &Data);
++		Data |= 0x0C;
++		RTMP_IO_WRITE32(pAd, MAC_SYS_CTRL, Data);
++	
++		/* */
++		/* Save BBP_R66 value, it will be used in RTUSBResumeMsduTransmission */
++		/* */
++		AsicBBPReadWithRxChain(pAd, BBP_R66, &pAd->BbpTuning.R66CurrentValue, RX_CHAIN_0);
++
++		DBGPRINT(RT_DEBUG_TRACE, ("AdjustChannelRelatedValue ==> not any connection !!!\n"));
++		return;
++	}
++
++	if (BandWidth)
++	{
++		if (pAd->CommonCfg.CentralChannel == pAd->CommonCfg.Channel)
++		{
++			pAd->CommonCfg.CentralChannel = ExtraCh;
++			pAd->CommonCfg.Channel = PriCh;
++
++			/* Set Regsiter for extension channel position.*/
++			RTMP_IO_READ32(pAd, TX_BAND_CFG, &Value);
++			RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R3, &BBP3Value);
++			if (ExtraCh < PriCh)
++			{
++				Value |= 0x1;
++				BBP3Value |= (0x20);
++				RTMP_IO_WRITE32(pAd, TX_BAND_CFG, Value);
++			}
++			else if (ExtraCh > PriCh)
++			{
++				Value &= 0xfe;
++				BBP3Value &= (~0x20);
++				RTMP_IO_WRITE32(pAd, TX_BAND_CFG, Value);
++			}
++
++			/* Turn on BBP 40MHz mode now. */
++			RTMP_BBP_IO_READ8_BY_REG_ID(pAd, BBP_R4, &BBPValue);
++			BBPValue &= (~0x18);
++#ifdef GREENAP_SUPPORT
++			if (pAd->ApCfg.bGreenAPActive == 0)
++#endif /* GREENAP_SUPPORT */
++			BBPValue |= 0x10;
++			RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R4, BBPValue);
++
++			RTMP_BBP_IO_WRITE8_BY_REG_ID(pAd, BBP_R3, BBP3Value);
++#ifdef GREENAP_SUPPORT
++			if (pAd->ApCfg.bGreenAPActive == 1)
++				pAd->CommonCfg.BBPCurrentBW = BW_20;
++			else
++#endif /* GREENAP_SUPPORT */
++			pAd->CommonCfg.BBPCurrentBW = BW_40;
++		}
++		else
++		{
++			if (pAd->CommonCfg.CentralChannel != ExtraCh)
++			{
++				*pBwFallBack = 1;
++			}
++		}
++	}
++}
++/* Ended by Bruce Liu */
++
+ /* 
+     ==========================================================================
+     Description:
+@@ -455,7 +716,10 @@
+ 		 				CentralChannel = pAddHtInfo->ControlChan + 2;
+ 		 			}
+ 		 			DBGPRINT(RT_DEBUG_TRACE, ("PeerBeaconAtJoinAction HT===>Central Channel = %d, Control Channel = %d,  .\n", CentralChannel, pAddHtInfo->ControlChan));
+-
++					
++					/* Added by Bruce Liu, 2013-8-11, Saved AP client's central channel */
++					pApCliEntry->ApCliMlmeAux.CentralChannel = CentralChannel;
++					/* Ended by Bruce Liu */
+ 				}
+ 				
+ 			}
+@@ -519,6 +783,33 @@
+ 			}
+ #endif /* DOT11_N_SUPPORT */
+ #endif /* WSC_AP_SUPPORT */
++
++		/*Added by Bruce Liu, 2013-8-11 */
++		#if 1
++			if (pApCliEntry->ApCliMlmeAux.BssType == BSS_INFRA)
++			{
++					BOOLEAN InfraAP_BW;
++					UCHAR BwFallBack = 0;
++			
++					/*
++						Ad-hoc call this function in LinkUp
++					*/
++					//if (pAd->MlmeAux.HtCapability.HtCapInfo.ChannelWidth == BW_40)
++					if (pHtCapability->HtCapInfo.ChannelWidth  == BW_40)
++						InfraAP_BW = TRUE;
++					else
++						InfraAP_BW = FALSE;
++					//printk(KERN_ERR "%s, <<<<<<<<<<<<<<<<<<channel: %d,  CentralChannel: %d\n", __FUNCTION__, pApCliEntry->ApCliMlmeAux.Channel, pApCliEntry->ApCliMlmeAux.CentralChannel);
++					APCliAdjustChannelRelatedValue(pAd,
++											&BwFallBack,
++											BSS0,
++											InfraAP_BW,
++											pApCliEntry->ApCliMlmeAux.Channel,
++											pApCliEntry->ApCliMlmeAux.CentralChannel);
++			}
++			/* Ended by Bruce Liu */
++		#endif
++
+ 			if(bssidEqualFlag == TRUE)
+ 			{
+ 				*pCurrState = APCLI_SYNC_IDLE;
+diff -urN b/rt2860v2/common/cmm_info.c a/rt2860v2/common/cmm_info.c
+--- b/rt2860v2/common/cmm_info.c	2013-08-12 14:44:30.000000000 +0800
++++ a/rt2860v2/common/cmm_info.c	2013-08-12 14:42:44.000000000 +0800
+@@ -1845,6 +1845,23 @@
+ 
+ 	return TRUE;
+ }
++
++INT	Set_ApcliBBPRead_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg)
++{
++	UCHAR value = 0, offset;
++
++	A2Hex(offset, arg);	
++			
++	RTMP_BBP_IO_READ8_BY_REG_ID(pAd, offset, &value);
++	
++	DBGPRINT(RT_DEBUG_OFF, ("%x\n", value));
++	printk(KERN_ERR "Offset(%d): 0x%x\n", offset, value);
++		
++	return TRUE;
++}
++
+ #endif
+ 
+ INT	Show_DescInfo_Proc(
+diff -urN b/rt2860v2/include/rtmp.h a/rt2860v2/include/rtmp.h
+--- b/rt2860v2/include/rtmp.h	2013-08-12 14:44:55.000000000 +0800
++++ a/rt2860v2/include/rtmp.h	2013-08-12 14:43:11.000000000 +0800
+@@ -8417,6 +8417,10 @@
+ INT	Set_Debug_Proc(
+ 	IN	PRTMP_ADAPTER	pAd, 
+ 	IN	PSTRING			arg);
++
++INT Set_ApcliBBPRead_Proc(
++	IN	PRTMP_ADAPTER	pAd, 
++	IN	PSTRING			arg);
+ #endif
+ 
+ #ifdef TXBF_SUPPORT

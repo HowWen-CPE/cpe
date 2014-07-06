@@ -1,0 +1,6 @@
+#!/bin/sh
+
+board_type="$(nvram show board_model_rule 0 bd_model)"
+/etc/init.d/network-wan stop
+ezp-wl0-mode $@
+

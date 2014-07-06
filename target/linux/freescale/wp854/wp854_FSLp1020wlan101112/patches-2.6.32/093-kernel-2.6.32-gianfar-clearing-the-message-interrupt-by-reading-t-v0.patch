@@ -1,0 +1,47 @@
+From 3208a46017209f64d8eacbffafa5fd2baa6fa66f Mon Sep 17 00:00:00 2001
+From: Tarun Garg <b10794@freescale.com>
+Date: Thu, 18 Feb 2010 14:56:52 +0530
+Subject: [PATCH] gianfar: clearing the message interrupt by reading the message.
+
+There seems to be issue if message interrupt is cleared by
+clearing the status bit. After some time, one of the message
+interrupt gets stuck and the cpu doesnt receive the interrupt.
+The interrupt is in fact counted as bad interrupt.
+
+This issue doesnt occur if we clear the interrupt by reading the
+message. RM says that either of the two methods can be used.
+---
+ drivers/net/gianfar.c |   10 ++++------
+ 1 files changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index 47709d6..b41bb63 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -880,9 +880,8 @@ static irqreturn_t gfar_cpu_receive(int irq, void *dev_id)
+ 	unsigned long flags;
+ 	struct gfar_cpu_dev *cpu_dev = &__get_cpu_var(gfar_cpu_dev);
+ 
+-	/* clear the status bit */
+-	setbits32(cpu_dev->msg_virtual_rx->msr,
+-		 (1 << cpu_dev->msg_virtual_rx->msg_num));
++	/* clear the interrupt by reading message */
++	fsl_clear_msg(cpu_dev->msg_virtual_rx);
+ 
+ 	local_irq_save(flags);
+ 	if (napi_schedule_prep(&cpu_dev->napi))
+@@ -1097,9 +1096,8 @@ static irqreturn_t gfar_virtual_transmit(int irq, void *grp_id)
+ 	int cpu = smp_processor_id();
+ 	struct gfar_priv_grp *grp = (struct gfar_priv_grp *)grp_id;
+ 
+-	/* clear the status bit */
+-	setbits32(grp->msg_virtual_tx[cpu]->msr,
+-		(1 << grp->msg_virtual_tx[cpu]->msg_num));
++	/* clear the interrupt by reading the message */
++	fsl_clear_msg(grp->msg_virtual_tx[cpu]);
+ 
+ 	local_irq_save(flags);
+ 	if (napi_schedule_prep(&grp->napi_tx[cpu]))
+-- 
+1.5.6.3
+

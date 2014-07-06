@@ -1,0 +1,52 @@
+From 88e4208dcaa81f83252d8fa01798e0794187be7d Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Thu, 4 Mar 2010 12:32:01 +0530
+Subject: [PATCH] serial: Fix NULL Pointer Dereference n_tty.c
+
+Signed-off-by: Rajesh Bv <B22233@freescale.com>
+Signed-off-by: Drona Pratap <B20017@freescale.com>
+Signed-off-by: Naidu Sai <B22341@freescale.com>
+---
+ drivers/char/n_tty.c |   13 ++++++++++---
+ 1 files changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/char/n_tty.c b/drivers/char/n_tty.c
+index 2e50f4d..3e340a3 100644
+--- a/drivers/char/n_tty.c
++++ b/drivers/char/n_tty.c
+@@ -108,7 +108,7 @@ static void n_tty_set_room(struct tty_struct *tty)
+ 
+ static void put_tty_queue_nolock(unsigned char c, struct tty_struct *tty)
+ {
+-	if (tty->read_cnt < N_TTY_BUF_SIZE) {
++	if (tty->read_cnt < N_TTY_BUF_SIZE && tty->read_buf != NULL) {
+ 		tty->read_buf[tty->read_head] = c;
+ 		tty->read_head = (tty->read_head + 1) & (N_TTY_BUF_SIZE-1);
+ 		tty->read_cnt++;
+@@ -1535,14 +1535,21 @@ static void n_tty_set_termios(struct tty_struct *tty, struct ktermios *old)
+ 
+ static void n_tty_close(struct tty_struct *tty)
+ {
++	char *tmpbuf;
++	unsigned long flags;
++
+ 	n_tty_flush_buffer(tty);
+ 	if (tty->read_buf) {
+-		kfree(tty->read_buf);
++		tmpbuf = tty->read_buf;
++		spin_lock_irqsave(&tty->read_lock, flags);
+ 		tty->read_buf = NULL;
++		spin_unlock_irqrestore(&tty->read_lock, flags);
++		kfree(tmpbuf);
+ 	}
+ 	if (tty->echo_buf) {
+-		kfree(tty->echo_buf);
++		tmpbuf = tty->echo_buf;
+ 		tty->echo_buf = NULL;
++		kfree(tmpbuf);
+ 	}
+ }
+ 
+-- 
+1.5.6.3
+

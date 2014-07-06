@@ -1,0 +1,14 @@
+Index: uboot_MTK4110/include/configs/rt2880.h
+===================================================================
+--- uboot_MTK4110.orig/include/configs/rt2880.h	2013-11-27 16:09:26.047182121 +0800
++++ uboot_MTK4110/include/configs/rt2880.h	2013-11-27 16:10:33.766597183 +0800
+@@ -98,6 +98,9 @@
+ 
+ #define CONFIG_BOOTCOMMAND	"tftp" //"run flash_self"
+ 
++/* Define ramboot default value, Sirian@Lirteon, 2013-11-27 */
++#undef CONFIG_RAMBOOTCOMMAND
++#define CONFIG_RAMBOOTCOMMAND "0"
+ 
+ #include <cmd_confdefs.h>
+ 

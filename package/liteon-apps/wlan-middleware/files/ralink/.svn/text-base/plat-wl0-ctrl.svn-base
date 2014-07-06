@@ -1,0 +1,908 @@
+#!/bin/sh
+
+wl_rule_set="wl_basic_rule"
+wl_ap_rule_set="wl_ap_basic_rule"
+#wl_basic_rule_item="enable net_mode txpower bisolation channel"
+wl_basic_rule_item="txpower bisolation"
+wl_basic_rule_priv="txpowerent=CutTxPower bisolationent=NoForwardingBTNBSSID"
+#wl_basic_rule_priv="enableent=RadioOn net_modeent=WirelessMode txpowerent=TxPower \
+#channelent=Channel bisolationent=NoForwardingBTNBSSID"
+
+wlv_basic_rule_item="hidden isolation"
+wlv_basic_rule_priv="hiddenent=HideSSID isolationent=NoForwarding"
+wlv_ssid_rule_item="ssid"
+wlv_ssid_rule_priv="ssident=SSID"
+
+wl_adv_rule_set="wl_advanced_rule"
+wl_ap_adv_rule_set="wl_ap_advanced_rule"
+#wl_adv_rule_item="frag rts dtim bcn htbw opmode gi extcha distance"
+wl_adv_rule_item="frag rts dtim bcn opmode gi distance"
+wl_adv_rule_priv="fragent=FragThreshold rtsent=RTSThreshold dtiment=DtimPeriod bcnent=BeaconPeriod opmodeent=HtOpMode gient=HtGi"
+#wl_adv_rule_priv="fragent=FragThreshold rtsent=RTSThreshold dtiment=DtimPeriod bcnent=BeaconPeriod htbwent=HtBw opmodeent=HtOpMode gient=HtGi extchaent=HtExtcha"
+
+wl_netmode_rule_item="net_mode"
+wl_htbw_rule_item="htbw"
+wl_channel_rule_item="channel"
+wl_extcha_rule_item="extcha"
+wl_net_rule_priv="net_modeent=WirelessMode htbwent=HtBw channelent=Channel extchaent=HtExtcha"
+
+gethide_status()
+{
+    local wlvidx=$1
+    # We hide the ssid when ssid is hiddne, ssid is disabled or wifi is off
+    [ "$(nvram show wl_basic_rule 0 enable)" = "0" -o \
+      "$(nvram show wl0_basic_rule $wlvidx enable)" = "0" -o \
+      "$(nvram show wl0_basic_rule $wlvidx hidden)" = "1" ] && {
+        echo "1"
+    } || {
+        echo "0"
+    }
+}
+
+dbg_iwpriv()
+{
+    echo "iwpriv $1 $2 $3 $4 $5 $6 $7 $8" 
+    iwpriv "$1" "$2" "$3" "$4" "$5" "$6" "$7" "$8"
+}
+
+iterate_basic()
+{
+    local vidx="$1"
+    local rulename="$2"
+    local ruleitem="$3"
+    local rulepriv="$4"
+
+    for attr in $rulepriv
+    do
+        eval "$attr"
+    done
+    for attr in $ruleitem
+    do
+        val="$(nvram show $rulename $vidx $attr)"
+        [ "$attr" = "hidden" ] && val="$(gethide_status $vidx)"
+        [ "$attr" = "txpower" ] && { 
+            if [ $val = "0" ]; then
+                val="0"
+            elif [ $val = "2" ]; then
+                val="2"
+            elif [ $val = "4" ]; then
+                val="4"
+            elif [ $val = "6" ]; then
+                val="6"
+            elif [ $val = "8" ]; then
+                val="8"
+            elif [ $val = "10" ]; then
+                val="10"
+            elif [ $val = "12" ]; then
+                val="12"
+            elif [ $val = "14" ]; then
+                val="14"
+            elif [ $val = "16" ]; then
+                val="16"
+            elif [ $val = "18" ]; then
+                val="18"
+            else
+                val="0"
+            fi
+        }
+
+        local rstr="echo \$${attr}ent"
+        local privitem="$(eval $rstr)"
+	
+	# Added by Bruce Liu, 2013-1-9
+	if [ "$attr" = "distance" -a $val -gt 0 ]; then
+		iwpriv rai$vidx ack_timeout 1=$val
+	else
+		dbg_iwpriv rai$vidx set $privitem="$val"
+		# Issue a Auto-Channel Selection command to driver when Channel equals zero
+		#[ "$attr" = "channel" -a $val = 0 ] && dbg_iwpriv rai$vidx set AutoChannelSel=2
+                
+		if [ "$attr" = "channel" -a $val = 0 ]; then
+                    dbg_iwpriv rai$vidx set AutoChannelSel=2
+                    sleep 6
+                fi
+                [ "$attr" = "htbw" ] && { 
+                    if [ $val = "0" ]; then
+ 		        iwpriv rai$vidx set HtBssCoex=0
+                    elif [ $val = "1" ]; then
+ 		        iwpriv rai$vidx set HtBssCoex=1
+                    fi
+# 		     iwpriv rai$vidx set HtBssCoex=0
+        }
+
+	fi
+	# Ended by Bruce Liu
+    done
+}
+
+iterate_net()
+{
+    local opmode="$1"
+    if [ "$opmode" = "ap" -o  "$opmode" = "normal" ]; then
+        iterate_basic "0" "$wl_ap_rule_set" "$wl_netmode_rule_item" "$wl_net_rule_priv"
+        iterate_basic "0" "$wl_ap_adv_rule_set" "$wl_htbw_rule_item" "$wl_net_rule_priv"
+        iterate_basic "0" "$wl_ap_adv_rule_set" "$wl_extcha_rule_item" "$wl_net_rule_priv"
+        iterate_basic "0" "$wl_ap_rule_set" "$wl_channel_rule_item" "$wl_net_rule_priv"
+    else
+        iterate_basic "0" "$wl_rule_set" "$wl_netmode_rule_item" "$wl_net_rule_priv"
+        iterate_basic "0" "$wl_adv_rule_set" "$wl_htbw_rule_item" "$wl_net_rule_priv"
+        iterate_basic "0" "$wl_adv_rule_set" "$wl_extcha_rule_item" "$wl_net_rule_priv"
+        iterate_basic "0" "$wl_rule_set" "$wl_channel_rule_item" "$wl_net_rule_priv"
+    fi
+}
+
+iterate_wlv()
+{
+    local vidx="$1"
+    local sidx="$2"
+    local rulename="$3"
+    local ruleitem="$4"
+    local rulepriv="$5"
+    for attr in $rulepriv
+    do
+        eval "$attr"
+    done
+    for attr in $ruleitem
+    do
+        val="$(nvram show $rulename $vidx $attr)"
+        local rstr="echo \$${attr}ent"
+        local privitem="$(eval $rstr)"
+        dbg_iwpriv rai$sidx set $privitem="$val"
+    done
+}
+
+apply_ssid_sec_none()
+{
+    local vidx="$1"
+    local sidx="$2"
+    dbg_iwpriv rai$sidx set AuthMode=OPEN
+    dbg_iwpriv rai$sidx set EncrypType=NONE
+}
+
+apply_ssid_sec_wep()
+{
+    local vidx="$1"
+    local sidx="$2"
+    local encmode="$(nvram show wl0_sec_wep_rule $vidx encmode)"
+    local keyindex="$(nvram show wl0_sec_wep_rule $vidx key_index)"
+    local key="$(nvram show wl0_sec_wep_rule $vidx key$keyindex)"
+    local keytype="$(nvram show wl0_sec_wep_rule $vidx keytype)"
+    local ssid="$(nvram show wl0_ssid_rule $vidx ssid)"
+    [ "$encmode" = "open" ] && {
+        dbg_iwpriv rai$sidx set AuthMode=OPEN
+        dbg_iwpriv rai$sidx set EncrypType=WEP
+    }
+    [ "$encmode" = "shared" ] && {
+        dbg_iwpriv rai$sidx set AuthMode=SHARED
+        dbg_iwpriv rai$sidx set EncrypType=WEP
+    }
+    [ "$encmode" = "auto" ] && {
+        dbg_iwpriv rai$sidx set AuthMode=WEPAUTO
+        dbg_iwpriv rai$sidx set EncrypType=WEP
+    }
+    dbg_iwpriv rai$sidx set IEEE8021X=0
+    
+    dbg_iwpriv rai$sidx set Key$keyindex="$key"
+    #dbg_iwpriv rai$sidx set Key2=$key2
+    #dbg_iwpriv rai$sidx set Key3=$key3
+    #dbg_iwpriv rai$sidx set Key4=$key4
+    dbg_iwpriv rai$sidx set DefaultKeyID=$keyindex
+    dbg_iwpriv rai$sidx set SSID="$ssid"
+}
+
+apply_ssid_sec_psk()
+{
+    local vidx="$1"
+    local sidx="$2"
+    local wpaversion="$3"
+    [ "$wpaversion" = "2" ] && {
+        local wpapadstr="2"
+    }
+    local key="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx key)"
+    local crypto="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx crypto)"
+    local ssid="$(nvram show wl0_ssid_rule $vidx ssid)"
+	local RekeyMethod="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx rekey_mode)"
+    local wpacap=""
+    #[ "$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx wpacap)" = "1" -a "$wpapadstr" = "2" ] && wpacap="WPAPSK"
+    [ "$(nvram show wl0_sec_rule $vidx secmode)" = "psk2mixed" -a "$wpapadstr" = "2" ] && wpacap="WPAPSK"
+    dbg_iwpriv rai$sidx set AuthMode="${wpacap}WPA${wpapadstr}PSK"
+    case "$crypto" in 
+    aes)
+        dbg_iwpriv rai$sidx set EncrypType=AES
+    ;;
+    tkip)
+        dbg_iwpriv rai$sidx set EncrypType=TKIP
+        [ "$wpaversion" = "2" ] && {
+            dbg_iwpriv rai$sidx set WpaMixPairCipher="WPA_TKIPAES_WPA2_TKIP"
+        }
+    ;;
+    mixed)
+        dbg_iwpriv rai$sidx set EncrypType=TKIPAES
+        [ "$wpaversion" = "2" -a -n "$wpacap" ] && {
+            dbg_iwpriv rai$sidx set WpaMixPairCipher="WPA_TKIPAES_WPA2_TKIPAES"
+        }
+    ;;
+    *)
+        dbg_iwpriv rai$sidx set EncrypType=TKIPAES
+        [ "$wpaversion" = "2" -a -n "$wpacap" ] && {
+            dbg_iwpriv rai$sidx set WpaMixPairCipher="WPA_TKIPAES_WPA2_TKIPAES"
+        }
+    ;;
+    esac
+    dbg_iwpriv rai$sidx set IEEE8021X=0
+    dbg_iwpriv rai$sidx set SSID="$ssid"
+    dbg_iwpriv rai$sidx set WPAPSK="$key"
+    dbg_iwpriv rai$sidx set DefaultKeyID=2
+    if [ "$RekeyMethod" = "time" ]; then
+        dbg_iwpriv rai$sidx set RekeyMethod="TIME"
+        dbg_iwpriv rai$sidx set RekeyInterval="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx rekey_time_interval)"
+    elif [ "$RekeyMethod" = "pkt" ]; then
+        dbg_iwpriv rai$sidx set RekeyMethod="PKT"
+        dbg_iwpriv rai$sidx set RekeyInterval="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx rekey_pkt_interval)"
+    else
+        dbg_iwpriv rai$sidx set RekeyMethod="DISABLE"
+    fi
+}
+
+apply_ssid_sec_wpa()
+{
+    local vidx="$1"
+    local sidx="$2"
+    local wpaversion="$3"
+    [ "$wpaversion" = "2" ] && {
+        local wpapadstr="2"
+    }
+    local key="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx key)"
+    local crypto="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx crypto)"
+    local ssid="$(nvram show wl0_ssid_rule $vidx ssid)"
+    local radiusserver="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx radius_ipaddr)"
+    local radiusport="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx radius_port)"
+    local radiuskey="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx radius_key)"
+    local own_ip_addr="$(nvram get lan0_ipaddr)"
+	local RekeyMethod="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx rekey_mode)"
+    # WPA2
+    local wpacap=""
+    #[ "$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx wpacap)" = "1" -a "$wpaversion" = "2" ] && wpacap="WPA1"
+    [ "$(nvram show wl0_sec_rule $vidx secmode)" = "wpa2mixed" -a "$wpaversion" = "2" ] && wpacap="WPA1"
+    [ "$wpaversion" = "1" ] && wpaversion=
+    dbg_iwpriv rai$sidx set AuthMode="${wpacap}WPA$wpaversion"
+    case "$crypto" in 
+    aes)
+        dbg_iwpriv rai$sidx set EncrypType=AES
+    ;;
+    tkip)
+        dbg_iwpriv rai$sidx set EncrypType=TKIP
+        [ "$wpaversion" = "2" ] && {
+            dbg_iwpriv rai$sidx set WpaMixPairCipher="WPA_TKIPAES_WPA2_TKIP"
+        }
+    ;;
+    mixed)
+        dbg_iwpriv rai$sidx set EncrypType=TKIPAES
+        [ "$wpaversion" = "2" -a -n "$wpacap" ] && {
+            dbg_iwpriv rai$sidx set WpaMixPairCipher="WPA_TKIPAES_WPA2_TKIPAES"
+        }
+    ;;
+    *)
+        dbg_iwpriv rai$sidx set EncrypType=TKIPAES
+        [ "$wpaversion" = "2" -a -n "$wpacap" ] && {
+            dbg_iwpriv rai$sidx set WpaMixPairCipher="WPA_TKIPAES_WPA2_TKIPAES"
+        }
+    ;;
+    esac
+    # "IEEE8021X=1" only when Radius-WEP or Radius-NONE mode on, otherwise must 
+    # "IEEE8021X=0". 
+    dbg_iwpriv rai$sidx set IEEE8021X=0
+    dbg_iwpriv rai$sidx set SSID="$ssid"
+    dbg_iwpriv rai$sidx set RADIUS_Server=$radiusserver
+    dbg_iwpriv rai$sidx set RADIUS_Port=$radiusport
+    dbg_iwpriv rai$sidx set RADIUS_Key="$radiuskey"
+    dbg_iwpriv rai$sidx set DefaultKeyID=2
+    dbg_iwpriv rai$sidx set own_ip_addr=$own_ip_addr
+    #dbg_iwpriv rai$sidx set session_timeout_interval="$(nvram show wl0_sec_wpa2_rule $vidx session_timeout)"
+    if [ "$RekeyMethod" = "time" ]; then
+        dbg_iwpriv rai$sidx set RekeyMethod="TIME"
+        dbg_iwpriv rai$sidx set RekeyInterval="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx rekey_time_interval)"
+    elif [ "$RekeyMethod" = "pkt" ]; then
+        dbg_iwpriv rai$sidx set RekeyMethod="PKT"
+        dbg_iwpriv rai$sidx set RekeyInterval="$(nvram show wl0_sec_wpa${wpapadstr}_rule $vidx rekey_pkt_interval)"
+    else
+        dbg_iwpriv rai$sidx set RekeyMethod="DISABLE"
+    fi
+    # For WPA2 settings
+    [ "$wpaversion" = "2" ] && {
+        dbg_iwpriv rai$sidx set PMKCachePeriod="$(nvram show wl0_sec_wpa2_rule $vidx pmkperiod)"
+        dbg_iwpriv rai$sidx set PreAuth="$(nvram show wl0_sec_wpa2_rule $vidx preauth)"
+    }
+    #Modified by Mario Huang
+    #/etc/rc.common /etc/init.d/rt2860apd start
+    iwpriv rai$sidx set EAPifname=br-lan0
+    iwpriv rai$sidx set PreAuthifname=br-lan0
+    killall rt2860apd
+    rt2860apd
+}
+
+apply_ssid_sec()
+{
+    local vidx="$1"
+    local sidx="$2"
+    local rulename="$3"
+    local ruleitem="$4"
+    local rulepriv="$5"
+
+    for attr in $ruleitem
+    do
+        secmode="$(nvram show wl0_sec_rule $vidx secmode)"
+        dbg_iwpriv rai$sidx set $privitem="$val"
+    done
+
+}
+
+get_acl_policy()
+{
+    local idx=$1
+    local vidx=$2
+    if [ -z "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 enable)" -o \
+            "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 enable)" = "0" -o \
+            "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 enable)" = "disabled" ]; then
+        # Disabled
+        echo "0"
+        return 0
+    else
+        if [ "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 defpolicy)" = "allow" -o \
+             "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 defpolicy)" = "1" ]; then
+            #allow all
+            echo "1"
+            return 1
+        elif [ "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 defpolicy)" = "deny" -o \
+               "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 defpolicy)" = "2" ]; then
+            #deny all
+            echo "2"
+            return 2
+        else
+            # Disabled
+            echo "0"
+            return 0
+        fi
+    fi
+}
+
+get_acl_list()
+{
+    local idx=$1
+    local vidx=$2
+    #local defpol="$(nvram show wl${idx}${vidx}_acl_basic_rule 0 defpolicy)"
+    local aclnum="$(nvram get wl${idx}${vidx}_acl_num)"
+    local aclidx="0"
+    local acllist=""
+    while [ "$aclidx" -lt "$aclnum" ];
+    do
+        #check rule is enabled and policy is "not" default policy
+        #[ "$(nvram show wl${idx}${vidx}_acl_rule $aclidx enable)" = "1" -a \
+        #  "$(nvram show wl${idx}${vidx}_acl_rule $aclidx policy)" = "$defpol" -a \
+        #  -n "$(nvram show wl${idx}${vidx}_acl_rule $aclidx mac)" ] && {
+        [ "$(nvram show wl${idx}${vidx}_acl_basic_rule 0 enable)" = "1" -a -n "$(nvram show wl${idx}${vidx}_acl_rule $aclidx mac)" ] && {
+          #"$(nvram show wl${idx}${vidx}_acl_rule $aclidx policy)" = "$defpol" -a \
+          #-n "$(nvram show wl${idx}${vidx}_acl_rule $aclidx mac)" ] && {
+            [ "$(nvram show wl${idx}${vidx}_acl_rule $aclidx flag)" = "1" -o "$(nvram show wl${idx}${vidx}_acl_rule $aclidx flag)" = "0" ] && {
+                if [ -n "${acllist}" ]; then
+                    acllist="${acllist};$(nvram show wl${idx}${vidx}_acl_rule $aclidx mac)"
+                else
+                    acllist="$(nvram show wl${idx}${vidx}_acl_rule $aclidx mac)"
+                fi
+          }
+        }
+        aclidx=$(($aclidx + 1))
+    done
+    echo "${acllist}"
+}
+
+apply_ssid_acl()
+{
+    local vidx=$1
+    local sidx=$2
+    local acl_policy="$(get_acl_policy 0 $vidx)"
+    local acl_list="$(get_acl_list 0 $vidx)"
+    dbg_iwpriv rai$sidx set AccessPolicy="$acl_policy"
+    # In 1.9.0.0, cmd "AccessControlList" by "ACLAddEntry" and "ACLClearAll"
+    # We clear al acl list first and then replaced by new ones
+    dbg_iwpriv rai$sidx set ACLClearAll=1
+    dbg_iwpriv rai$sidx set ACLAddEntry="$acl_list"
+}
+
+apply_ssid ()
+{
+    local wlvnum="$(nvram get wlv_rule_num)"
+    local wlvidx=0
+    local ssididx=0
+    while [ "$wlvidx" -lt "$wlvnum" ];
+    do
+        # Apply settings to every ssid
+        [ "$(nvram show wl0_basic_rule $wlvidx enable)" = "1" ] && {
+            iterate_wlv "$wlvidx" "$ssididx" "wl0_ssid_rule" "$wlv_ssid_rule_item" "$wlv_ssid_rule_priv"
+            iterate_wlv "$wlvidx" "$ssididx" "wl0_basic_rule" "$wlv_basic_rule_item" "$wlv_basic_rule_priv"
+            secmode="$(nvram show wl0_sec_rule $wlvidx secmode)"
+            case "$secmode" in
+            none)
+                apply_ssid_sec_none "$wlvidx" "$ssididx"
+            ;;
+            wep)
+                apply_ssid_sec_wep "$wlvidx" "$ssididx"
+            ;;
+            psk)
+                apply_ssid_sec_psk "$wlvidx" "$ssididx" "1"
+            ;;
+            psk2)
+                apply_ssid_sec_psk "$wlvidx" "$ssididx" "2"
+            ;;
+            psk2mixed)
+                apply_ssid_sec_psk "$wlvidx" "$ssididx" "2"
+            ;;
+            wpa)
+                apply_ssid_sec_wpa "$wlvidx" "$ssididx" "1"
+            ;;
+            wpa2)
+                apply_ssid_sec_wpa "$wlvidx" "$ssididx" "2"
+            ;;
+            wpa2mixed)
+                apply_ssid_sec_wpa "$wlvidx" "$ssididx" "2"
+            ;;
+            disabled)
+                apply_ssid_sec_none "$wlvidx" "$ssididx"
+            ;;
+            *)
+                apply_ssid_sec_none "$wlvidx" "$ssididx"
+            ;;
+            esac
+            apply_ssid_acl "$wlvidx" "$ssididx"
+        }
+        ssididx="$(($ssididx + 1))"
+        wlvidx="$(($wlvidx + 1))"
+        #sleep 1
+    done
+}
+
+# EZP : Fix Me, we should treat the bridge device according to br_rule in the
+# future
+wifidevctrl ()
+{
+    local act=$1
+    local widx="0"
+    [ "$act" = "down" ] && {
+        while [ "$widx" -lt "8" ]; do
+            #brctl delif br0 rai$widx
+            #brctl delif br0 wdsi$widx
+            ifconfig rai$widx down
+            #ifconfig wdsi$widx down
+            widx=$(($widx + 1))
+        done
+        #brctl delif br0 apclii0
+        ifconfig apclii0 down
+    } || {
+        while [ "$widx" -lt "8" ]; do
+            ifconfig rai$widx up
+            #ifconfig wdsi$widx up
+            #brctl addif br0 rai$widx
+            #brctl addif br0 wdsi$widx
+            widx=$(($widx + 1))
+        done
+        ifconfig apclii0 up
+        #brctl addif br0 apclii0
+    }
+}
+
+apply_wds ()
+{
+    local wdsnum="$(nvram get wl1_wds_rule_num)"
+    local wdsdx=0
+    local wdsmode="$(nvram show wl_wds_rule 0 mode)"
+    /etc/rc.common /etc/init.d/hwnat stop
+    wifidevctrl "down"
+    rmmod rt2860v2_ap
+    #/etc/wl/wlan-init
+    insmod rt2860v2_ap
+    echo "$(sleep 2)"
+    wifidevctrl "up"
+    /etc/rc.common /etc/init.d/hwnat start
+}
+
+#======================== Adapting extension channel =========================
+adapt_extcha()
+{
+local surveyidx=0
+local targetssid
+local extchasetting=$(nvram show wl_advanced_rule 0 extcha)
+local ApCliSsid=$1
+local ApCliBssid=$2
+[ -n "$ApCliSsid" ] && targetssid=" $ApCliSsid " || targetssid=" $ApCliBssid "
+iwpriv rai0 set SiteSurvey=1
+# extchasetting:0 ==> below
+# extchasetting:1 ==> above
+while [ "$surveyidx" -lt "10" ]; do
+    iwpriv rai0 get_site_survey | grep "$targetssid" > /tmp/surveyline
+    # if target AP uses extcha "above" but our setting is "below(0)"
+    [ -n "$(cat /tmp/surveyline | grep ABOVE)" -a "$extchasetting" = "0" ] && {
+        # change to above
+        nvram replace attr wl_advanced_rule 0 extcha 1
+        nvram commit
+        iwpriv rai0 set HtExtcha=1
+        # Apply basic settings on rai0
+        break
+    }
+    # if target AP uses extcha "below" but our setting is "above(1)"
+    [ -n "$(cat /tmp/surveyline | grep BELOW)" -a "$extchasetting" = "1" ] && {
+        # change to below
+        nvram replace attr wl_advanced_rule 0 extcha 0
+        nvram commit
+        iwpriv rai0 set HtExtcha=0
+        # Apply basic settings on rai0
+        break
+    }
+    [ -n "$(cat /tmp/surveyline)" ] && break
+    sleep 1
+    surveyidx=$(($surveyidx + 1))
+done
+}
+
+apply_apcli()
+{
+# Leave if universal repeater is not activated
+[ "$(nvram show wl0_apcli_rule 0 enable)" = "0" ] && {
+        ifconfig apclii0 down && ifconfig apclii0 up && iwpriv apclii0 set ApCliEnable=0
+        echo "apclii0 disconnect with AP>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+        exit
+    }
+ifconfig apclii0 up
+echo "*****************************************apclii0 up"
+ApCliSsid="$(nvram show wl0_apcli_rule 0 ssid)"
+ApCliBssid="$(nvram show wl0_apcli_rule 0 bssid)"
+# [ -z "$ApCliSsid" -a -z "$ApCliBssid" ] && exit
+
+if [ "$(nvram show wl0_apcli_rule 0 lockmac)" = "0" ]; then
+	ApCliBssid=""
+fi
+dbg_iwpriv apclii0 set ApCliSsid="$ApCliSsid"
+dbg_iwpriv apclii0 set ApCliBssid="$ApCliBssid"
+#enable HT40 connection of TKIP and Wep--Alvin
+dbg_iwpriv apclii0 set HtDisallowTKIP=0
+#add end--Alvin
+
+#adapt_extcha "$ApCliSsid" "$ApCliBssid"
+ApCliHtbw="$(nvram show wl_advanced_rule 0 htbw)"
+iwpriv apclii0 set HtBw=$ApCliHtbw
+
+if [ "$(nvram show wl_advanced_rule 0 htbw)" = "1" ]; then
+    dbg_iwpriv apclii0 set HtBssCoex=1
+else
+    dbg_iwpriv apclii0 set HtBssCoex=0
+fi
+
+ApCliChannel="$(nvram show wl_basic_rule 0 channel)"
+iwpriv apclii0 set Channel=$ApCliChannel
+
+case "$(nvram show wl0_apcli_rule 0 secmode)" in
+wep)
+    if [ "$(nvram show wl0_apcli_sec_wep_rule 0 encmode)" = "shared" ]; then
+        dbg_iwpriv apclii0 set ApCliAuthMode=SHARED
+    else
+        dbg_iwpriv apclii0 set ApCliAuthMode=OPEN
+    fi
+    dbg_iwpriv apclii0 set ApCliEncrypType=WEP
+    local keyid="$(nvram show wl0_apcli_sec_wep_rule 0 key_index)"
+    [ -z "$keyid" ] && keyid=1
+    dbg_iwpriv apclii0 set ApCliDefaultKeyID="$keyid"
+    dbg_iwpriv apclii0 set ApCliKey${keyid}="$(nvram show wl0_apcli_sec_wep_rule 0 key${keyid})"
+;;
+wpa)
+    # We don't have these velues because Ralink ApCli doesn't support wpa
+    dbg_iwpriv apclii0 set ApCliAuthMode=WPA
+    if [ "$(nvram show wl0_wpa_auth_rule 0 wpa_crypto)" = "aes" ]; then
+        dbg_iwpriv apclii0 set ApCliEncrypType=AES
+    else
+        dbg_iwpriv apclii0 set ApCliEncrypType=TKIP
+    fi
+    #dbg_iwpriv apclii0 set ApCliWPAPSK="$(nvram show wl0_apcli_sec_wpa_rule 0 key)"
+;;
+wpa2)
+    # We don't have these velues because Ralink ApCli doesn't support wpa2
+    dbg_iwpriv apclii0 set ApCliAuthMode=WPA2
+    if [ "$(nvram show wl0_wpa_auth_rule 0 wpa_crypto)" = "aes" ]; then
+        dbg_iwpriv apclii0 set ApCliEncrypType=AES
+    else
+        dbg_iwpriv apclii0 set ApCliEncrypType=TKIP
+    fi
+    #dbg_iwpriv apclii0 set ApCliWPAPSK="$(nvram show wl0_apcli_sec_wpa2_rule 0 key)"
+;;
+psk)
+    dbg_iwpriv apclii0 set ApCliAuthMode=WPAPSK
+    if [ "$(nvram show wl0_apcli_sec_wpa_rule 0 crypto)" = "aes" ]; then
+        dbg_iwpriv apclii0 set ApCliEncrypType=AES
+    else
+        dbg_iwpriv apclii0 set ApCliEncrypType=TKIP
+    fi
+    dbg_iwpriv apclii0 set ApCliWPAPSK="$(nvram show wl0_apcli_sec_wpa_rule 0 key)"
+;;
+psk2)
+    dbg_iwpriv apclii0 set ApCliAuthMode=WPA2PSK
+    if [ "$(nvram show wl0_apcli_sec_wpa2_rule 0 crypto)" = "aes" ]; then
+        dbg_iwpriv apclii0 set ApCliEncrypType=AES
+    else
+        dbg_iwpriv apclii0 set ApCliEncrypType=TKIP
+    fi
+    dbg_iwpriv apclii0 set ApCliWPAPSK="$(nvram show wl0_apcli_sec_wpa2_rule 0 key)"
+;;
+*)
+    # All other case are treated as none
+    dbg_iwpriv apclii0 set ApCliAuthMode=OPEN
+    dbg_iwpriv apclii0 set ApCliEncrypType=NONE
+;;
+esac
+ApcliAddrMode="$(nvram show wl0_apcli_rule 0 addrmode)"
+dbg_iwpriv apclii0 set apcliAddrMode=$ApcliAddrMode
+
+if [ "$(nvram show system_mode 0 name)" = "wisp0" ]; then
+   dbg_iwpriv apclii0 set apcliAddrMode=0
+fi
+
+iwpriv apclii0 set ApCliEnable=1
+ifconfig apclii0 down
+ifconfig apclii0 up
+}
+
+wisp_bridge_iface()
+{
+    local idx=0
+#    while [ "$idx" -lt "4" ]; do
+#        brctl addif br0 rai$idx
+#        idx=$(($idx + 1))
+#    done
+    while [ "$idx" -lt "8" ]; do
+        if [ "$(nvram show wl0_apcli_rule 0 enable)" = "1" ]; then
+            ifconfig rai$idx down
+        fi
+        idx=$(($idx + 1))
+    done
+}
+
+creat_wpa_supplicant_conf()
+{
+    ssid=$(nvram show wl0_apcli_rule 0 ssid)
+    secmode=$(nvram show wl0_apcli_rule 0 secmode)
+    wpa_crypto=$(nvram show wl0_wpa_auth_rule 0 wpa_crypto)
+    wpa_auth=$(nvram show wl0_wpa_auth_rule 0 wpa_auth)
+    wpa_user=$(nvram show wl0_wpa_auth_rule 0 wpa_user)
+    wpa_passwd=$(nvram show wl0_wpa_auth_rule 0 wpa_passwd)
+   echo "$ssid  $secmode $wpa_crypto $wpa_auth $wpa_user $wpa_passwd "
+   if [ "${secmode}" = "wpa" ];then
+     proto="WPA"
+   else
+     proto="RSN"
+   fi
+
+   if [ "${wpa_crypto}" = "aes" ];then
+     pairwise="CCMP"
+   else
+     pairwise="TKIP"
+   fi
+
+   if [ "${wpa_auth}" = "1" ];then
+     eap="PEAP"
+   else
+     eap="TTLS"
+   fi
+
+   cat > /var/run/wpa_supplicant.conf <<EOF
+
+
+network={
+        ssid="$ssid"
+        scan_ssid=1
+        key_mgmt=WPA-EAP
+        proto=$proto
+        pairwise=$pairwise
+        eap=$eap
+        identity="$wpa_user"
+        password="$wpa_passwd"
+        phase2="auth=MSCHAPV2"
+}
+EOF
+
+}
+
+category=$1
+item=$2
+
+#First set wlan2.4g antenna mode(0:Internal 1:External)
+#antenna0_select
+
+case "$category" in
+basic)
+    #/etc/wl/wlan-init
+    # Apply basic settings on rai0
+    [ "$(nvram show system_mode 0 name)" = "sta0" -o \
+      "$(nvram show system_mode 0 name)" = "wisp0" -o ] && apply_apcli
+    
+    iterate_net "$(nvram show system_mode 0 name)"
+    #iterate_basic "0" "$wl_ap_rule_set" "$wl_netmode_rule_item" "$wl_net_rule_priv"
+    #iterate_basic "0" "$wl_ap_adv_rule_set" "$wl_htbw_rule_item" "$wl_net_rule_priv"
+    #iterate_basic "0" "$wl_ap_rule_set" "$wl_channel_rule_item" "$wl_net_rule_priv"
+    #iterate_basic "0" "$wl_ap_adv_rule_set" "$wl_extcha_rule_item" "$wl_net_rule_priv"
+
+    if [ "$(nvram show system_mode 0 name)" = "ap" -o "$(nvram show system_mode 0 name)" = "normal" ]; then 
+    	iterate_basic "0" "$wl_ap_rule_set" "$wl_basic_rule_item" "$wl_basic_rule_priv"
+    	#Added by Mario Huang,advanced rule setting is needed here
+        iterate_basic "0" "$wl_ap_adv_rule_set" "$wl_adv_rule_item" "$wl_adv_rule_priv"
+        #iterate_basic "0" "$wl_ap_adv_rule_set" "$wl_adv_rule_item" "$wl_adv_rule_priv"
+    else
+    	iterate_basic "0" "$wl_rule_set" "$wl_basic_rule_item" "$wl_basic_rule_priv"
+    	#Added by Mario Huang,advanced rule setting is needed here
+    	iterate_basic "0" "$wl_adv_rule_set" "$wl_adv_rule_item" "$wl_adv_rule_priv"
+    	#iterate_basic "0" "$wl_adv_rule_set" "$wl_adv_rule_item" "$wl_adv_rule_priv"
+    fi
+    #/sbin/ezp-chk-wl-enable
+    iwpriv rai0 set DeviceMode=0
+    #/etc/wl/wlan-init
+    apply_ssid
+;;
+advance)
+    #/etc/wl/wlan-init
+    [ "$(nvram show system_mode 0 name)" = "sta0" -o \
+      "$(nvram show system_mode 0 name)" = "wisp0" -o ] && apply_apcli
+##      "$(nvram show system_mode 0 name)" = "wisp_ur" ] && apply_apcli
+    apply_ssid
+    if [ "$(nvram show system_mode 0 name)" = "ap" -o "$(nvram show system_mode 0 name)" = "normal" ]; then 
+    	iterate_basic "0" "$wl_ap_adv_rule_set" "$wl_adv_rule_item" "$wl_adv_rule_priv"
+    else
+    	iterate_basic "0" "$wl_adv_rule_set" "$wl_adv_rule_item" "$wl_adv_rule_priv"
+    fi
+    #/etc/wl/wlan-init
+;;
+# basic_ap: change mode to AP from wisp/bridge.
+basic_ap)
+    #sh /etc/rc.common /etc/init.d/miniupnpd stop
+    wifidevctrl "down"
+    rmmod rt2860v2_ap
+    #/etc/wl/wlan-init
+    insmod rt2860v2_ap
+    #/sbin/ezp-chk-wl-enable
+    apply_ssid
+    if [ "$(nvram show system_mode 0 name)" = "ap" -o "$(nvram show system_mode 0 name)" = "normal" ]; then 
+    	#Added by Mario Huang,advanced rule setting is needed here
+        #iterate_basic "0" "$wl_ap_adv_rule_set" "$wl_adv_rule_item" "$wl_adv_rule_priv"
+    	iterate_basic "0" "$wl_ap_rule_set" "$wl_basic_rule_item" "$wl_basic_rule_priv"
+        iterate_basic "0" "$wl_ap_adv_rule_set" "$wl_adv_rule_item" "$wl_adv_rule_priv"
+    else
+    	#Added by Mario Huang,advanced rule setting is needed here
+    	#iterate_basic "0" "$wl_adv_rule_set" "$wl_adv_rule_item" "$wl_adv_rule_priv"
+    	iterate_basic "0" "$wl_rule_set" "$wl_basic_rule_item" "$wl_basic_rule_priv"
+    	iterate_basic "0" "$wl_adv_rule_set" "$wl_adv_rule_item" "$wl_adv_rule_priv"
+    fi
+    iwpriv rai0 set DeviceMode=0
+    #ap_bridge_iface
+    #/etc/qos/tos_classify  delete
+    #/etc/qos/qos.sh stop
+    #/etc/qos/qos.sh restart
+;;
+wmm)
+    # Restart WiFi driver is required to re-configure WMM
+    /etc/rc.common /etc/init.d/hwnat stop
+    wifidevctrl "down"
+    rmmod rt2860v2_ap
+    #/etc/wl/wlan-init
+    insmod rt2860v2_ap
+    echo "$(sleep 2)"
+    #/sbin/ezp-chk-wl-enable
+    /etc/rc.common /etc/init.d/hwnat start
+;;
+wds)
+    apply_wds
+    apply_ssid
+    if [ "$(nvram show system_mode 0 name)" = "ap" -o "$(nvram show system_mode 0 name)" = "normal" ]; then 
+    	iterate_basic "0" "$wl_ap_rule_set" "$wl_basic_rule_item" "$wl_basic_rule_priv"
+    else
+    	iterate_basic "0" "$wl_rule_set" "$wl_basic_rule_item" "$wl_basic_rule_priv"
+    fi
+;;
+#ur: bridge mode configuration when boot.
+sta0)
+    #/etc/wl/wlan-init
+    #brctl addif br0 apclii0
+
+    if [ "$(nvram show wl0_apcli_rule 0 addrmode)" = "0" ]; then
+        if [ "$(nvram show wl0_apcli_rule 0 macrepeater)" = "1" ]; then
+           iwpriv rai0 set MACRepeaterEn=1
+        else
+           iwpriv rai0 set MACRepeaterEn=0
+        fi
+    else
+        iwpriv rai0 set MACRepeaterEn=0
+    fi
+ 
+    apply_apcli
+    iwpriv rai0 set DeviceMode=1
+    apply_ssid
+    if [ "$(nvram show system_mode 0 name)" = "ap" -o "$(nvram show system_mode 0 name)" = "normal" ]; then 
+    	iterate_basic "0" "$wl_ap_rule_set" "$wl_basic_rule_item" "$wl_basic_rule_priv"
+    else
+    	iterate_basic "0" "$wl_rule_set" "$wl_basic_rule_item" "$wl_basic_rule_priv"
+    fi
+
+   
+    #/etc/wl/wlan-init
+;;
+#wisp: wisp configuration when boot.
+wisp)
+    local wpa_mode="$(nvram show wl0_apcli_rule 0 secmode)"
+
+    #brctl delif br0 apclii0
+    #/etc/wl/wlan-init
+    apply_apcli
+    apply_ssid
+    if [ "$(nvram show system_mode 0 name)" = "ap" -o "$(nvram show system_mode 0 name)" = "normal" ]; then 
+    	iterate_basic "0" "$wl_ap_rule_set" "$wl_basic_rule_item" "$wl_basic_rule_priv"
+    else
+    	iterate_basic "0" "$wl_rule_set" "$wl_basic_rule_item" "$wl_basic_rule_priv"
+    fi
+    iwpriv rai0 set DeviceMode=2
+    #/etc/wl/wlan-init
+    sleep 5
+    ifup wan0
+    ifupv6 wan0
+    killall wpa_supplicant
+    creat_wpa_supplicant_conf
+    #start wpa_supplica
+    #if [ "$wpa_mode" = "wpa" -o "$wpa_mode" = "wpa2" ]; then
+      #/usr/sbin/wpa_supplicant  -iapclii0 -b br0 -c /var/run/wpa_supplicant.conf  -Dralink -B
+    #fi
+;;
+#wisp_single_radio: change mode to wisp from ap/wisp.
+#wisp_single_radio)
+wisp0)
+    local wpa_mode="$(nvram show wl0_apcli_rule 0 secmode)"
+    #wifidevctrl "down"
+    #rmmod rt2860v2_ap
+    #/etc/wl/wlan-init
+    #insmod rt2860v2_ap
+    #/sbin/ezp-chk-wl-enable
+    apply_apcli
+    apply_ssid
+    if [ "$(nvram show system_mode 0 name)" = "ap" -o "$(nvram show system_mode 0 name)" = "normal" ]; then 
+    	iterate_basic "0" "$wl_ap_rule_set" "$wl_basic_rule_item" "$wl_basic_rule_priv"
+    else
+    	iterate_basic "0" "$wl_rule_set" "$wl_basic_rule_item" "$wl_basic_rule_priv"
+    fi
+    iwpriv rai0 set DeviceMode=2
+
+    killall wpa_supplicant
+    creat_wpa_supplicant_conf
+    #start wpa_supplica
+    if [ "$wpa_mode" = "wpa" -o "$wpa_mode" = "wpa2" ]; then
+      /usr/sbin/wpa_supplicant  -iapclii0 -b br-wan0 -c /var/run/wpa_supplicant.conf  -Dralink -B
+    fi
+
+    #wisp_bridge_iface
+    #ifdown lan0
+    #kill `pidof udhcpc`
+    #sleep 5
+    #ifup lan0
+    #ifup wan0
+    # start related to services for IPv6, 2013-4-18
+    #ifdownv6 wan0
+    #ifdownv6 lan0
+    #ifupv6 wan0
+    #ifupv6 lan0
+    # ended 2013-4-18
+    #/etc/qos/tos_classify  delete
+    #/etc/qos/qos.sh stop
+    #/etc/qos/qos.sh restart
+;;
+start_wpa_supplicant)
+    iwpriv apclii0 set SiteSurvey=1;sleep 2;
+    creat_wpa_supplicant_conf
+    #start wpa_supplicant
+    #/usr/sbin/wpa_supplicant  -iapclii0 -b br0 -c /var/run/wpa_supplicant.conf  -Dralink -B
+    /usr/sbin/wpa_supplicant  -iapclii0 -b br-lan0 -c /var/run/wpa_supplicant.conf  -Dralink -B
+;;
+*)
+;;
+esac
+

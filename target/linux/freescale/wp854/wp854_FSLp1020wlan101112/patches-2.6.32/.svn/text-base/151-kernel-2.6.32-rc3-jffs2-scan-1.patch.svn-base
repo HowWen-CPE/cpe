@@ -1,0 +1,31 @@
+From 2e2553497dcfd3d83529a8a81ad35325faed2622 Mon Sep 17 00:00:00 2001
+From: yanfei.zhang <yanfei.zhang@freescale.com>
+Date: Thu, 28 Oct 2010 16:52:40 +0800
+Subject: [PATCH] fix jffs2 error
+
+Signed-off-by: yanfei.zhang <yanfei.zhang@freescale.com>
+---
+ fs/jffs2/scan.c |    7 -------
+ 1 files changed, 0 insertions(+), 7 deletions(-)
+
+diff --git a/fs/jffs2/scan.c b/fs/jffs2/scan.c
+index 7c53314..5e3d16e 100644
+--- a/fs/jffs2/scan.c
++++ b/fs/jffs2/scan.c
+@@ -215,13 +215,6 @@ int jffs2_scan_medium(struct jffs2_sb_info *c)
+ 			break;
+ 
+ 		case BLK_STATE_ALLDIRTY:
+-			/* Nothing valid - not even a clean marker. Needs erasing. */
+-			/* For now we just put it on the erasing list. We'll start the erases later */
+-			D1(printk(KERN_NOTICE "JFFS2: Erase block at 0x%08x is not formatted. It will be erased\n", jeb->offset));
+-			list_add(&jeb->list, &c->erase_pending_list);
+-			c->nr_erasing_blocks++;
+-			break;
+-
+ 		case BLK_STATE_BADBLOCK:
+ 			D1(printk(KERN_NOTICE "JFFS2: Block at 0x%08x is bad\n", jeb->offset));
+ 			list_add(&jeb->list, &c->bad_list);
+-- 
+1.5.6.5
+

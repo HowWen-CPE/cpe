@@ -1,0 +1,41 @@
+From 06c35d9f1cb2e4a0a738e759b4735ef181669c8b Mon Sep 17 00:00:00 2001
+From: Tarun Garg <b10794@freescale.com>
+Date: Tue, 23 Feb 2010 17:15:39 +0530
+Subject: [PATCH] gianfar: fix the issues in packet steering code to support gianfar as module.
+
+---
+ drivers/net/gianfar.c |    4 +++-
+ kernel/irq/manage.c   |    1 +
+ 2 files changed, 4 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index f252005..07d20f6 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -1785,8 +1785,10 @@ static void free_grp_irqs(struct gfar_priv_grp *grp)
+ 	int cpus = num_online_cpus();
+ 
+ 	if (priv->sps) {
+-		for (i = 0; i < cpus; i++)
++		for (i = 0; i < cpus; i++) {
+ 			free_irq(grp->msg_virtual_tx[i]->irq, grp);
++			fsl_release_msg_unit(grp->msg_virtual_tx[i]);
++		}
+ 	}
+ #endif
+ 	free_irq(grp->interruptError, grp);
+diff --git a/kernel/irq/manage.c b/kernel/irq/manage.c
+index bde4c66..185eb26 100644
+--- a/kernel/irq/manage.c
++++ b/kernel/irq/manage.c
+@@ -137,6 +137,7 @@ int irq_set_affinity(unsigned int irq, const struct cpumask *cpumask)
+ 	spin_unlock_irqrestore(&desc->lock, flags);
+ 	return 0;
+ }
++EXPORT_SYMBOL(irq_set_affinity);
+ 
+ #ifndef CONFIG_AUTO_IRQ_AFFINITY
+ /*
+-- 
+1.5.6.3
+

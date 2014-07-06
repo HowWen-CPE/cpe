@@ -1,0 +1,53 @@
+From 5761637e4a6dbcf8aa66819365d0d2d4991e152d Mon Sep 17 00:00:00 2001
+From: Tarun Garg <b10794@freescale.com>
+Date: Wed, 10 Feb 2010 17:59:23 +0530
+Subject: [PATCH] gianfar: not enabling/disabling message interrupt in RPS code.
+
+An issue is seen that if we are enabling/disabling message interrupts
+during normal operation, message interrupt gets stuck in disabled
+state randomly.
+
+Also, reference manual says that enabling/disabling of message interrupt
+during normal operation is illegal. It should be enabled at startup time
+and remain untouched during normal operation.
+
+Since we have interrupt coalescing logic in RPS code, there is no
+performance hit.
+---
+ drivers/net/gianfar.c |   11 +++--------
+ 1 files changed, 3 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index ae21fb4..1a1e510 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -870,10 +870,8 @@ static int gfar_cpu_poll(struct napi_struct *napi, int budget)
+ 		}
+ 	}
+ 
+-	if (budget > 0) {
++	if (budget > 0)
+ 		napi_complete(napi);
+-		fsl_enable_msg(cpu_dev->msg_virtual_rx);
+-	}
+ 
+ 	return rx_cleaned;
+ }
+@@ -888,12 +886,9 @@ static irqreturn_t gfar_cpu_receive(int irq, void *dev_id)
+ 		 (1 << cpu_dev->msg_virtual_rx->msg_num));
+ 
+ 	local_irq_save(flags);
+-	if (napi_schedule_prep(&cpu_dev->napi)) {
+-		/* disable irq */
+-		clrbits32(cpu_dev->msg_virtual_rx->mer,
+-			(1 << cpu_dev->msg_virtual_rx->msg_num));
++	if (napi_schedule_prep(&cpu_dev->napi))
+ 		__napi_schedule(&cpu_dev->napi);
+-	}
++
+ 	local_irq_restore(flags);
+ 
+ 	return IRQ_HANDLED;
+-- 
+1.5.6.3
+

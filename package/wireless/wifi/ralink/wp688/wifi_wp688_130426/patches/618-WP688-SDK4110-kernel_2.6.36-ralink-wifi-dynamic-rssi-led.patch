@@ -1,0 +1,52 @@
+--- a/rt2860v2/common/cmm_data.c	2013-06-26 10:07:57.285322430 +0800
++++ b/rt2860v2/common/cmm_data.c	2013-06-26 10:14:15.849802086 +0800
+@@ -3314,6 +3314,15 @@
+ 			}
+ #endif /* P2P_SUPPORT */
+ 			pAd->MacTab.Size --;
++#ifndef WIFI_DRIVER_PRE_PORTING
++			if (pAd->MacTab.Size == 0)
++			{
++				pAd->ApCfg.RssiSample.LastRssi0 = 0;
++				pAd->ApCfg.RssiSample.LastRssi1 = 0;
++				pAd->ApCfg.RssiSample.LastRssi2 = 0;
++				RTMPSetSignalLED(pAd, -100);
++			}
++#endif
+ #ifdef TXBF_SUPPORT
+ 			if (pAd->chipCap.FlgHwTxBfCap)
+ 				NdisFreeSpinLock(&pEntry->TxSndgLock);
+@@ -3497,6 +3506,12 @@
+ 							sizeof(pAd->MacTab.Hash)-
+ 							sizeof(pAd->MacTab.Content));
+ 
++#ifndef WIFI_DRIVER_PRE_PORTING		
++		pAd->ApCfg.RssiSample.LastRssi0 = 0;
++		pAd->ApCfg.RssiSample.LastRssi1 = 0;
++		pAd->ApCfg.RssiSample.LastRssi2 = 0;
++		RTMPSetSignalLED(pAd, -100);
++#endif
+ 		InitializeQueueHeader(&pAd->MacTab.McastPsQueue);
+ 		/*NdisReleaseSpinLock(&pAd->MacTabLock);*/
+ #ifdef RTMP_MAC_PCI
+@@ -4011,8 +4026,19 @@
+ 
+ #ifdef LED_CONTROL_SUPPORT
+ #ifdef APCLI_SUPPORT
++	PMAC_TABLE_ENTRY pEntry = &(pAd->MacTab.Content[0]);
+ 	if(RtmpOSNetDevIsUp((pAd)->ApCfg.ApCliTab[0].dev) == TRUE)
+-		RTMPSetSignalLED(pAd, RTMPMaxRssi(pAd, pRssi->AvgRssi0, pRssi->AvgRssi1,pRssi->AvgRssi2));
++	{
++		if (pAd->MacTab.Size > 0 && pEntry->Sst==SST_ASSOC)
++			RTMPSetSignalLED(pAd, RTMPMaxRssi(pAd, pRssi->AvgRssi0, pRssi->AvgRssi1,pRssi->AvgRssi2));
++		else
++		{
++			pAd->ApCfg.RssiSample.LastRssi0 = 0;
++			pAd->ApCfg.RssiSample.LastRssi1 = 0;
++			pAd->ApCfg.RssiSample.LastRssi2 = 0;
++			RTMPSetSignalLED(pAd, -100);
++		}
++	}
+ #endif
+ #endif
+ 

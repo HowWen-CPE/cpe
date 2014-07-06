@@ -1,0 +1,272 @@
+<po>
+	<message msgid="upload title" msgstr="Donanım Yazılımını Yükselt"/>
+	<message msgid="upload titleOnLine" msgstr="Online Donanım Yazılımı Yükseltme"/>
+	<message msgid="upload introduction1" msgstr="Dahili cihaz donanım yazılımını yükseltmek için, ikili (.BIN) yükseltme dosyasının konumun tarayın ve Yükle düğmesini tıklayın. Yükseltme dosyaları internet sitesinden indirilebilir. Yükseltme dosyası sıkıştırılmışsa (.ZIP file), önce ikili (.BIN) dosyayı çıkarmanız gerekir.. Bazı durumlarda, yeniden yapılandırma yapmanız gerekebilir."/>
+	<message msgid="upload Path" msgstr="Dosya Yolu:"/>
+	<message msgid="admin Upload" msgstr="Yükle"/>
+	<message msgid="check latest Upload" msgstr="En Son Donanım Yazılımını Kontrol Ediniz"/>
+	<message msgid="upload current FW version" msgstr="Şu anda kullandığınız donanım yazılımı sürümü:"/>
+	<message msgid="upload latest FW version" msgstr="En Son Donanım Yazılımı Sürümü"/>
+	<message msgid="upload release date" msgstr="Sürüm Tarihi"/>
+	<message msgid="upload release note" msgstr="Sürüm Notu"/>
+	<message msgid="upload size" msgstr="Boyut"/>
+	<message msgid="do FW upgrade" msgstr="Donanım Yazılımını Yükselt"/>
+	<message msgid="Retrieve Failed. Please check your Internet connection or try again later." msgstr="Internet algılanamadı, lütfen internet bağlantısını kontrol edin ya da daha sonra tekrar deneyiniz."/>
+	<message msgid="Not a valid firmware." msgstr="Geçerli bir donanım yazılımı değil."/>
+	<message msgid="Firmware download has stopped. Please check your Internet connection or try again later." msgstr="Donanım yazılımının indirilmesi durdu. Lütfen Internet bağlantınızı kontrol edin ya da daha sonra tekrar deneyiniz"/>
+	<message msgid="reset title" msgstr="Sistemi Yeniden Başlatma"/>
+	<message msgid="reset introduction" msgstr="Cihazın yazılımı yeniden başlatması içim Yeniden Başlat düğmesini tıklayın. Cihaz yeniden başlarken SYS (ya da PWR) LED yanıp söner ve sonra yeniden başlatma başarılıysa sabit kalır. Cihazda tekrar oturum açmadan önce bir dakika bekleyiniz."/>
+	<message msgid="reset Restart" msgstr="Yeniden Başlat"/>
+	<message msgid="logsystem title" msgstr="Günlükler"/>
+	<message msgid="logsystem display" msgstr="Göster:"/>
+	<message msgid="logsystem op1" msgstr="Tüm Günlükler"/>
+	<message msgid="logsystem table_title" msgstr="Özet"/>
+	<message msgid="logsystem time" msgstr="Zaman"/>
+	<message msgid="logsystem msg" msgstr="Mesaj"/>
+	<message msgid="logsystem logAll" msgstr="tüm günlükler"/>
+	<message msgid="logsystem logWebmgt" msgstr="Web Yönetimi"/>
+	<message msgid="logsystem logDNS" msgstr="DNS"/>
+	<message msgid="logsystem logPPP" msgstr="PPP"/>
+	<message msgid="logsystem logUPnP" msgstr="UPnP"/>
+	<message msgid="logsystem logWireless" msgstr="Kablosuz"/>
+	<message msgid="logsystem logNTPClient" msgstr="NTPClient"/>
+	<message msgid="logsystem logSysWarn" msgstr="Sistem Uyarısı"/>
+	<message msgid="logsystem logDhcpSrv" msgstr="DHCP Sunucusu"/>
+	<message msgid="logsystem logDhcpCli" msgstr="DHCP İstemcisi"/>
+	<message msgid="logsystem logDDNS" msgstr="DDNS"/>
+	<message msgid="logsystem logVPN" msgstr="VPN"/>
+	<message msgid="logsystem logIpaddr" msgstr="Server IP(full 0 disable server):"/> 
+	<message msgid="logsystem logPort" msgstr="Server Port:"/>
+	<message msgid="logsystem logEnable" msgstr="enable"/>
+	<message msgid="logsystem logDisable" msgstr="disable"/>	
+	<message msgid="logsystem logFirewall" msgstr="Güvenlik Duvarı"/>
+	<message msgid="active log" msgstr="Etkin Günlük"/>
+	<message msgid="logsystem refresh" msgstr="Yenile"/>
+	<message msgid="logsystem clear" msgstr="Sil"/>
+	<message msgid="syssettings title" msgstr="Yapılandırmayı Yedekle"/>
+	<message msgid="syssettings introduction" msgstr="Sisteminizin geçerli yapılandırmasını bilgisayarınıza kaydetmek için Yedekle düğmesini tıklayınız."/>
+	<message msgid="syssettings title_1" msgstr="Yapılandırmayı Geri Yükle"/>
+	<message msgid="syssettings introduction_1" msgstr="Daha önce sisteminize kaydedilmiş bir yapılandırmayı geri yüklemek için, yapılandırma dosyasının konumunu tarayın ve Yükle düğmesini tıklayınız."/>
+	<message msgid="syssettings path" msgstr="Dosya Yolu:"/>
+	<message msgid="syssettings upload" msgstr="Yükle"/>
+	<message msgid="syssettings title_2" msgstr="Fabrika Ayarlarına Geri Dön"/>
+	<message msgid="syssettings introduction_2" msgstr="Kullanıcının girdiği tüm yapılandırma bilgilerini silmek ve fabrika ayarlarına geri dönmek için Sıfırla düğmesini tıklayınız. Sıfırlama sonrasında"/>
+	<message msgid="syssettings introduction_3" msgstr="- Şifreadmin"/>
+	<message msgid="WP838_syssettings introduction_4" msgstr="- LAN IP address will be 192.168.1.2 " />
+	<message msgid="WP688_syssettings introduction_4" msgstr="- LAN IP address will be 192.168.1.2 " />
+	<message msgid="syssettings introduction_5" msgstr="- DHCP sunucuya sıfırlanacak"/>
+	<message msgid="syssettings Reset" msgstr="Sıfırla"/>
+	<message msgid="syssettings Backup" msgstr="Yedekle"/>
+	<message msgid="management title" msgstr="Geçerli Saat ve Tarih"/>
+	<message msgid="management CurrentTime" msgstr="Geçerli Saat:"/>
+	<message msgid="management CurrentDate" msgstr="Geçerli Tarih:"/>
+	<message msgid="management title_1" msgstr="Geçerli Saat ve Tarih"/>
+	<message msgid="management Manual" msgstr="Manuel"/>
+	<message msgid="management NewTime" msgstr="Yeni Saat (SS:dd:ss):"/>
+	<message msgid="management NewDate" msgstr="Yeni Tarih (yyyy/aa/gg):"/>
+	<message msgid="management TimeServer" msgstr="Zaman Sunucusundan al"/>
+	<message msgid="management Auto" msgstr="Otomatik"/>
+	<message msgid="management UserDefined" msgstr="Kullanıcı Tanımlı Zaman Sunucusu Adresi:"/>
+	<message msgid="management title_2" msgstr="Saat Dilimi Ayarı"/>
+	<message msgid="management TimeZone" msgstr="Saat Dilimi:"/>
+	<message msgid="management manNTPMidIsland" msgstr="(GMT-11:00) Midway Island, Samoa"/>
+	<message msgid="management manNTPHawaii" msgstr="(GMT-10:00) Havai"/>
+	<message msgid="management manNTPAlaska" msgstr="(GMT-09:00) Alaska"/>
+	<message msgid="management manNTPPacific" msgstr="(GMT-08:00) Pasifik Saati (ABD ve Kanada), Tijuana"/>
+	<message msgid="management manNTPArizona" msgstr="(GMT-07:00) Arizona"/>
+	<message msgid="management manNTPMountain" msgstr="(GMT-07:00) Sıradağlar Saati (ABD ve Kanada)"/>
+	<message msgid="management manNTPCentralAmerica" msgstr="(GMT-06:00) Orta Amerika"/>
+	<message msgid="management manNTPCentralTime" msgstr="(GMT-06:00) Merkezi Saat (ABD ve Kanada)"/>
+	<message msgid="management manNTPBogota" msgstr="(GMT-05:00) Bogota, Lima, Quito"/>
+	<message msgid="management manNTPEasternTime" msgstr="(GMT-05:00) Doğu Saati (ABD ve Kanada)"/>
+	<message msgid="management manNTPAltlantic" msgstr="(GMT-04:00) Atlantik Saati (Kanada)"/>
+	<message msgid="management manNTPCaracas" msgstr="(GMT-04:00) Karakas, La Poz, Santiago"/>
+	<message msgid="management manNTPBrasilia" msgstr="(GMT-03:00) Brasilia, Grönland"/>
+	<message msgid="management manNTPBuenos" msgstr="(GMT-03:00) Buenos Aires, Georgetown"/>
+	<message msgid="management manNTPMid-Atlantic" msgstr="(GMT-02:00) Orta Atlantik"/>
+	<message msgid="management manNTPAzores" msgstr="(GMT-01:00) Azores, Cape Verde Adaları"/>
+	<message msgid="management manNTPCasablanca" msgstr="(GMT) Kazablanka, Monrovia"/>
+	<message msgid="management manNTPGreenwich" msgstr="(GMT) Greenwich Ortalama Zamanı: Dublin, Edinburgh, Lizbon, Londra"/>
+	<message msgid="management manNTPAmsterdam" msgstr="(GMT+01:00) Amsterdam, Berlin, Bern, Roma, Stockholm, Viyana"/>
+	<message msgid="management manNTPBelgrade" msgstr="(GMT+01:00) Belgrad, Bratislava, Budapeşte, Lubliyana, Prag"/>
+	<message msgid="management manNTPBrussels" msgstr="(GMT+01:00) Brüksel, Kopenhag, Madrid, Paris"/>
+	<message msgid="management manNTPAthens" msgstr="(GMT+02:00) Atina, Beyrut, İstanbul, Minsk"/>
+	<message msgid="management manNTPBucharest" msgstr="(GMT+02:00) Bükreş, Kahire, Harare, Pretoria"/>
+	<message msgid="management manNTPBaghdad" msgstr="(GMT+03:00) Bağdat, Kuveyt, Riyad, Nairobi"/>
+	<message msgid="management manNTPMoscow" msgstr="(GMT+03:00) Moskova, St. Petersburg, Volgograd"/>
+	<message msgid="management manNTPMuscat" msgstr="(GMT+04:00) Abu Dabi, Muscat"/>
+	<message msgid="management manNTPEkaterinburg" msgstr="(GMT+05:00) Ekaterinburg"/>
+	<message msgid="management manNTPAlmaty" msgstr="(GMT+06:00) Almaata, Novosibirsk"/>
+	<message msgid="management manNTPBangkok" msgstr="(GMT+07:00) Bangkok, Hanoi, Cakarta"/>
+	<message msgid="management manNTPBeijing" msgstr="(GMT+08:00) Pekin, Chongqing, Hong Kong, Urumçi"/>
+	<message msgid="management manNTPIrkutsk" msgstr="(GMT+08:00) Irkutsk, Ulan Batur"/>
+	<message msgid="management manNTPSingapore" msgstr="(GMT+08:00) Kuala Lumpur, Singapur"/>
+	<message msgid="management manNTPTaipei" msgstr="(GMT+08:00) Perth, Taipei"/>
+	<message msgid="management manNTPTokyo" msgstr="(GMT+09:00) Osaka, Sapporo, Tokyo"/>
+	<message msgid="management manNTPYakutsk" msgstr="(GMT+09:00) Seul, Yakutsk"/>
+	<message msgid="management manNTPVladivostok" msgstr="(GMT+10:00) Brisbane, Vladivostok"/>
+	<message msgid="management manNTPCanberra" msgstr="(GMT+10:00) Canberra, Melbourne, Sydney"/>
+	<message msgid="management manNTPMagadan" msgstr="(GMT+11:00) Magadan, Solomon Adaları, Yeni Kaledonya"/>
+	<message msgid="management manNTPAuckland" msgstr="(GMT+12:00) Auckland, Wellington"/>
+	<message msgid="management manNTPFiji" msgstr="(GMT+12:00) Fiji, Kamçatka, Marshall Adaları"/>
+	<message msgid="management Apply" msgstr="Uygula"/>
+	<message msgid="management Reset" msgstr="İptal et"/>
+	<message msgid="management Cancel" msgstr="Cancel" />
+	<message msgid="management Daylight" msgstr="Yaz Saati Uygulaması"/>
+	<message msgid="management DaylightStart" msgstr="Başlangıç Tarihi (aa/gg)"/>
+	<message msgid="management DaylightStartat" msgstr="saat"/>
+	<message msgid="management DaylightStartclock" msgstr=":"/>
+	<message msgid="management DaylightEnd" msgstr="Bitiş Tarihi"/>
+	<message msgid="management Daylightendat" msgstr="saat"/>
+	<message msgid="management Daylightendclock" msgstr=":"/>
+	<message msgid="man select language" msgstr="Dil"/>
+	<message msgid="man admin passwd" msgstr="Şifre"/>
+	<message msgid="man title" msgstr="Yönlendirici yapılandırma arayüzüne hoş geldiniz. Lütfen &quot;GİT&quot; düğmesini tıklayınız ve Temel Mod'a gidiniz."/>
+	<message msgid="login loginmsg" msgstr="Yönlendirici yapılandırma arayüzüne hoş geldiniz. Şifreyi giriniz ve 'Oturum Aç' düğmesini tıklayınız."/>
+	<message msgid="login passmsg" msgstr="(en çok 30 alfasayısal, yazdırılabilir karakter ve boşluksuz)"/>
+	<message msgid="login login" msgstr="Oturum aç"/>
+	<message msgid="man GO" msgstr="GİT"/>
+	<message msgid="login continue" msgstr="devam etmek" />
+	<message msgid="login cancel" msgstr="iptal" />
+	<message msgid="force login title" msgstr="Kullanıcı zaten oturum." />
+	<message msgid="force loginmsg" msgstr="Eğer diğer oturumu kapatmak istiyorsanız, 60 saniye içinde 'Devam' butonuna tıklayınız. Çıkış için 'iptal' Düğme tıklayın" />
+	<message msgid="city1" msgstr="Avusturya - Viyana"/>
+	<message msgid="city2" msgstr="Çin - Pekin"/>
+	<message msgid="city3" msgstr="Kosta Rika - San Jose"/>
+	<message msgid="city4" msgstr="Çek - Prag"/>
+	<message msgid="city5" msgstr="Danimarka - Kopenhag"/>
+	<message msgid="city6" msgstr="Finlandiya - Helsinki"/>
+	<message msgid="city7" msgstr="Fransa - Paris"/>
+	<message msgid="city8" msgstr="Almanya - Berlin"/>
+	<message msgid="city9" msgstr="Yunanistan - Atina"/>
+	<message msgid="city10" msgstr="Hindistan - Yeni Delhi"/>
+	<message msgid="city11" msgstr="Endonezya - Cakarta"/>
+	<message msgid="city12" msgstr="İtalya - Roma"/>
+	<message msgid="city13" msgstr="Japonya - Tokyo"/>
+	<message msgid="city14" msgstr="Malezya - Kuala Lumpur"/>
+	<message msgid="city15" msgstr="Hollanda - Amsterdam"/>
+	<message msgid="city16" msgstr="Norveç - Oslo"/>
+	<message msgid="city17" msgstr="Rusya - Moskova"/>
+	<message msgid="city18" msgstr="Singapur - Singapur"/>
+	<message msgid="city19" msgstr="İspanya - Madrid"/>
+	<message msgid="city20" msgstr="İsveç - Stockholm"/>
+	<message msgid="city21" msgstr="İsviçre - Bern"/>
+	<message msgid="city22" msgstr="Tayvan - Taipei"/>
+	<message msgid="city23" msgstr="Tayland - Bangkok"/>
+	<message msgid="city24" msgstr="Türkiye - Ankara"/>
+	<message msgid="city25" msgstr="İngiltere - Londra"/>
+	<message msgid="city26" msgstr="İngiltere - Greenwich"/>
+	<message msgid="city27" msgstr="ABD - New York"/>
+	<message msgid="city28" msgstr="ABD - Washington D.C."/>
+	<message msgid="city29" msgstr="ABD - Los Angeles"/>
+	<message msgid="city30" msgstr="Vietnam - Hanoi"/>
+	<message msgid="c1" msgstr="Viyana"/>
+	<message msgid="c2" msgstr="Pekin"/>
+	<message msgid="c3" msgstr="San Jose"/>
+	<message msgid="c4" msgstr="Prag"/>
+	<message msgid="c5" msgstr="Kopenhag"/>
+	<message msgid="c6" msgstr="Helsinki"/>
+	<message msgid="c7" msgstr="Paris"/>
+	<message msgid="c8" msgstr="Berlin"/>
+	<message msgid="c9" msgstr="Atina"/>
+	<message msgid="c10" msgstr="Yeni Delhi"/>
+	<message msgid="c11" msgstr="Cakarta"/>
+	<message msgid="c12" msgstr="Roma"/>
+	<message msgid="c13" msgstr="Tokyo"/>
+	<message msgid="c14" msgstr="Kuala Lumpur"/>
+	<message msgid="c15" msgstr="Amsterdam"/>
+	<message msgid="c16" msgstr="Oslo"/>
+	<message msgid="c17" msgstr="Moskova"/>
+	<message msgid="c18" msgstr="Singapur"/>
+	<message msgid="c19" msgstr="Madrid"/>
+	<message msgid="c20" msgstr="Stockholm"/>
+	<message msgid="c21" msgstr="Bern"/>
+	<message msgid="c22" msgstr="Taipei"/>
+	<message msgid="c23" msgstr="Bangkok"/>
+	<message msgid="c24" msgstr="Ankara"/>
+	<message msgid="c25" msgstr="Londra"/>
+	<message msgid="c26" msgstr="Greenwich"/>
+	<message msgid="c27" msgstr="New York"/>
+	<message msgid="c28" msgstr="Washington D.C."/>
+	<message msgid="c29" msgstr="Los Angeles"/>
+	<message msgid="c30" msgstr="Hanoi"/>
+	<message msgid="You must input 0~23 hours!!" msgstr="0~23 arası saat girmeniz gerekir!!"/>
+	<message msgid="You must input 0~59 minutes!!" msgstr="0~59 arası dakika girmeniz gerekir!!"/>
+	<message msgid="You must input 0~60 seconds!!" msgstr="0~60 arası saniye girmeniz gerekir!!"/>
+	<message msgid="You must input 1970~2037 years!!" msgstr="1970~2037 arası yıl gimeniz gerekir!!"/>
+	<message msgid="You must input 1~12 month!!" msgstr="1~12 arası ay girmeniz gerekir!!"/>
+	<message msgid="You must input 1~31 days!" msgstr="1~31 arası gün girmeniz gerekir!"/>
+	<message msgid="You must input 1~30 days!" msgstr="1~30 arası gün girmeniz gerekir!"/>
+	<message msgid="You must input 1~29 days!" msgstr="1~29 arası gün girmeniz gerekir!"/>
+	<message msgid="You must input 1~28 days!" msgstr="1~28 arası gün girmeniz gerekir!"/>
+	<message msgid="Please specify the file name." msgstr="Lütfen dosya adını belirtiniz."/>
+	<message msgid="Firmware Upgrade: Please specify a file." msgstr="Donanım Yazılımı Yükseltmesi: Lütfen bir dosya belirtiniz."/>
+	<message msgid="Giving up :( Cannot create an XMLHTTP instance" msgstr="vazgeçiliyor: ( Bir XMLHTTP örneği oluşturulamadı"/>
+	<message msgid="There was a problem with the request." msgstr="Taleple ilgili bir sorun oldu."/>
+	<message msgid="main Ready" msgstr="Hazır"/>
+	<message msgid="main ConfigurationSuccess" msgstr="Yapılandırma başarıyla güncellendi."/>
+	<message msgid="main ConfigurationProceeding" msgstr="Yapılandırma Güncellemesi devam ediyor. Lütfen Bekleyiniz..."/>
+	<message msgid="main firmware download in progress" msgstr="Donanım yazılımı indiriliyor. Lütfen bekleyiniz. . ."/>
+	<message msgid="main firmware upgrade is proceeding" msgstr="Yazılım yükseltmesi devam ediyor. Lütfen bekleyiniz ve cihazınızı KAPATMAYINIZ."/>
+	<message msgid="no_internet" msgstr="Hava durumu bilgisi kullanılamıyor, lütfen internet ayarlarını kontrol ediniz."/>
+	<message msgid="check_password" msgstr="Hata: Yanlış Şifre! Lütfen tekrar deneyiniz."/>
+	<message msgid="check_username" msgstr="Hata: Yanlış Kullanıcı Adı! Lütfen tekrar deneyiniz."/>
+	<message msgid="login_err" msgstr="WEB yöneticisi bu cihazı yapılandırıyor"/>
+	<message msgid="time_zone" msgstr="Zaman dilimini değiştir"/>
+	<message msgid="Change_Unit" msgstr="Birimi Değiştir"/>
+	<message msgid="Change_location" msgstr="Konumu değiştir"/>
+	<message msgid="finish" msgstr="Bitir"/>
+	<message msgid="Do you wish to continue with the upgrade process ?" msgstr="Yükseltme işlemine devam etmek istiyor musunuz?"/>
+	<message msgid="Do you really want to restart the device ?" msgstr="Cihazı gerçekten yeniden başlatmak istiyor musunuz?"/>
+	<message msgid="Not a valid firmware." msgstr="Geçerli bir donanım yazılımı değil."/>
+	<message msgid="Do you wish to continue with this process ?" msgstr="Bu işleme devam etmek istiyor musunuz?"/>
+	<message msgid="management manNTPUTC-11Samoa" msgstr="UTC-11:00 Midway Island, Samoa"/>
+	<message msgid="management manNTPUTC-10Hawaii" msgstr="UTC-10:00 Havai"/>
+	<message msgid="management manNTPUTC-09Alaska" msgstr="UTC-09:00 Alaska"/>
+	<message msgid="management manNTPUTC-08Pacific" msgstr="UTC-08:00 Pasifik Saati"/>
+	<message msgid="management manNTPUTC-07Arizona" msgstr="UTC-07:00 Arizona"/>
+	<message msgid="management manNTPUTC-07Mountain" msgstr="UTC-07:00 Sıradağlar Saati"/>
+	<message msgid="management manNTPUTC-06Central" msgstr="UTC-06:00 Merkezi Saat"/>
+	<message msgid="management manNTPUTC-05Eastern" msgstr="UTC-05:00 Doğu Saati"/>
+	<message msgid="management manNTPUTC-03Greenland" msgstr="UTC-03:00 Grönland"/>
+	<message msgid="management manNTPUTC-02Mid-Atlantic" msgstr="UTC-02:00 Orta Atlantik"/>
+	<message msgid="management manNTPUTC-01Azores" msgstr="UTC-01:00 Azores"/>
+	<message msgid="management manNTPUTCFrance" msgstr="UTC+01:00 Fransa, Almanya, İtalya"/>
+	<message msgid="management manNTPUTCThailand" msgstr="UTC+07:00 Tayland, Rusya"/>
+	<message msgid="management manNTPUTCSolomonIslands" msgstr="UTC+11:00 Solomon Adaları"/>
+	<message msgid="management manNTPUTCFiji" msgstr="UTC+12:00 Fiji"/>
+	<message msgid="management manNTPUTC-12Kwajalein" msgstr="UTC-12:00 Kwajalein"/>
+	<message msgid="management manNTPUTC-06Mexico" msgstr="UTC-06:00 Meksika"/>
+	<message msgid="management manNTPUTC-05Colombia" msgstr="UTC-05:00 Kolombiya, Panama"/>
+	<message msgid="management manNTPUTC-04Bolivia" msgstr="UTC-04:00 Bolivya, Venezuela"/>
+	<message msgid="management manNTPUTC-04Atlantic" msgstr="UTC-04:00 Atlantik Zamanı"/>
+	<message msgid="management manNTPUTC-04Brazil" msgstr="UTC-04:00 Batı Brezilya"/>
+	<message msgid="management manNTPUTC-03Newfoundland" msgstr="UTC-03:30 Newfoundland"/>
+	<message msgid="management manNTPUTC-03Brazil" msgstr="UTC-03:00 Doğu Brezilya"/>
+	<message msgid="management manNTPUTC-03Guyana" msgstr="UTC-03:00 Guyana"/>
+	<message msgid="management manNTPUTCGambia" msgstr="UTC+00:00 Gambiya, Liberya, Fas"/>
+	<message msgid="management manNTPUTCEngland" msgstr="UTC+00:00 İngiltere"/>
+	<message msgid="management manNTPUTCTunisia" msgstr="UTC+01:00 Tunus"/>
+	<message msgid="management manNTPUTCSouthAfrica" msgstr="UTC+02:00 Güney Afrika"/>
+	<message msgid="management manNTPUTCGreece" msgstr="UTC+02:00 Yunanistan, Ukrayna, Romanya, Türkiye"/>
+	<message msgid="management manNTPUTCIraq" msgstr="UTC+03:00 Irak, Ürdün, Kuveyt"/>
+	<message msgid="management manNTPUTCArmenia" msgstr="UTC+04:00 Ermenistan"/>
+	<message msgid="management manNTPUTCPakistan" msgstr="UTC+05:00 Pakistan, Rusya"/>
+	<message msgid="management manNTPUTCBombay" msgstr="UTC+05:30 Bombay, Kalküta, Madras, Yeni Delhi"/>
+	<message msgid="management manNTPUTCBangladesh" msgstr="UTC+06:00 Bangladeş, Rusya"/>
+	<message msgid="management manNTPUTCTaiwan" msgstr="UTC+08:00 Tayvan, Çin, Hong Kong, Batı Avustralya, Singapur"/>
+	<message msgid="management manNTPUTCJapan" msgstr="UTC+09:00 Japonya, Kore"/>
+	<message msgid="management manNTPUTCSouthAustralia" msgstr="UTC+09:30 Güney Avustralya"/>
+	<message msgid="management manNTPUTCGuam" msgstr="UTC+10:00 Guam, Rusya"/>
+	<message msgid="management manNTPUTCAustralia" msgstr="UTC+10:00 Avustralya"/>
+	<message msgid="management manNTPUTCNewZealand" msgstr="UTC+12:00 Yeni Zelanda"/>
+	<message msgid="Retrieve new firmware information now. Please wait . . ." msgstr="Şu anda yeni donanım yazılımı bilgisi alıyor. Lütfen bekleyiniz. . ."/>
+	<message msgid="No newer firmware exists. The firmware on your device is already the latest version." msgstr="Daha yeni donanım yazılımı yok. Cihazınızdaki donanım yazılımı zaten en son versiyon."/>
+	<message msgid="IP adress format error." msgstr="IP adress format error." />
+	<message msgid="Please set port between 1~65535" msgstr="Please set port between 1~65535" />
+<message msgid="Please update your firmware with ethernet" msgstr="Please update your firmware with ethernet" />
+
+<!-- checkupload_config.asp -->
+<message msgid="configuration size is too large to write down" msgstr="Configuration size is too large to write down." />
+<message msgid="Port has been occupied" msgstr="Port has been occupied"/>
+</po>

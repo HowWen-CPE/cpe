@@ -1,0 +1,72 @@
+From d5d0183c888308efc51ce11d2bf03c6d696eb471 Mon Sep 17 00:00:00 2001
+From: Tarun Garg <b10794@freescale.com>
+Date: Fri, 5 Feb 2010 17:08:12 +0530
+Subject: [PATCH] gianfar: fixed crash on free_netdev() of dummy net device
+
+---
+ drivers/net/gianfar.c |   14 ++------------
+ drivers/net/gianfar.h |    2 +-
+ 2 files changed, 3 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index 72caf81..ae21fb4 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -932,15 +932,8 @@ void gfar_cpu_dev_init(void)
+ 		cpu_dev = &per_cpu(gfar_cpu_dev, i);
+ 		cpu_dev->enabled = 0;
+ 
+-		cpu_dev->dev = alloc_netdev(0, "cpu%d", gfar_cpu_setup);
+-		if (NULL == cpu_dev->dev) {
+-			printk(KERN_WARNING
+-			"%s: alloc_netdev(cpu%d) failed!\n", __func__, i);
+-			return;
+-		}
+-
+-		init_dummy_netdev(cpu_dev->dev);
+-		netif_napi_add(cpu_dev->dev,
++		init_dummy_netdev(&cpu_dev->dev);
++		netif_napi_add(&cpu_dev->dev,
+ 			&cpu_dev->napi, gfar_cpu_poll, GFAR_DEV_WEIGHT);
+ 
+ 		cpu_dev->msg_virtual_rx = fsl_get_msg_unit();
+@@ -987,7 +980,6 @@ irq_fail:
+ 
+ msg_fail:
+ 	netif_napi_del(&cpu_dev->napi);
+-	free_netdev(cpu_dev->dev);
+ 
+ 	for (j = 0; j < i; j++) {
+ 		cpu_dev = &per_cpu(gfar_cpu_dev, j);
+@@ -997,7 +989,6 @@ msg_fail:
+ 		free_irq(cpu_dev->msg_virtual_rx->irq, NULL);
+ 		fsl_release_msg_unit(cpu_dev->msg_virtual_rx);
+ 		netif_napi_del(&cpu_dev->napi);
+-		free_netdev(cpu_dev->dev);
+ 	}
+ }
+ 
+@@ -1014,7 +1005,6 @@ void gfar_cpu_dev_exit(void)
+ 		free_irq(cpu_dev->msg_virtual_rx->irq, NULL);
+ 		fsl_release_msg_unit(cpu_dev->msg_virtual_rx);
+ 		netif_napi_del(&cpu_dev->napi);
+-		free_netdev(cpu_dev->dev);
+ 	}
+ }
+ 
+diff --git a/drivers/net/gianfar.h b/drivers/net/gianfar.h
+index 9281c87..10fa89d 100644
+--- a/drivers/net/gianfar.h
++++ b/drivers/net/gianfar.h
+@@ -1315,7 +1315,7 @@ struct shared_buffer {
+ };
+ 
+ struct gfar_cpu_dev {
+-	struct net_device *dev;
++	struct net_device dev;
+ 	struct napi_struct napi;
+ 	struct shared_buffer tx_queue;
+ 	int intr_coalesce_cnt;
+-- 
+1.5.6.3
+

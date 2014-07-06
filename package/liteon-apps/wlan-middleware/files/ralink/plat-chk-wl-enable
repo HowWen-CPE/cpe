@@ -1,0 +1,31 @@
+#!/bin/sh -x
+local wlvnum="$(nvram get wlv_rule_num)"
+local i=0
+local ap_enable="1"
+local wlmode="$(nvram show system_mode 0 name)"
+local radio_enable="$(nvram show wl_ap_basic_rule 0 enable)"
+
+if [ "$wlmode" = "ap" -o "$wlmode" = "normal" ]; then
+    ap_enable="1"
+else
+    ap_enable="0"
+fi
+
+i=0
+while [ "$i" -lt "$wlvnum" ];
+do 
+	if [ "$(nvram show wl0_basic_rule $i enable)" = "1" -a \
+		 "$ap_enable" = "1" -a \
+		 "$radio_enable" = "1" ]; then
+		[ "$(nvram show wl0_basic_rule $i hidden)" = "0" ] && {
+			iwpriv rai$i set HideSSID=0
+		} || {
+			iwpriv rai$i set HideSSID=1
+		}
+		ifconfig rai$i up
+	else
+		iwpriv rai$i set HideSSID=1
+		ifconfig rai$i down
+	fi
+		i="$(($i + 1))"
+done

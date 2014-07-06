@@ -1,0 +1,86 @@
+From cf7756d3146e34a8330891c2bffc760df4ca9394 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Wed, 17 Mar 2010 19:29:06 +0530
+Subject: [PATCH] Set HID1[mbdd] bit for optimal eieio
+
+This patch checks the version number and revision number
+from the pvr register and sets the HID1[mbdd] bit accordingly.
+
+HID1[mbdd] is found on the new revisions of the e500 cores
+which will optimize eieio instruction.
+
+By setting this bit, a 10% improvement is seen in
+applications like IP forwarding.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ cpu/mpc85xx/release.S       |    9 ++++++++-
+ cpu/mpc85xx/start.S         |    9 ++++++++-
+ include/asm-ppc/processor.h |    1 +
+ 3 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/cpu/mpc85xx/release.S b/cpu/mpc85xx/release.S
+index 433ff02..a0010b8 100644
+--- a/cpu/mpc85xx/release.S
++++ b/cpu/mpc85xx/release.S
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright 2008-2009 Freescale Semiconductor, Inc.
++ * Copyright 2008-2010 Freescale Semiconductor, Inc.
+  * Kumar Gala <kumar.gala@freescale.com>
+  *
+  * See file CREDITS for list of people who contributed to this
+@@ -57,6 +57,13 @@ __secondary_start_page:
+ 
+ #ifndef CONFIG_E500MC
+ 	li	r3,(HID1_ASTME|HID1_ABE)@l	/* Addr streaming & broadcast */
++	mfspr   r0,PVR
++	andi.	r0,r0,0xff
++	cmpwi	r0,0x50@l	/* if we are rev 5.0 or greater set MBDD */
++	blt 1f
++	/* Set MBDD bit also */
++	ori r3, r3, HID1_MBDD@l
++1:
+ 	mtspr	SPRN_HID1,r3
+ #endif
+ 
+diff --git a/cpu/mpc85xx/start.S b/cpu/mpc85xx/start.S
+index 6a86528..88fbfde 100644
+--- a/cpu/mpc85xx/start.S
++++ b/cpu/mpc85xx/start.S
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright 2004, 2007-2009 Freescale Semiconductor.
++ * Copyright 2004, 2007-2010 Freescale Semiconductor, Inc.
+  * Copyright (C) 2003  Motorola,Inc.
+  *
+  * See file CREDITS for list of people who contributed to this
+@@ -174,6 +174,13 @@ _start_e500:
+ 
+ #ifndef CONFIG_E500MC
+ 	li	r0,(HID1_ASTME|HID1_ABE)@l	/* Addr streaming & broadcast */
++	mfspr	r3,PVR
++	andi.	r3,r3, 0xff
++	cmpwi	r3,0x50@l	/* if we are rev 5.0 or greater set MBDD */
++	blt 1f
++	/* Set MBDD bit also */
++	ori r0, r0, HID1_MBDD@l
++1:
+ 	mtspr	HID1,r0
+ #endif
+ 
+diff --git a/include/asm-ppc/processor.h b/include/asm-ppc/processor.h
+index f61778f..764178b 100644
+--- a/include/asm-ppc/processor.h
++++ b/include/asm-ppc/processor.h
+@@ -265,6 +265,7 @@
+ #define	  HID1_RFXE	(1<<17)		/* Read Fault Exception Enable */
+ #define	  HID1_ASTME	(1<<13)		/* Address bus streaming mode */
+ #define	  HID1_ABE	(1<<12)		/* Address broadcast enable */
++#define	  HID1_MBDD	(1<<6)		/* optimized sync instruction */
+ #define SPRN_IABR	0x3F2	/* Instruction Address Breakpoint Register */
+ #ifndef CONFIG_BOOKE
+ #define SPRN_IAC1	0x3F4	/* Instruction Address Compare 1 */
+-- 
+1.5.6.3
+

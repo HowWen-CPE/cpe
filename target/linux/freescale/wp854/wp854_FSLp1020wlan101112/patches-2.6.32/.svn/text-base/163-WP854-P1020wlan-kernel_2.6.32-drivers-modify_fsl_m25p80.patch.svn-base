@@ -1,0 +1,11 @@
+--- linux-2.6.32-freescale-p1020-sku/drivers/mtd/devices/fsl_m25p80.c	2012-07-13 03:19:05.541660593 -0700
++++ linux-liteon-wp854-openwrt/drivers/mtd/devices/fsl_m25p80.c	2012-07-13 03:21:14.889594340 -0700
+@@ -581,6 +581,8 @@
+ 	{ "w25x16", 0xef3015, 0, 256, 64 * 1024, 32, SECT_4K, },
+ 	{ "w25x32", 0xef3016, 0, 256, 64 * 1024, 64, SECT_4K, },
+ 	{ "w25x64", 0xef3017, 0, 256, 64 * 1024, 128, SECT_4K, },
++       /* MXIC -- MX25L6406E "blocks" are 64K, "sectors" are 4KiB, added by sirian, 2011-03-10*/
++	{ "MX25L6406E", 0xc22017, 0x00c220, 256, 64 * 1024, 128,SECT_4K,},
+ };
+ 
+ static struct flash_info *__devinit jedec_probe(struct spi_device *spi)

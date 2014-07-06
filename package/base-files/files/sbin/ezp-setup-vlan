@@ -1,0 +1,264 @@
+#!/bin/sh
+. /etc/network.sh
+. /etc/functions.sh
+
+# Iterate vlanport_rule
+local vnum="$(nvram get vlanport_rule_max)"
+local i=0
+local tag="";
+local temp;
+
+HOST="$(nvram get hostname)"
+
+Internal_Switch_Init()
+{
+	#LAN/WAN ports as security mode
+	switch reg w 2004 ff0003 #port0
+	switch reg w 2104 ff0003 #port1
+	switch reg w 2204 ff0003 #port2
+	switch reg w 2304 ff0003 #port3
+	switch reg w 2404 ff0003 #port4
+	switch reg w 2504 ff0003 #port5
+	#LAN/WAN ports as transparent port
+	switch reg w 2010 810000c0 #port0
+	switch reg w 2110 810000c0 #port1
+	switch reg w 2210 810000c0 #port2
+	switch reg w 2310 810000c0 #port3	
+	switch reg w 2410 810000c0 #port4
+	switch reg w 2510 810000c0 #port5
+	#set CPU/P7 port as user port
+	switch reg w 2610 81000000 #port6
+	switch reg w 2710 81000000 #port7
+
+	switch reg w 2604 20ff0003 #port6, Egress VLAN Tag Attribution=tagged
+	switch reg w 2704 20ff0003 #port7, Egress VLAN Tag Attribution=tagged
+	if [ "$CONFIG_RAETH_SPECIAL_TAG" == "y" ]; then
+	    echo "Special Tag Enabled"
+		switch reg w 2610 81000020 #port6
+		#VLAN member port
+		switch vlan set 0 1 1000001
+		switch vlan set 1 2 0100001
+		switch vlan set 2 3 0010001
+		switch vlan set 3 4 0001001
+		switch vlan set 4 5 0000101
+		switch vlan set 5 6 0000011
+		switch vlan set 6 7 0000011
+	else
+	    echo "Special Tag Disabled"
+		switch reg w 2610 81000000 #port6
+	fi
+
+	if [ "$1" = "LLLLW" ]; then
+		if [ "$CONFIG_RAETH_SPECIAL_TAG" == "y" ]; then
+		#set PVID
+		switch reg w 2014 10007 #port0
+		switch reg w 2114 10007 #port1
+		switch reg w 2214 10007 #port2
+		switch reg w 2314 10007 #port3
+		switch reg w 2414 10008 #port4
+		switch reg w 2514 10007 #port5
+		#VLAN member port
+		switch vlan set 6 7 11110111
+		switch vlan set 7 8 00001011
+		else
+		#set PVID
+		switch reg w 2014 10001 #port0
+		switch reg w 2114 10001 #port1
+		switch reg w 2214 10001 #port2
+		switch reg w 2314 10001 #port3
+		switch reg w 2414 10002 #port4
+		switch reg w 2514 10001 #port5
+		#VLAN member port
+		switch vlan set 0 1 11110111
+		switch vlan set 1 2 00001011
+		fi
+	elif [ "$1" = "WLLLL" ]; then
+		if [ "$CONFIG_RAETH_SPECIAL_TAG" == "y" ]; then
+		#set PVID
+		switch reg w 2014 10008 #port0
+		switch reg w 2114 10007 #port1
+		switch reg w 2214 10007 #port2
+		switch reg w 2314 10007 #port3
+		switch reg w 2414 10007 #port4
+		switch reg w 2514 10007 #port5
+		#VLAN member port
+		switch vlan set 6 7 01111111
+		switch vlan set 7 8 10000011
+		else
+		#set PVID
+		switch reg w 2014 10002 #port0
+		switch reg w 2114 10001 #port1
+		switch reg w 2214 10001 #port2
+		switch reg w 2314 10001 #port3
+		switch reg w 2414 10001 #port4
+		switch reg w 2514 10001 #port5
+		#VLAN member port
+		switch vlan set 0 1 01111111
+		switch vlan set 1 2 10000011
+		fi
+	elif [ "$1" = "12345" ]; then
+		echo "12345"
+		#set PVID
+		switch reg w 2014 10001 #port0
+		switch reg w 2114 10002 #port1
+		switch reg w 2214 10003 #port2
+		switch reg w 2314 10004 #port3
+		switch reg w 2414 10005 #port4
+		switch reg w 2514 10006 #port5
+		#VLAN member port
+		switch vlan set 0 1 10000011
+		switch vlan set 1 2 01000011
+		switch vlan set 2 3 00100011
+		switch vlan set 3 4 00010011
+		switch vlan set 4 5 00001011
+		switch vlan set 5 6 00000111
+	elif [ "$1" = "GW" ]; then
+		echo "GW"
+		#set PVID
+		switch reg w 2014 10001 #port0
+		switch reg w 2114 10001 #port1
+		switch reg w 2214 10001 #port2
+		switch reg w 2314 10001 #port3
+		switch reg w 2414 10001 #port4
+		switch reg w 2514 10002 #port5
+		#VLAN member port
+		switch vlan set 0 1 11111011
+		switch vlan set 1 2 00000111
+	fi
+
+	#clear mac table if vlan configuration changed
+	switch clear
+}
+
+
+set_vlan_map()
+{
+	# vlan priority tag => skb->priority mapping
+	vconfig set_ingress_map $1 0 0
+	vconfig set_ingress_map $1 1 1
+	vconfig set_ingress_map $1 2 2
+	vconfig set_ingress_map $1 3 3
+	vconfig set_ingress_map $1 4 4
+	vconfig set_ingress_map $1 5 5
+	vconfig set_ingress_map $1 6 6
+	vconfig set_ingress_map $1 7 7
+
+	# skb->priority => vlan priority tag mapping
+	vconfig set_egress_map $1 0 0
+	vconfig set_egress_map $1 1 1
+	vconfig set_egress_map $1 2 2
+	vconfig set_egress_map $1 3 3
+	vconfig set_egress_map $1 4 4
+	vconfig set_egress_map $1 5 5
+	vconfig set_egress_map $1 6 6
+	vconfig set_egress_map $1 7 7
+}
+
+LAN_WAN_Par_Init()
+{
+    echo "LAN_WAN_Par_Init..." >>/dev/console
+    #P0~P4 lan port, P5 wan port
+    #802.1Q check mode 
+    esw_mgr -s -r 0x660 -v 0x0014027e
+    esw_mgr -s -r 0x66c -v 0x0014027d
+    esw_mgr -s -r 0x678 -v 0x0014027b
+    esw_mgr -s -r 0x684 -v 0x00140277
+    esw_mgr -s -r 0x690 -v 0x0014026f
+    esw_mgr -s -r 0x69c -v 0x0014025f
+    #set P0~P4 CVID=1
+    esw_mgr -s -r 0x420 -v 0x00010001
+    esw_mgr -s -r 0x428 -v 0x00010001
+    esw_mgr -s -r 0x430 -v 0x00010001
+    esw_mgr -s -r 0x438 -v 0x00010001
+    esw_mgr -s -r 0x440 -v 0x00010001
+
+if [ "$(nvram show wl_mode_rule 0 mode)" = "normal" ]; then 
+    #switch reg w 98 7f1f
+    #switch greg w 108 c03e0001
+    //add by alan
+    echo "Router mode" >>/dev/console
+    esw_mgr -s -r 0x448 -v 0x00020001
+    esw_mgr -s -r 0x610 -v 0x001bd560
+    esw_mgr -s -r 0x614 -v 0x80010002
+    esw_mgr -s -r 0x610 -v 0x001b7fe0
+    esw_mgr -s -r 0x614 -v 0x80020002
+else
+    //add by alan
+    #switch reg w 98 7f3f
+    #switch greg w 108 3e0001
+    echo "AP mode" >>/dev/console
+    esw_mgr -s -r 0x448 -v 0x00010001
+    esw_mgr -s -r 0x610 -v 0x001B5560
+    esw_mgr -s -r 0x614 -v 0x80010002
+fi
+
+}
+
+if [ "$HOST" = "WP688" ]; then 
+
+	# Add switch to control if config vlan, Sean@liteon, 2012-12-25----->
+	enable="$(nvram show vlan_rule $i enable)"
+        [ "$enable" = "1" ] && {
+		echo '##### config Ralink ESW vlan partition (LLLLW) #####'
+	        echo "Internal_Switch_Init LLLLW"                       
+
+		Internal_Switch_Init LLLLW
+	}
+	# <-----Sean@liteon, 2012-12-25
+else 
+	while [ "$i" -lt "$vnum" ];
+	do
+	      portid="$(nvram show vlanport_rule $i portid)"
+	      pvid="$(nvram show vlanport_rule $i pvid)"
+	      temp="$(nvram show vlanport_rule $i tag)"
+	      gmemb="$(nvram show vlanport_rule $i gmemb)"
+	      tag="$tag$temp"
+	      #set up the switch IC           
+	      switch vlan port $portid $pvid
+	      [ -n "$gmemb" ] && switch gport "$portid" "$pvid" "$gmemb"
+	      #vlan group index
+	      i="$(($i + 1))"
+	done
+
+	LAN_WAN_Par_Init
+fi
+
+# Iterate vlan_rule 
+vnum="$(nvram get vlan_rule_num)"
+i=0
+local idx=0
+local enable=0
+local count=1
+while [ "$i" -lt "$vnum" ];
+do
+	enable="$(nvram show vlan_rule $i enable)"
+	[ "$enable" = "1" ] && { 
+	vid="$(nvram show vlan_rule $i vid)"
+	portmember="$(nvram show vlan_rule $i portmember)"
+	tag="$(nvram show vlan_rule $i tag)"
+	# set up the switch IC
+	#switch vlan set $idx $vid $portmember $tag
+	# set up linux vlan by vconfig
+	if_valid vlan${vid} ${i}
+	# Add vlan1 to br_rule, Sean@liteon, 2012-12-25----->
+	[ "$count" = "1" ] && {
+		nvram set br_rule="LAN1^1^$vif ra0 ra1 ra2 ra3 rai0 rai1 rai2 rai3 wds0 wds1 wds2 wds3 wdsi0 wdsi1 wdsi2 wdsi3 apcli0 apclii0 ^|WAN1^0^vlan2^|GuestLAN^0^ra1^"
+	}
+	# <-----Sean@liteon, 2012-12-25
+	#set_vlan_map vlan${vid}
+	# vlan group index
+	idx="$(($idx + 1))"
+	} || {
+		# Add eth2 to br_rule, Sean@liteon, 2012-12-25----->
+		[ "$count" = "1" ] && {
+			vif=$(nvram show vlan_rule $i ifname)
+			nvram set br_rule="LAN1^1^$vif ra0 ra1 ra2 ra3 rai0 rai1 rai2 rai3 wds0 wds1 wds2 wds3 wdsi0 wdsi1 wdsi2 wdsi3 apcli0 apclii0 ^|WAN1^0^vlan2^|GuestLAN^0^ra1^"
+		}
+		# <-----Sean@liteon, 2012-12-25
+	}
+	i="$(($i + 1))"
+	count="$(($count - 1))"
+done
+
+
+

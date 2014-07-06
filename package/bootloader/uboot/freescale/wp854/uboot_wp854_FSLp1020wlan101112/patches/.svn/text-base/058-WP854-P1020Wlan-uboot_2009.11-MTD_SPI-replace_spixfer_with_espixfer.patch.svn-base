@@ -1,0 +1,113 @@
+--- u-boot-freescale-p1020-sku/drivers/mtd/spi/macronix.c	2009-12-15 14:20:54.000000000 -0800
++++ u-boot-liteon-wp854-openwrt/drivers/mtd/spi/macronix.c	2011-03-16 04:54:54.000000000 -0700
+@@ -94,7 +94,7 @@
+ 		.pages_per_sector = 16,
+ 		.sectors_per_block = 16,
+ 		.nr_blocks = 128,
+-		.name = "MX25L6405D",
++		.name = "MX25L6406E",
+ 	},
+ 	{
+ 		.idcode = 0x2018,
+@@ -114,6 +114,33 @@
+ 	},
+ };
+ 
++#if 1  //sirian, 2011-03-10
++static int macronix_wait_ready(struct spi_flash *flash, unsigned long timeout)
++{
++	struct spi_slave *spi = flash->spi;
++	unsigned long timebase;
++	int ret;
++	u8 status;
++
++	timebase = get_timer(0);
++	do {
++		ret = spi_flash_cmd(spi, CMD_MX25XX_RDSR, &status, sizeof(status));
++		if (ret)
++			return -1;
++
++		if ((status & MACRONIX_SR_WIP) == 0)
++			break;
++
++	} while (get_timer(timebase) < timeout);
++
++
++	if ((status & MACRONIX_SR_WIP) == 0)
++		return 0;
++
++	/* Timed out */
++	return -1;
++}
++#else
+ static int macronix_wait_ready(struct spi_flash *flash, unsigned long timeout)
+ {
+ 	struct spi_slave *spi = flash->spi;
+@@ -122,7 +149,9 @@
+ 	u8 status;
+ 	u8 cmd = CMD_MX25XX_RDSR;
+ 
+-	ret = spi_xfer(spi, 8, &cmd, NULL, SPI_XFER_BEGIN);
++	//ret = spi_xfer(spi, 8, &cmd, NULL, SPI_XFER_BEGIN);
++	    ret = espi_xfer(spi, 8, &cmd, NULL, SPI_XFER_BEGIN);
++    
+ 	if (ret) {
+ 		debug("SF: Failed to send command %02x: %d\n", cmd, ret);
+ 		return ret;
+@@ -130,7 +159,8 @@
+ 
+ 	timebase = get_timer(0);
+ 	do {
+-		ret = spi_xfer(spi, 8, NULL, &status, 0);
++		//ret = spi_xfer(spi, 8, NULL, &status, 0);
++		    ret = espi_xfer(spi, 8, NULL, &status, 0);
+ 		if (ret)
+ 			return -1;
+ 
+@@ -139,7 +169,8 @@
+ 
+ 	} while (get_timer(timebase) < timeout);
+ 
+-	spi_xfer(spi, 0, NULL, NULL, SPI_XFER_END);
++	//spi_xfer(spi, 0, NULL, NULL, SPI_XFER_END);
++	espi_xfer(spi, 0, NULL, NULL, SPI_XFER_END);
+ 
+ 	if ((status & MACRONIX_SR_WIP) == 0)
+ 		return 0;
+@@ -148,6 +179,8 @@
+ 	return -1;
+ }
+ 
++#endif
++
+ static int macronix_read_fast(struct spi_flash *flash,
+ 			      u32 offset, size_t len, void *buf)
+ {
+@@ -165,6 +198,9 @@
+ 	cmd[3] = offset % page_size;
+ 	cmd[4] = 0x00;
+ 
++        debug("READ: 0x%x => cmd = { 0x%02x 0x%02x%02x%02x%02x } len = 0x%x\n",
++		 offset, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], len);
++        
+ 	return spi_flash_read_common(flash, cmd, sizeof(cmd), buf, len);
+ }
+ 
+@@ -226,7 +262,7 @@
+ 		byte_addr = 0;
+ 	}
+ 
+-	debug("SF: Macronix: Successfully programmed %u bytes @ 0x%x\n",
++	printf("SF: Macronix: Successfully programmed %u bytes @ 0x%x\n",
+ 	      len, offset);
+ 
+ 	spi_release_bus(flash->spi);
+@@ -289,7 +325,7 @@
+ 		}
+ 	}
+ 
+-	debug("SF: Macronix: Successfully erased %u bytes @ 0x%x\n",
++	printf("SF: Macronix: Successfully erased %u bytes @ 0x%x\n",
+ 	      len * sector_size, offset);
+ 
+ 	spi_release_bus(flash->spi);

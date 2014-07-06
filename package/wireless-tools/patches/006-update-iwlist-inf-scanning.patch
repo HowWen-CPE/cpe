@@ -1,0 +1,12 @@
+Index: wireless_tools.29/iwlist.c
+===================================================================
+--- wireless_tools.29.orig/iwlist.c	2014-01-03 11:30:01.479753948 +0800
++++ wireless_tools.29/iwlist.c	2014-01-03 12:18:25.007752086 +0800
+@@ -456,6 +456,7 @@
+   switch(event->cmd)
+     {
+     case SIOCGIWAP:
++      printf("\n");
+       printf("          Cell %02d - Address: %s\n", state->ap_num,
+ 	     iw_saether_ntop(&event->u.ap_addr, buffer));
+       state->ap_num++;

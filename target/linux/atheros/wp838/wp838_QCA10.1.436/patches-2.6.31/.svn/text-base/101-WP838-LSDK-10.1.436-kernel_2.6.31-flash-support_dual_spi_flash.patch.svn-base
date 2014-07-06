@@ -1,0 +1,488 @@
+--- a/arch/mips/atheros/Makefile
++++ b/arch/mips/atheros/Makefile
+@@ -106,6 +106,12 @@ CFLAGS_gpio.o += -DAP_USB_LED_GPIO=$(AP_
+ endif
+ endif
+ 
++#liteon add+
++ifdef AP_SPI_CS2_GPIO
++CFLAGS_gpio.o += -DAP_SPI_CS2_GPIO=$(AP_SPI_CS2_GPIO)
++endif
++#liteon add-
++
+ ifdef POWER_ON_RLED_GPIO
+ CFLAGS_gpio.o += -DPOWER_ON_RLED_GPIO=$(POWER_ON_RLED_GPIO)
+ endif
+--- a/arch/mips/atheros/gpio.c
++++ b/arch/mips/atheros/gpio.c
+@@ -123,6 +123,106 @@ typedef struct {
+ 	void		*cb_arg2;
+ } multi_callback_t;
+ 
++//liteon+
++int wdt_flag=0;
++//int cc=0;
++struct timer_list brook_timer;
++static void callback(unsigned long);
++
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++void ap_spi_cs_enable(void)
++{
++#ifdef CONFIG_MACH_AR934x
++#define PLATFORM_MAX_GPIO_NUMBER    22
++#define PLATFORM_GPIO_MUX_SPI_CS1   0x7
++#else
++#define PLATFORM_MAX_GPIO_NUMBER    23
++#define PLATFORM_GPIO_MUX_SPI_CS1   0xa
++#endif
++    unsigned int rddata;
++
++    if ( (AP_SPI_CS2_GPIO < 0) || (AP_SPI_CS2_GPIO > PLATFORM_MAX_GPIO_NUMBER) )
++        return;
++    rddata = ath_reg_rd(ATH_GPIO_OUT_FUNCTION0+(AP_SPI_CS2_GPIO&0xfc));
++    rddata = rddata & ~(0xff<<((AP_SPI_CS2_GPIO&0x3)*8));
++    rddata = rddata | (PLATFORM_GPIO_MUX_SPI_CS1<<((AP_SPI_CS2_GPIO&0x3)*8));
++    ath_reg_wr(ATH_GPIO_OUT_FUNCTION0+(AP_SPI_CS2_GPIO&0xfc), rddata);
++}
++EXPORT_SYMBOL(ap_spi_cs_enable);
++#endif
++//liteon add-
++
++static void callback(unsigned long data)
++{
++    //cc++;
++    //printk("%s(): %d %d\n", __FUNCTION__,cc++,HZ);
++    mod_timer(&brook_timer, jiffies + 200/*HZ*/);
++#ifdef CONFIG_MACH_AR934x
++    ath_reg_rmw_clear(ATH_GPIO_OE, (1 << 12));  //setgpio12 as output,WATCH DOG
++#else
++    ath_reg_rmw_clear(GPIO_OE_ADDRESS, (1 << 21)); //setgpio21 as output,WATCH DOG
++#endif
++    if(wdt_flag==0)
++    {
++	wdt_flag=1;
++#ifdef CONFIG_MACH_AR934x
++	ath_reg_wr(0x18040010, (1 << 12));     //set output low    
++#else
++	ath_reg_rmw_set(0x18040010, (1 << 21)); //set output low    
++#endif
++
++    }
++    else
++    {
++	wdt_flag=0;
++#ifdef CONFIG_MACH_AR934x
++	ath_reg_wr(0x1804000c, (1 << 12));     //set output high    
++#else
++	ath_reg_rmw_set(0x1804000c, (1 << 21)); //set output high    
++#endif
++    }
++}
++
++static int __init init_modules(void)
++{
++    init_timer(&brook_timer);
++    brook_timer.expires = jiffies + 200/*HZ/2*/;
++    brook_timer.function = &callback;
++    //brook_timer.data = (unsigned long) &data;
++    brook_timer.data = 0;
++    add_timer(&brook_timer);
++    printk("enable watchdog\n");
++#ifdef CONFIG_MACH_AR934x
++    ath_reg_rmw_clear(ATH_GPIO_OE, (1 << 18));  //setgpio18 as output,WATCH DOG_EN
++    ath_reg_wr(0x1804000c, (1 << 18));          //set output high
++    ath_reg_rmw_clear(ATH_GPIO_OE, (1 << 12));  //setgpio12 as output,WATCH DOG
++    ath_reg_wr(0x1804000c, (1 << 12));          //set output high
++    ath_reg_rmw_clear(ATH_GPIO_OE, (1 << 4));   //setgpio4 as output, USB current limit IC enable pin
++    ath_reg_wr(0x1804000c, (1 << 4));           //set output high
++#else
++    ath_reg_rmw_clear(GPIO_OE_ADDRESS, (1 << 20)); //setgpio20 as output,WATCH DOG_EN
++    ath_reg_rmw_set(0x1804000c, (1 << 20)); //set output high
++    ath_reg_rmw_clear(GPIO_OE_ADDRESS, (1 << 21)); //setgpio21 as output,WATCH DOG
++    ath_reg_rmw_set(0x1804000c, (1 << 21)); //set output high
++#endif
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++    ap_spi_cs_enable();
++#endif
++//liteon add-
++    return 0;
++}
++
++static void __exit exit_modules(void)
++{
++    del_timer(&brook_timer);
++}
++
++//module_init(init_modules);
++//module_exit(exit_modules);
++//liteon-
++
+ /*
+  * Specific instance of the callback structure
+  */
+@@ -926,7 +1026,8 @@ int __init ath_simple_config_init(void)
+     OS_INIT_TIMER(NULL, &power_on_timer, power_led_blink, NULL);
+     OS_SET_TIMER(&power_on_timer, POWER_LED_BLINK_INTERVAL);
+ #endif
+-
++    //module_init(init_modules);
++    init_modules();
+ 	return 0;
+ }
+ 
+--- a/drivers/mtd/devices/Makefile
++++ b/drivers/mtd/devices/Makefile
+@@ -25,3 +25,8 @@ obj-$(CONFIG_MTD_ATH_FLASH)	+= ath_flash
+ ifeq ($(ATH_SST_FLASH), y)
+ CFLAGS_ath_flash.o += -DATH_SST_FLASH=1
+ endif
++#liteon add+
++ifdef AP_SPI_CS2_GPIO
++CFLAGS_ath_flash.o += -DAP_SPI_CS2_GPIO=$(AP_SPI_CS2_GPIO)
++endif
++#liteon add-
+--- a/drivers/mtd/devices/ath_flash.c
++++ b/drivers/mtd/devices/ath_flash.c
+@@ -39,6 +39,11 @@ static void ath_spi_poll(void);
+ static void ath_spi_write_page(uint32_t addr, uint8_t * data, int len);
+ #endif
+ static void ath_spi_sector_erase(uint32_t addr);
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++static void ath_spi_read_page(uint32_t addr, u_char *data, int len);
++#endif
++//liteon add-
+ 
+ static const char *part_probes[] __initdata = { "cmdlinepart", "RedBoot", NULL };
+ 
+@@ -66,6 +71,10 @@ EXPORT_SYMBOL(ath_flash_spi_up);
+ #define ATH_FLASH_SECTOR_SIZE_64KB  (64*1024)
+ #define ATH_FLASH_PG_SIZE_256B       256
+ #define ATH_FLASH_NAME               "ath-nor0"
++//liteon add+
++#define ATH_FLASH_NAME_1             "ath-nor1"
++#define ATH_FLASH_SIZE_16MB          (16*1024*1024)
++//liteon add-
+ /*
+  * bank geometry
+  */
+@@ -78,7 +87,15 @@ typedef struct ath_flash_geom {
+ 
+ ath_flash_geom_t flash_geom_tbl[ATH_FLASH_MAX_BANKS] = {
+ 	{
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++		.size		= ATH_FLASH_SIZE_16MB,
++#else
++//liteon add-
+ 		.size		= ATH_FLASH_SIZE_8MB,
++//liteon add+
++#endif
++//liteon add-
+ 		.sector_size	= ATH_FLASH_SECTOR_SIZE_64KB,
+ 		.pgsize		= ATH_FLASH_PG_SIZE_256B
+ 	}
+@@ -146,7 +163,15 @@ static int
+ ath_flash_read(struct mtd_info *mtd, loff_t from, size_t len,
+ 		  size_t *retlen, u_char *buf)
+ {
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++	uint32_t addr = from;
++#else
++//liteon add-
+ 	uint32_t addr = from | 0x9f000000;
++//liteon add+
++#endif
++//liteon add-
+ 
+ 	if (!len)
+ 		return (0);
+@@ -155,7 +180,15 @@ ath_flash_read(struct mtd_info *mtd, lof
+ 
+ 	ath_flash_spi_down();
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++	ath_spi_read_page(addr, buf, len); //memcpy(buf, (uint8_t *)(addr), len);
++#else
++//liteon add-
+ 	memcpy(buf, (uint8_t *)(addr), len);
++//liteon add+
++#endif
++//liteon add-
+ 	*retlen = len;
+ 
+ 	ath_flash_spi_up();
+@@ -253,7 +286,15 @@ static int __init ath_flash_init(void)
+ 	for (i = 0; i < ATH_FLASH_MAX_BANKS; i++) {
+ 
+ 		index = ath_flash_probe();
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++		geom = &flash_geom_tbl[i];
++#else
++//liteon add-
+ 		geom = &flash_geom_tbl[index];
++//liteon add+
++#endif
++//liteon add-
+ 
+ 		/* set flash size to value from bootloader if it passed valid value */
+ 		/* otherwise use the default 4MB.                                   */
+@@ -267,7 +308,15 @@ static int __init ath_flash_init(void)
+ 		}
+ 		memset(mtd, 0, sizeof(struct mtd_info));
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++		mtd->name		= (i == 0) ? ATH_FLASH_NAME : ATH_FLASH_NAME_1;
++#else
++//liteon add-
+ 		mtd->name		= ATH_FLASH_NAME;
++//liteon add+
++#endif
++//liteon add-
+ 		mtd->type		= MTD_NORFLASH;
+ 		mtd->flags		= MTD_CAP_NORFLASH | MTD_WRITEABLE;
+ 		mtd->size		= geom->size;
+@@ -280,8 +329,22 @@ static int __init ath_flash_init(void)
+ 		mtd->write		= ath_flash_write;
+ 		mtd->writesize		= 1;
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++                if (i == 1) {
++                   mtd_parts->offset = 0x01000000;
++                   mtd->size = 0x02000000;
++                   mtd->erasesize = 0x00010000;
++                } 
++#endif
++//liteon add-
+ 		np = parse_mtd_partitions(mtd, part_probes, &mtd_parts, 0);
+ 		if (np > 0) {
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++                        if (i == 1 ) mtd_parts->offset = 0x01000000;
++#endif
++//liteon add-
+ 			add_mtd_partitions(mtd, mtd_parts, np);
+ 		} else {
+ 			printk("No partitions found on flash bank %d\n", i);
+@@ -310,6 +373,19 @@ ath_spi_write_enable()
+ 	ath_spi_go();
+ }
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++static void
++ath_spi_write_enable_idx(int idx)
++{
++        ath_reg_wr_nf(ATH_SPI_FS, 1);
++        ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS);
++        ath_spi_bit_banger_idx(idx, ATH_SPI_CMD_WREN);
++        ath_spi_go_idx(idx);
++}
++#endif
++//liteon add-
++
+ static void
+ ath_spi_poll()
+ {
+@@ -323,32 +399,94 @@ ath_spi_poll()
+ 	} while (rd);
+ }
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++static void
++ath_spi_poll_idx(int idx)
++{
++        int rd;
++
++        do {
++                ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS);
++                ath_spi_bit_banger_idx(idx, ATH_SPI_CMD_RD_STATUS);
++                ath_spi_delay_8_idx(idx);
++                rd = (ath_reg_rd(ATH_SPI_RD_STATUS) & 1);
++        } while (rd);
++}
++#endif
++//liteon add-
++
+ static void
+ ath_spi_write_page(uint32_t addr, uint8_t *data, int len)
+ {
+ 	int i;
+ 	uint8_t ch;
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++        uint32_t idx;
++
++    	idx = (addr < 0x1000000) ? 0 : 1; 
++    	if(idx==1)
++       	   addr -= 0x1000000;
++
++	ath_spi_write_enable_idx(idx);
++	ath_spi_bit_banger_idx(idx, ATH_SPI_CMD_PAGE_PROG);
++	ath_spi_send_addr_idx(idx, addr);
++#else
++//liteon add-
+ 	ath_spi_write_enable();
+ 	ath_spi_bit_banger(ATH_SPI_CMD_PAGE_PROG);
+ 	ath_spi_send_addr(addr);
++//liteon add+
++#endif
++//liteon add-
+ 
+ 	for (i = 0; i < len; i++) {
+ 		ch = *(data + i);
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++		ath_spi_bit_banger_idx(idx, ch);
++	}
++
++	ath_spi_go_idx(idx);
++	ath_spi_poll_idx(idx);
++#else
++//liteon add-
+ 		ath_spi_bit_banger(ch);
+ 	}
+ 
+ 	ath_spi_go();
+ 	ath_spi_poll();
++//liteon add+
++#endif
++//liteon add-
+ }
+ 
+ static void
+ ath_spi_sector_erase(uint32_t addr)
+ {
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++    	uint32_t idx; 
++	idx = (addr < 0x1000000) ? 0 : 1;
++  
++    	if(idx==1)
++           addr -= 0x1000000;
++  
++	ath_spi_write_enable_idx(idx);
++	ath_spi_bit_banger_idx(idx, ATH_SPI_CMD_SECTOR_ERASE);
++	ath_spi_send_addr_idx(idx, addr);
++	ath_spi_go_idx(idx);
++#else
++//liteon add-
+ 	ath_spi_write_enable();
+ 	ath_spi_bit_banger(ATH_SPI_CMD_SECTOR_ERASE);
+ 	ath_spi_send_addr(addr);
+ 	ath_spi_go();
++//liteon add+
++#endif
++//liteon add-
+ #if 0
+ 	/*
+ 	 * Do not touch the GPIO's unnecessarily. Might conflict
+@@ -356,8 +494,43 @@ ath_spi_sector_erase(uint32_t addr)
+ 	 */
+ 	display(0x7d);
+ #endif
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++	ath_spi_poll_idx(idx);
++#else
++//liteon add-
+ 	ath_spi_poll();
++//liteon add+
++#endif
++//liteon add-
++}
++
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++static void
++ath_spi_read_page(uint32_t addr, u_char *data, int len)
++{
++    	int i;
++    	uint32_t idx; 
++
++    	idx = (addr < 0x1000000) ? 0 : 1;
++    	if(idx==1)
++       	   addr -= 0x1000000;
++
++        
++    	ath_reg_wr_nf(ATH_SPI_FS, 1);
++    	ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS);
++    	ath_spi_bit_banger_idx(idx, 0x03);
++    	ath_spi_send_addr_idx(idx, addr);
++    	for(i = 0; i < len; i++) {
++            ath_spi_delay_8_idx(idx);
++            *(data + i) = (ath_reg_rd(ATH_SPI_RD_STATUS)) & 0xff;
++    	}
++    	ath_spi_go_idx(idx);
++    	ath_spi_done();
+ }
++#endif
++//liteon add-
+ 
+ module_init(ath_flash_init);
+ module_exit(ath_flash_exit);
+--- a/drivers/mtd/devices/ath_flash.h
++++ b/drivers/mtd/devices/ath_flash.h
+@@ -12,10 +12,22 @@
+ 
+ #define ATH_SPI_CE_LOW		0x60000
+ #define ATH_SPI_CE_HIGH		0x60100
++//liteon add+
++#define	ATH_SPI_IDX_LOW         0x70000 
++#define	ATH_SPI_IDX_HIGH        0x70100 
++//liteon add-
+ #define ATH_SPI_SECTOR_SIZE	(1024*64)
+ #define ATH_SPI_PAGE_SIZE	256
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++#define ATH_FLASH_MAX_BANKS	2
++#else
++//liteon add-
+ #define ATH_FLASH_MAX_BANKS	1
++//liteon add+
++#endif
++//liteon add-
+ 
+ #define display(_x)	ath_reg_wr_nf(0x18040008, (_x))
+ 
+@@ -50,4 +62,30 @@
+ #define ath_spi_delay_8()	ath_spi_bit_banger(0)
+ #define ath_spi_done()		ath_reg_wr(ATH_SPI_FS, 0)
+ 
++//liteon add+
++#ifdef AP_SPI_CS2_GPIO
++#define ath_spi_bit_banger_idx(_idx, _byte)  do {        \
++    int _i;                                      \
++    for(_i = 0; _i < 8; _i++) {                    \
++        ath_reg_wr_nf(ATH_SPI_WRITE,      \
++                        (~(1<<(16 + _idx)) & (ATH_SPI_IDX_LOW)) | ath_be_msb(_byte, _i));  \
++        ath_reg_wr_nf(ATH_SPI_WRITE,      \
++                        (~(1<<(16 + _idx)) & (ATH_SPI_IDX_HIGH)) | ath_be_msb(_byte, _i)); \
++    }       \
++}while(0);
++
++#define ath_spi_go_idx(_idx) do {        \
++    	ath_reg_wr_nf(ATH_SPI_WRITE, (~(1<<(16 + _idx)) & (ATH_SPI_IDX_LOW))); \
++    	ath_reg_wr_nf(ATH_SPI_WRITE, ATH_SPI_CS_DIS); \
++}while(0);
++
++#define ath_spi_send_addr_idx(_idx, _addr) do {                    \
++    	ath_spi_bit_banger_idx(_idx, ((addr & 0xff0000) >> 16));                 \
++    	ath_spi_bit_banger_idx(_idx, ((addr & 0x00ff00) >> 8));                 \
++    	ath_spi_bit_banger_idx(_idx, addr & 0x0000ff);                 \
++}while(0);
++
++#define ath_spi_delay_8_idx(_idx)    ath_spi_bit_banger_idx(_idx,0)
++#endif
++//liteon add-
+ #endif /*_ATH_FLASH_H*/

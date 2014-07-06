@@ -1,0 +1,49 @@
+#
+# Copyright (C) Sean@liteon.com
+#
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+#
+
+MADWIFI_INC = \
+	-I$(PKG_SOURCE_DIR)/ \
+	-I$(PKG_SOURCE_DIR)/include \
+	-I$(PKG_SOURCE_DIR)/hal \
+	-I$(PKG_SOURCE_DIR)/hal/linux \
+	-I$(PKG_SOURCE_DIR)/os/linux/include \
+	-I$(PKG_SOURCE_DIR)/os/linux/src \
+	-I$(PKG_SOURCE_DIR)/os/linux/ath_hal \
+	-I$(PKG_SOURCE_DIR)/lmac/ath_pktlog \
+	-I$(PKG_SOURCE_DIR)/lmac/ratectrl \
+	-I$(PKG_SOURCE_DIR)/lmac/ath_dev \
+	-I$(PKG_SOURCE_DIR)/lmac/tx99 \
+	-I$(PKG_SOURCE_DIR)/lmac/dfs \
+	-I$(PKG_SOURCE_DIR)/lmac/spectral/ \
+	-I$(PKG_SOURCE_DIR)/umac/include \
+	-I$(PKG_SOURCE_DIR)/umac/if_lmac \
+	-I$(PKG_SOURCE_DIR)/umac/crypto \
+	-I$(PKG_SOURCE_DIR)/umac/pm \
+	-I$(PKG_SOURCE_DIR)/umac/resmgr \
+	-I$(PKG_SOURCE_DIR)/umac/scan \
+	-I$(PKG_SOURCE_DIR)/umac/p2p \
+	-I$(PKG_SOURCE_DIR)/umac/vi_dbg \
+	-I$(PKG_SOURCE_DIR)/umac/rpt_placement \
+	-I$(PKG_SOURCE_DIR)/umac/ique \
+	-I$(PKG_SOURCE_DIR)/umac/tdls \
+	-I$(PKG_SOURCE_DIR)/umac/mlme \
+	-I$(PKG_SOURCE_DIR)/umac/sme \
+	-I$(PKG_SOURCE_DIR)/umac/txrx \
+	-I$(PKG_SOURCE_DIR)/umac/ique \
+	-I$(PKG_SOURCE_DIR)/umac/smart_antenna \
+	-I$(PKG_SOURCE_DIR)/umac/base \
+	-I$(PKG_SOURCE_DIR)/asf/include \
+	-I$(PKG_SOURCE_DIR)/adf/include/os \
+	-I$(PKG_SOURCE_DIR)/adf/include/net \
+	-I$(PKG_SOURCE_DIR)/adf/include/nbuf \
+	-I$(PKG_SOURCE_DIR)/adf/os/linux \
+	-I$(PKG_SOURCE_DIR)/adf/net/linux \
+	-I$(PKG_SOURCE_DIR)/adf/nbuf/linux \
+	-I$(PKG_SOURCE_DIR)/htc/adf/linux/os \
+	-I$(STAGING_DIR)/usr/include/wprobe \
+	-I$(PKG_BUILD_DIR)/include \
+	-include $(PKG_SOURCE_DIR)/include/compat.h

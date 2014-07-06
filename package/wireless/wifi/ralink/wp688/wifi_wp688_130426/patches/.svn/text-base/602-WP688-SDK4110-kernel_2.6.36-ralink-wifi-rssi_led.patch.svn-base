@@ -1,0 +1,169 @@
+diff -urN a/rt2860v2/ap/ap_apcli.c b/rt2860v2/ap/ap_apcli.c
+--- a/rt2860v2/ap/ap_apcli.c	2013-05-13 17:21:49.510227747 +0800
++++ b/rt2860v2/ap/ap_apcli.c	2013-05-13 11:40:35.169722705 +0800
+@@ -277,7 +277,7 @@
+ 	UCHAR CliIdx = 0xFF;
+ 	INVAILD_TRIGGER_MAC_ENTRY *pSkipEntry = NULL;
+ #endif /* MAC_REPEATER_SUPPORT */
+-
++	UCHAR scanIdx;
+ 	do
+ 	{
+ 		if ((ifIndex < MAX_APCLI_NUM)
+@@ -821,6 +821,19 @@
+     }
+ #endif /* WSC_AP_SUPPORT */
+ 
++#ifdef LED_CONTROL_SUPPORT
++		/* Set LED */
++		RTMPSetLED(pAd, LED_LINK_UP);
++	   	for( scanIdx = 0; scanIdx < MAX_LEN_OF_BSS_TABLE; scanIdx++) {
++	   		if(MAC_ADDR_EQUAL(pAd->ScanTab.BssEntry[scanIdx].Bssid,
++				pApCliEntry->ApCliMlmeAux.Bssid)) {
++				pApCliEntry->ApCliMlmeAux.Rssi = pAd->ScanTab.BssEntry[scanIdx].Rssi;
++				break;
++	   		}
++	   	}
++	    RTMPSetSignalLED(pAd, pApCliEntry->ApCliMlmeAux.Rssi);
++#endif /* LED_CONTROL_SUPPORT */
++
+ 	return result;
+ }
+ 
+diff -urN a/rt2860v2/common/cmm_data.c b/rt2860v2/common/cmm_data.c
+--- a/rt2860v2/common/cmm_data.c	2013-05-13 17:21:49.502227932 +0800
++++ b/rt2860v2/common/cmm_data.c	2013-05-13 11:41:17.373722865 +0800
+@@ -3979,6 +3979,14 @@
+ 
+ 		pRssi->AvgRssi2 = pRssi->AvgRssi2X8 >> 3;
+ 	}
++
++#ifdef LED_CONTROL_SUPPORT
++#ifdef APCLI_SUPPORT
++	if(RtmpOSNetDevIsUp((pAd)->ApCfg.ApCliTab[0].dev) == TRUE)
++		RTMPSetSignalLED(pAd, RTMPMaxRssi(pAd, pRssi->AvgRssi0, pRssi->AvgRssi1,pRssi->AvgRssi2));
++#endif
++#endif
++
+ }
+ 
+ 
+diff -urN a/rt2860v2/common/rt_led.c b/rt2860v2/common/rt_led.c
+--- a/rt2860v2/common/rt_led.c	2013-05-13 17:21:49.502227932 +0800
++++ b/rt2860v2/common/rt_led.c	2013-05-13 11:43:09.138053284 +0800
+@@ -579,6 +579,19 @@
+ }
+ #endif /* CONFIG_WIFI_LED_SHARE */
+ 
++#define RALINK_PIO_ADDR           0xB0000600
++#define RALINK_REG_PIO3_DIR       (RALINK_PIO_ADDR + 0x74)
++#define RALINK_REG_PIO3_SET		    (RALINK_PIO_ADDR + 0x7c)
++#define RALINK_REG_PIO3_RESET	    (RALINK_PIO_ADDR + 0x80)
++
++#define RSSI_LED1_GPIO            66
++#define RSSI_LED2_GPIO            67
++#define RSSI_LED3_GPIO            68
++#define REG_PIO3_OFFSET           40
++
++#define RSSI_LED1_ADDR           (RSSI_LED1_GPIO - REG_PIO3_OFFSET)
++#define RSSI_LED2_ADDR           (RSSI_LED2_GPIO - REG_PIO3_OFFSET)
++#define RSSI_LED3_ADDR           (RSSI_LED3_GPIO - REG_PIO3_OFFSET)
+ 
+ /* Entry for SWMCU Led control.  Triggered by timer per LED_CHECK_INTERVAL */
+ void SWMCULedCtrlMain(
+@@ -589,6 +602,42 @@
+ {
+ 	RTMP_ADAPTER *pAd = (RTMP_ADAPTER *)FunctionContext;
+ 	PSWMCU_LED_CONTROL pSWMCULedCntl = &pAd->LedCntl.SWMCULedCntl;
++	static UCHAR rssi = 0;
++	unsigned long tmp;
++	
++	if(pAd->LedCntl.RssiSingalstrengthOffet != rssi) {
++
++		rssi = pAd->LedCntl.RssiSingalstrengthOffet;
++		//set GPIO 66~68 out
++		tmp = *(volatile unsigned int *)(RALINK_REG_PIO3_DIR);
++		*(volatile unsigned int *)(RALINK_REG_PIO3_DIR) = ( tmp | (1 << RSSI_LED1_ADDR) 
++		| (1 << RSSI_LED2_ADDR) | (1 << RSSI_LED3_ADDR)); 
++		
++		// low level active
++		switch(rssi) {
++			case 0:
++				*(volatile unsigned int *)(RALINK_REG_PIO3_SET) = ((1 << RSSI_LED1_ADDR) 
++				| (1 << RSSI_LED2_ADDR) | (1 << RSSI_LED3_ADDR));
++				break;
++			case 1:
++				*(volatile unsigned int *)(RALINK_REG_PIO3_SET) = ((1 << RSSI_LED2_ADDR) | (1 << RSSI_LED3_ADDR));
++				*(volatile unsigned int *)(RALINK_REG_PIO3_RESET) = (1 << RSSI_LED1_ADDR);
++				break;
++			case 2:
++				*(volatile unsigned int *)(RALINK_REG_PIO3_SET) = (1 << RSSI_LED3_ADDR);
++				*(volatile unsigned int *)(RALINK_REG_PIO3_RESET) = ((1 << RSSI_LED1_ADDR) | (1 << RSSI_LED2_ADDR));
++				break;
++			case 3:
++				*(volatile unsigned int *)(RALINK_REG_PIO3_RESET) = ((1 << RSSI_LED1_ADDR) 
++				| (1 << RSSI_LED2_ADDR) | (1 << RSSI_LED3_ADDR));
++				break;
++			default:
++				*(volatile unsigned int *)(RALINK_REG_PIO3_RESET) = ((1 << RSSI_LED1_ADDR) 
++				| (1 << RSSI_LED2_ADDR) | (1 << RSSI_LED3_ADDR));
++				break;
++		}
++		
++	}
+ 
+ 	switch(pSWMCULedCntl->LedParameter.LedMode)
+ 	{
+@@ -965,9 +1014,18 @@
+ 	IN NDIS_802_11_RSSI Dbm)
+ {
+ 	UCHAR		nLed = 0;
++	UCHAR       rssi = 0;
++	
++	if (Dbm <= -94)
++		rssi = 0;
++	else if (Dbm <= -77)
++		rssi = 1;
++	else if (Dbm <= -65)
++		rssi = 2;
++	else 
++		rssi = 3;
+ 
+-
+-
++	pAd->LedCntl.RssiSingalstrengthOffet = rssi;
+ 
+ 	if (pAd->LedCntl.MCULedCntl.field.LedMode == LED_MODE_SIGNAL_STREGTH)
+ 	{
+diff -urN a/rt2860v2/sta/p2pcli.c b/rt2860v2/sta/p2pcli.c
+--- a/rt2860v2/sta/p2pcli.c	2013-05-13 17:21:49.518477463 +0800
++++ b/rt2860v2/sta/p2pcli.c	2013-05-13 11:46:14.085723160 +0800
+@@ -281,6 +281,7 @@
+ 	BOOLEAN result = FALSE;
+ 	PAPCLI_STRUCT pApCliEntry = NULL;
+ 	PMAC_TABLE_ENTRY pMacEntry = NULL;
++	UCHAR scanIdx;
+ 
+ 	do
+ 	{
+@@ -687,6 +688,20 @@
+ 	}
+ #endif /* WSC_AP_SUPPORT */
+ 
++#ifdef LED_CONTROL_SUPPORT
++		/* Set LED */
++		RTMPSetLED(pAd, LED_LINK_UP);
++	   	for( scanIdx = 0; scanIdx < MAX_LEN_OF_BSS_TABLE; scanIdx++) {
++	   		if(MAC_ADDR_EQUAL(pAd->ScanTab.BssEntry[scanIdx].Bssid,
++				pApCliEntry->ApCliMlmeAux.Bssid)) {
++				pApCliEntry->ApCliMlmeAux.Rssi = pAd->ScanTab.BssEntry[scanIdx].Rssi;
++				pAd->ApCfg.RssiSample.LastRssi0 = pApCliEntry->ApCliMlmeAux.Rssi;
++				break;
++	   		}
++	   	}
++	    RTMPSetSignalLED(pAd, pApCliEntry->ApCliMlmeAux.Rssi);
++#endif /* LED_CONTROL_SUPPORT */
++
+ 	return result;
+ }
+ 

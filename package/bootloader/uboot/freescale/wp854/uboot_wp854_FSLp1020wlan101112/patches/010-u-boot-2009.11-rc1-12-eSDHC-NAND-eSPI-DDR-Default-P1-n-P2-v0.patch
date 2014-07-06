@@ -1,0 +1,31 @@
+From 4f5633f1ce0e8e341be643534faa5114425c3297 Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Wed, 28 Oct 2009 17:39:24 +0530
+Subject: [PATCH] Make DDR use default for P1 and P2 platforms
+
+---
+ include/configs/P1_P2_RDB.h |    7 +++++--
+ 1 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/include/configs/P1_P2_RDB.h b/include/configs/P1_P2_RDB.h
+index 1ec57e3..c93fdb5 100644
+--- a/include/configs/P1_P2_RDB.h
++++ b/include/configs/P1_P2_RDB.h
+@@ -46,9 +46,12 @@
+ /* Boot using DDR for eSDHC/eSPI/NAND boot because L2 Cache size
+  * on these platforms is 256K.
+  */
+-#if defined(CONFIG_P1011) || defined(CONFIG_P1020)
++/*
++ * Due to Bug using L2 eSDHC/NAND/eSPI gives hang on power-on,
++ * But after doing soft reset it works fine. That's why make use 
++ * of DDR instead of L2 on all P1 & P2 platforms.
++ */
+ #define CONFIG_SYS_FSL_BOOT_DDR
+-#endif
+ 
+ #ifdef CONFIG_MK_NAND
+ #define CONFIG_NAND_U_BOOT		1
+-- 
+1.5.6.3
+

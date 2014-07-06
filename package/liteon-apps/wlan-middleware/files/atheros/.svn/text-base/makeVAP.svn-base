@@ -1,0 +1,358 @@
+#!/bin/sh
+if [ "${1}" = "" ]; then
+    echo "MAKEVAP_PRINT: makeVAP usage"
+    echo "MAKEVAP_PRINT: makeVAP mode essid IFstr"
+    echo
+    echo "MAKEVAP_PRINT: mode: [ap | ap-wds | sta | sta-wds | sta-fwd]"
+    echo "MAKEVAP_PRINT: essid: up to 32 character ESSID string"
+    echo "MAKEVAP_PRINT: RF: Include RF commands"
+    echo "MAKEVAP_PRINT: beaconint: Beacon interval, milliseconds"
+    echo
+    exit
+fi
+
+MODE=`echo $1 | cut -f 2- -d '_' | cut -f 1 -d '-'`
+echo "MAKEVAP_PRINT: MODE is ${MODE}"
+SUB_MODE=`echo $1 | cut -f 2- -d '_' | cut -f 2 -d '-'`
+echo "MAKEVAP_PRINT: SUB_MODE is ${SUB_MODE}"
+IND_MODE=`echo $1 | cut -f 2- -d '_' | cut -f 3 -d '-'`
+echo "MAKEVAP_PRINT: IND_MODE is ${IND_MODE}"
+
+IFNUM=`echo $3 | cut -f 2- -d '_' | cut -f 1 -d ':'`
+echo "MAKEVAP_PRINT: IFNUM is ${IFNUM}"
+RF=`echo $3 | cut -f 2- -d '_' | cut -f 2 -d ':'`
+echo "MAKEVAP_PRINT: RF is ${RF}"
+PRI_CH=`echo $3 | cut -f 2- -d '_' | cut -f 3 -d ':'`
+echo "MAKEVAP_PRINT: PRI_CH is ${PRI_CH}"
+CH_MODE=`echo $3 | cut -f 2- -d '_' | cut -f 4 -d ':'`
+echo "MAKEVAP_PRINT: CH_MODE is ${CH_MODE}"
+
+VAP_ID=`echo $4| cut -f 2- -d '_'`
+echo "MAKEVAP_PRINT: VAP_ID is ${VAP_ID}"
+
+ACL_POLICY=`echo $6 | cut -f 2- -d '_'`
+echo "MAKEVAP_PRINT: ACL_POLICY is ${ACL_POLICY}"
+ACL_LIST=`echo $7 | cut -f 2- -d '_' `
+echo "MAKEVAP_PRINT: ACL_LIST is ${ACL_LIST}"
+
+HIDE_SSID=`echo $8 | cut -f 2- -d '_'`
+echo "MAKEVAP_PRINT: HIDE_SSID is ${HIDE_SSID}"
+ISOLATION=`echo $9 | cut -f 2- -d '_'`
+echo "MAKEVAP_PRINT: ISOLATION is ${ISOLATION}"
+
+BISOLATION=`echo $10 | cut -f 2- -d '_'`
+echo "MAKEVAP_PRINT: BISOLATION is ${BISOLATION}"
+
+if [ "${IFNUM}" != "0" -a "${IFNUM}" != "1" ]; then
+    IFNUM=0
+fi
+
+##
+## Need to select the proper radio parameters based on the interface
+## ID
+##
+
+if [ "${IFNUM}" = "1" ]; then
+    R_SHORTGI=$SHORTGI_2
+    R_AMPDUENABLE=$AMPDUENABLE_2
+    R_AMPDUFRAMES=$AMPDUFRAMES_2
+    R_AMPDULIMIT=$AMPDULIMIT_2
+    R_TXCHAIN=$TX_CHAINMASK_2
+    R_RXCHAIN=$RX_CHAINMASK_2
+    R_DTIM=$DTIM_2  
+    echo "MAKEVAP_PRINT: R_DTIM is $R_DTIM"
+    R_TXPOWER=$TXPOWER_2  
+    echo "MAKEVAP_PRINT: R_TXPOWER is $R_TXPOWER"
+    R_BEACONINTERVAL=$BEACONINTERVAL_2
+    echo "MAKEVAP_PRINT: R_BEACONINTERVAL is $R_BEACONINTERVAL"
+else
+    R_SHORTGI=$SHORTGI
+    R_AMPDUENABLE=$AMPDUENABLE
+    R_AMPDUFRAMES=$AMPDUFRAMES
+    R_AMPDULIMIT=$AMPDULIMIT
+    R_TXCHAIN=$TX_CHAINMASK
+    R_RXCHAIN=$RX_CHAINMASK
+    R_DTIM=$DTIM
+    echo "MAKEVAP_PRINT: R_DTIM is $R_DTIM"
+    R_TXPOWER=$TXPOWER
+    echo "MAKEVAP_PRINT: R_TXPOWER is $R_TXPOWER"
+    R_BEACONINTERVAL=$BEACONINTERVAL
+    echo "MAKEVAP_PRINT: R_BEACONINTERVAL is $R_BEACONINTERVAL"
+fi
+
+ESSID=`echo "$2" | cut -f 2- -d '_'`
+BEACONINT=`echo $5 | cut -f 2- -d '_'`
+
+echo Creating ${MODE} for "${ESSID}" on ${BRIDGE}
+
+if [ "${MODE}" = "sta" ]; then
+    if [ "${IND_MODE}" = "ind" -o "${IND_MODE}" = "sin" -o "${SUB_MODE}" = "wds" ]; then
+        APNAME=`wlanconfig sta$VAP_ID create wlandev wifi$IFNUM wlanmode ${MODE}`
+    else
+        APNAME=`wlanconfig sta$VAP_ID create wlandev wifi$IFNUM wlanmode ${MODE} nosbeacon`
+    fi
+    APMODE="mode managed"
+
+    #if no name, set a default to it
+    if [ ! -n "${APNAME}" ]; then
+        APNAME=sta$VAP_ID
+    fi
+    
+    # set sta-ext only when mode isn't sta-wds
+    if [ "${SUB_MODE}" != "wds" ]; then
+        STA_EXT="STA${VAP_ID}_EXT_ENABLE"
+        eval STA_EXT=\$$STA_EXT
+    fi
+else
+    APNAME=`wlanconfig ath$VAP_ID create wlandev wifi$IFNUM wlanmode ${MODE}`
+    if [ "${MODE}" = "adhoc" ]; then
+        APMODE="mode adhoc"
+    else
+        APMODE="mode master"
+    fi
+fi
+
+echo Added ${APNAME} ${APMODE}
+
+##
+## Enable WDS if selected
+##
+
+if [ "${SUB_MODE}" = "wds" ]; then
+    iwpriv ${APNAME} wds 1
+    echo iwpriv ${APNAME} wds 1 > /tmp/wds
+    
+fi
+
+##
+## EXT STA
+##
+
+if [ "${STA_EXT}" = "1" ]; then
+    iwpriv ${APNAME} extap 1
+fi
+
+#if [ "${RF}" = "RF" ]; then
+echo "MAKEVAP_PRINT: Enter RF settings"
+#BAND=`echo $CH_MODE | grep 11NG`
+#IS11G=`echo $CH_MODE | grep 11G`
+#IS11NG=`echo $CH_MODE | grep 11NG`
+#PLUS=`echo $CH_MODE | grep PLUS`
+#MINUS=`echo $CH_MODE | grep MINUS`
+#if [ "$VAP_ID" = "0" -o "$VAP_ID" = "1" ]; then
+    #ifconfig wifi$IFNUM txqueuelen $TXQUEUELEN
+    #iwpriv wifi$IFNUM AMPDU $R_AMPDUENABLE
+    #iwpriv wifi$IFNUM AMPDUFrames $R_AMPDUFRAMES
+    #iwpriv wifi$IFNUM AMPDULim $R_AMPDULIMIT
+
+    if [ "${R_TXCHAIN}" != "" -a "${R_TXCHAIN}" != "0" ]; then
+        iwpriv wifi$IFNUM txchainmask $R_TXCHAIN
+    fi
+
+    if [ "${R_RXCHAIN}" != ""  -a "${R_RXCHAIN}" != "0" ]; then
+        iwpriv wifi$IFNUM rxchainmask $R_RXCHAIN
+    fi
+    #ifconfig ${APNAME} txqueuelen $TXQUEUELEN
+    if [ "${MODE}" != "sta" ]; then
+        if [ "${R_SHORTGI}" != "" ]; then
+        iwpriv ${APNAME} shortgi $R_SHORTGI
+        fi
+    fi
+    if [ "${CH_MODE}" != "" ]; then
+        iwpriv ${APNAME} mode $CH_MODE
+    fi 
+
+    if [ "${MODE}" != "sta" ]; then
+        if [ "${BEACONINT}" != "" ]; then
+            iwpriv ${APNAME} bintval ${BEACONINT}
+        fi
+    fi
+#fi
+#ifconfig ${APNAME} up
+
+#Do not set essid here in STA mode
+if [ "${MODE}" != "sta" ]; then
+    if [ "${ESSID}" != "" ]; then
+        #iwconfig ${APNAME} essid "${ESSID}" ${APMODE} ${FREQ}
+        iwconfig ${APNAME} essid "${ESSID}"
+    fi
+fi
+    
+
+ISCOEXIST=`echo $CH_MODE | grep '11.*HT40'`
+#if [ "$VAP_ID" = "0" -o "$VAP_ID" = "1" ]; then
+    if [ "${MODE}" != "sta" ]; then
+        if [ "$ISCOEXIST" != "" ]; then
+            iwpriv ${APNAME} disablecoext 1
+        else
+            iwpriv ${APNAME} disablecoext 0
+        fi
+        if [ "${PRI_CH}" != "" ]; then 
+            iwconfig ${APNAME} channel ${PRI_CH}
+        fi 
+
+        if [ "${BISOLATION}" = "0" ]; then
+            iwpriv ${APNAME} apisolation 0
+        elif [ "${BISOLATION}" = "1" ]; then 
+            iwpriv ${APNAME} apisolation 1
+        fi
+    fi
+#    #TxPower process
+#
+#    local MAX_TXPOWER=""
+#    if [ "$VAP_ID" = "0" ]; then
+#        MAX_TXPOWER=`iwpriv wifi0 getTxMaxPower2G | awk '{gsub(/getTxMaxPower2G:/,"");print $2}'`
+#    elif [ "$VAP_ID" = "1" ]; then
+#        MAX_TXPOWER=`iwpriv wifi1 getTxMaxPower5G | awk '{gsub(/getTxMaxPower5G:/,"");print $2}'`
+#        #MAX_TXPOWER="17"
+#    fi
+#    echo "MAX_TXPOWER is $MAX_TXPOWER"
+#
+#    local POWER_MIN=""
+#    if [ "${R_TXCHAIN}"="7" ]; then
+#        POWER_MIN=5
+#    elif [ "${R_TXCHAIN}"="5" ]; then
+#        POWER_MIN=3
+#    elif [ "${R_TXCHAIN}"="3" ]; then
+#        POWER_MIN=0
+#    else
+#        POWER_MIN=5
+#    fi
+#
+#    local ACTRUAL_TXPOWER=""
+#    if [ "$R_TXPOWER" = "0" ]; then
+#        ACTRUAL_TXPOWER="$MAX_TXPOWER"
+#    elif [ "$R_TXPOWER" = "2" ]; then
+#        ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 1))"
+#    elif [ "$R_TXPOWER" = "4" ]; then
+#        ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 2))"
+#    elif [ "$R_TXPOWER" = "6" ]; then
+#        ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 3))"
+#    elif [ "$R_TXPOWER" = "8" ]; then
+#        ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 4))"
+#    elif [ "$R_TXPOWER" = "10" ]; then
+#        ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 5))"
+#    elif [ "$R_TXPOWER" = "12" ]; then
+#        ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 6))"
+#    elif [ "$R_TXPOWER" = "14" ]; then
+#        ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 7))"
+#    elif [ "$R_TXPOWER" = "16" ]; then
+#        ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 8))"
+#    elif [ "$R_TXPOWER" = "18" ]; then
+#        ACTRUAL_TXPOWER="$(($MAX_TXPOWER - 9))"
+#    elif [ "$R_TXPOWER" = "20" ]; then
+#        ACTRUAL_TXPOWER=$POWER_MIN
+#    else
+#        ACTRUAL_TXPOWER="$MAX_TXPOWER"
+#    fi
+#
+#    echo "AP_HIDESSID is ${AP_HIDESSID}"
+#    echo "ACTRUAL_TXPOWER is ${ACTRUAL_TXPOWER}"
+#    iwconfig ${APNAME} txpower ${ACTRUAL_TXPOWER}
+#fi
+ 
+if [ "${MODE}" != "sta" ]; then
+    if [ "${HIDE_SSID}" = "1" ]; then
+         iwpriv ${APNAME} hide_ssid 1
+    fi
+
+    if [ "${ISOLATION}" = "0" ]; then
+    iwpriv ${APNAME} ap_bridge 1
+    elif [ "${ISOLATION}" = "1" ]; then 
+    iwpriv ${APNAME} ap_bridge 0
+    fi
+
+    if [ "${R_DTIM}" != "" ]; then
+        iwpriv ${APNAME} dtim_period ${R_DTIM}
+    fi
+    
+    if [ "$ACL_POLICY" = "1" ];then
+        iwpriv ${APNAME} maccmd 1
+    elif [ "$ACL_POLICY" = "2" ];then
+        iwpriv ${APNAME} maccmd 2
+    else
+        iwpriv ${APNAME} maccmd 0
+    fi
+   
+
+    while [ "${ACL_LIST}" != "" ]
+    do
+        local current_mac=""
+        #eval "current_mac=`$(echo $ACL_LIST | cut -f 1 -d ';')`"
+        current_mac=`echo $ACL_LIST | cut -f 1 -d ';'`
+        ACL_LIST="${ACL_LIST#*;}"
+        if [ "${current_mac}" != "" ]; then
+            iwpriv ${APNAME} addmac ${current_mac}
+        fi
+    done
+fi
+
+## disable DCS for Repeater modes
+if [ "${MODE}" = "sta" ]; then
+    if [ "${SUB_MODE}" = "wds" -o "${SUB_MODE}" = "ext" ]; then
+        iwpriv wifi$IFNUM dcs_enable 0
+    fi
+
+    if [ "${STA_EXT}" = "1" ]; then
+        iwpriv wifi$IFNUM dcs_enable 0
+    fi
+fi
+
+
+get_rule_value()
+{
+    local rule_name=$1
+    local rule_index=$2
+    local rule_entry=$3
+    rule_content="$(nvram show $rule_name $rule_index $rule_entry | sed -e 's/\\/\\\\/g;s/"/\\\"/g;s/`/\\\`/g;')"
+    #echo $rule_content | sed -e "s/'/\\\'/g"
+    echo "$rule_content" 
+}
+
+## set rssi threshold, value from nvram
+if [ "${MODE}" = "sta" -a "${IFNUM}" = "0" ]; then
+    index_if=0
+    index_apcli=0
+
+    rule="wl${index_if}_apcli_rule"
+    for item in connrssi disconnrssi; do {
+        eval "wifi${index_if}_apcli_${item}=\"$(get_rule_value ${rule} ${index_apcli} ${item})\""
+    } done
+
+    export STA0_CONNRSSI="${wifi0_apcli_connrssi}"
+    echo "MAKEVAP_PRINT: STA0_CONNRSSI is ${STA0_CONNRSSI}"
+    export STA0_DISCONNRSSI="${wifi0_apcli_disconnrssi}"
+    echo "MAKEVAP_PRINT: STA0_DISCONNRSSI is ${STA0_DISCONNRSSI}"
+
+    if [ -n "${STA0_CONNRSSI}" ]; then
+        DELTA_STA0_CONNRSSI=$((STA0_CONNRSSI+95))
+        echo iwpriv sta0 connrssi ${DELTA_STA0_CONNRSSI}
+        iwpriv sta0 connrssi ${DELTA_STA0_CONNRSSI}
+    fi
+    if [ -n "${STA0_DISCONNRSSI}" ]; then
+        DELTA_STA0_DISCONNRSSI=$((STA0_DISCONNRSSI+95))
+        echo iwpriv sta0 disconnrssi ${DELTA_STA0_DISCONNRSSI}
+        iwpriv sta0 disconnrssi $DELTA_STA0_DISCONNRSSI
+    fi
+fi
+
+if [ "${MODE}" = "sta" -a "${IFNUM}" = "0" ]; then
+    index_if=0
+    index_apcli=0
+
+    rule="wl${index_if}_apcli_rule"
+    
+    item="addrmode"
+    eval "wifi${index_if}_apcli_${item}=\"$(get_rule_value ${rule} ${index_apcli} ${item})\""
+
+    #overwrite wds and extap here
+    if [ "${wifi0_apcli_addrmode}" = "1" ]; then
+        iwpriv ${APNAME} wds 1
+        iwpriv ${APNAME} extap 0
+    else
+        iwpriv ${APNAME} wds 0
+        iwpriv ${APNAME} extap 1
+    fi
+fi
+
+echo Created ${APNAME} mode ${MODE} for "${ESSID}"

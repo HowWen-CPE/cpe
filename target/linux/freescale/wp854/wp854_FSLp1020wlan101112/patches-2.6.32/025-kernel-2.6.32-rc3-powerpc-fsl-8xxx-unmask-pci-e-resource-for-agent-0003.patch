@@ -1,0 +1,55 @@
+From 1f50cc318a22c0c1501c23fe9cb537c97e3a592c Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Wed, 7 Oct 2009 15:02:04 +0530
+Subject: [PATCH v2 3/7] powerpc/fsl: 8xxx: unmask pci(e) resource for agent mode
+
+Also does the PCIe fixup only for the host-pci(e) bridge.
+
+This patch was originally written by Jason Jin and Mingkai Hu
+for mpc8536.
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+v2: No change
+
+ arch/powerpc/kernel/pci_32.c  |    2 +-
+ arch/powerpc/sysdev/fsl_pci.c |   10 +++++++---
+ 2 files changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/arch/powerpc/kernel/pci_32.c b/arch/powerpc/kernel/pci_32.c
+index c13668c..bb8a468 100644
+--- a/arch/powerpc/kernel/pci_32.c
++++ b/arch/powerpc/kernel/pci_32.c
+@@ -57,7 +57,7 @@ fixup_hide_host_resource_fsl(struct pci_dev *dev)
+ 	if ((class == PCI_CLASS_PROCESSOR_POWERPC ||
+ 	     class == PCI_CLASS_BRIDGE_OTHER) &&
+ 		(dev->hdr_type == PCI_HEADER_TYPE_NORMAL) &&
+-		(dev->bus->parent == NULL)) {
++		(!class & 0xf) && (dev->bus->parent == NULL)) {
+ 		for (i = 0; i < DEVICE_COUNT_RESOURCE; i++) {
+ 			dev->resource[i].start = 0;
+ 			dev->resource[i].end = 0;
+diff --git a/arch/powerpc/sysdev/fsl_pci.c b/arch/powerpc/sysdev/fsl_pci.c
+index ae88b14..bcede1e 100644
+--- a/arch/powerpc/sysdev/fsl_pci.c
++++ b/arch/powerpc/sysdev/fsl_pci.c
+@@ -41,9 +41,13 @@ static void __init quirk_fsl_pcie_header(struct pci_dev *dev)
+ 	if (!pci_find_capability(dev, PCI_CAP_ID_EXP))
+ 		return;
+ 
+-	dev->class = PCI_CLASS_BRIDGE_PCI << 8;
+-	fsl_pcie_bus_fixup = 1;
+-	return;
++	/*
++	 * PCIe fixup for RC's only
++	 */
++	if (dev->hdr_type == PCI_HEADER_TYPE_BRIDGE) {
++		dev->class = PCI_CLASS_BRIDGE_PCI << 8;
++		fsl_pcie_bus_fixup = 1;
++	}
+ }
+ 
+ static int __init fsl_pcie_check_link(struct pci_controller *hose)
+-- 
+1.5.6.5
+

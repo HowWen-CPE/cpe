@@ -1,0 +1,26 @@
+From 97ae3a621d0721e0694216bc4d00334b497560b7 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Thu, 4 Mar 2010 14:03:58 +0530
+Subject: [PATCH] p1_p2_rdb: Remove printing of the board revision.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ board/freescale/p1_p2_rdb/p1_p2_rdb.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/board/freescale/p1_p2_rdb/p1_p2_rdb.c b/board/freescale/p1_p2_rdb/p1_p2_rdb.c
+index 14e44b2..d79e6aa 100644
+--- a/board/freescale/p1_p2_rdb/p1_p2_rdb.c
++++ b/board/freescale/p1_p2_rdb/p1_p2_rdb.c
+@@ -122,7 +122,7 @@ int checkboard (void)
+ 		panic ("Unexpected Board REV %x detected!!\n", board_rev_gpio);
+ 
+ 	cpu = gd->cpu;
+-	printf ("Board: %sRDB Rev%c\n", cpu->name, board_rev);
++	printf ("Board: %sRDB\n", cpu->name);
+ 	setbits_be32(&pgpio->gpdir, GPIO_DIR);
+ 
+ /*
+-- 
+1.5.6.3
+

@@ -1,0 +1,11 @@
+--- linux-2.6.36-ra4110/ralink/Kconfig	2012-12-10 16:31:53.000000000 +0800
++++ linux-2.6.36/ralink/Kconfig	2012-12-17 17:28:18.462890783 +0800
+@@ -92,7 +92,7 @@
+ 	bool "3T3R (RT3883)"
+ endchoice
+ 
+-#source "drivers/net/wireless/rt2860v2_ap/Kconfig"
++source "drivers/net/wireless/rt2860v2_ap/Kconfig"
+ config  RA_CLASSIFIER
+ 	tristate "Ralink Flow Classifier"
+ 	depends on RT2860V2_AP_VIDEO_TURBINE || RT2860V2_STA_VIDEO_TURBINE

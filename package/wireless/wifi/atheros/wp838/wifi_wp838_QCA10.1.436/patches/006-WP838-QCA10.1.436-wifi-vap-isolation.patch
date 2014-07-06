@@ -1,0 +1,244 @@
+--- a/drivers/wlan_modules/os/linux/include/ieee80211_ioctl.h
++++ b/drivers/wlan_modules/os/linux/include/ieee80211_ioctl.h
+@@ -948,6 +948,9 @@ enum {
+     IEEE80211_PARAM_GET_CAC                 = 309,/* to get status of CAC period */
+     IEEE80211_PARAM_MAX_SCANENTRY           = 310,/* MAX scan entry */
+     IEEE80211_PARAM_SCANENTRY_TIMEOUT       = 311,/* Scan entry timeout value */
++    /*add for vap isolation function, daniel@liteon,2013-12-26----->*/
++    IEEE80211_PARAM_APISOLATION = 312, 
++    /*<-----daniel@liteon,2013-12-26*/
+ };
+ /*
+  * New get/set params for p2p.
+--- a/drivers/wlan_modules/os/linux/src/ieee80211_aponly.c
++++ b/drivers/wlan_modules/os/linux/src/ieee80211_aponly.c
+@@ -8268,6 +8268,10 @@ wlan_vap_send_aponly(wlan_if_t vap, wbuf
+     u_int8_t *daddr;
+     int is_data,retval;
+ 
++    /*add for vap isolation function, daniel@liteon,2013-12-26----->*/
++    struct ieee80211com *ic = vap->iv_ic;
++    /*<-----daniel@liteon,2013-12-26*/
++
+     /* 
+      * Find the node for the destination so we can do
+      * things like power save and fast frames aggregation.
+@@ -8319,7 +8323,33 @@ wlan_vap_send_aponly(wlan_if_t vap, wbuf
+         /* NB: ieee80211_find_txnode does stat+msg */
+         goto bad;
+     }
++   
++  
++   /*add for vap isolation function, daniel@liteon,2013-12-26----->*/
++   //when VLAN function added in the furture, the code should be modified,because VLAN has higher priority than ISOLATION
++  if ((vap->iv_ic->ic_flags & IEEE80211_F_APISOLATION) && (vap->iv_opmode == IEEE80211_M_HOSTAP))
++  {
++	 
++	 struct ieee80211_node *ni2 = NULL;
++	 struct ieee80211_node_table *nt;
++	 nt = &vap->iv_ic->ic_sta;
++	 
++	 if(nt){
++  		ni2 = ieee80211_find_node(nt, eh->ether_shost);		
++	 }
++
++        if (ni2  && (ni2->ni_vap != ni->ni_vap)  && (ni2->ni_vap->iv_opmode == IEEE80211_M_HOSTAP))
++        {
++		ieee80211_free_node(ni2);		
++		goto bad; /* ap isolation */
++        }
++         if(ni2)
++        	ieee80211_free_node(ni2);    
++  }
+ 
++   /*<-----daniel@liteon,2013-12-26*/
++   
++  
+     /* calculate priority so driver can find the tx queue */
+     if (unlikely(ieee80211_classify_aponly(ni, wbuf))) {
+         IEEE80211_DPRINTF(vap, IEEE80211_MSG_OUTPUT,
+--- a/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c
++++ b/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c
+@@ -4884,7 +4884,19 @@ ieee80211_ioctl_setparam(struct net_devi
+                 osif_vap_init(tmpdev, RESCAN);
+         }
+         break;
+-
++    
++     /*add for vap isolation function, daniel@liteon,2013-12-26----->*/
++     case IEEE80211_PARAM_APISOLATION:
++	 if (vap->iv_opmode == IEEE80211_M_HOSTAP || vap->iv_opmode == IEEE80211_M_IBSS)
++	 {
++		if (value )
++			ic->ic_flags |= IEEE80211_F_APISOLATION;
++		else
++			ic->ic_flags &= ~IEEE80211_F_APISOLATION;
++		break;
++	 }
++    /*<-----daniel@liteon,2013-12-26*/	
++    
+     case IEEE80211_PARAM_AUTHMODE:
+         IEEE80211_DPRINTF(vap, IEEE80211_MSG_IOCTL, "set IEEE80211_IOC_AUTHMODE to %s\n",
+         (value == IEEE80211_AUTH_WPA) ? "WPA" : (value == IEEE80211_AUTH_8021X) ? "802.1x" :
+@@ -8537,7 +8549,15 @@ ieee80211_ioctl_getparam(struct net_devi
+     case IEEE80211_PARAM_COEXT_DISABLE:
+         param[0] = ((ic->ic_flags & IEEE80211_F_COEXT_DISABLE) != 0);
+         break;
+-
++		
++    /*add for vap isolation function, daniel@liteon,2013-12-26----->*/
++	
++     case IEEE80211_PARAM_APISOLATION:
++    	param[0] = ((ic->ic_flags & IEEE80211_F_APISOLATION) != 0);
++    	break;
++		
++    /*<-----daniel@liteon,2013-12-26*/
++	
+     case IEEE80211_PARAM_AUTHMODE:
+         //fixme how it used to be done: param[0] = osifp->authmode;
+         {
+@@ -14550,7 +14570,12 @@ static const struct iw_priv_args ieee802
+     IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "scanentryage" },
+     { IEEE80211_PARAM_SCANENTRY_TIMEOUT,
+     0,IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_scanentryage" },
+-
++    /*add for vap isolation function, daniel@liteon,2013-12-26----->*/
++    { IEEE80211_PARAM_APISOLATION,
++      IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "apisolation" },
++    { IEEE80211_PARAM_APISOLATION,
++      0, IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, "get_apisolation" },
++    /*<-----daniel@liteon,2013-12-26*/
+ };
+ 
+ 
+--- a/drivers/wlan_modules/os/linux/src/osif_umac.c
++++ b/drivers/wlan_modules/os/linux/src/osif_umac.c
+@@ -106,6 +106,12 @@ extern void osif_pltfrm_delete_vap(osif_
+ extern void osif_pltfrm_record_macinfor(unsigned char unit, unsigned char* mac);
+ #endif
+ 
++/*add for vap isolation function, daniel@liteon,2013-12-26----->*/
++extern struct ieee80211_node * ieee80211_find_txnode_aponly(struct ieee80211vap *vap, const u_int8_t *macaddr);
++/*<-----daniel@liteon,2013-12-26*/
++
++
++
+ #if UMAC_SUPPORT_IBSS
+ static int
+ osif_ibss_init(struct net_device *dev);
+@@ -3524,6 +3530,11 @@ osif_vap_hardstart_generic(struct sk_buf
+     struct ether_header *eh = (struct ether_header *)skb->data;
+     int send_err=0;
+ 
++   /*add for vap isolation function, daniel@liteon,2013-12-26----->*/
++   struct ieee80211com *ic = vap->iv_ic;
++   struct ieee80211_node *ni = NULL;
++   /*<-----daniel@liteon,2013-12-26*/
++
+     spin_lock(&osdev->tx_lock);
+     if (!osdev->is_up) {
+         goto bad;
+@@ -3535,6 +3546,36 @@ osif_vap_hardstart_generic(struct sk_buf
+         (IEEE80211_IS_CHAN_RADAR(vap->iv_bsschan))) {
+         goto bad;
+     }
++/*add for vap isolation function, daniel@liteon,2013-12-26----->*/
++//when VLAN function added in the furture, the code should be modified,because VLAN has higher priority than ISOLATION
++if ((vap->iv_ic->ic_flags & IEEE80211_F_APISOLATION) && (vap->iv_opmode == IEEE80211_M_HOSTAP))
++{  
++       struct ieee80211_node *ni2 = NULL;
++       struct ieee80211_node_table *nt=&vap->iv_ic->ic_sta;	 
++       struct ether_header *eh = (struct ether_header *)skb->data;
++	 
++       ni = ieee80211_find_txnode_aponly(vap, eh->ether_dhost);
++    	if (unlikely(!(ni==NULL))) 	    
++    	{
++		if(nt){
++			   ni2 = ieee80211_find_node(nt, eh->ether_shost);
++		}   
++		
++	        if (ni2 && (ni2->ni_vap->iv_opmode == IEEE80211_M_HOSTAP)&&(ni2->ni_vap != ni->ni_vap))
++	        {
++			ieee80211_free_node(ni2);
++			ieee80211_free_node(ni);
++			goto bad; /* ap isolation */
++	        } 
++			
++	         if(ni2)
++	        	ieee80211_free_node(ni2);
++		  if(ni)
++		  	ieee80211_free_node(ni);
++    	}   
++}
++/*<-----daniel@liteon,2013-12-26*/
++
+ #ifdef notyet
+     /* if the vap is configured in 3 address forwarding
+     * mode, then clone the MAC address if necessary
+@@ -3783,6 +3824,12 @@ osif_ol_vap_hardstart_fast(struct sk_buf
+     uint32_t start_idx = osdev->nbuf_arr_pi; /* NOTE : nbuf_arr_pi = 0, always */
+     uint32_t num_msdus = 1;
+ 
++
++    /*add for vap isolation function, daniel@liteon,2013-12-26----->*/
++    struct ieee80211com *ic = vap->iv_ic; 
++    struct ieee80211_node *ni = NULL;
++   /*<-----daniel@liteon,2013-12-26*/
++	
+     ASSERT(osdev->is_up);
+ 
+     /* Update packet count */
+@@ -3812,6 +3859,37 @@ osif_ol_vap_hardstart_fast(struct sk_buf
+     }
+ #endif /* ATH_EXT_AP */
+ 
++     /*add for vap isolation function, daniel@liteon,2013-12-26----->*/
++    //when VLAN function added in the furture, the code should be modified,because VLAN has higher priority than ISOLATION
++    if((vap->iv_ic->ic_flags & IEEE80211_F_APISOLATION) && (vap->iv_opmode == IEEE80211_M_HOSTAP))
++    {
++       struct ieee80211_node *ni2 = NULL;
++       struct ieee80211_node_table *nt=&vap->iv_ic->ic_sta;	 
++       struct ether_header *eh = (struct ether_header *)skb->data;	 
++	 
++       ni = ieee80211_find_txnode_aponly(vap, eh->ether_dhost);
++    	if (unlikely(!(ni==NULL))) 	
++    	{
++		if(nt){
++			   ni2 = ieee80211_find_node(nt, eh->ether_shost);
++		}
++
++	        if (ni2 && (ni2->ni_vap->iv_opmode == IEEE80211_M_HOSTAP)&&(ni2->ni_vap != ni->ni_vap))
++	        {	         
++			ieee80211_free_node(ni2);
++			ieee80211_free_node(ni);
++			goto bad; /* ap isolation */
++	        }       
++	         if(ni2)
++	        	ieee80211_free_node(ni2);
++		  if(ni)
++		  	ieee80211_free_node(ni);
++    	}	  
++    }
++		
++   /*<-----daniel@liteon,2013-12-26*/
++       
++
+     ASSERT(osdev->nbuf_arr);
+ 
+     /* TODO : Check space in the nbuf_arr */
+--- a/drivers/wlan_modules/umac/include/ieee80211_var.h
++++ b/drivers/wlan_modules/umac/include/ieee80211_var.h
+@@ -1937,6 +1937,13 @@ typedef struct ieee80211vap {
+ /* NB: this is intentionally setup to be IEEE80211_CAPINFO_PRIVACY */
+ #define IEEE80211_F_PRIVACY              0x00000010  /* CONF: privacy enabled */
+ #define IEEE80211_F_PUREG                0x00000020  /* CONF: 11g w/o 11b sta's */
++
++/*add for vap isolation function, daniel@liteon,2013-12-26----->*/
++
++#define IEEE80211_F_APISOLATION  0x00000040  /* CONF: VAP isolation */
++
++/*<-----daniel@liteon,2013-12-26*/
++
+ #define IEEE80211_F_SCAN                 0x00000080  /* STATUS: scanning */
+ #define IEEE80211_F_SIBSS                0x00000200  /* STATUS: start IBSS */
+ /* NB: this is intentionally setup to be IEEE80211_CAPINFO_SHORT_SLOTTIME */

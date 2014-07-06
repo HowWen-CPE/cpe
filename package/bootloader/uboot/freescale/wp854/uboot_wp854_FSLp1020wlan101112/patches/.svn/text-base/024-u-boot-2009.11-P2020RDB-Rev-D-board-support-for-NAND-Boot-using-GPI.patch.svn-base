@@ -1,0 +1,39 @@
+From fcdf98931ae4b0087f9291687ccc78b1d8188fee Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Thu, 4 Mar 2010 11:22:57 +0530
+Subject: [PATCH] P2020RDB Rev D board support for NAND Boot using GPIO
+
+Signed-off-by: Dipen Dudhat <dipen.dudhat@freescale.com>
+---
+ nand_spl/board/freescale/p1_p2_rdb/nand_boot.c |    8 +++++++-
+ 1 files changed, 7 insertions(+), 1 deletions(-)
+
+diff --git a/nand_spl/board/freescale/p1_p2_rdb/nand_boot.c b/nand_spl/board/freescale/p1_p2_rdb/nand_boot.c
+index 35e58a3..a3d4cff 100644
+--- a/nand_spl/board/freescale/p1_p2_rdb/nand_boot.c
++++ b/nand_spl/board/freescale/p1_p2_rdb/nand_boot.c
+@@ -32,6 +32,7 @@
+ #define BOARDREV_MASK   0x10100000
+ #define BOARDREV_B      0x10100000
+ #define BOARDREV_C      0x00100000
++#define BOARDREV_D      0x00000000
+ 
+ #define SYSCLK_66       66666666
+ #define SYSCLK_50       50000000
+@@ -110,7 +111,12 @@ void board_init_f(ulong bootflag)
+ 	val = pgpio->gpdat;
+ 	sysclk_mask = val & SYSCLK_MASK;
+ 	temp = val & BOARDREV_MASK;
+-	if (temp == BOARDREV_C) {
++	if (temp == BOARDREV_D) {
++		if(sysclk_mask == 0)
++			sys_clk = SYSCLK_66;
++		else
++			sys_clk = SYSCLK_100;
++	} else if (temp == BOARDREV_C) {
+ 		if(sysclk_mask == 0)
+ 			sys_clk = SYSCLK_66;
+ 		else
+-- 
+1.5.6.3
+

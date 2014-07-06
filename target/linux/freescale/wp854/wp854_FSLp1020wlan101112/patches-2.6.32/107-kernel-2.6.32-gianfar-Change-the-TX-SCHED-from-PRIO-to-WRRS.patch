@@ -1,0 +1,111 @@
+From d460e58877c50fff2b98cf7e3a1eedbd75851188 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Thu, 4 Mar 2010 12:16:42 +0530
+Subject: [PATCH] gianfar: Change the TX SCHED from PRIO to WRRS
+
+1. With PRIO scheduling, priority is always given to Q0
+and when there are multiple active queues, we will notice
+a performance degradation for larger byte packtes.
+To resolve the performance issue for larger byte packets use
+WRRS with 0xFF as weight value for each queue.
+Also note that for proper functioning of WRRS, the weight for
+each queue should be greater than the max packet size that is
+supported by default. Hence we used value 0xFF (max value) for
+each queue.
+
+2. Also made minor changes to the poll function to reduce the number
+of iterations when multiple queues are active.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/gianfar.c |   17 ++++++++++++-----
+ drivers/net/gianfar.h |    3 +++
+ 2 files changed, 15 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index e73d933..6bbf07c 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -2428,7 +2428,10 @@ int startup_gfar(struct net_device *dev)
+ 	if (dev->features & NETIF_F_IP_CSUM)
+ 		tctrl |= TCTRL_INIT_CSUM;
+ 
+-	tctrl |= TCTRL_TXSCHED_PRIO;
++	tctrl |= TCTRL_TXSCHED_WRRS;
++
++	gfar_write(&regs->tr03wt, WRRS_TR03WT);
++	gfar_write(&regs->tr47wt, WRRS_TR47WT);
+ 
+ 	gfar_write(&regs->tctrl, tctrl);
+ 
+@@ -3753,7 +3756,8 @@ static int gfar_poll_tx(struct napi_struct *napi, int budget)
+ 
+ 		gfar_write(&regs->ievent, IEVENT_TX_MASK);
+ 
+-		for (i = 0; i < priv->num_tx_queues; i++) {
++		for_each_bit(i, &gfargrp->tx_bit_map, priv->num_tx_queues) {
++			mask = mask >> i;
+ 			if (tstat & mask) {
+ 				tx_queue = priv->tx_queue[i];
+ 				spin_lock_irqsave(&tx_queue->txlock, flags);
+@@ -3765,7 +3769,7 @@ static int gfar_poll_tx(struct napi_struct *napi, int budget)
+ 				tx_cleaned += tx_cleaned_per_queue;
+ 				tx_cleaned_per_queue = 0;
+ 			}
+-			mask = mask >> 0x1;
++			mask = TSTAT_TXF0_MASK;
+ 		}
+ 
+ 		budget = (num_act_qs * DEFAULT_TX_RING_SIZE) + 1;
+@@ -3778,6 +3782,7 @@ static int gfar_poll_tx(struct napi_struct *napi, int budget)
+ 		if (!priv->sps) {
+ #endif
+ 			spin_lock_irq(&gfargrp->grplock);
++			gfar_write(&regs->tstat, tstat);
+ 			imask = gfar_read(&regs->imask);
+ 			imask |= IMASK_DEFAULT_TX;
+ 			gfar_write(&regs->ievent, IEVENT_TX_MASK);
+@@ -3824,7 +3829,8 @@ static int gfar_poll_rx(struct napi_struct *napi, int budget)
+ 
+ 	gfar_write(&regs->ievent, IEVENT_RX_MASK);
+ 
+-	for (i = 0; i < priv->num_rx_queues; i++) {
++	for_each_bit(i, &gfargrp->rx_bit_map, priv->num_rx_queues) {
++		mask = mask >> i;
+ 		if (rstat & mask) {
+ 			rstat_rhalt |= (RSTAT_CLEAR_RHALT >> i);
+ 			rx_queue = priv->rx_queue[i];
+@@ -3832,7 +3838,7 @@ static int gfar_poll_rx(struct napi_struct *napi, int budget)
+ 							budget_per_queue);
+ 			rx_cleaned += rx_cleaned_per_queue;
+ 		}
+-		mask = mask >> 0x1;
++		mask = RSTAT_RXF0_MASK;
+ 	}
+ 
+ 	if (rx_cleaned < budget) {
+@@ -3841,6 +3847,7 @@ static int gfar_poll_rx(struct napi_struct *napi, int budget)
+ 		/* Clear the halt bit in RSTAT */
+ 		spin_lock_irq(&gfargrp->grplock);
+ 		gfar_write(&regs->rstat, rstat_rhalt);
++		gfar_write(&regs->rstat, rstat);
+ 		imask = gfar_read(&regs->imask);
+ 		imask |= IMASK_DEFAULT_RX;
+ 		gfar_write(&regs->ievent, IEVENT_RX_MASK);
+diff --git a/drivers/net/gianfar.h b/drivers/net/gianfar.h
+index 46a4c90..2ebbf99 100644
+--- a/drivers/net/gianfar.h
++++ b/drivers/net/gianfar.h
+@@ -250,6 +250,9 @@ extern const char gfar_driver_version[];
+ #define TR47WT_WT6_MASK		0x0000FF00
+ #define TR47WT_WT7_MASK		0x000000FF
+ 
++#define WRRS_TR03WT		0xFFFFFFFF
++#define WRRS_TR47WT		0xFFFFFFFF
++
+ /* Rqueue control */
+ #define RQUEUE_EX0		0x00800000
+ #define RQUEUE_EX1		0x00400000
+-- 
+1.5.6.3
+

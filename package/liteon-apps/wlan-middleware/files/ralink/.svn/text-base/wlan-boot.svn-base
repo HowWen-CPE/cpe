@@ -1,0 +1,123 @@
+#!/bin/sh /etc/rc.common 
+# Copyright (C) 2006 OpenWrt.org
+#. /etc/arch.sh
+
+set -x
+#START=99
+#log_msg="MON-server"
+#board_type="$(nvram show board_model_rule 0 bd_model)"
+
+reset_iface()
+{
+    local idx=0
+    local wlmode="$(nvram show system_mode 0 name)"
+    local radio_on="$(nvram show wl_ap_basic_rule 0 enable)"
+    if [ "$wlmode" = "sta0" ]; then
+        if [ "$(nvram show wl0_apcli_rule 0 macrepeater)" = "0" ]; then
+            while [ "$idx" -lt "8" ]; do
+                #brctl delif br0 rai$idx
+                ifconfig rai$idx down
+                idx=$(($idx + 1))
+            done
+
+        fi
+    elif [ "$wlmode" = "wisp0" ]; then
+        while [ "$idx" -lt "8" ]; do
+            #brctl delif br0 rai$idx
+            ifconfig rai$idx down
+            idx=$(($idx + 1))
+        done
+    elif [ "$wlmode" = "ap" -o "$wlmode" = "normal" ]; then
+        #brctl delif br0 apclii0
+        ifconfig apclii0 down
+        if [ "$radio_on" = "0" ]; then
+            while [ "$idx" -lt "8" ]; do
+                #brctl delif br0 rai$idx
+                ifconfig rai$idx down
+                idx=$(($idx + 1))
+            done
+        fi     
+    fi
+}
+
+start() {
+    #[ "$(nvram get license_invalid)" != "0" ] && COMMIT=1
+
+    #cat /etc/sysctl.conf.template > /tmp/sysctl.conf
+    #/sbin/ezp-nat
+
+    # Save value (bootcount and NVRAM variables for upgrade/downgrade)
+    #${COMMIT:+nvram commit}
+    # Watchdog
+    #[ -c /dev/watchdog ] && watchdog -t 5 /dev/watchdog
+    # Sysctl
+    #[ -f /etc/sysctl.conf ] && sysctl -p >&-
+    # How many sessions we should specified.
+    #echo $(nvram get ct_max) > /proc/sys/net/ipv4/netfilter/ip_conntrack_max
+    # enable gpio button
+    #echo "1" > /proc/ezp_gpio
+    # if under universal or wisp mode, then apply extension channel behavior
+    local wlmode="$(nvram show system_mode 0 name)"
+    #local wlmode0="$(nvram show wl_wisp_mode_rule 0 mode2.4g)"
+    #local wlmode1="$(nvram show wl_wisp_mode_rule 0 mode5g)"
+    local wpa_mode="$(nvram show wl0_apcli_rule 0 secmode)"
+
+    local radio_enable="$(nvram show wl_ap_basic_rule 0 enable)"
+
+    if [ "$wlmode" = "ap" -o "$wlmode" = "normal" ]; then
+         iwpriv rai0 set DeviceMode=0
+    fi
+    if [ "$wlmode" = "sta0" ]; then
+         iwpriv rai0 set DeviceMode=1
+    fi
+    if [ "$wlmode" = "wisp0" ]; then
+         iwpriv rai0 set DeviceMode=2
+    fi
+
+    if [ "$wlmode" = "sta0" -o "$wlmode" = "wisp0" ]; then
+        #disable stp both ur and wisp -- alvin add
+        #brctl stp br0 off
+        #sleep 1
+              
+        /etc/wl/plat-wl0-ctrl "$wlmode"
+    else
+        /etc/wl/plat-wl0-ctrl "basic" #debug for DUT reboot read Security Mode (kissth add 2012-07-16)
+    fi
+    #echo "3" > /proc/sys/vm/drop_caches
+    # boot led stop
+    #arch_led_boot_stop
+    #system up, the boot led will be on always
+    #arch_led_boot_always_on
+    #/sbin/ezp-wl-ctrl "antenna"
+
+    #Added by Mario Huang for VAP Up and Down
+    /etc/wl/plat-chk-wl-enable
+
+    reset_iface
+    #/sbin/insmod mt7620_wdt   #insmod external watchdog
+    #[ -c /dev/mt7620_wdt ] || mknod /dev/mt7620_wdt c 10 44
+    if [ "$wlmode" = "sta0" ]; then
+       if [ "$wpa_mode" = "wpa" -o "$wpa_mode" = "wpa2" ]; then
+                /etc/wl/plat-wl0-ctrl "start_wpa_supplicant"
+       fi
+    fi
+    #Added by Mario Huang, if radio is Disable in AP/Router mode, Set RadioOn as down
+    if [ "$wlmode" = "ap" -o "$wlmode" = "normal" ]; then
+        [ "radio_enable" = "0" ] && {
+	    iwpriv rai0 set RadioOn=0
+        } || {
+	    iwpriv rai0 set RadioOn=1
+        }
+    else
+        iwpriv rai0 set RadioOn=1
+    fi
+    #startup telnet
+    #local enable="$(nvram get telnet_enable)"
+    #local port="$(nvram get telnet_port)"
+    #if [ $enable == "1" ];then
+    #    /usr/sbin/telnetd -p $port
+    #fi
+    return $err
+}
+    
+start         

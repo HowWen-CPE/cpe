@@ -1,0 +1,86 @@
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/lmac/dfs/dfs.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/lmac/dfs/dfs.c	2013-08-27 07:05:21.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/lmac/dfs/dfs.c	2014-03-18 09:38:56.209122593 +0800
+@@ -577,6 +577,7 @@
+ 	struct ath_dfs_phyerr_param peout;
+ 	struct ath_dfs *dfs = (struct ath_dfs *)ic->ic_dfs;
+ 	struct dfs_ioctl_params *dfsparams;
++	struct ieee80211_dfs_state *dfs_state = &ic->ic_dfs_state;	//get CAC info, Felix@liteon, 2014-3-10
+     u_int32_t val=0;
+ #ifndef ATH_DFS_RADAR_DETECTION_ONLY
+     struct dfsreq_nolinfo *nol;
+@@ -789,6 +790,17 @@
+                 nol = (struct dfsreq_nolinfo *) indata;
+ 		dfs_set_nol(dfs, (struct dfsreq_nolelem *)nol->dfs_nol, nol->ic_nchans);
+ 		break;
++		
++	/* check is cac done. Felix@liteon, 2014-3-10 -----> */
++	case DFS_IS_CAC_DONE:
++		if (!outdata || !outsize || *outsize < sizeof(u_int32_t)) {
++			error = -EINVAL;
++			break;
++			}
++		*outsize = sizeof(u_int32_t);
++		*((u_int32_t *)outdata) = ((u_int32_t)dfs_state->cac_timer_running & 0x00000002)?0:1;
++	break;
++		/* <----- Felix@liteon, 2014-3-10 */	
+ 
+     case DFS_SHOW_NOL:
+         dfs_print_nol(dfs);
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/lmac/dfs/dfs_ioctl.h
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/lmac/dfs/dfs_ioctl.h	2013-08-27 07:05:21.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/lmac/dfs/dfs_ioctl.h	2014-03-18 09:38:56.209122593 +0800
+@@ -35,7 +35,8 @@
+ #define DFS_SET_PEAK_MAG         17
+ #define DFS_IGNORE_CAC		18
+ #define DFS_SET_NOL_TIMEOUT		19
+-#define	DFS_LAST_IOCTL  	20 
++#define DFS_IS_CAC_DONE		20		//check if cac finished. Felix@liteon, 2014-3-10
++#define	DFS_LAST_IOCTL  	21
+ #ifndef IEEE80211_CHAN_MAX
+ #define IEEE80211_CHAN_MAX	255
+ #endif
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/umac/mlme/ieee80211_mlme_ap.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/umac/mlme/ieee80211_mlme_ap.c	2013-08-27 07:05:31.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/mlme/ieee80211_mlme_ap.c	2014-03-18 09:56:01.119543821 +0800
+@@ -293,6 +293,16 @@
+         chan =  vap->iv_des_chan[vap->iv_des_mode];
+     }
+ 
++	/* If a radar is coming, dfs will assign the new random channel to ic->ic_curchan */
++	/* but the channel info. of vap will not change. In this case, we pick the ic->ic_curchan */
++	/* to initial the vap. Felix@liteon, 2014-3-17, -----> */
++	#ifdef ATH_SUPPORT_DFS
++	if(IEEE80211_IS_CHAN_RADAR(chan)){
++			chan = ic->ic_curchan;
++	}
++	#endif
++	/* <----- Felix@liteon, 2014-3-17 */
++	
+     if (chan == NULL) {
+         return EINVAL;
+     }
+Index: wifi_QCA_10.1.436/perf_pwr_offload/drivers/host/wlan/lmac_offload_if/ol_if_ath.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/perf_pwr_offload/drivers/host/wlan/lmac_offload_if/ol_if_ath.c	2014-03-18 09:38:56.113122592 +0800
++++ wifi_QCA_10.1.436/perf_pwr_offload/drivers/host/wlan/lmac_offload_if/ol_if_ath.c	2014-03-18 09:47:30.337380688 +0800
+@@ -1794,6 +1794,16 @@
+     if (IEEE80211_M_HOSTAP == vap->iv_opmode) {
+         avn = OL_ATH_VAP_NET80211(vap);
+         scn = avn->av_sc;
++
++		/* Bug: If a radar is coming, all the VAP will be restart, but we hope the down VAP */
++		/* keeps down state. Felix@liteon, 2014-3-17 -----> */
++		#ifdef ATH_SUPPORT_DFS
++		if(vap->iv_state_info.iv_state == IEEE80211_S_INIT){
++			return;
++		}
++		#endif
++		/* <-----Felix@liteon, 2014-3-17 */
++		
+         if (wmi_unified_vdev_restart_send(scn->wmi_handle,
+             avn->av_if_id, chan,
+             chan->ic_freq, IEEE80211_IS_CHAN_DFS(chan))) {

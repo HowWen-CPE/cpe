@@ -1,0 +1,2211 @@
+diff -Nur boot_atheros/u-boot/board/ar7240/common/ar7240_pci.c boot_liteon/u-boot/board/ar7240/common/ar7240_pci.c
+--- boot_atheros/u-boot/board/ar7240/common/ar7240_pci.c	2013-04-03 13:43:13.000000000 +0800
++++ boot_liteon/u-boot/board/ar7240/common/ar7240_pci.c	2013-03-29 18:00:25.000000000 +0800
+@@ -202,7 +202,190 @@
+ }
+ 
+ #define print_llx(n)	__print_llx(n, str_##n)
++void pci_reset_again (void)
++{
++#ifdef CONFIG_AP123
++	return;
++#else
++	uint32_t cmd = 0, reg_val;
++
++
++	//printf("%s: PCIe PLL 0x%x\n", __func__, mips3_cp0_count_read());
++	//printf("%s: PCIe PLL 0x%x  0xb8000008 =  0x%08x\n", __func__, mips3_cp0_count_read(), ar7240_reg_rd(0xb8040008));
++
++	pci_udelay(100000);
++	//count ++;
++
++	if ((ar7240_reg_rd(WASP_BOOTSTRAP_REG) & WASP_REF_CLK_25) == 0) {
++		ar7240_reg_wr_nf(AR934X_PCIE_PLL_DITHER_DIV_MAX,
++			PCIE_PLL_DITHER_DIV_MAX_EN_DITHER_SET(0) |
++			PCIE_PLL_DITHER_DIV_MAX_USE_MAX_SET(1) |
++			PCIE_PLL_DITHER_DIV_MAX_DIV_MAX_INT_SET(0x20) |
++			PCIE_PLL_DITHER_DIV_MAX_DIV_MAX_FRAC_SET(0));
++	} else {
++#ifndef COMPRESSED_UBOOT
++		printf("%s: PCIe PLL not set for 40MHz refclk\n", __func__);
++#endif
++	}
+ 
++	ar7240_reg_rmw_set(AR7240_RESET, AR7240_RESET_PCIE);	// core in reset
++	pci_udelay(10000);
++	ar7240_reg_rmw_set(AR7240_RESET, AR7240_RESET_PCIE_PHY);// phy in reset
++	pci_udelay(10000);
++	ar7240_reg_rmw_clear(RST_MISC2_ADDRESS, RST_MISC2_PERSTN_RCPHY_SET(1)); // pci phy analog in reset
++	pci_udelay(10000);
++	ar7240_reg_wr(0x180f0000, 0x1ffc0);			// ltssm is disabled
++	pci_udelay(100);
++	ar7240_reg_wr_nf(AR7240_PCI_LCL_RESET, 0);	// End point in reset
++	pci_udelay(100000);
++
++
++	//ar7240_reg_rmw_clear(AR7240_RESET, AR7240_RESET_PCIE_PHY);
++
++	if ((ar7240_reg_rd(AR7240_REV_ID) & 0xf) == 0) {
++		ar7240_reg_wr_nf(AR934X_PCIE_PLL_CONFIG,
++			PCIE_PLL_CONFIG_REFDIV_SET(1) |
++			PCIE_PLL_CONFIG_BYPASS_SET(1) |
++			PCIE_PLL_CONFIG_PLLPWD_SET(1));
++		pci_udelay(10000);
++		ar7240_reg_wr_nf(AR934X_PCIE_PLL_CONFIG,
++			PCIE_PLL_CONFIG_REFDIV_SET(1) |
++			PCIE_PLL_CONFIG_BYPASS_SET(1) |
++			PCIE_PLL_CONFIG_PLLPWD_SET(0));
++		pci_udelay(1000);
++		ar7240_reg_wr_nf(AR934X_PCIE_PLL_CONFIG,
++			ar7240_reg_rd(AR934X_PCIE_PLL_CONFIG) &
++			(~PCIE_PLL_CONFIG_BYPASS_SET(1)));
++		pci_udelay(1000);
++	} else {
++		ar7240_reg_wr_nf(AR934X_PCIE_PLL_CONFIG,
++			PCIE_PLL_CONFIG_REFDIV_SET(2) |
++			PCIE_PLL_CONFIG_BYPASS_SET(1) |
++			PCIE_PLL_CONFIG_PLLPWD_SET(1));
++		pci_udelay(10000);
++
++		if ((ar7240_reg_rd(WASP_BOOTSTRAP_REG) & WASP_REF_CLK_25) == 0) {
++			ar7240_reg_wr_nf(0xb8116c00, (0x5 << 27) | (160 << 18) | 0);
++		} else {
++			ar7240_reg_wr_nf(0xb8116c00, (0x2 << 27) | (0x28 << 18) | 0);
++		}
++		do {
++			ar7240_reg_wr_nf(0xb8116c04, (0x1 << 30) | (0x4 << 26) | (0x32 << 19) | (1 << 16) | (3 << 13) | (0x1e << 7));
++			ar7240_reg_wr_nf(0xb8116c08, (6 << 23));
++			pci_udelay(10000);
++			ar7240_reg_wr_nf(0xb8116c04, (0x1 << 30) | (0x4 << 26) | (0x32 << 19) | (3 << 13) | (0x1e << 7));
++
++			ar7240_reg_rmw_clear(KSEG1ADDR(PCIe_DPLL3_ADDRESS), PCIe_DPLL3_DO_MEAS_SET(1));
++			ar7240_reg_rmw_set(KSEG1ADDR(PCIe_DPLL3_ADDRESS), PCIe_DPLL3_DO_MEAS_SET(1));
++
++			ar7240_reg_wr(0xb804000c, 1 << 2);
++
++			pci_udelay(1000);
++
++			while (((cmd = ar7240_reg_rd(PCIe_DPLL4_ADDRESS)) & PCIe_DPLL4_MEAS_DONE_SET(1)) == 0) {
++				printf("0x%x 0x%x 0x%x\n", KSEG1ADDR(PCIe_DPLL4_ADDRESS), cmd);
++				pci_udelay(10);
++			}
++
++			{ int i; for (i = 0; i < 100; i++) udelay(10); }
++
++		} while ((cmd = PCIe_DPLL3_SQSUM_DVC_GET(ar7240_reg_rd(PCIe_DPLL3_ADDRESS))) >= 0x40000);
++
++		ar7240_reg_rmw_clear(AR934X_PCIE_PLL_CONFIG, PCIE_PLL_CONFIG_PLLPWD_SET(1));
++		pci_udelay(10000);
++		ar7240_reg_rmw_clear(AR934X_PCIE_PLL_CONFIG, PCIE_PLL_CONFIG_BYPASS_SET(1));
++		pci_udelay(10000);
++
++	}
++	ar7240_reg_rmw_set(RST_MISC2_ADDRESS, RST_MISC2_PERSTN_RCPHY_SET(1)); // pci phy analog out of reset
++	pci_udelay(10000);
++
++	ar7240_reg_rmw_clear(AR7240_RESET, AR7240_RESET_PCIE_PHY);	// phy out of reset
++	pci_udelay(10000);
++
++	ar7240_reg_rmw_clear(AR7240_RESET, AR7240_RESET_PCIE);	// core out of reset
++	pci_udelay(1000);
++
++	cmd = PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER | PCI_COMMAND_INVALIDATE |
++	      PCI_COMMAND_PARITY|PCI_COMMAND_SERR|PCI_COMMAND_FAST_BACK;
++
++	ar7240_local_write_config(PCI_COMMAND, 4, cmd);		// pci cmd reg init
++	ar7240_local_write_config(0x20, 4, 0x1ff01000);		// membase setting
++	ar7240_local_write_config(0x24, 4, 0x1ff01000);		// prefetch membase setting
++
++
++	if ((is_ar7241() || is_ar7242() || is_wasp())) {
++		ar7240_reg_wr(0x180f0000, 0x1ffc1);		// ltssm enable
++	} else {
++		ar7240_reg_wr(0x180f0000, 0x1);
++	}
++	pci_udelay(100000);
++
++	ar7240_reg_wr_nf(AR7240_PCI_LCL_RESET, 4);		// EP out of reset
++	pci_udelay(100000);
++
++
++#ifdef COMPRESSED_UBOOT
++	pci_udelay(100);
++#else
++	/*
++	 *  Delay increased from 100 to 1000, so as to
++	 *  get the correct status from PCI LCL RESET register
++	 */
++	pci_udelay(100000);
++
++	/*
++	 * Check if the WLAN PCI-E H/W is present, If the
++	 * WLAN H/W is not present, skip the PCI platform
++	 * initialization code and return
++	 */
++
++	if (((ar7240_reg_rd(AR7240_PCI_LCL_RESET)) & 0x1) == 0x0) {
++		printf("*** Warning *** : PCIe WLAN Module not found !!!\n");
++		return;
++	}
++#endif
++
++#ifndef COMPRESSED_UBOOT
++	/*
++	 * Now, configure for u-boot tools
++	 */
++
++	hose.first_busno = 0;
++	hose.last_busno = 0xff;
++
++	/* System space */
++	pci_set_region(	&hose.regions[0],
++			0x80000000,
++			0x00000000,
++			32 * 1024 * 1024,
++			PCI_REGION_MEM | PCI_REGION_MEMORY);
++
++	/* PCI memory space */
++	pci_set_region(	&hose.regions[1],
++			0x10000000,
++			0x10000000,
++			128 * 1024 * 1024,
++			PCI_REGION_MEM);
++
++	hose.region_count = 2;
++
++	pci_register_hose(&hose);
++
++	pci_set_ops(	&hose,
++			pci_hose_read_config_byte_via_dword,
++			pci_hose_read_config_word_via_dword,
++			ar7240_pci_read_config,
++			pci_hose_write_config_byte_via_dword,
++			pci_hose_write_config_word_via_dword,
++			ar7240_pci_write_config);
++#endif
++	plat_dev_init();
++#endif	// CONFIG_AP123
++#ifdef COMPRESSED_UBOOT
++	return 0;
++#endif
++}
+ #ifdef COMPRESSED_UBOOT
+ int pci_init_board (void)
+ #else
+@@ -216,10 +399,10 @@
+ 
+ 
+ 	//printf("%s: PCIe PLL 0x%x\n", __func__, mips3_cp0_count_read());
+-	reg_val = ar7240_reg_rd(0xb804006c);
+-	ar7240_reg_wr(0xb804006c, reg_val | 2);
++	//reg_val = ar7240_reg_rd(0xb804006c);
++	//ar7240_reg_wr(0xb804006c, reg_val | 2);
+ 
+-	ar7240_reg_wr(0xb804000c, 1 << 2);
++	//ar7240_reg_wr(0xb804000c, 1 << 2);
+ 	//printf("%s: PCIe PLL 0x%x  0xb8000008 =  0x%08x\n", __func__, mips3_cp0_count_read(), ar7240_reg_rd(0xb8040008));
+ 
+ 	pci_udelay(100000);
+@@ -400,9 +583,15 @@
+ 	 * initialization code and return
+ 	 */
+ 
+-	if (((ar7240_reg_rd(AR7240_PCI_LCL_RESET)) & 0x1) == 0x0) {
+-		printf("*** Warning *** : PCIe WLAN Module not found !!!\n");
+-		return;
++        if (((ar7240_reg_rd(AR7240_PCI_LCL_RESET)) & 0x1) == 0x0) {
++                //--jack--2012.6.25
++                printf("*** Warning *** : PCIe WLAN Module not ready !!!\n");
++	        pci_reset_again();
++	        if (((ar7240_reg_rd(AR7240_PCI_LCL_RESET)) & 0x1) == 0x0){
++                      printf("*** Warning *** : PCIe WLAN Module not found !!!\n"); 
++		      return;
++	        } 
++                
+ 	}
+ #endif
+ 
+diff -Nur boot_atheros/u-boot/board/ar7240/common/ath_nand.c boot_liteon/u-boot/board/ar7240/common/ath_nand.c
+--- boot_atheros/u-boot/board/ar7240/common/ath_nand.c	2013-04-03 13:43:13.000000000 +0800
++++ boot_liteon/u-boot/board/ar7240/common/ath_nand.c	2013-03-29 18:00:25.000000000 +0800
+@@ -71,8 +71,8 @@
+ #define ATH_NF_GENERIC_SEQ_CTRL	(ATH_NAND_FLASH_BASE + 0x2b4u)
+ 
+ #define ATH_NF_TIMING_ASYN	0x11
+-#define ATH_NF_STATUS_OK	0xc0
+-#define ATH_NF_RD_STATUS_MASK	0xc7
++#define ATH_NF_STATUS_OK	0x40	//0xc0
++#define ATH_NF_RD_STATUS_MASK	0x47	//0xc7
+ 
+ #define ATH_NF_CTRL_SMALL_BLOCK_EN	(1 << 21)
+ 
+@@ -115,6 +115,7 @@
+ #define ATH_NF_CTRL_ADDR_CYCLE0_3	(3 <<  0)
+ #define ATH_NF_CTRL_ADDR_CYCLE0_4	(4 <<  0)
+ #define ATH_NF_CTRL_ADDR_CYCLE0_5	(5 <<  0)
++#define ATH_NF_CTRL_ADDR_CYCLE0(c)	((c) << 0)
+ 
+ 
+ #define ATH_NF_DMA_CTRL_DMA_START	(1 << 7)
+@@ -140,9 +141,20 @@
+ 
+ #define ATH_NF_ECC_CTRL_ERR_THRESH(x)	((x << 8) & (0x1fu << 8))
+ #define ATH_NF_ECC_CTRL_ECC_CAP(x)	((x << 5) & (0x07u << 5))
++#define ATH_NF_ECC_CTRL_ECC_2_BITS	ATH_NF_ECC_CTRL_ECC_CAP(0)
++#define ATH_NF_ECC_CTRL_ECC_4_BITS	ATH_NF_ECC_CTRL_ECC_CAP(1)
++#define ATH_NF_ECC_CTRL_ECC_6_BITS	ATH_NF_ECC_CTRL_ECC_CAP(2)
++#define ATH_NF_ECC_CTRL_ECC_8_BITS	ATH_NF_ECC_CTRL_ECC_CAP(3)
++#define ATH_NF_ECC_CTRL_ECC_10_BITS	ATH_NF_ECC_CTRL_ECC_CAP(4)
++#define ATH_NF_ECC_CTRL_ECC_12_BITS	ATH_NF_ECC_CTRL_ECC_CAP(5)
++#define ATH_NF_ECC_CTRL_ECC_14_BITS	ATH_NF_ECC_CTRL_ECC_CAP(6)
++#define ATH_NF_ECC_CTRL_ECC_16_BITS	ATH_NF_ECC_CTRL_ECC_CAP(7)
++
+ #define ATH_NF_ECC_CTRL_ERR_OVER	(1 << 2)
+ #define ATH_NF_ECC_CTRL_ERR_UNCORR	(1 << 1)
+ #define ATH_NF_ECC_CTRL_ERR_CORR	(1 << 0)
++#	define ATH_NF_ECC_ERROR		(ATH_NF_ECC_CTRL_ERR_UNCORR | \
++					 ATH_NF_ECC_CTRL_ERR_OVER)
+ 
+ #define ATH_NF_CMD_END_INT		(1 << 1)
+ 
+@@ -154,7 +166,26 @@
+ 
+ #define ath_nand_clear_int_status()	ath_reg_wr(ATH_NF_INT_STATUS, 0)
+ 
+-static int ath_nand_hw_init(void *);
++#define ATH_NAND_BLK_DONT_KNOW	0x0
++#define ATH_NAND_BLK_GOOD	0x1
++#define ATH_NAND_BLK_BAD	0x2
++#define ATH_NAND_BLK_ERASED	0x3
++
++/*
++ * Note: The byte positions might not match the spec.
++ * It is to handle the endianness issues.
++ */
++#define ONFI_NUM_ADDR_CYCLES	102	/* see note */
++#define ONFI_DEV_DESC		32
++#define ONFI_DEV_DESC_SZ	32
++#define ONFI_PAGE_SIZE		80
++#define ONFI_SPARE_SIZE		86	/* see note */
++#define ONFI_PAGES_PER_BLOCK	92
++#define ONFI_BLOCKS_PER_LUN	96
++#define ONFI_NUM_LUNS		103	/* see note */
++#define ONFI_RD_PARAM_PAGE_SZ	128
++#define READ_PARAM_STATUS_OK	0x40
++#define READ_PARAM_STATUS_MASK	0x41
+ 
+ #define ATH_NAND_IO_DBG		0
+ #define ATH_NAND_OOB_DBG	0
+@@ -226,6 +257,31 @@
+ 	 8 << 30
+ };
+ 
++typedef struct {
++	uint8_t vid,
++		did,
++		b3,
++		addrcyc,
++		pgsz,
++		blk,
++		spare;
++} ath_nand_vend_data_t;
++
++ath_nand_vend_data_t ath_nand_arr[] = {
++	{ 0x20, 0xda, 0x10, 5, 3, 1, 1 },	// NU2g3B2D
++	{ 0x20, 0xf1, 0x00, 4, 3, 1, 1 },	// NU1g3B2C
++	{ 0x20, 0xdc, 0x10, 5, 3, 1, 1 },	// NU4g3B2D
++	{ 0x20, 0xd3, 0x10, 5, 4, 1, 1 },	// NU8g3F2A
++	{ 0x20, 0xd3, 0x14, 5, 3, 2, 1 },	// NU8g3C2B
++	{ 0xad, 0xf1, 0x00, 4, 3, 1, 1 },	// HY1g2b
++	{ 0xad, 0xda, 0x10, 5, 3, 1, 1 },	// HY2g2b
++	{ 0xec, 0xf1, 0x00, 4, 3, 1, 1 },	// Samsung 3,3V 8-bit [128MB]
++	{ 0x98, 0xd1, 0x90, 4, 3, 1, 1 },	// Toshiba
++	//{ 0x2c, 0x48, 0x04, 5, 4, 3, 1 },	// Micron 16GBit MLC
++};
++
++#define NUM_ARRAY_ENTRIES(a)	(sizeof((a)) / sizeof((a)[0]))
++#define NUM_ATH_NAND		NUM_ARRAY_ENTRIES(ath_nand_arr)
+ 
+ /* ath nand info */
+ typedef struct {
+@@ -246,22 +302,65 @@
+ 				ba1,
+ 				cmd;	// Current command
+ 	ath_nand_id_t		__id;	// for readid
++	uint8_t			onfi[ONFI_RD_PARAM_PAGE_SZ];
+ #if ATH_NF_HW_ECC
+ 	uint32_t		ecc_offset;
+ #endif
++	uint32_t		nf_ctrl;
+ } ath_nand_sc_t;
+ 
+ ath_nand_sc_t ath_nand_sc;
++static int ath_nand_hw_init(ath_nand_sc_t *, void *);
++
+ struct mtd_info nand_info[CFG_MAX_NAND_DEVICE];
+ int nand_curr_device = 0;
+ 
+-int ath_nand_block_isbad(struct mtd_info *mtd, loff_t ofs);
+-
+ #define	nid	__id.__details
+ #define	bid	__id.byte_id
+ 
++static int ath_nand_block_isbad(struct mtd_info *mtd, loff_t ofs);
++void ath_nand_dump_buf(loff_t addr, void *v, unsigned count);
++
++/* max page size (16k) + oob buf size */
++uint8_t	ath_nand_io_buf[24 << 10] __attribute__((aligned(4096)));
++#define get_ath_nand_io_buf()	ath_nand_io_buf
++
++#define	bbt_index	(sizeof(*sc->bbt) * 8 / 2)
++
++inline unsigned
++ath_nand_get_blk_state(struct mtd_info *mtd, loff_t b)
++{
++	unsigned		x, y;
++	ath_nand_sc_t		*sc = mtd->priv;
++
++	if (!sc->bbt)	return ATH_NAND_BLK_DONT_KNOW;
++
++	b = b >> mtd->erasesize_shift;
++
++	x = b / bbt_index;
++	y = b % bbt_index;
++
++	return (sc->bbt[x] >> (y * 2)) & 0x3;
++}
++
++inline void
++ath_nand_set_blk_state(struct mtd_info *mtd, loff_t b, unsigned state)
++{
++	unsigned		x, y;
++	ath_nand_sc_t		*sc = mtd->priv;
++
++	if (!sc->bbt)	return;
++
++	b = b >> mtd->erasesize_shift;
++
++	x = b / bbt_index;
++	y = b % bbt_index;
++
++	sc->bbt[x] = (sc->bbt[x] & ~(3 << (y * 2))) | (state << (y * 2));
++}
++
+ static unsigned
+-ath_nand_status(void)
++ath_nand_status(ath_nand_sc_t *sc, unsigned *ecc)
+ {
+ 	unsigned	rddata, i, j, dmastatus;
+ 
+@@ -279,9 +378,12 @@
+ 
+ 	if ((i == ATH_NF_STATUS_RETRY) || (j == ATH_NF_STATUS_RETRY)) {
+ 		//printk("ath_nand_status: i = %u j = %u\n", i, j);
+-		ath_nand_hw_init(NULL);
++		ath_nand_hw_init(sc, NULL);
+ 		return -1;
+ 	}
++	if (ecc) {
++		*ecc = ath_reg_rd(ATH_NF_ECC_CTRL);
++	}
+ 	ath_nand_clear_int_status();
+ 	ath_reg_wr(ATH_NF_COMMAND, 0x07024);	// READ STATUS
+ 	while (ath_nand_get_cmd_end_status() == 0);
+@@ -291,12 +393,60 @@
+ }
+ 
+ static unsigned
+-ath_nand_rw_page(ath_nand_sc_t *sc, int rd, unsigned addr0, unsigned addr1, unsigned count, unsigned char *buf)
++ath_check_all_0xff(ath_nand_sc_t *sc, unsigned addr0, unsigned addr1)
++{
++	uint8_t		*pa, *buf = ath_nand_io_buf, *end;
++	struct mtd_info	*mtd = sc->mtd;
++	unsigned	i, count = mtd->writesize + mtd->oobsize;
++
++	ath_nand_clear_int_status();
++	ath_reg_wr(ATH_NF_ADDR0_0, addr0);
++	ath_reg_wr(ATH_NF_ADDR0_1, addr1);
++	ath_reg_wr(ATH_NF_DMA_COUNT, count);
++	ath_reg_wr(ATH_NF_DMA_CTRL, ATH_NF_DMA_CTRL_DMA_START |
++				ATH_NF_DMA_CTRL_DMA_DIR_READ |
++				ATH_NF_DMA_CTRL_DMA_BURST_3);
++	ath_reg_wr(ATH_NF_ECC_OFFSET, 0);
++	ath_reg_wr(ATH_NF_ECC_CTRL, 0);
++	ath_reg_wr(ATH_NF_CTRL, sc->nf_ctrl | ATH_NF_CTRL_CUSTOM_SIZE_EN);
++	ath_reg_wr(ATH_NF_PG_SIZE, count);
++	pa = (void *)virt_to_phys(buf);
++	ath_reg_wr(ATH_NF_DMA_ADDR, (unsigned)pa);
++	ath_reg_wr(ATH_NF_COMMAND, 0x30006a);	// Read page
++	while (ath_nand_get_cmd_end_status() == 0);
++	udelay(1000);
++	i = ath_nand_status(sc, NULL) & ATH_NF_RD_STATUS_MASK;
++	memcpy(buf, pa, count);	// cache sync equivalent
++	if (i != ATH_NF_STATUS_OK) {
++		return 0;
++	}
++	end = buf + count;
++	for (buf += sc->ecc_offset; (*buf == 0xff) && buf != end; buf ++);
++
++	if (buf == end) {
++		/* This page was read without ECC. From the spare area
++		 * content we see that it a blank page (i.e. full 0xff).
++		 * To take care of bit flips if any, force 0xff on it.
++		 */
++		memset(ath_nand_io_buf, 0xff, mtd->writesize);
++	} else {
++		ath_nand_dump_buf(addr0, ath_nand_io_buf, mtd->writesize + mtd->oobsize);
++	}
++	return (buf == end);
++}
++
++static unsigned
++ath_nand_rw_page(ath_nand_sc_t *sc, int rd, unsigned addr0, unsigned addr1, unsigned count, unsigned char *buf, unsigned ecc_needed)
+ {
+-	unsigned	i = 0, tmp, rddata;
++	unsigned	ecc, i = 0, tmp, rddata, all_0xff = 0;
++#if ATH_NF_HW_ECC
++	unsigned	mlc_retry = 0;
++#endif
+ 	char		*err[] = { "Write", "Read" };
+ #define ATH_MAX_RETRY	25
++#define ATH_MLC_RETRY	3
+ retry:
++	ecc = 0;
+ 	ath_nand_clear_int_status();
+ 	ath_reg_wr(ATH_NF_ADDR0_0, addr0);
+ 	ath_reg_wr(ATH_NF_ADDR0_1, addr1);
+@@ -317,26 +467,23 @@
+ 		}
+ 	}
+ #if ATH_NF_HW_ECC
+-	if (sc->ecc_offset && (count & sc->mtd->writesize_mask) == 0) {
++	if (ecc_needed && sc->ecc_offset && (count & sc->mtd->writesize_mask) == 0) {
+ 		/*
+ 		 * ECC can operate only on the device's pages.
+ 		 * Cannot be used for non-page-sized read/write
+ 		 */
+ 		ath_reg_wr(ATH_NF_ECC_OFFSET, sc->ecc_offset);
+-		ath_reg_wr(ATH_NF_ECC_CTRL, 0x20e0);
+-		ath_reg_wr(ATH_NF_CTRL,	ATH_NF_CTRL_ADDR_CYCLE0_5 |
+-				ATH_NF_CTRL_BLOCK_SIZE_64 |
+-				ATH_NF_CTRL_PAGE_SIZE_2048 |
+-				ATH_NF_CTRL_ECC_EN);
++		//ath_reg_wr(ATH_NF_ECC_CTRL, 0x20e0);
++		ath_reg_wr(ATH_NF_ECC_CTRL, ATH_NF_ECC_CTRL_ERR_THRESH(4) |
++						ATH_NF_ECC_CTRL_ECC_4_BITS);
++		ath_reg_wr(ATH_NF_CTRL, sc->nf_ctrl | ATH_NF_CTRL_ECC_EN);
++		ath_reg_wr(ATH_NF_SPARE_SIZE, sc->mtd->oobsize);
+ 	} else
+ #endif
+ 	{
+-		//ath_reg_wr(ATH_NF_ECC_OFFSET, 0);
+-		//ath_reg_wr(ATH_NF_ECC_CTRL, 0);
+-		ath_reg_wr(ATH_NF_CTRL,	ATH_NF_CTRL_ADDR_CYCLE0_5 |
+-				ATH_NF_CTRL_BLOCK_SIZE_64 |
+-				ATH_NF_CTRL_PAGE_SIZE_2048 |
+-				ATH_NF_CTRL_CUSTOM_SIZE_EN);
++		ath_reg_wr(ATH_NF_ECC_OFFSET, 0);
++		ath_reg_wr(ATH_NF_ECC_CTRL, 0);
++		ath_reg_wr(ATH_NF_CTRL, sc->nf_ctrl | ATH_NF_CTRL_CUSTOM_SIZE_EN);
+ 		ath_reg_wr(ATH_NF_PG_SIZE, count);
+ 	}
+ 
+@@ -347,6 +494,7 @@
+ 					ATH_NF_DMA_CTRL_DMA_BURST_3);
+ 		ath_reg_wr(ATH_NF_COMMAND, 0x30006a);
+ 	} else {	// Write Page
++		ath_reg_wr(ATH_NF_MEM_CTRL, 0xff00);	// Remove write protect
+ 		ath_reg_wr(ATH_NF_DMA_CTRL,
+ 					ATH_NF_DMA_CTRL_DMA_START |
+ 					ATH_NF_DMA_CTRL_DMA_DIR_WRITE |
+@@ -359,29 +507,45 @@
+ 	//printk(KERN_DEBUG "%s(%c): 0x%x 0x%x 0x%x 0x%p\n", __func__,
+ 	//	rd ? 'r' : 'w', addr0, addr1, count, buf);
+ 	udelay(1000);
+-	rddata = (tmp = ath_nand_status()) & ATH_NF_RD_STATUS_MASK;
++	rddata = (tmp = ath_nand_status(sc, &ecc)) & ATH_NF_RD_STATUS_MASK;
+ 	if ((rddata != ATH_NF_STATUS_OK) && (i < ATH_MAX_RETRY)) {
+ 		i++;
+ 		goto retry;
+ 	}
+ 
++	ath_reg_wr(ATH_NF_MEM_CTRL, 0x0000);	// Enable write protect
++	ath_reg_wr(ATH_NF_FIFO_INIT, 1);
++	ath_reg_wr(ATH_NF_FIFO_INIT, 0);
++
+ 	if (rddata != ATH_NF_STATUS_OK) {
+ 		printk("%s: %s Failed. tmp = 0x%x, status = 0x%x 0x%x retries = %d\n", __func__,
+ 			err[rd], tmp, rddata, ath_reg_rd(ATH_NF_DMA_CTRL), i);
+ 	}
+ #if ATH_NF_HW_ECC
+ 	else {
+-		uint32_t	r = ath_reg_rd(ATH_NF_ECC_CTRL);
+ #define DDR_WB_FLUSH_USB_ADDRESS		0x180000a4
+ 
+ 		ath_reg_wr(DDR_WB_FLUSH_USB_ADDRESS, 1);
+ 		while (ath_reg_rd(DDR_WB_FLUSH_USB_ADDRESS) & 1);
+ 		udelay(50);
+ 
+-		if (r & ATH_NF_ECC_CTRL_ERR_UNCORR) {
+-			printk("%s: %s uncorrectable errors. ecc = 0x%x\n",
+-				__func__, err[rd], r);
+-			return -1;
++		if (ecc_needed && (ecc & ATH_NF_ECC_ERROR)) {
++			if (rd && all_0xff == 0) {
++				all_0xff = 1;
++				if (ath_check_all_0xff(sc, addr0, addr1)) {
++					return ATH_NF_STATUS_OK;
++				}
++			}
++
++			if (mlc_retry < ATH_MLC_RETRY) {
++				mlc_retry ++;
++				i = 0;
++				goto retry;
++			} else {
++				printk("%s: %s uncorrectable errors. ecc = 0x%x\n",
++					__func__, err[rd], ecc);
++				return -1;
++			}
+ 		}
+ 	}
+ #endif
+@@ -394,7 +558,7 @@
+ 	unsigned	*buf = v,
+ 			*end = buf + (count / sizeof(*buf));
+ 
+-	iodbg("____ Dumping %d bytes at 0x%p 0x%llx_____\n", count, buf, addr);
++	iodbg("____ Dumping %d bytes at 0x%p 0x%lx_____\n", count, buf, (ulong)addr);
+ 
+ 	for (; buf && buf < end; buf += 4, addr += 16) {
+ 		printk("%08lx: %08x %08x %08x %08x\n",
+@@ -404,22 +568,18 @@
+ 	//while(1);
+ }
+ 
+-
+-/* max page size + oob buf size */
+-uint8_t	ath_nand_io_buf[4096 + 256] __attribute__((aligned(4096)));
+-
+ static int
+ ath_nand_rw_buff(struct mtd_info *mtd, int rd, uint8_t *buf,
+ 		loff_t addr, size_t len, size_t *iodone)
+ {
+-	unsigned	iolen, ret = ATH_NF_STATUS_OK;
++	unsigned	iolen, ret = ATH_NF_STATUS_OK, ecc_needed;
+ 	unsigned char	*pa;
+ 	ath_nand_sc_t	*sc = mtd->priv;
+ 
+ 	*iodone = 0;
+ 
+ 	while (len) {
+-		unsigned b, p, c, ba0, ba1;
++		unsigned c, ba0, ba1;
+ 
+ 		if (ath_nand_block_isbad(mtd, addr)) {
+ 			printk("Skipping bad block[0x%x]\n", (unsigned)addr);
+@@ -427,8 +587,6 @@
+ 			continue;
+ 		}
+ 
+-		b = (addr >> mtd->erasesize_shift);
+-		p = (addr & mtd->erasesize_mask) >> mtd->writesize_shift;
+ 		c = (addr & mtd->writesize_mask);
+ 
+ 		/*
+@@ -437,8 +595,9 @@
+ 		 * a28 - a31 - xxxxxxxxxxxxxxxx == 4 bits, will be in ba1 in lsb
+ 		 */
+ 
+-		ba0 = (b << 22) | (p << 16);
+-		ba1 = (b >>  9) & 0xf;
++		ba0 = ((addr >> mtd->writesize_shift) << 16);
++		ba1 = ((addr >> (mtd->writesize_shift + 16)) & 0xf);
++
+ 		if (c) {
+ 			iolen = mtd->writesize - c;
+ 		} else {
+@@ -449,9 +608,21 @@
+ 			iolen = len;
+ 		}
+ 
+-		if (!rd) {
++		if (rd) {
++			ecc_needed = (ath_nand_get_blk_state(mtd, addr) != ATH_NAND_BLK_ERASED);
++		} else {
++			int i;
++
++			for (i = 0; (i < mtd->writesize) && (buf[i] == 0xff); i++);
++			if (i == mtd->writesize) {
++				ret = ATH_NF_STATUS_OK;
++				//printk("Skipping write for 0x%x\n", (ulong)addr);
++				goto skip_write_for_all_0xff;
++			}
++
+ 			/* FIXME for writes FIXME */
+ 			memcpy(ath_nand_io_buf, buf, iolen);
++			ecc_needed = 1;
+ 		}
+ 
+ 		pa = (void *)virt_to_phys(ath_nand_io_buf);
+@@ -463,15 +634,15 @@
+ 		//printk("%s(%c): 0x%x 0x%x 0x%x 0x%p\n", __func__,
+ 		//	rd ? 'r' : 'w', ba0, ba1, iolen, pa);
+ 
+-		ret = ath_nand_rw_page(sc, rd, ba0, ba1, mtd->writesize, pa);
++		ret = ath_nand_rw_page(sc, rd, ba0, ba1, mtd->writesize, pa, ecc_needed);
+ 
+-		if (rd) memcpy(ath_nand_io_buf, pa, mtd->writesize);
+ 
+ 		if (rd) {
++			memcpy(ath_nand_io_buf, KSEG1ADDR(pa), mtd->writesize);	// cache sync equivalent
+ 			memcpy(buf, ath_nand_io_buf + c, iolen);
+ 		}
+-
+-		//	ath_nand_dump_buf(addr, buf, iolen);
++skip_write_for_all_0xff:
++		//ath_nand_dump_buf(addr, buf, iolen);
+ 
+ 		if (ret != ATH_NF_STATUS_OK) {
+ 			return 1;
+@@ -481,8 +652,177 @@
+ 		buf += iolen;
+ 		addr += iolen;
+ 		*iodone += iolen;
++	
++	}
++	return 0;
++}
++
++static int
++ath_nand_rw_raw(struct mtd_info *mtd, int rd, uint8_t *buf,
++		loff_t addr, size_t len, size_t *iodone)
++{
++	unsigned	iolen, ret = ATH_NF_STATUS_OK, ecc_needed;
++	unsigned char	*pa;
++	ath_nand_sc_t	*sc = mtd->priv; 
++
++	unsigned int start_page_addr= addr, last_page_addr=0;
++#ifdef NAND256RW3A
++	ubyte cycle1, cycle2, cycle3, cycle4;
++#endif
++
++	start_page_addr = addr;
++
++	/* check size: range*/
++	if ((loff_t)(addr + (len/(mtd->writesize + mtd->oobsize))*mtd->writesize) >= (loff_t)mtd->size) 
++	{
++		if(rd)
++			printf ("Attempt to read outside the flash area\n");
++		else	
++			printf ("Attempt to write outside the flash area\n");
++		
++		return 1;
++	}
++
++	/* check size: align with page_size + oob_size*/
++	if((len%(mtd->writesize + mtd->oobsize)) || len == 0)
++	{
++		if(rd)
++			printf ("Attempt to read error length data!\n");
++		else	
++			printf ("Attempt to write error length data!\n");
++		
++		return 1;
+ 	}
+ 
++	*iodone = 0;
++
++	while (len) {
++		unsigned b, p, c, ba0, ba1;
++		size_t block_offset = addr & (mtd->erasesize - 1);	
++
++		if (ath_nand_block_isbad(mtd, addr)) {
++			printk("Skipping bad block[0x%x]\n", (unsigned)addr);
++			addr += mtd->erasesize;
++			continue;
++		}
++
++#if defined(CONFIG_MTD_NAND_YAFFS2) //add yaffs2 file system support
++	        if(mtd->skipfirstblk==1)    
++	        {
++			mtd->skipfirstblk=0;
++			printf ("Skip the first good block %x\n", (unsigned)(addr & ~(mtd->erasesize - 1)));
++			addr += (mtd->erasesize - block_offset);
++			
++			start_page_addr = addr;
++			continue;
++	        }
++#endif
++
++		b = (addr >> mtd->erasesize_shift);   //block
++		p = (addr & mtd->erasesize_mask) >> mtd->writesize_shift; //page
++		c = (addr & mtd->writesize_mask);   //colum
++
++		//printf("b=%d, p=%d\n", b, p);
++
++#ifdef NAND256RW3A
++ 		/* for NAND256RW3A*/
++		cycle1=(ubyte)addr;
++		cycle2=(ubyte)(addr >> (8 + SHIFT_A8));
++		cycle3=(ubyte)(addr >> (16 + SHIFT_A8));
++		cycle4=0;
++             
++		ba0 = cycle1 | (cycle2 << 8) | (cycle3 << 16);
++		ba1 = 0;
++		//iodbg("------%s: %x %llx %llx\n", __func__, addr, ba1, ba0);
++#else
++		/*
++		 * addr format:
++		 * a0 - a11 - xxxx - a19 - a27 == 32 bits, will be in ba0
++		 * a28 - a31 - xxxxxxxxxxxxxxxx == 4 bits, will be in ba1 in lsb
++		 */
++
++		ba0 = ((addr >> mtd->writesize_shift) << 16);
++		ba1 = ((addr >> (mtd->writesize_shift + 16)) & 0xf);
++#endif
++
++		if (c) {
++			iolen = mtd->writesize + mtd->oobsize - c;
++		} else {
++			iolen = mtd->writesize + mtd->oobsize;
++		}
++
++		if (len < iolen) {
++			iolen = len;
++		}
++
++		if (rd) {
++			ecc_needed = (ath_nand_get_blk_state(mtd, addr) != ATH_NAND_BLK_ERASED);
++		} else {
++			int i;
++		
++			for (i = 0; (i < mtd->writesize) && (buf[i] == 0xff); i++);
++			if (i == mtd->writesize) {
++				ret = ATH_NF_STATUS_OK;
++				//printk("Skipping write for 0x%x\n", (ulong)addr);
++				goto skip_write_for_all_0xff;
++			}
++		
++			/* FIXME for writes FIXME */
++			memcpy(ath_nand_io_buf, buf, iolen);
++			ecc_needed = 1;
++		}
++
++
++		pa = (void *)virt_to_phys(ath_nand_io_buf);
++
++		if (!rd) {
++			flush_cache((unsigned)ath_nand_io_buf,
++				mtd->writesize + mtd->oobsize);
++		}
++
++		//printk("%s(%c): 0x%x 0x%x 0x%x 0x%p\n", __func__,
++		//	rd ? 'r' : 'w', ba0, ba1, iolen, pa);
++        if(!rd) {
++			ret = ath_nand_rw_page(sc, rd, ba0, ba1, mtd->writesize + mtd->oobsize, pa, ecc_needed);
++        } else {
++            ret = ath_nand_rw_page(sc, rd, ba0, ba1, mtd->writesize , pa, ecc_needed);
++			if (ret != ATH_NF_STATUS_OK) {
++				return 1;
++			}
++            memcpy(ath_nand_io_buf,pa,mtd->writesize);
++
++            ret = ath_nand_rw_page(sc, rd, ba0, ba1, mtd->writesize + mtd->oobsize, pa, ecc_needed);
++            memcpy(ath_nand_io_buf+mtd->writesize,pa+mtd->writesize,mtd->oobsize);
++         }
++
++
++		//if (rd) memcpy(ath_nand_io_buf, pa, (mtd->writesize + mtd->oobsize));
++
++		if (rd) {
++			memcpy(buf, ath_nand_io_buf + c, iolen);
++		}
++
++	skip_write_for_all_0xff:
++
++		//ath_nand_dump_buf(addr, buf, iolen);
++
++		if (ret != ATH_NF_STATUS_OK) {
++			return 1;
++		}
++
++		len -= iolen;
++		buf += iolen;
++		if((iolen - mtd->oobsize)  > 0)
++			addr += (iolen - mtd->oobsize);
++		else
++			addr += iolen;
++		*iodone += iolen;
++	}
++
++	last_page_addr = addr - mtd->writesize;
++	
++	printf("%s from page address 0x%x to 0x%x\n", rd?"Read":"Write", start_page_addr, last_page_addr);
++
+ 	return 0;
+ }
+ 
+@@ -505,7 +845,11 @@
+ 
+ 	indbg("0x%llx	%u", to, len);
+ 
+-	ret = ath_nand_rw_buff(mtd, 0 /* write */, (u_char *)buf, to, len, retlen);
++	if(mtd->rw_oob){
++		ret = ath_nand_rw_raw(mtd, 0 /* write */, (u_char *)buf, to, len, retlen);
++	}else{
++		ret = ath_nand_rw_buff(mtd, 0 /* write */, (u_char *)buf, to, len, retlen);
++	}
+ #if ath_nand_write_verify
+ 	//printk("Verifying 0x%llx 0x%x\n", to, len);
+ 	r = ath_nand_rw_buff(mtd, 1 /* read */, ath_nand_rd_buf, to, len, &rl);
+@@ -514,6 +858,8 @@
+ 		while (1);
+ 	}
+ #endif
++    if(ret == 0)
++	  ath_nand_set_blk_state(mtd, to, ATH_NAND_BLK_GOOD);
+ 	return ret;
+ }
+ 
+@@ -525,26 +871,34 @@
+ 
+ 	if (!len || !retlen) return (0);
+ 
+-	ret = ath_nand_rw_buff(mtd, 1 /* read */, buf, from, len, retlen);
++	if(mtd->rw_oob){
++		ret = ath_nand_rw_raw(mtd, 1 /* read */, buf, from, len, retlen);
++	}else{
++		ret = ath_nand_rw_buff(mtd, 1 /* read */, buf, from, len, retlen);
++	}
+ 
+ 	return ret;
+ }
+ 
+ static inline int
+-ath_nand_block_erase(unsigned addr0, unsigned addr1)
++ath_nand_block_erase(ath_nand_sc_t *sc, unsigned addr0, unsigned addr1)
+ {
+ 	unsigned	rddata;
+ 
+ 	indbg("0x%x 0x%x", addr1, addr0);
+ 
+ 	ath_nand_clear_int_status();
++	ath_reg_wr(ATH_NF_MEM_CTRL, 0xff00);	// Remove write protect
+ 	ath_reg_wr(ATH_NF_ADDR0_0, addr0);
+ 	ath_reg_wr(ATH_NF_ADDR0_1, addr1);
+ 	ath_reg_wr(ATH_NF_COMMAND, 0xd0600e);	// BLOCK ERASE
+ 
+ 	while (ath_nand_get_cmd_end_status() == 0);
+ 
+-	rddata = ath_nand_status() & ATH_NF_RD_STATUS_MASK;
++	rddata = ath_nand_status(sc, NULL) & ATH_NF_RD_STATUS_MASK;
++
++	ath_reg_wr(ATH_NF_MEM_CTRL, 0x0000);	// Enable write protect
++
+ 	if (rddata != ATH_NF_STATUS_OK) {
+ 		printk("Erase Failed. status = 0x%x", rddata);
+ 		return 1;
+@@ -556,9 +910,10 @@
+ static int
+ ath_nand_erase(struct mtd_info *mtd, struct erase_info *instr)
+ {
+-	loff_t s_first, i;
+-	unsigned n, j;
+-	int ret, bad = 0;
++	ulong		s_first, i;
++	unsigned	n, j;
++	int		ret, bad = 0;
++	ath_nand_sc_t	*sc = mtd->priv;
+ 
+ 	if (instr->addr + instr->len > mtd->size) {
+ 		return (-EINVAL);
+@@ -571,28 +926,28 @@
+ 
+ 	indbg("0x%llx 0x%x 0x%x", instr->addr, n, mtd->erasesize);
+ 
++	printk("%s: 0x%x %u\n", __func__, s_first, n);
++
+ 	for (j = 0, i = s_first; j < n; j++, i += mtd->erasesize) {
+-		ulong b, ba0, ba1;
++		ulong ba0, ba1;
+ 
+ 		if (ath_nand_block_isbad(mtd, i)) {
+ 			bad ++;
+ 			continue;
+ 		}
+ 
+-		b = (i >> mtd->erasesize_shift);
+-
+-		ba0 = (b << 22);
+-		ba1 = (b >>  9) & 0xf;
++		ba0 = ((i >> mtd->writesize_shift) << 16);
++		ba1 = ((i >> (mtd->writesize_shift + 16)) & 0xf);
+ 
+ 		printk("\b\b\b\b%4d", j);
+ 
+-		if ((ret = ath_nand_block_erase(ba0, ba1)) != 0) {
++		if ((ret = ath_nand_block_erase(sc, ba0, ba1)) != 0) {
+ 			iodbg("%s: erase failed 0x%llx 0x%x 0x%x %llu "
+ 				"%lx %lx\n", __func__, instr->addr, n,
+ 				mtd->erasesize, i, ba1, ba0);
+ 			break;
+ 		}
+-
++		ath_nand_set_blk_state(mtd, i, ATH_NAND_BLK_ERASED);
+ 	}
+ 
+ 	if (instr->callback) {
+@@ -633,16 +988,12 @@
+ {
+ 	unsigned	ret = ATH_NF_STATUS_OK;
+ 	unsigned char	*pa;
+-	unsigned	b, p, c, ba0, ba1;
++	unsigned	ba0, ba1;
+ 	uint8_t		*oob = ath_nand_io_buf + mtd->writesize;
+ 	ath_nand_sc_t	*sc = mtd->priv;
+ 
+-	b = (addr >> mtd->erasesize_shift);
+-	p = (addr & mtd->erasesize_mask) >> mtd->writesize_shift;
+-	c = (addr & mtd->writesize_mask);
+-
+-	ba0 = (b << 22) | (p << 16);
+-	ba1 = (b >>  9) & 0xf;
++	ba0 = ((addr >> mtd->writesize_shift) << 16);
++	ba1 = ((addr >> (mtd->writesize_shift + 16)) & 0xf);
+ 
+ 	if (!rd) {
+ 		if (ops->datbuf) {
+@@ -673,16 +1024,16 @@
+ 	//printk("%s(%c): 0x%x 0x%x 0x%x 0x%p\n", __func__,
+ 	//	rd ? 'r' : 'w', ba0, ba1, mtd->writesize + mtd->oobsize, pa);
+ 
+-	ret = ath_nand_rw_page(sc, rd, ba0, ba1, mtd->writesize + mtd->oobsize, pa);
++	ret = ath_nand_rw_page(sc, rd, ba0, ba1, mtd->writesize + mtd->oobsize, pa, 0);
+ 
+ 	if (ret != ATH_NF_STATUS_OK) {
+ 		return 1;
+ 	}
+ 
+-	if (rd) memcpy(ath_nand_io_buf, pa, mtd->writesize + mtd->oobsize);	// for reads...
+-	//ath_nand_dump_buf(addr, buf, iolen);
+ 
+ 	if (rd) {
++		memcpy(ath_nand_io_buf, KSEG1ADDR(pa), mtd->writesize + mtd->oobsize);	// for reads...
++
+ 		if (ops->datbuf) {
+ 			memcpy(ops->datbuf, ath_nand_io_buf, ops->len);
+ 		}
+@@ -716,14 +1067,14 @@
+ 	struct mtd_oob_ops ops = { MTD_OOB_RAW, len, 0, ooblen, 0,
+ 					0, buf, buf + mtd->writesize };
+ 
+-	oobdbg(	"%s: from: 0x%llx mode: 0x%x len: 0x%x retlen: 0x%x\n"
++	oobdbg(	"%s: from: 0x%lx mode: 0x%x len: 0x%x retlen: 0x%x\n"
+ 		"ooblen: 0x%x oobretlen: 0x%x ooboffs: 0x%x datbuf: %p "
+-		"oobbuf: %p\n", __func__, from,
++		"oobbuf: %p\n", __func__, (uint32_t)from,
+ 		ops.mode, ops.len, ops.retlen, ops.ooblen,
+ 		ops.oobretlen, ops.ooboffs, ops.datbuf,
+ 		ops.oobbuf);
+ 
+-	oobdbg("0x%llx %p %p %u", from, ops.oobbuf, ops.datbuf, ops.len);
++	oobdbg("0x%lx %p %p %u\n", (uint32_t)from, ops.oobbuf, ops.datbuf, ops.len);
+ 
+ 	if (len == 0) {
+ 		ops.datbuf = 0;
+@@ -785,54 +1136,25 @@
+ }
+ #endif
+ 
+-#define	bbt_index	(sizeof(*sc->bbt) * 8 / 2)
+-
+-#define ATH_NAND_BLK_DONT_KNOW	0x0
+-#define ATH_NAND_BLK_GOOD	0x1
+-#define ATH_NAND_BLK_BAD	0x2
+-
+-inline unsigned
+-ath_nand_get_blk_state(struct mtd_info *mtd, loff_t b)
+-{
+-	unsigned		x, y;
+-	ath_nand_sc_t		*sc = mtd->priv;
+-
+-	if (!sc->bbt)	return ATH_NAND_BLK_DONT_KNOW;
+-
+-	b = b >> mtd->erasesize_shift;
+-
+-	x = b / bbt_index;
+-	y = b % bbt_index;
+-
+-	return (sc->bbt[x] >> (y * 2)) & 0x3;
+-}
+-
+-inline void
+-ath_nand_set_blk_state(struct mtd_info *mtd, loff_t b, unsigned state)
+-{
+-	unsigned		x, y;
+-	ath_nand_sc_t		*sc = mtd->priv;
+-
+-	if (!sc->bbt)	return;
+-
+-	b = b >> mtd->erasesize_shift;
+-
+-	x = b / bbt_index;
+-	y = b % bbt_index;
+-
+-	sc->bbt[x] = (sc->bbt[x] & ~(3 << (y * 2))) | (state << (y * 2));
+-}
+-
+-int
++static int
+ ath_nand_block_isbad(struct mtd_info *mtd, loff_t ofs)
+ {
+-	unsigned char		oob[128];
++	unsigned char		oob[256];
+ 	unsigned		bs, i;
++	unsigned		*force = (unsigned *)0xbd000000;
++
++	if (*force == 0x12345678) {
++		return 0;
++	}
+ 
+ 	bs = ath_nand_get_blk_state(mtd, ofs);
+ 
+-	if (bs != ATH_NAND_BLK_DONT_KNOW) {
+-		return (bs - ATH_NAND_BLK_GOOD);
++	if ((bs == ATH_NAND_BLK_ERASED) || (bs == ATH_NAND_BLK_GOOD)) {
++		return 0;
++	}
++
++	if (bs == ATH_NAND_BLK_BAD) {
++		return 1;
+ 	}
+ 
+ 	/*
+@@ -847,8 +1169,9 @@
+ 	 * Bad Blocks based on the original information it is
+ 	 * recommended to create a Bad Block table following the
+ 	 * flowchart shown in Figure 24. The 1st block, which is
++	 *                               ^^^^^^^^^^^^^
+ 	 * placed on 00h block address is guaranteed to be a valid
+-	 * block.
++	 * block.                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 	 */
+ 
+ 	for (i = 0; i < 2; i++, ofs += mtd->writesize) {
+@@ -896,7 +1219,13 @@
+ 		}
+ 	}
+ 
+-	ath_nand_set_blk_state(mtd, ofs, ATH_NAND_BLK_GOOD);
++	for (i = 0; (i < mtd->oobsize) && (oob[i] == 0xff); i++);
++
++	if (i == mtd->oobsize) {
++		ath_nand_set_blk_state(mtd, ofs, ATH_NAND_BLK_ERASED);
++	} else {
++	      ath_nand_set_blk_state(mtd, ofs, ATH_NAND_BLK_GOOD);
++	}
+ 
+ 	return 0;
+ }
+@@ -945,11 +1274,95 @@
+ 	return 0;
+ }
+ 
++ath_nand_vend_data_t *
++nand_get_entry(ath_nand_id_t *nand_id, ath_nand_vend_data_t *tbl, int count)
++{
++	int     i;
++
++	for (i = 0; i < count; i++, tbl ++) {
++		if ((nand_id->__details.vid == tbl->vid) &&
++		    (nand_id->__details.did == tbl->did) &&
++		    (nand_id->byte_id[1] == tbl->b3)) {
++			return tbl;
++		}
++	}
++
++	return NULL;
++}
++
++static inline void
++ath_nand_onfi_endian_convert(uint8_t *buf)
++{
++	uint32_t	i, *u = (uint32_t *)(buf + ONFI_DEV_DESC);
++
++	for (i = 0; i < (ONFI_DEV_DESC_SZ / sizeof(*u)); i++) {
++		u[i] = __le32_to_cpu(u[i]);
++	}
++
++	// Hope nobody has a 20 character device description
++	buf[ONFI_DEV_DESC + ONFI_DEV_DESC_SZ - 1] = 0;
++}
++
++int
++nand_param_page(ath_nand_sc_t *sc, uint8_t *buf, unsigned count)
++{
++	unsigned int	tries, rddata;
++	uint8_t		*pa;
++
++	pa = virt_to_phys(buf);
++
++	for (tries = 3; tries; tries --) {
++		// ADDR0_0 Reg Settings
++		ath_reg_wr(ATH_NF_ADDR0_0, 0x0);
++
++		// ADDR0_1 Reg Settings
++		ath_reg_wr(ATH_NF_ADDR0_1, 0x0);
++
++		// DMA Start Addr
++		ath_reg_wr(ATH_NF_DMA_ADDR, (unsigned)pa);
++
++		// DMA count
++		ath_reg_wr(ATH_NF_DMA_COUNT, count);
++
++		// Custom Page Size
++		ath_reg_wr(ATH_NF_PG_SIZE, count);
++
++		// DMA Control Reg
++		ath_reg_wr(ATH_NF_DMA_CTRL, 0xcc);
++
++		ath_nand_clear_int_status();
++		// READ PARAMETER PAGE
++		ath_reg_wr(ATH_NF_COMMAND, 0xec62);
++		while (ath_nand_get_cmd_end_status() == 0);
++
++		rddata = ath_nand_status(sc, NULL) & READ_PARAM_STATUS_MASK;
++		if (rddata == READ_PARAM_STATUS_OK) {
++			break;
++		} else {
++			printk("\nParam Page Failure: 0x%x", rddata);
++			ath_nand_hw_init(sc, NULL);
++		}
++	}
++
++	memcpy(buf, KSEG1ADDR(buf), count);	// get into the cache
++
++	//ath_nand_dump_buf(buf, buf, count);
++
++	if ((rddata == READ_PARAM_STATUS_OK) &&
++	    (buf[3] == 'O' && buf[2] == 'N' && buf[1] == 'F' && buf[0] == 'I')) {
++		ath_nand_onfi_endian_convert(buf);
++		printf("ONFI %s\n", buf + ONFI_DEV_DESC);
++		return 0;
++	}
++
++	return 1;
++}
++
+ /*
+  * System initialization functions
+  */
+ static int
+-ath_nand_hw_init(void *p)
++ath_nand_hw_init(ath_nand_sc_t *sc, void *p)
+ {
+ 	uint8_t		id[8];
+ 	unsigned char	*pa;
+@@ -969,6 +1382,7 @@
+ 
+ 	// NAND Mem Control Reg
+ 	ath_reg_wr(ATH_NF_MEM_CTRL, 0xff00);
++	//ath_reg_wr(ATH_NF_MEM_CTRL, 0x0000);
+ 
+ 	// Reset Command
+ 	ath_reg_wr(ATH_NF_COMMAND, 0xff00);
+@@ -989,6 +1403,8 @@
+ 	}
+ 
+ 	if (p) {
++		ath_nand_vend_data_t *entry;
++
+ 		ath_nand_clear_int_status();
+ 		pa = (void *)virt_to_phys(p ? p : id);
+ 		ath_reg_wr(ATH_NF_DMA_ADDR, (unsigned)pa);
+@@ -1000,14 +1416,28 @@
+ 		ath_reg_wr(ATH_NF_COMMAND, 0x9061);	// READ ID
+ 		while (ath_nand_get_cmd_end_status() == 0);
+ 
+-		rddata = ath_nand_status();
++		rddata = ath_nand_status(sc, NULL);
+ 		if ((rddata & ATH_NF_RD_STATUS_MASK) != ATH_NF_STATUS_OK) {
+ 			printf("%s: ath nand status = 0x%x\n", __func__, rddata);
+ 		}
+ 
+ 		pa = p;
+ 		printk("Ath Nand ID[%p]: %02x:%02x:%02x:%02x:%02x\n",
+-				pa, pa[0], pa[1], pa[2], pa[3], pa[4]);
++				pa, pa[3], pa[2], pa[1], pa[0], pa[7]);
++
++		sc->onfi[0] = 0;
++
++		entry = nand_get_entry((ath_nand_id_t *)p, ath_nand_arr, NUM_ATH_NAND);
++		if (entry) {
++			sc->nf_ctrl = ATH_NF_CTRL_ADDR_CYCLE0(entry->addrcyc);
++		} else if (nand_param_page(sc, sc->onfi, sizeof(sc->onfi)) == 0) {
++			rddata = sc->onfi[ONFI_NUM_ADDR_CYCLES];
++			rddata = ((rddata >> 4) & 0xf) + (rddata & 0xf);
++			sc->nf_ctrl = ATH_NF_CTRL_ADDR_CYCLE0(rddata);
++		} else {
++			printk("Attempting to use unknown device\n");
++			sc->nf_ctrl = ATH_NF_CTRL_ADDR_CYCLE0(5);
++		}
+ 
+ 		iodbg("******* %s done ******\n", __func__);
+ 	}
+@@ -1025,26 +1455,43 @@
+  * | data    |  |          |         |
+  * +---...---+--+----------+---------+
+  * cm -> clean marker (2 bytes)
+- * FS Spare -> 38 bytes available for jffs2
++ * FS Spare -> bytes available for jffs2
+  */
+ 
+ static void
+ ath_nand_ecc_init(struct mtd_info *mtd)
+ {
+-	ath_nand_sc_t *sc = mtd->priv;
++#if ATH_NF_HW_ECC
++	ath_nand_sc_t		*sc = mtd->priv;
+ 
++	sc->ecc_offset = mtd->writesize + 20;
++#else
+ 	sc->ecc_offset = 0;
+-
+-	if (mtd->oobsize == 128) {
+-#if ATH_NF_HW_ECC
+-		sc->ecc_offset = mtd->writesize + 80;
+-#endif
+-	} else if (mtd->oobsize == 64) {
+-#if ATH_NF_HW_ECC
+-		sc->ecc_offset = mtd->writesize + 40;
+ #endif
++}
++
++void
++ath_nand_set_ns(struct mtd_info *mtd)
++{
++#define ATH_DEF_PAGE_SIZE	(2u << 10)
++#define ATH_DEF_BLK_SIZE	(128u << 10)
++#define ATH_NAND_SPEC		"ns"
++
++	char ns[64], *p;
++
++	if ((p = getenv(ATH_NAND_SPEC))) {
++		/* don't override user setting */
++		return;
+ 	}
+ 
++	if (mtd->writesize == ATH_DEF_PAGE_SIZE &&
++	    mtd->erasesize == ATH_DEF_BLK_SIZE) {
++		return;
++	}
++
++	sprintf(ns, "-0x%x-0x%x", mtd->erasesize, mtd->writesize);
++	setenv(ATH_NAND_SPEC, ns);
++	printf("set " ATH_NAND_SPEC " %s\n", ns);
+ }
+ 
+ /*
+@@ -1059,13 +1506,32 @@
+ {
+ 	ath_nand_sc_t	*sc = NULL;
+ 	struct mtd_info	*mtd = NULL;
+-	int		err = 0, bbt_size;
++	int		i, err = 0, bbt_size;
++	unsigned	nf_ctrl_pg[][2] = {
++		/* page size in bytes, register val */
++		{   256, ATH_NF_CTRL_PAGE_SIZE_256	},
++		{   512, ATH_NF_CTRL_PAGE_SIZE_512	},
++		{  1024, ATH_NF_CTRL_PAGE_SIZE_1024	},
++		{  2048, ATH_NF_CTRL_PAGE_SIZE_2048	},
++		{  4096, ATH_NF_CTRL_PAGE_SIZE_4096	},
++		{  8192, ATH_NF_CTRL_PAGE_SIZE_8192	},
++		{ 16384, ATH_NF_CTRL_PAGE_SIZE_16384	},
++		{     0, ATH_NF_CTRL_PAGE_SIZE_0	},
++		};
++	unsigned	nf_ctrl_blk[][2] = {
++		/* no. of pages, register val */
++		{  32, ATH_NF_CTRL_BLOCK_SIZE_32	},
++		{  64, ATH_NF_CTRL_BLOCK_SIZE_64	},
++		{ 128, ATH_NF_CTRL_BLOCK_SIZE_128	},
++		{ 256, ATH_NF_CTRL_BLOCK_SIZE_256	},
++		{   0, 0				},
++		};
+ 
+ 	sc = &ath_nand_sc;
+ 	sc->mtd = &nand_info[nand_curr_device];
+ 
+ 	/* initialise the hardware */
+-	err = ath_nand_hw_init(&sc->nid);
++	err = ath_nand_hw_init(sc, &sc->nid);
+ 	if (err) {
+ 		goto out_err_hw_init;
+ 	}
+@@ -1079,16 +1545,50 @@
+ 		mtd->size	= ath_plane_size[sc->nid.pls] << sc->nid.pn;
+ 	}
+ 
+-	mtd->writesize_shift	= 10 + sc->nid.ps;
+-	mtd->writesize		= (1 << mtd->writesize_shift);
+-	mtd->writesize_mask	= (mtd->writesize - 1);
+-
+-	mtd->erasesize_shift	= 16 + sc->nid.bs;
+-	mtd->erasesize		= (1 << mtd->erasesize_shift);
+-	mtd->erasesize_mask	= (mtd->erasesize - 1);
++	if (!sc->onfi[0]) {
++		mtd->writesize_shift	= 10 + sc->nid.ps;
++		mtd->writesize		= (1 << mtd->writesize_shift);
++		mtd->writesize_mask	= (mtd->writesize - 1);
++
++		mtd->erasesize_shift	= 16 + sc->nid.bs;
++		mtd->erasesize		= (1 << mtd->erasesize_shift);
++		mtd->erasesize_mask	= (mtd->erasesize - 1);
++
++		mtd->oobsize		= (mtd->writesize / 512) * (8 << sc->nid.ss);
++		mtd->oobavail		= mtd->oobsize;
++	} else {
++		mtd->writesize		= *(uint32_t *)(&sc->onfi[ONFI_PAGE_SIZE]);
++		mtd->writesize_shift	= ffs(mtd->writesize) - 1;
++		mtd->writesize_mask	= (mtd->writesize - 1);
++
++		mtd->erasesize		= *(uint32_t *)(&sc->onfi[ONFI_PAGES_PER_BLOCK]) *
++					  mtd->writesize;
++		mtd->erasesize_shift	= ffs(mtd->erasesize) - 1;
++		mtd->erasesize_mask	= (mtd->erasesize - 1);
++
++		mtd->oobsize		= *(uint16_t *)(&sc->onfi[ONFI_SPARE_SIZE]);
++		mtd->oobavail		= mtd->oobsize;
++
++		mtd->size		= mtd->erasesize *
++					  (*(uint32_t *)(&sc->onfi[ONFI_BLOCKS_PER_LUN])) *
++					  sc->onfi[ONFI_NUM_LUNS];
++	}
++
++	for (i = 0; nf_ctrl_pg[i][0]; i++) {
++		if (nf_ctrl_pg[i][0] == mtd->writesize) {
++			sc->nf_ctrl |= nf_ctrl_pg[i][1];
++			break;
++		}
++	}
++
++	for (i = 0; nf_ctrl_blk[i][0]; i++) {
++		if (nf_ctrl_blk[i][0] == (mtd->erasesize / mtd->writesize)) {
++			sc->nf_ctrl |= nf_ctrl_blk[i][1];
++			break;
++		}
++	}
+ 
+-	mtd->oobsize		= (mtd->writesize / 512) * (8 << sc->nid.ss);
+-	mtd->oobavail		= mtd->oobsize;
++	ath_nand_set_ns(mtd);
+ 
+ 	mtd->type		= MTD_NANDFLASH;
+ 	mtd->flags		= MTD_CAP_NANDFLASH;
+@@ -1115,7 +1615,10 @@
+ 		memset(sc->bbt, 0, bbt_size);
+ 	}
+ 
+-	printk("%s: sc->bbt = 0x%x size = 0x%x\n", __func__, sc->bbt, bbt_size);
++	printf(	"====== NAND Parameters ======\n"
++		"sc = 0x%p bbt = 0x%p bbt_size = 0x%x nf_ctrl = 0x%x\n"
++		"page = 0x%x block = 0x%x oob = 0x%x\nsize = %uMB\n", sc, sc->bbt, bbt_size,
++		sc->nf_ctrl, mtd->writesize, mtd->erasesize, mtd->oobsize, mtd->size >> 20);
+ 
+ 	return mtd->size;
+ 
+diff -Nur boot_atheros/u-boot/board/ar7240/common/athrs17_phy.c boot_liteon/u-boot/board/ar7240/common/athrs17_phy.c
+--- boot_atheros/u-boot/board/ar7240/common/athrs17_phy.c	2013-04-03 13:43:13.000000000 +0800
++++ boot_liteon/u-boot/board/ar7240/common/athrs17_phy.c	2013-03-29 18:00:25.000000000 +0800
+@@ -364,7 +364,18 @@
+                          ATHR_PHYADDR(phyUnit),
+                          ATHR_PHY_SPEC_STATUS)));
+     }
+-    phy_mode_setup();    
++    phy_mode_setup();
++
++    /* set LED behavior*/
++    athrs17_reg_write(S17_PWS_REG, athrs17_reg_read(S17_PWS_REG) | (1 << 31));
++    athrs17_reg_write(S17_LED_CTRL0_REG, 0xc435c435 );
++    athrs17_reg_write(S17_LED_CTRL1_REG, 0xc335c335 );
++    athrs17_reg_write(S17_LED_CTRL2_REG, 0xcf00cf00 );
++    athrs17_reg_write(S17_LED_CTRL3_REG, 0x03ffff00 );
++
++    /* disable 802.3az*/
++    athrs17_reg_write(S17_EEE_CTRL_REG, 0x1550);
++    
+     return (liveLinks > 0);
+ }
+ 
+diff -Nur boot_atheros/u-boot/board/ar7240/common/athrs17_phy.h boot_liteon/u-boot/board/ar7240/common/athrs17_phy.h
+--- boot_atheros/u-boot/board/ar7240/common/athrs17_phy.h	2013-04-03 13:43:13.000000000 +0800
++++ boot_liteon/u-boot/board/ar7240/common/athrs17_phy.h	2013-03-29 18:00:25.000000000 +0800
+@@ -20,6 +20,48 @@
+ #define ATHR_DEBUG_PORT_ADDRESS          29
+ #define ATHR_DEBUG_PORT_DATA             30
+ 
++/* S17 CSR Registers */
++#define S17_MASK_CTRL_REG               0x0000
++#define S17_P0PAD_MODE_REG              0x0004
++#define S17_P5PAD_MODE_REG              0x0008
++#define S17_P6PAD_MODE_REG              0x000c
++#define S17_PWS_REG                     0x0010
++#define S17_GLOBAL_INT0_REG             0x0020
++#define S17_GLOBAL_INT1_REG             0x0024
++#define S17_GLOBAL_INTMASK0             0x0028
++#define S17_GLOBAL_INTMASK1             0x002c
++#define S17_MODULE_EN_REG               0x0030
++#define S17_MIB_REG                     0x0034
++#define S17_INTF_HIADDR_REG             0x0038
++#define S17_MDIO_CTRL_REG               0x003c
++#define S17_BIST_CTRL_REG               0x0040
++#define S17_BIST_REC_REG                0x0044
++#define S17_SERVICE_REG                 0x0048
++#define S17_LED_CTRL0_REG               0x0050
++#define S17_LED_CTRL1_REG               0x0054
++#define S17_LED_CTRL2_REG               0x0058
++#define S17_LED_CTRL3_REG               0x005c
++#define S17_MACADDR0_REG                0x0060
++#define S17_MACADDR1_REG                0x0064
++#define S17_MAX_FRAME_SIZE_REG          0x0078
++#define S17_P0STATUS_REG                0x007c
++#define S17_P1STATUS_REG                0x0080
++#define S17_P2STATUS_REG                0x0084
++#define S17_P3STATUS_REG                0x0088
++#define S17_P4STATUS_REG                0x008c
++#define S17_P5STATUS_REG                0x0090
++#define S17_P6STATUS_REG                0x0094
++#define S17_HDRCTRL_REG                 0x0098
++#define S17_P0HDRCTRL_REG               0x009c
++#define S17_P1HDRCTRL_REG               0x00A0
++#define S17_P2HDRCTRL_REG               0x00a4
++#define S17_P3HDRCTRL_REG               0x00a8
++#define S17_P4HDRCTRL_REG               0x00ac
++#define S17_P5HDRCTRL_REG               0x00b0
++#define S17_P6HDRCTRL_REG               0x00b4
++#define S17_SGMII_CTRL_REG              0x00e0
++#define S17_EEE_CTRL_REG		0x0100
++
+ /* ATHR_PHY_CONTROL fields */
+ #define ATHR_CTRL_SOFTWARE_RESET                    0x8000
+ #define ATHR_CTRL_SPEED_LSB                         0x2000
+diff -Nur boot_atheros/u-boot/board/ar7240/common/athrsf1_phy.c boot_liteon/u-boot/board/ar7240/common/athrsf1_phy.c
+--- boot_atheros/u-boot/board/ar7240/common/athrsf1_phy.c	2013-04-03 13:43:13.000000000 +0800
++++ boot_liteon/u-boot/board/ar7240/common/athrsf1_phy.c	2013-03-29 18:00:25.000000000 +0800
+@@ -138,7 +138,6 @@
+ }
+ void athr_auto_neg(int ethUnit,int phyUnit) 
+ { 
+-    int timeout = 0;
+     uint16_t phyHwStatus;
+     
+     if(!is_emu()) {
+@@ -159,13 +158,52 @@
+        phy_reg_write(ethUnit, phyUnit , ATHR_PHY_CONTROL, ATHR_CTRL_AUTONEGOTIATION_ENABLE | ATHR_CTRL_SOFTWARE_RESET);
+     }
+ 
++/*Modify by sirian, 2011-05-08*/
++#ifdef BCM_ENET_PHY
++        /*
++ 	 * Wait for auto-negotiation to complete
++	 */
++	phyHwStatus = phy_reg_read(ethUnit, phyUnit , ATHR_PHY_STATUS);
++
++	if ((phyHwStatus & ATHR_STATUS_AUTO_NEG_ABLE) && !(phyHwStatus & ATHR_STATUS_AUTO_NEG_COMP)) {
++		int i = 0;
++
++		puts("Waiting for PHY auto negotiation to complete");
++		while (!(phyHwStatus & ATHR_STATUS_AUTO_NEG_COMP)) {
++			/*
++			 * Timeout reached ?
++			 */
++			if (i > PHY_AUTONEGOTIATE_TIMEOUT) {
++				puts(" TIMEOUT !\n");
++				return;
++			}
++
++			if ((i++ % 1000) == 0) {
++				putc('.');
++			}
++			udelay(1000);	/* 1 ms */
++			
++			phyHwStatus = phy_reg_read(ethUnit, phyUnit , ATHR_PHY_STATUS);
++		}
++		puts(" done\n");
++
++		/* Link status bit is latched low, read it again */
++		//phyHwStatus = phy_reg_read(ethUnit, phyUnit , ATHR_PHY_STATUS);
++		
++		udelay(500000);	/* another 500 ms (results in faster booting) */
++	}
++
++#else
+    /*
+      * Wait up to 3 seconds for ALL associated PHYs to finish
+      * autonegotiation.  The only way we get out of here sooner is
+      * if ALL PHYs are connected AND finish autonegotiation.
+      */
++     int timeout = 0;
+     timeout=20;
++   
+     for (;;) {
++		
+         phyHwStatus = phy_reg_read(ethUnit, phyUnit, ATHR_PHY_CONTROL);
+ 
+         if (ATHR_RESET_DONE(phyHwStatus)) {
+@@ -183,10 +221,58 @@
+ 
+         mdelay(150);
+     }
++#endif	
+ 
+     printf(MODULE_NAME": unit %d phy addr %x ", ethUnit, phyUnit);
+ }
+ 
++
++#ifdef BCM_ENET_PHY
++/************************************************************************
++*athr_get_phy_id - get phy id
++*RETURN:phy_id
++*/
++int
++athr_get_phy_id(int ethUnit,int phyUnit)
++{
++    uint16_t  id1, id2;
++    uint32_t phy_id;
++
++    id1 = id2 = 0;
++    
++    id1 = phy_reg_read(ethUnit, ATHR_PHYADDR(phyUnit), 2);
++    id2 = phy_reg_read(ethUnit, ATHR_PHYADDR(phyUnit), 3);
++
++    phy_id = (id1 << 16) | id2;
++
++    printf("phy_id = 0x%x, ethUnit=%d, ATHR_PHYADDR(phyUnit)=%d\n", phy_id, ethUnit, ATHR_PHYADDR(phyUnit));
++
++    return phy_id;
++}
++
++
++void athr_phy_init(int ethUnit,int phyUnit)
++{
++	#ifdef BCM_ENET_PHY
++	    phy_reg_write(ethUnit, phyUnit , ATHR_PHY_CONTROL, ATHR_CTRL_SOFTWARE_RESET);
++	    udelay(1000);
++	    phy_reg_write(ethUnit, phyUnit , ATHR_1000BASET_CONTROL, ATHR_1000BASET_CONTROL_INIT);
++	    udelay(100);
++	    phy_reg_write(ethUnit, phyUnit , ATHR_PHY_CONTROL, ATHR_CTRL_AUTONEGOTIATION_INIT);
++	    udelay(100);
++	    phy_reg_write(ethUnit, phyUnit , ATHR_PHY_CONTROL, ATHR_CTRL_SOFTWARE_RESET);
++	    udelay(1000);
++	    phy_reg_write(ethUnit, phyUnit , ATHR_PHY_CONTROL, ATHR_CTRL_SOFTWARE_INIT);
++	    udelay(100);
++		
++	    /*Disable GTXCLK delay*/
++	    phy_reg_write(ethUnit, ATHR_PHYADDR(phyUnit),ATHR_PHY_SKEW_CTRL, 0x8c00);
++       #endif
++
++	   return;
++}
++#endif
++
+ /******************************************************************************
+ *
+ * athr_phy_is_link_alive - test to see if the specified link is alive
+@@ -203,13 +289,23 @@
+ 	uint32_t phyAddr;
+ 
+ 	phyBase = ATHR_PHYBASE(phyUnit);
++	
+ 	phyAddr = ATHR_PHYADDR(phyUnit);
++
++#ifdef BCM_ENET_PHY
++	/*Modify by sirian, 2011-05-05*/
++	phyHwStatus = phy_reg_read(0, phyAddr, ATHR_PHY_STATUS);
++	
++	if (phyHwStatus & 0x0004) {
++		return TRUE;
++	}
++#else
+ 	phyHwStatus = phy_reg_read(0, phyAddr, ATHR_PHY_SPEC_STATUS);
+ 
+ 	if (phyHwStatus & ATHR_STATUS_LINK_PASS) {
+ 		return TRUE;
+ 	}
+-
++#endif
+ 	return FALSE;
+ }
+ 
+@@ -231,6 +327,14 @@
+ 	int       phyUnit = 0;
+ 	int       liveLinks = 0;
+ 
++#ifdef BCM_ENET_PHY
++        /*Get phy  id info, sirian, 2011-05-05*/
++        athr_get_phy_id(ethUnit, phyUnit);
++
++        /*phy init, sirian, 2011-05-05*/
++	athr_phy_init(ethUnit,phyUnit);
++#endif
++
+ 	athr_auto_neg(ethUnit,phyUnit);
+ 
+ 	if (athr_phy_is_link_alive(phyUnit)) {
+@@ -242,6 +346,121 @@
+ 	return (liveLinks > 0);
+ }
+ 
++
++/*Added by sirian, 2011-05-08, for get speed , duplex and link */
++#ifdef BCM_ENET_PHY
++void athr_phy_get_speed_duplex_link(int ethUnit,int * speed, int * duplex, int *link)
++{
++	uint32_t  phyBase;
++    	uint32_t  phyAddr;
++    	uint16_t  phyHwStatus;
++		
++	int phyUnit = 0;
++		
++   	 *duplex = 0;
++	 *speed = 10;
++	 *link = 0;
++
++	 /*
++ 	 * Wait for auto-negotiation to complete
++	 */
++	phyHwStatus = phy_reg_read(ethUnit, phyUnit , ATHR_PHY_STATUS);
++	 
++	if ((phyHwStatus & ATHR_STATUS_AUTO_NEG_ABLE) && !(phyHwStatus & ATHR_STATUS_AUTO_NEG_COMP)) {
++		int i = 0;
++
++		puts("Waiting for PHY auto negotiation to complete");
++		while (!(phyHwStatus & ATHR_STATUS_AUTO_NEG_COMP)) {
++			/*
++			 * Timeout reached ?
++			 */
++			if (i > PHY_AUTONEGOTIATE_TIMEOUT) {
++				puts(" TIMEOUT !\n");
++				return;
++			}
++
++			if ((i++ % 1000) == 0) {
++				putc('.');
++			}
++			udelay(1000);	/* 1 ms */
++			
++			phyHwStatus = phy_reg_read(ethUnit, phyUnit , ATHR_PHY_STATUS);
++		}
++		puts(" done\n");
++
++		/* Link status bit is latched low, read it again */
++		phyHwStatus = phy_reg_read(ethUnit, phyUnit , ATHR_PHY_STATUS);
++		udelay(500000);	/* another 500 ms (results in faster booting) */
++	}
++
++	
++
++         /*get lin status*/
++         if (phyHwStatus && 0x0004)
++         {
++         	*link = 1;
++         }
++
++	 
++   	 if (*link) {
++
++        	 phyBase = ATHR_PHYBASE(phyUnit);
++	 
++        	 phyAddr = ATHR_PHYADDR(phyUnit);
++			 
++		 phyHwStatus = phy_reg_read(ethUnit, ATHR_PHYADDR(phyUnit),ATHR_PHY_SPEC_STATUS);
++	
++		switch((phyHwStatus & ATHER_STATUS_LINK_MASK) >> ATHER_STATUS_LINK_SHIFT){
++
++		case 1:
++			*duplex = 0;
++			*speed = 10;
++			break;
++
++		case 2:
++			*duplex = 1;
++			*speed = 10;
++			break;
++
++		case 3:
++			*duplex = 0;
++			*speed = 100;
++			break;
++
++		case 5:
++			*duplex = 1;
++			*speed = 100;
++			break;
++
++		case 6:
++			*duplex = 0;
++			*speed = 1000;
++			break;
++
++		case 7:
++			*duplex = 1;
++			*speed = 1000;
++			break;
++
++		default:
++			printf("Auto-neg error, defaulting to 10BT/HD\n");
++			*duplex = 0;
++			*speed = 10;
++			break;
++	}
++
++	
++        //printf("%dMbps %s\n", *speed, *duplex? "full duplex":"half duplex");
++		
++	return;
++}
++
++        printf("Link is down\n");
++return ;
++}
++
++#endif
++
+ /******************************************************************************
+ *
+ * athr_phy_is_fdx - Determines whether the phy ports associated with the
+@@ -257,8 +476,13 @@
+     uint32_t  phyBase;
+     uint32_t  phyAddr;
+     uint16_t  phyHwStatus;
+-    int       ii = 200;
+ 
++#ifdef BCM_ENET_PHY
++    int       ii = 200, duplex = 0;
++#else
++    int       ii = 200;
++#endif
++   
+     if (athr_phy_is_link_alive(phyUnit)) {
+ 
+          phyBase = ATHR_PHYBASE(phyUnit);
+@@ -270,10 +494,22 @@
+           } while((!(phyHwStatus & ATHR_STATUS_RESOVLED)) && --ii);
+           
+           if (phyHwStatus & ATHER_STATUS_FULL_DUPLEX) {
++		  	
++#ifdef BCM_ENET_PHY
++		 duplex = 1;
++#else
+                 return TRUE;
++#endif
++
+           }
+     }
++	
++#ifdef BCM_ENET_PHY	
++	return duplex;
++#else
+     return FALSE;
++#endif
++
+ }
+ 
+ /******************************************************************************
+@@ -292,8 +528,12 @@
+     uint16_t  phyHwStatus;
+     uint32_t  phyBase;
+     uint32_t  phyAddr;
+-    int       ii = 200;
+-
++   
++#ifdef BCM_ENET_PHY
++    int  ii = 200, speed = 10;
++#else
++     int   ii = 200;
++#endif
+ 
+     if (athr_phy_is_link_alive(phyUnit)) {
+ 
+@@ -309,17 +549,35 @@
+ 
+         switch(phyHwStatus) {
+         case 0:
++#ifdef BCM_ENET_PHY
++            speed = 10;
++            break;
++#else
+             return _10BASET;
++#endif
+         case 1:
+             phy_reg_write(0, phyAddr, ATHR_DEBUG_PORT_ADDRESS, 0x5);
+             phy_reg_write(0, phyAddr, ATHR_DEBUG_PORT_DATA, 0x147);
++#ifdef BCM_ENET_PHY
++           speed = 100;
++           break;
++#else
+             return _100BASET;
++#endif
+         case 2:
+             phy_reg_write(0, phyAddr, ATHR_DEBUG_PORT_ADDRESS, 0x5);
+             phy_reg_write(0, phyAddr, ATHR_DEBUG_PORT_DATA, 0x0);
++#ifdef BCM_ENET_PHY
++            speed = 1000;
++	    break;
++#else
+             return _1000BASET;
++#endif
+         default:
+             printf("Unkown speed read!\n");
++#ifdef BCM_ENET_PHY
++	    speed = 10;
++#endif
+         }
+     }
+ 
+@@ -328,7 +586,11 @@
+ 
+ 
+     //printf("athr_phy_speed: link down, returning 10t\n");
++ #ifdef BCM_ENET_PHY
++    return speed;
++ #else
+     return _10BASET;
++ #endif
+ }
+ 
+ /*****************************************************************************
+@@ -363,18 +625,31 @@
+         lastStatus = &athrPhyInfo[phyUnit];
+ 
+         if (lastStatus->isPhyAlive) { /* last known link status was ALIVE */
+-
++			
++#ifdef BCM_ENET_PHY
++            /*Modify by sirian, 2011-05-05*/
++             phyHwStatus = phy_reg_read(0, ATHR_PHYADDR(phyUnit),ATHR_PHY_STATUS);
++#else
+              phyHwStatus = phy_reg_read(0, ATHR_PHYADDR(phyUnit),ATHR_PHY_SPEC_STATUS);
++#endif
+ 
+             /* See if we've lost link */
++#ifdef BCM_ENET_PHY
++            if (phyHwStatus & 0x0004) { /* check realtime link */
++#else
+             if (phyHwStatus & ATHR_STATUS_LINK_PASS) { /* check realtime link */
++#endif
+                 linkCount++;
+             } else {
+                 phyHwStatus = phy_reg_read(0, ATHR_PHYADDR(phyUnit),ATHR_PHY_STATUS);
+             /* If realtime failed check link in latch register before
+ 	     * asserting link down.
+              */
++#ifdef BCM_ENET_PHY
++                if (phyHwStatus & 0x0004)      /*modify by sirian, 2011-05-05*/
++#else
+                 if (phyHwStatus & ATHR_LATCH_LINK_PASS)     
++#endif
+                    linkCount++;
+ 		else
+                     lostLinks++;
+@@ -384,20 +659,40 @@
+ 
+             /* Check for reset complete */
+ 
++#ifdef BCM_ENET_PHY
++	    phyHwControl = phy_reg_read(0, ATHR_PHYADDR(phyUnit),ATHR_PHY_CONTROL);
++#else
+                 phyHwStatus = phy_reg_read(0, ATHR_PHYADDR(phyUnit),ATHR_PHY_STATUS);
++#endif
+ 
++#ifdef BCM_ENET_PHY
++            if (!ATHR_RESET_DONE(phyHwControl))
++#else
+             if (!ATHR_RESET_DONE(phyHwStatus))
++#endif
+                 continue;
+ 
++#ifdef BCM_ENET_PHY
++            phyHwStatus = phy_reg_read(0, ATHR_PHYADDR(phyUnit),ATHR_PHY_STATUS);
++#else
+                 phyHwControl = phy_reg_read(0, ATHR_PHYADDR(phyUnit),ATHR_PHY_CONTROL);
++#endif
+ 
+             /* Check for AutoNegotiation complete */ 
+            
+             if ((!(phyHwControl & ATHR_CTRL_AUTONEGOTIATION_ENABLE)) 
+                  || ATHR_AUTONEG_DONE(phyHwStatus)) {
++#ifdef BCM_ENET_PHY
++                    phyHwStatus = phy_reg_read(0, ATHR_PHYADDR(phyUnit),ATHR_PHY_STATUS);
++#else
+                     phyHwStatus = phy_reg_read(0, ATHR_PHYADDR(phyUnit),ATHR_PHY_SPEC_STATUS);
++#endif
+ 
++#ifdef BCM_ENET_PHY
++                    if (phyHwStatus & 0x0004) {
++#else
+                     if (phyHwStatus & ATHR_STATUS_LINK_PASS) {
++#endif
+                         gainedLinks++;
+                         linkCount++;
+                         lastStatus->isPhyAlive = TRUE;
+diff -Nur boot_atheros/u-boot/board/ar7240/common/athrsf1_phy.h boot_liteon/u-boot/board/ar7240/common/athrsf1_phy.h
+--- boot_atheros/u-boot/board/ar7240/common/athrsf1_phy.h	2013-04-03 13:43:13.000000000 +0800
++++ boot_liteon/u-boot/board/ar7240/common/athrsf1_phy.h	2013-03-29 18:00:25.000000000 +0800
+@@ -17,10 +17,23 @@
+ #ifndef _ATHRS26_RGMII_H
+ #define _ATHRS26_RGMII_H
+ #define BOOL int
++
++/*Added by sirian, 2011-05-08*/
++#ifdef BCM_ENET_PHY
++#include "bcm_54610_phy.h"
++#else
+ #include "athr_s27_phy.h"
++#endif
++
+ int athr_phy_is_up(int unit);
+ int athr_phy_is_fdx(int unit,int phyUnit);
+ int athr_phy_speed(int unit,int phyUnit);
++
++/*Added by sirian, 2011-05-08*/
++#ifdef BCM_ENET_PHY
++void athr_phy_get_speed_duplex_link(int ethUnit,int * speed, int * duplex, int* link);
++#endif
++
+ BOOL athr_phy_setup(int unit);
+ BOOL athr_phy_is_link_alive(int phyUnit);
+ #endif
+diff -Nur boot_atheros/u-boot/board/ar7240/common/bcm_54610_phy.h boot_liteon/u-boot/board/ar7240/common/bcm_54610_phy.h
+--- boot_atheros/u-boot/board/ar7240/common/bcm_54610_phy.h	1970-01-01 07:00:00.000000000 +0700
++++ boot_liteon/u-boot/board/ar7240/common/bcm_54610_phy.h	2013-03-29 18:00:25.000000000 +0800
+@@ -0,0 +1,229 @@
++/*
++ * Copyright (c) 2011, Liteon corp.
++ *
++ * Permission to use, copy, modify, and/or distribute this software for any
++ * purpose with or without fee is hereby granted, provided that the above
++ * copyright notice and this permission notice appear in all copies.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
++ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
++ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
++ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
++ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
++ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
++ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
++ */
++
++#ifndef _BCM54610_PHY_H
++#define _BCM54610_PHY_H
++
++/*****************/
++/* PHY Registers */
++/*****************/
++#define ATHR_PHY_CONTROL                 0x00
++#define ATHR_PHY_STATUS                   0x01
++#define ATHR_PHY_ID1                     0x02
++#define ATHR_PHY_ID2                     0x03
++#define ATHR_AUTONEG_ADVERT              0x04
++#define ATHR_LINK_PARTNER_ABILITY        0x05
++#define ATHR_AUTONEG_EXPANSION          0x06
++#define ATHR_NEXT_PAGE_TRANSMIT          0x07
++#define ATHR_LINK_PARTNER_NEXT_PAGE      0x08
++#define ATHR_1000BASET_CONTROL           0x09
++#define ATHR_1000BASET_STATUS              10
++#define ATHR_PHY_FUNC_CONTROL            16
++
++#define ATHR_DEBUG_PORT_ADDRESS          29
++#define ATHR_DEBUG_PORT_DATA             30
++#define ATHR_PHY_INTR_ENABLE             0x12
++#define ATHR_PHY_INTR_STATUS             0x13
++
++
++/*modify by sirian, 2011-05-09 --->*/
++#define ATHR_PHY_SPEC_STATUS                 0x19
++#define ATHR_PHY_SKEW_CTRL                    0x1c
++
++/* ATHR_PHY_CONTROL fields */
++#define ATHR_CTRL_SOFTWARE_RESET  0x9140
++#define ATHR_CTRL_SOFTWARE_INIT  0x1140
++#define ATHR_CTRL_SOFTWARE_RESTART  0x1340
++#define ATHR_1000BASET_CONTROL_INIT	0xe00
++#define ATHR_CTRL_AUTONEGOTIATION_INIT		0x1e1
++#define ATHR_CTRL_AUTONEGOTIATION_ENABLE            0x00001000
++/*<---end sirian*/
++
++#define ATHR_CTRL_RESTART_AUTONEGOTIATION           0x0200
++#define ATHR_CTRL_SPEED_FULL_DUPLEX                 0x0100
++#define ATHR_CTRL_SPEED_LSB                         0x2000
++#define ATHR_CTRL_SPEED_MSB                         0x0040
++
++#define ATHR_RESET_DONE(phy_control)                   \
++    (((phy_control) & (ATHR_CTRL_SOFTWARE_RESET)) == 0)
++
++
++    
++/* Phy status fields */
++/*modify by sirian, 2011-05-09 --->*/
++#define ATHR_STATUS_AUTO_NEG_DONE      0x0020
++#define ATHR_STATUS_AUTO_NEG_ABLE	 0x0008
++#define ATHR_STATUS_AUTO_NEG_COMP	 0x0020
++#define PHY_AUTONEGOTIATE_TIMEOUT	5000 /* in ms */
++/*<---end sirian*/
++
++#define ATHR_AUTONEG_DONE(ip_phy_status)                   \
++    (((ip_phy_status) &                                  \
++        (ATHR_STATUS_AUTO_NEG_DONE)) ==                    \
++        (ATHR_STATUS_AUTO_NEG_DONE))
++
++/* Link Partner ability */
++#define ATHR_LINK_100BASETX_FULL_DUPLEX       0x0100
++#define ATHR_LINK_100BASETX                   0x0080
++#define ATHR_LINK_10BASETX_FULL_DUPLEX        0x0040
++#define ATHR_LINK_10BASETX                    0x0020
++
++/* Advertisement register. */
++#define ATHR_ADVERTISE_NEXT_PAGE              0x8000
++#define ATHR_ADVERTISE_ASYM_PAUSE             0x0800
++#define ATHR_ADVERTISE_PAUSE                  0x0400
++#define ATHR_ADVERTISE_100FULL                0x0100
++#define ATHR_ADVERTISE_100HALF                0x0080  
++#define ATHR_ADVERTISE_10FULL                 0x0040  
++#define ATHR_ADVERTISE_10HALF                 0x0020  
++
++#define ATHR_ADVERTISE_ALL (ATHR_ADVERTISE_ASYM_PAUSE | ATHR_ADVERTISE_PAUSE | \
++                            ATHR_ADVERTISE_10HALF | ATHR_ADVERTISE_10FULL | \
++                            ATHR_ADVERTISE_100HALF | ATHR_ADVERTISE_100FULL)
++                       
++/* 1000BASET_CONTROL */
++#define ATHR_ADVERTISE_1000FULL               0x0200
++#define ATHR_ADVERTISE_1000HALF		      0x0100
++
++/* Phy Specific status fields */
++/*modify by sirian, 2011-05-09 --->*/
++#define ATHER_STATUS_LINK_MASK                0x0700
++#define ATHER_STATUS_LINK_SHIFT                8
++/*<---end sirian*/
++
++#define ATHER_STATUS_FULL_DUPLEX              0x2000
++#define ATHR_STATUS_LINK_PASS                 0x0400 
++#define ATHR_LATCH_LINK_PASS                  0x0004 
++#define ATHR_STATUS_RESOVLED                  0x0800
++
++
++/*phy debug port  register */
++#define ATHER_DEBUG_SERDES_REG                5
++
++/* Serdes debug fields */
++#define ATHER_SERDES_BEACON                   0x0100
++
++#define OPERATIONAL_MODE_REG0                0x4
++
++/* S27 CSR Registers */
++
++#define PORT_STATUS_REGISTER0                0x0100 
++#define PORT_STATUS_REGISTER1                0x0200
++#define PORT_STATUS_REGISTER2                0x0300
++#define PORT_STATUS_REGISTER3                0x0400
++#define PORT_STATUS_REGISTER4                0x0500
++#define PORT_STATUS_REGISTER5                0x0600
++
++#define RATE_LIMIT_REGISTER0                 0x010C
++#define RATE_LIMIT_REGISTER1                 0x020C
++#define RATE_LIMIT_REGISTER2                 0x030C
++#define RATE_LIMIT_REGISTER3                 0x040C
++#define RATE_LIMIT_REGISTER4                 0x050C
++#define RATE_LIMIT_REGISTER5                 0x060C
++
++#define PORT_CONTROL_REGISTER0               0x0104
++#define PORT_CONTROL_REGISTER1               0x0204
++#define PORT_CONTROL_REGISTER2               0x0304
++#define PORT_CONTROL_REGISTER3               0x0404
++#define PORT_CONTROL_REGISTER4               0x0504
++#define PORT_CONTROL_REGISTER5               0x0604
++
++#define CPU_PORT_REGISTER                    0x0078
++#define MDIO_CTRL_REGISTER                   0x0098
++
++#define S27_ARL_TBL_FUNC_REG0                0x0050
++#define S27_ARL_TBL_FUNC_REG1                0x0054
++#define S27_ARL_TBL_FUNC_REG2                0x0058
++#define S27_FLD_MASK_REG                     0x002c
++#define S27_ARL_TBL_CTRL_REG                 0x005c
++#define S27_GLOBAL_INTR_REG                  0x10
++#define S27_GLOBAL_INTR_MASK_REG             0x14
++
++
++#define S27_ENABLE_CPU_BROADCAST             (1 << 26)
++#define S27_ENABLE_CPU_BCAST_FWD             (1 << 25)
++
++#define PHY_LINK_CHANGE_REG 		     0x4
++#define PHY_LINK_UP 		             0x400
++#define PHY_LINK_DOWN 		             0x800
++#define PHY_LINK_DUPLEX_CHANGE 		     0x2000
++#define PHY_LINK_SPEED_CHANGE		     0x4000
++#define PHY_LINK_INTRS			     (PHY_LINK_UP | PHY_LINK_DOWN | PHY_LINK_DUPLEX_CHANGE | PHY_LINK_SPEED_CHANGE)
++
++/* SWITCH QOS REGISTERS */
++
++#define ATHR_QOS_PORT_0			0x110 /* CPU PORT */
++#define ATHR_QOS_PORT_1			0x210
++#define ATHR_QOS_PORT_2			0x310
++#define ATHR_QOS_PORT_3			0x410
++#define ATHR_QOS_PORT_4			0x510
++
++#define ATHR_ENABLE_TOS                 (1 << 16)
++
++#define ATHR_QOS_MODE_REGISTER          0x030
++#define ATHR_QOS_FIXED_PRIORITY        ((0 << 31) | (0 << 28))
++#define ATHR_QOS_WEIGHTED              ((1 << 31) | (0 << 28)) /* Fixed weight 8,4,2,1 */
++#define ATHR_QOS_MIXED                 ((1 << 31) | (1 << 28)) /* Q3 for managment; Q2,Q1,Q0 - 4,2,1 */
++
++#ifndef BOOL
++#define BOOL    int
++#endif
++
++#define sysMsDelay(_x) udelay((_x) * 1000)
++#define mdelay(_x)      sysMsDelay(_x)
++
++#undef S27_VER_1_0
++
++/*
++ *  Atheros header defines
++ */
++#ifndef _ATH_HEADER_CONF
++#define _ATH_HEADER_CONF
++
++typedef enum {
++    NORMAL_PACKET,
++    RESERVED0,
++    MIB_1ST,
++    RESERVED1,
++    RESERVED2,
++    READ_WRITE_REG,
++    READ_WRITE_REG_ACK,
++    RESERVED3
++} AT_HEADER_TYPE;
++
++typedef struct {
++    uint16_t    reserved0  :2;
++    uint16_t    priority   :2;
++    uint16_t    type       :4;
++    uint16_t    broadcast  :1;
++    uint16_t    from_cpu   :1;
++    uint16_t    reserved1  :2;
++    uint16_t    port_num   :4;
++}at_header_t;
++
++#define ATHR_HEADER_LEN 2
++
++#endif // _ATH_HEADER_CONF
++
++typedef enum {
++    PORT_EG_UNMODIFIED = 0,  /**<  egress transmit packets unmodified */
++    PORT_EG_UNTAGGED,        /**<  egress transmit packets without vlan tag */
++    PORT_EG_TAGGED,          /**<  egress transmit packets with vlan tag */
++} port_1q_egmode_t;
++
++extern void set_packet_inspection_flag(int flag);
++
++#endif

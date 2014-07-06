@@ -1,0 +1,15 @@
+--- old/include/cmd_confdefs.h	2012-11-28 15:36:33.000000000 +0800
++++ new/include/cmd_confdefs.h	2012-11-28 16:34:54.000000000 +0800
+@@ -51,7 +51,12 @@
+ #define CFG_CMD_ASKENV		0x00020000ULL	/* ask for env variable		*/
+ #define CFG_CMD_RUN		0x00040000ULL	/* run command in env variable	*/
+ #define CFG_CMD_ECHO		0x00080000ULL	/* echo arguments		*/
++/*Sean modify. Nov 2012, 28*/
++#ifdef LITEON_SRC_VALID
++#else
+ #define CFG_CMD_I2C		0x00100000ULL	/* I2C serial bus support	*/
++#endif //LITEON_SRC_VALID
++/*End Sean*/
+ #define CFG_CMD_REGINFO		0x00200000ULL	/* Register dump		*/
+ #define CFG_CMD_IMMAP		0x00400000ULL	/* IMMR dump support		*/
+ #define CFG_CMD_DATE		0x00800000ULL	/* support for RTC, date/time...*/

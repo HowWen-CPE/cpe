@@ -1,0 +1,52 @@
+Index: mt7620_wifi2714_all_dpa_20130218/rt2860v2/common/cmm_asic.c
+===================================================================
+--- mt7620_wifi2714_all_dpa_20130218.orig/rt2860v2/common/cmm_asic.c	2013-03-25 18:16:14.406535703 +0800
++++ mt7620_wifi2714_all_dpa_20130218.new/rt2860v2/common/cmm_asic.c	2013-03-25 18:20:12.968022553 +0800
+@@ -1601,20 +1601,38 @@
+ 	}
+ 	else if (pAd->CommonCfg.TxPowerPercentage > 30) /* 31 ~ 60%, treat as 50% in terms of mW		 DeltaPwr -= 3; */
+ 	{
++#ifdef LITEON_SRC_VALID
++		*pDeltaPwr -= 6;
++#else
+ 		*pDeltaPwr -= 3;
++#endif
++		
+ 	}
+ 	else if (pAd->CommonCfg.TxPowerPercentage > 15) /* 16 ~ 30%, treat as 25% in terms of mW		 DeltaPwr -= 6; */
+ 	{
++#ifdef LITEON_SRC_VALID
++		*pDeltaPowerByBbpR1 -= 12;
++#else
+ 		*pDeltaPowerByBbpR1 -= 6; /* -6 dBm */
++#endif
+ 	}
+ 	else if (pAd->CommonCfg.TxPowerPercentage > 9) /* 10 ~ 15%, treat as 12.5% in terms of mW		 DeltaPwr -= 9; */
+ 	{
++#ifdef LITEON_SRC_VALID
++		*pDeltaPowerByBbpR1 -= 12; /* -12 dBm */
++		*pDeltaPwr -= 6;
++#else
+ 		*pDeltaPowerByBbpR1 -= 6; /* -6 dBm */
+ 		*pDeltaPwr -= 3;
++#endif
+ 	}
+ 	else /* 0 ~ 9 %, treat as MIN(~3%) in terms of mW		 DeltaPwr -= 12; */
+ 	{
++#ifdef LITEON_SRC_VALID
++		*pDeltaPowerByBbpR1 -= 20; /* -20 dBm */
++#else
+ 		*pDeltaPowerByBbpR1 -= 12; /* -12 dBm */
++#endif
+ 	}
+ }
+ 
+@@ -1875,6 +1893,8 @@
+ 
+ 			}
+ 		}
++
++		
+ #else /* specific for RT3352 */
+ /*****************************************************************************/
+ 		/* Set new Tx power for different Tx rates */

@@ -1,0 +1,71 @@
+Index: mt7620_wifi2716_all_dpa_20130426/rt2860v2/common/wsc.c
+===================================================================
+--- mt7620_wifi2716_all_dpa_20130426.orig/rt2860v2/common/wsc.c	2013-12-11 17:16:57.198538453 +0800
++++ mt7620_wifi2716_all_dpa_20130426/rt2860v2/common/wsc.c	2013-12-11 17:25:33.602688824 +0800
+@@ -9926,7 +9926,7 @@
+ 	STRING			WepKeyName[MAX_WEPKEYNAME_LEN] = {0};
+ 	STRING			WepKeyFormatName[MAX_WEPKEYNAME_LEN] = {0};
+ 	INT				tempStrLen = 0;
+-
++	
+ 	DBGPRINT(RT_DEBUG_TRACE, ("-----> WscWriteConfToDatFile(CurOpMode = %d)\n", CurOpMode));
+ 
+ #ifdef CONFIG_AP_SUPPORT
+@@ -9943,7 +9943,15 @@
+ 			fileName = AP_PROFILE_PATH_RBUS;
+ 		else
+ #endif /* RTMP_RBUS_SUPPORT */
+-			fileName = AP_PROFILE_PATH;
++		/* when insmod rt2860v2_ap.ko, ap_profile_path_rbus can be passed to rt2860v2_ap.ko, Sirian@liteon, 2013-12-11-----> */
++		{	
++			extern PSTRING ap_profile_path_rbus;
++			if (ap_profile_path_rbus != NULL)
++				fileName = ap_profile_path_rbus;
++			else
++				fileName = AP_PROFILE_PATH_RBUS;
++		}
++		/* <-----Sirian@liteon, 2013-12-11 */
+ 
+ 		snprintf((PSTRING) WepKeyName, sizeof(WepKeyName), "Key%dStr%d=", pAd->ApCfg.MBSSID[apidx].DefaultKeyId+1, apidx+1);
+ 		snprintf((PSTRING) WepKeyFormatName, sizeof(WepKeyFormatName), "Key%dType=", pAd->ApCfg.MBSSID[apidx].DefaultKeyId+1);
+Index: mt7620_wifi2716_all_dpa_20130426/rt2860v2/os/linux/rt_main_dev.c
+===================================================================
+--- mt7620_wifi2716_all_dpa_20130426.orig/rt2860v2/os/linux/rt_main_dev.c	2013-12-11 17:16:45.889570658 +0800
++++ mt7620_wifi2716_all_dpa_20130426/rt2860v2/os/linux/rt_main_dev.c	2013-12-11 17:21:30.269823486 +0800
+@@ -49,8 +49,15 @@
+ /* Private Variables Used                                              */
+ /*---------------------------------------------------------------------*/
+ 
+-PSTRING mac = "";		   /* default 00:00:00:00:00:00 */
+-PSTRING hostname = "";		   /* default CMPC */
++PSTRING mac = "";	  /* default 00:00:00:00:00:00 */
++PSTRING hostname = "";	  /* default CMPC */
++
++/*when insmod rt2860v2_ap.ko, ap_profile_path_rbus can be passed to rt2860v2_ap.ko, Sirian@liteon, 2013-12-11----->*/
++PSTRING ap_profile_path_rbus=NULL;
++module_param (ap_profile_path_rbus, charp, 0600);
++MODULE_PARM_DESC (ap_profile_path_rbus, "rt28xx: ap_profile_path_rbus");
++/*<-----Sirian@liteon, 2013-12-11*/
++
+ #if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,12)
+ MODULE_PARM (mac, "s");
+ #else
+Index: mt7620_wifi2716_all_dpa_20130426/rt2860v2/os/linux/rt_profile.c
+===================================================================
+--- mt7620_wifi2716_all_dpa_20130426.orig/rt2860v2/os/linux/rt_profile.c	2013-12-11 17:16:28.981624485 +0800
++++ mt7620_wifi2716_all_dpa_20130426/rt2860v2/os/linux/rt_profile.c	2013-12-11 17:24:13.041525436 +0800
+@@ -171,7 +171,13 @@
+ #ifdef CONFIG_AP_SUPPORT
+ 		IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
+ 		{
+-			src = AP_PROFILE_PATH_RBUS;
++			/* when insmod rt2860v2_ap.ko, ap_profile_path_rbus can be passed to rt2860v2_ap.ko, Sirian@liteon, 2013-12-11-----> */
++			extern PSTRING ap_profile_path_rbus;
++			if (ap_profile_path_rbus != NULL)
++				src = ap_profile_path_rbus;
++			else
++				src = AP_PROFILE_PATH_RBUS;
++			/* <-----Sirian@liteon, 2013-12-11 */
+ 		}
+ #endif /* CONFIG_AP_SUPPORT */
+ 

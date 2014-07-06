@@ -1,0 +1,54 @@
+#!/bin/sh 
+. /etc/arch.sh
+
+local wlvnum="$(nvram get wlv_rule_num)"
+local i=0
+
+newstate=${1}
+actitem=${2}
+[ "$newstate" = "on" ] && {
+    newstate="1"
+}
+[ "$newstate" = "off" ] && {
+    newstate="0"
+}
+# if there is no arguments, we suppose to do a state change for radio on/off
+[ -z "$newstate" ] && {
+    newstate="1"
+    [ "$(nvram show wl_basic_rule 0 enable)" = "1" ] && newstate="0"
+    [ "$(nvram show wl1_basic_rule 0 enable)" = "1" ] && newstate="0"
+}
+#set the nvram and let ezp-chk-wl-enable do the rest actions.
+#If we need to turn-off/on the radio, ie. cmd from button or no arg2,
+#set wl_basic_rule 0 enable as 0/1.
+#We need to avoid NVRAM from writing every time, make a check on this.
+
+[ "$actitem" = "wlan5g" ] &&
+[ "$(nvram show wl5g_basic_rule 0 enable)" != "$newstate" ] && {
+    nvram replace attr wl5g_basic_rule 0 enable "$newstate"
+    nvram commit
+}
+[ "$actitem" = "wlan2.4g" ] &&
+[ "$(nvram show wl_basic_rule 0 enable)" != "$newstate" ] && {
+    nvram replace attr wl_basic_rule 0 enable "$newstate"
+    nvram commit
+}
+[ "$actitem" = "button" ] && {
+    [ "$(nvram show wl_basic_rule 0 enable)" != "$newstate" ] && {
+        nvram replace attr wl_basic_rule 0 enable "$newstate"
+    }
+    [ "$(nvram show wl5g_basic_rule 0 enable)" != "$newstate" ] && {
+        nvram replace attr wl5g_basic_rule 0 enable "$newstate"
+    }
+    nvram replace attr wl_origset_rule 0 enable "$newstate"
+    nvram replace attr wl1_origset_rule 0 enable "$newstate"
+    nvram commit
+}
+#To distinguish the wifionoff command comes from hardware button or switch,
+#two argument should be available in this case 
+#[ "$actitem" = "button" ] && {
+#}
+
+#ezp-wifi-led wlan "$newstate"
+# wl nvram has been set up properly just fire the commands
+/sbin/ezp-chk-wl-enable

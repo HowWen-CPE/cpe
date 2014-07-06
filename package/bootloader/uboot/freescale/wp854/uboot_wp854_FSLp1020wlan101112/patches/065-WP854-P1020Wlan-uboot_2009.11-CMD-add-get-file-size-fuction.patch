@@ -1,0 +1,52 @@
+--- a/fs/ubifs/ubifs.c	2012-08-29 19:32:18.000000000 -0700
++++ b/fs/ubifs/ubifs.c	2012-08-29 19:33:13.000000000 -0700
+@@ -707,3 +707,48 @@
+ 	ubi_close_volume(c->ubi);
+ 	return err;
+ }
++
++#ifdef CONFIG_CMD_UBIFS
++/*liteon add*/
++u32 liteon_ubifs_get_size(char *filename, u32 size)
++{
++	struct ubifs_info *c = ubifs_sb->s_fs_info;
++	unsigned long inum;
++	struct inode *inode;
++	int err = 0;
++
++	c->ubi = ubi_open_volume(c->vi.ubi_num, c->vi.vol_id, UBI_READONLY);
++	/* ubifs_findfile will resolve symlinks, so we know that we get
++	 * the real file here */
++	inum = ubifs_findfile(ubifs_sb, filename);
++	if (!inum) {
++		err = -1;
++		goto out;
++	}
++
++	/*
++	 * Read file inode
++	 */
++	inode = ubifs_iget(ubifs_sb, inum);
++	if (IS_ERR(inode)) {
++		printf("%s: Error reading inode %ld!\n", __func__, inum);
++		err = -1;
++		goto out;
++	}
++
++	/*
++	 * If no size was specified or if size bigger than filesize
++	 * set size to filesize
++	 */
++	if ((size == 0) || (size > inode->i_size))
++		size = inode->i_size;
++
++
++	ubifs_iput(inode);
++        ubi_close_volume(c->ubi);
++	return size;
++out:
++	ubi_close_volume(c->ubi);
++	return err;
++}
++#endif
+\ No newline at end of file

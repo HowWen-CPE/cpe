@@ -1,0 +1,77 @@
+10
+
+dir
+12
+svn://192.168.1.17/trunk/cpe/target/linux
+svn://192.168.1.17
+
+
+
+2014-06-02T15:34:15.867866Z
+8
+peter
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+e6ba6a40-ba65-43fd-b1f0-5c3b951f9f94
+
+freescale
+dir
+
+generic
+dir
+
+Makefile
+file
+
+
+
+
+2014-06-21T05:05:21.063041Z
+55fb5f5cfdb9d1cfb51fc1b22e4dbdec
+2014-05-17T01:39:21.519443Z
+2
+peter
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+373
+
+ralink
+dir
+
+cavium
+dir
+
+atheros
+dir
+

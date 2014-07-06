@@ -1,0 +1,80 @@
+--- linux-2.6.36-ra4110/arch/mips/ralink/nvram.c	2012-12-10 16:32:06.000000000 +0800
++++ linux-2.6.36-ra4110_new/arch/mips/ralink/nvram.c	2012-12-27 14:45:49.304436000 +0800
+@@ -15,6 +15,12 @@
+ 
+ #include "nvram.h"
+ 
++/*modify for wp777 , daniel@liteon,2012-10-15----->*/
++#ifdef LITEON_SRC_VALID
++#include <linux/device.h>
++#endif //LITEON_SRC_VALID
++/*<-----daniel@liteon,2012-10-15*/
++
+ static unsigned long counter = 0;
+ 
+ extern int ra_mtd_write_nm(char *name, loff_t to, size_t len, const u_char *buf);
+@@ -28,13 +34,25 @@
+ int nvram_commit(int index);
+ int nvram_clear(int index);
+ 
++/*modify modify for wp777, daniel@liteon,2012-10-15----->*/
++#ifdef LITEON_SRC_VALID
++static int ralink_nvram_major = 0;
++static struct class *nvram_class = NULL;
++#else
+ static int ralink_nvram_major = 251;
++#endif //LITEON_SRC_VALID
++/*<-----daniel@liteon,2012-10-15*/
++
++
+ char ra_nvram_debug = 0;
+ 
+ static DECLARE_MUTEX(nvram_sem);
+ 
+ static block_t fb[FLASH_BLOCK_NUM] =
+ {
++/*modify for wp777 patition, daniel@liteon,2012-10-15----->*/
++#ifndef LITEON_SRC_VALID
++
+ #ifdef CONFIG_DUAL_IMAGE
+ 	{
+ 		.name = "uboot",
+@@ -67,6 +85,17 @@
+ 		.flash_max_len = ENV_BLK_SIZE * 5,
+ 		.valid = 0
+ 	}
++#else ////LITEON_SRC_VALID
++
++	{
++		.name = "2860",
++		.flash_offset =  0x0,
++		//.flash_max_len = 0x10000,
++		.flash_max_len = 0x8000,
++		.valid = 0
++	}
++#endif////LITEON_SRC_VALID
++/*<-----daniel@liteon,2012-10-15*/
+ };
+ 
+ /* ========================================================================
+@@ -272,6 +301,12 @@
+ 		printk(KERN_DEBUG "ralink_nvram: got dynamic major %d\n", r);
+ 	}
+ #endif
++	/*modify for wp777, daniel@liteon,2012-10-15----->*/
++	#ifdef LITEON_SRC_VALID
++	nvram_class = class_create(THIS_MODULE, "nvram_class");
++    	device_create(nvram_class, NULL, MKDEV(r, 0),NULL, RALINK_NVRAM_DEVNAME);
++	#endif //LITEON_SRC_VALID
++	/*<-----daniel@liteon,2012-10-15*/
+ 
+ 	init_MUTEX(&nvram_sem);
+ 
+@@ -480,6 +515,7 @@
+ 
+ 	RANV_PRINT("--> nvram_commit %d\n", index);
+ 
++
+ 	RANV_CHECK_INDEX(-1);
+ 
+ 	down(&nvram_sem);

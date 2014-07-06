@@ -1,0 +1,49 @@
+10
+
+dir
+12
+svn://192.168.1.17/trunk/cpe/toolchain/gcc/patches
+svn://192.168.1.17
+
+
+
+2014-05-17T07:31:18.579404Z
+4
+peter
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+e6ba6a40-ba65-43fd-b1f0-5c3b951f9f94
+
+4.7.0
+dir
+
+4.6.2
+dir
+
+4.5-linaro
+dir
+
+4.6-linaro
+dir
+
+4.4.7
+dir
+
+4.7-linaro
+dir
+
+llvm
+dir
+

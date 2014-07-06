@@ -1,0 +1,22 @@
+--- a/rt2860v2/ap/ap_cfg.c
++++ b/rt2860v2/ap/ap_cfg.c
+@@ -6325,6 +6325,8 @@ INT	Set_ACLClearAll_Proc(
+ 	{
+ 		DBGPRINT(RT_DEBUG_WARN, ("The Access Control List is empty!\n"));
+ 		DBGPRINT(RT_DEBUG_WARN, ("No need to clear the Access Control List!\n"));
++		if (pacl != NULL)
++		os_free_mem(NULL, pacl);
+ 		return TRUE;
+ 	}
+ 
+--- a/rt2860v2/common/p2p_cfg.c
++++ b/rt2860v2/common/p2p_cfg.c
+@@ -5026,6 +5026,8 @@ INT	Set_ACLClearAll_Proc(
+ 	{
+ 		DBGPRINT(RT_DEBUG_WARN, ("The Access Control List is empty!\n"));
+ 		DBGPRINT(RT_DEBUG_WARN, ("No need to clear the Access Control List!\n"));
++		if (pacl != NULL)
++			os_free_mem(NULL, pacl);
+ 		return TRUE;
+ 	}
+ 

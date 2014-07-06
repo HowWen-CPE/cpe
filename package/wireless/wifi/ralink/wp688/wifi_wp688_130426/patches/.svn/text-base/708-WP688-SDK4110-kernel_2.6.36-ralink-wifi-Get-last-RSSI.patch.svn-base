@@ -1,0 +1,14 @@
+--- a/rt2860v2/ap/apcli_assoc.c
++++ b/rt2860v2/ap/apcli_assoc.c
+@@ -804,6 +804,11 @@ static VOID ApCliPeerAssocRspAction(
+ 				ifIndex = (USHORT)(Elem->Priv);
+ #endif /* MAC_REPEATER_SUPPORT */
+ 
++				/* Getting Rssi, Sean@liteon, 2013-09-12. */
++				pAd->ApCfg.RssiSample.LastRssi0 = ConvertToRssi(pAd, Elem->Rssi0, RSSI_0);
++				pAd->ApCfg.RssiSample.LastRssi1 = ConvertToRssi(pAd, Elem->Rssi1, RSSI_1);
++				/* Sean@liteon. */
++
+ 				MlmeEnqueue(pAd, APCLI_CTRL_STATE_MACHINE, APCLI_CTRL_ASSOC_RSP,
+ 					sizeof(APCLI_CTRL_MSG_STRUCT), &ApCliCtrlMsg, ifIndex);
+ 			}

@@ -1,0 +1,50 @@
+From 4f68026814a3e54cbd516fd74a4ceaa1ffc1645e Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Fri, 6 Nov 2009 18:49:40 +0530
+Subject: [PATCH 1/1] powerpc/85xx: P2020RDB: Add pcie legacy interrupt entries
+
+The following entries will enable the PCI Express
+INTx/IRQn sharing on P2020RDB
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ arch/powerpc/boot/dts/p2020rdb.dts |   16 ++++++++++++++++
+ 1 files changed, 16 insertions(+), 0 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p2020rdb.dts b/arch/powerpc/boot/dts/p2020rdb.dts
+index da4cb0d..a0d53da 100644
+--- a/arch/powerpc/boot/dts/p2020rdb.dts
++++ b/arch/powerpc/boot/dts/p2020rdb.dts
+@@ -541,6 +541,14 @@
+ 		clock-frequency = <33333333>;
+ 		interrupt-parent = <&mpic>;
+ 		interrupts = <25 2>;
++		interrupt-map-mask = <0xf800 0x0 0x0 0x7>;
++		interrupt-map = <
++			/* IDSEL 0x0 */
++			0000 0x0 0x0 0x1 &mpic 0x4 0x1
++			0000 0x0 0x0 0x2 &mpic 0x5 0x1
++			0000 0x0 0x0 0x3 &mpic 0x6 0x1
++			0000 0x0 0x0 0x4 &mpic 0x7 0x1
++			>;
+ 		pcie@0 {
+ 			reg = <0x0 0x0 0x0 0x0 0x0>;
+ 			#size-cells = <2>;
+@@ -569,6 +577,14 @@
+ 		clock-frequency = <33333333>;
+ 		interrupt-parent = <&mpic>;
+ 		interrupts = <26 2>;
++		interrupt-map-mask = <0xf800 0x0 0x0 0x7>;
++		interrupt-map = <
++			/* IDSEL 0x0 */
++			0000 0x0 0x0 0x1 &mpic 0x0 0x1
++			0000 0x0 0x0 0x2 &mpic 0x1 0x1
++			0000 0x0 0x0 0x3 &mpic 0x2 0x1
++			0000 0x0 0x0 0x4 &mpic 0x3 0x1
++			>;
+ 		pcie@0 {
+ 			reg = <0x0 0x0 0x0 0x0 0x0>;
+ 			#size-cells = <2>;
+-- 
+1.5.6.5
+

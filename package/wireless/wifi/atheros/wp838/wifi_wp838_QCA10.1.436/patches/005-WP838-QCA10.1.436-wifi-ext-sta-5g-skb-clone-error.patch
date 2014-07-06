@@ -1,0 +1,17 @@
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/osif_umac.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/os/linux/src/osif_umac.c	2013-12-17 11:07:30.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/osif_umac.c	2013-12-17 11:08:58.000000000 +0800
+@@ -3798,6 +3798,12 @@
+ #ifdef ATH_EXT_AP
+     if (adf_os_unlikely(IEEE80211_VAP_IS_EXT_AP_ENABLED(vap))) {
+         if (vap->iv_opmode == IEEE80211_M_STA) {
++            /* make a new copy for skb, Bevin@liteon, 2013-xx-xx -----> */
++            skb = skb_unshare(skb, GFP_ATOMIC);
++            if (skb == NULL) {
++               goto bad;
++            }
++            /* <----- Bevin@liteon, 2013-xx-xx */
+             struct ether_header *eh = (struct ether_header *)skb->data;
+             if (ieee80211_extap_output(vap, eh)) {
+                 goto bad;

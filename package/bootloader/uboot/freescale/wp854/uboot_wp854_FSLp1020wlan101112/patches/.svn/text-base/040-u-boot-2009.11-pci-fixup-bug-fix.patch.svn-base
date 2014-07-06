@@ -1,0 +1,28 @@
+From e8214f9b5f6fb865e60b485c5ce96931211a9e91 Mon Sep 17 00:00:00 2001
+From: Poonam Aggrwal <poonam.aggrwal@freescale.com>
+Date: Fri, 9 Apr 2010 14:52:11 +0530
+Subject: [PATCH] While we had ft_pci_board_setup it wasn't being called by
+ ft_board_setup.  Fix that so we actually update the device tree PCI
+ nodes on P1_P2_RDB boards.
+
+Signed-off-by: Kumar Gala <galak@kernel.crashing.org>
+---
+ board/freescale/p1_p2_rdb/p1_p2_rdb.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/board/freescale/p1_p2_rdb/p1_p2_rdb.c b/board/freescale/p1_p2_rdb/p1_p2_rdb.c
+index fbf561b..d31a019 100644
+--- a/board/freescale/p1_p2_rdb/p1_p2_rdb.c
++++ b/board/freescale/p1_p2_rdb/p1_p2_rdb.c
+@@ -351,6 +351,8 @@ void ft_board_setup(void *blob, bd_t *bd)
+ 	base = getenv_bootm_low();
+ 	size = getenv_bootm_size();
+ 
++	ft_pci_board_setup(blob);
++
+ 	fdt_fixup_memory(blob, (u64)base, (u64)size);
+ 
+ 	if (!hwconfig("usb2"))
+-- 
+1.5.6.3
+

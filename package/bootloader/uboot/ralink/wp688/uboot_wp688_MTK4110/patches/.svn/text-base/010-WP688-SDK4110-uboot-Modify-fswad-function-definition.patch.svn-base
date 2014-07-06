@@ -1,0 +1,68 @@
+--- old/include/linux/byteorder/swab.h	2012-11-28 15:36:33.000000000 +0800
++++ new/include/linux/byteorder/swab.h	2012-11-28 16:33:50.000000000 +0800
+@@ -96,10 +96,17 @@
+ #endif /* OPTIMIZE */
+ 
+ 
++#ifdef LITEON_SRC_VALID
++static __inline__ __attribute__((const)) __u16 __fswab16(__u16 x)
++{
++	return __arch__swab16(x);
++}
++#else
+ static __inline__ __const__ __u16 __fswab16(__u16 x)
+ {
+ 	return __arch__swab16(x);
+ }
++#endif //LITEON_SRC_VALID
+ static __inline__ __u16 __swab16p(__u16 *x)
+ {
+ 	return __arch__swab16p(x);
+@@ -109,10 +116,18 @@
+ 	__arch__swab16s(addr);
+ }
+ 
++#ifdef LITEON_SRC_VALID
++static __inline__ __attribute__((const)) __u32 __fswab32(__u32 x)
++{
++	return __arch__swab32(x);
++}
++#else
+ static __inline__ __const__ __u32 __fswab32(__u32 x)
+ {
+ 	return __arch__swab32(x);
+ }
++#endif //LITEON_SRC_VALID
++
+ static __inline__ __u32 __swab32p(__u32 *x)
+ {
+ 	return __arch__swab32p(x);
+@@ -123,6 +138,18 @@
+ }
+ 
+ #ifdef __BYTEORDER_HAS_U64__
++#ifdef LITEON_SRC_VALID
++static __inline__ __attribute__((const)) __u64 __fswab64(__u64 x)
++{
++#  ifdef __SWAB_64_THRU_32__
++	__u32 h = x >> 32;
++	__u32 l = x & ((1ULL<<32)-1);
++	return (((__u64)__swab32(l)) << 32) | ((__u64)(__swab32(h)));
++#  else
++	return __arch__swab64(x);
++#  endif
++}
++#else
+ static __inline__ __const__ __u64 __fswab64(__u64 x)
+ {
+ #  ifdef __SWAB_64_THRU_32__
+@@ -133,6 +160,9 @@
+ 	return __arch__swab64(x);
+ #  endif
+ }
++#endif //LITEON_SRC_VALID
++
++
+ static __inline__ __u64 __swab64p(__u64 *x)
+ {
+ 	return __arch__swab64p(x);

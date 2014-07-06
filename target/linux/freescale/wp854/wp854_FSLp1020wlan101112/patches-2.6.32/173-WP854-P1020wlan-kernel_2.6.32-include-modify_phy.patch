@@ -1,0 +1,19 @@
+--- linux-2.6.32-freescale-p1020-sku/include/linux/phy.h	2012-07-13 03:18:49.149508644 -0700
++++ linux-liteon-wp854-openwrt/include/linux/phy.h	2012-07-13 03:20:58.809528666 -0700
+@@ -129,6 +129,7 @@
+ struct phy_device *mdiobus_scan(struct mii_bus *bus, int addr);
+ int mdiobus_read(struct mii_bus *bus, int addr, u16 regnum);
+ int mdiobus_write(struct mii_bus *bus, int addr, u16 regnum, u16 val);
++int liteon_phy_mii(struct phy_device *phydev, struct ifreq *ifrq);//Alvin add
+ 
+ 
+ #define PHY_INTERRUPT_DISABLED	0x0
+@@ -322,6 +323,8 @@
+ 
+ 	struct net_device *attached_dev;
+ 
++    int led_color_set; /*Added by sirian, 2011-05-18, for led color control*/
++
+ 	void (*adjust_link)(struct net_device *dev);
+ 
+ 	void (*adjust_state)(struct net_device *dev);

@@ -1,0 +1,20 @@
+--- boot_atheros/u-boot/common/Makefile	2013-04-03 13:43:14.000000000 +0800
++++ boot_liteon/u-boot/common/Makefile	2013-03-29 18:00:31.000000000 +0800
+@@ -45,7 +45,7 @@
+ 	  exports.o \
+ 	  hush.o lcd.o lists.o \
+ 	  memsize.o miiphybb.o miiphyutil.o \
+-	  serial.o crc16.o
++	  serial.o crc16.o crc32.o
+ else
+ COBJS	= main.o ACEX1K.o altera.o bedbug.o circbuf.o \
+ 	  cmd_ace.o cmd_autoscript.o \
+@@ -71,7 +71,7 @@
+ 	  memsize.o miiphybb.o miiphyutil.o \
+ 	  s_record.o serial.o soft_i2c.o soft_spi.o spartan2.o spartan3.o \
+ 	  usb.o usb_kbd.o usb_storage.o \
+-	  virtex2.o xilinx.o crc16.o xyzModem.o
++	  virtex2.o xilinx.o crc16.o xyzModem.o cmd_liteon.o crc32.o
+ endif
+ 
+ ifndef BOOT_FROM_NAND

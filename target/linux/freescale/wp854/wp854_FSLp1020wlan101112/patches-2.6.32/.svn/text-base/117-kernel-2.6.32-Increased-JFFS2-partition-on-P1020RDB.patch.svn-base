@@ -1,0 +1,63 @@
+From 986df7746fc7fdaf39fae63c2ca8dd38b5422270 Mon Sep 17 00:00:00 2001
+From: Poonam Aggrwal <poonam.aggrwal@freescale.com>
+Date: Fri, 9 Apr 2010 16:50:22 +0530
+Subject: [PATCH] Increased JFFS2 partition size on NAND flash from 7M to 15M in P1020/P1011 RDB
+
+
+Signed-off-by: Poonam Aggrwal <poonam.aggrwal@freescale.com>
+---
+ arch/powerpc/boot/dts/p1011rdb.dts |   10 +++++-----
+ arch/powerpc/boot/dts/p1020rdb.dts |   10 +++++-----
+ 2 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p1011rdb.dts b/arch/powerpc/boot/dts/p1011rdb.dts
+index d6debf6..3fe8f0e 100644
+--- a/arch/powerpc/boot/dts/p1011rdb.dts
++++ b/arch/powerpc/boot/dts/p1011rdb.dts
+@@ -137,14 +137,14 @@
+ 			};
+ 
+ 			partition@a00000 {
+-				/* 7MB for JFFS2 based Root file System */
+-				reg = <0x00a00000 0x00700000>;
++				/* 15MB for JFFS2 based Root file System */
++				reg = <0x00a00000 0x00f00000>;
+ 				label = "NAND (RW) JFFS2 Root File System";
+ 			};
+ 
+-			partition@1100000 {
+-				/* 15MB for JFFS2 based Root file System */
+-				reg = <0x01100000 0x00f00000>;
++			partition@1900000 {
++				/* 7MB for User Writable Area */
++				reg = <0x01900000 0x00700000>;
+ 				label = "NAND (RW) Writable User area";
+ 			};
+ 		};
+diff --git a/arch/powerpc/boot/dts/p1020rdb.dts b/arch/powerpc/boot/dts/p1020rdb.dts
+index 1da6e0d..b86987b 100644
+--- a/arch/powerpc/boot/dts/p1020rdb.dts
++++ b/arch/powerpc/boot/dts/p1020rdb.dts
+@@ -143,14 +143,14 @@
+ 			};
+ 
+ 			partition@a00000 {
+-				/* 7MB for JFFS2 based Root file System */
+-				reg = <0x00a00000 0x00700000>;
++				/* 15MB for JFFS2 based Root file System */
++				reg = <0x00a00000 0x00f00000>;
+ 				label = "NAND (RW) JFFS2 Root File System";
+ 			};
+ 
+-			partition@1100000 {
+-				/* 15MB for JFFS2 based Root file System */
+-				reg = <0x01100000 0x00f00000>;
++			partition@1900000 {
++				/* 7MB for User Writable Area */
++				reg = <0x01900000 0x00700000>;
+ 				label = "NAND (RW) Writable User area";
+ 			};
+ 		};
+-- 
+1.5.6.3
+

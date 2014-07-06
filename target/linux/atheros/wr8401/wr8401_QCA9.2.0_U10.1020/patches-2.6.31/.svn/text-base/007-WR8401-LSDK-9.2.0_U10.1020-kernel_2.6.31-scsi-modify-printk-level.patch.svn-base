@@ -1,0 +1,11 @@
+--- linux-2.6.31_atheros/drivers/scsi/sd.c	2013-04-03 13:35:51.000000000 +0800
++++ linux-2.6.31_liteon/drivers/scsi/sd.c	2013-02-04 09:39:48.000000000 +0800
+@@ -1742,7 +1742,7 @@
+ 		sd_printk(KERN_ERR, sdkp, "Asking for cache data failed\n");
+ 
+ defaults:
+-	sd_printk(KERN_ERR, sdkp, "Assuming drive cache: write through\n");
++	sd_printk(KERN_NOTICE, sdkp, "Assuming drive cache: write through\n");
+ 	sdkp->WCE = 0;
+ 	sdkp->RCD = 0;
+ 	sdkp->DPOFUA = 0;

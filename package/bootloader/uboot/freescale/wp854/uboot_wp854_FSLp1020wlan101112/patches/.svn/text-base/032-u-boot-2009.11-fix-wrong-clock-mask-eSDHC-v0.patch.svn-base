@@ -1,0 +1,30 @@
+From 5bf4d2da1b24b97359cad0bc2c7a602856dcc2ef Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Thu, 18 Mar 2010 17:38:07 +0530
+Subject: [PATCH 4/7] [eSDHC]: fix wrong clock mask for eSDHC Driver
+
+This patch is derived from P2020DS BSP Release.
+
+Signed-off-by: Jin Qing <B24347@freescale.com>
+Signed-off-by: Li Yang <leoli@freescale.com>
+Signed-off-by: Dipen Dudhat <Dipen.Dudhat@freescale.com>
+---
+ include/fsl_esdhc.h |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/include/fsl_esdhc.h b/include/fsl_esdhc.h
+index 72ad84d..a061bcd 100644
+--- a/include/fsl_esdhc.h
++++ b/include/fsl_esdhc.h
+@@ -32,7 +32,7 @@
+ #define SYSCTL			0x0002e02c
+ #define SYSCTL_INITA		0x08000000
+ #define SYSCTL_TIMEOUT_MASK	0x000f0000
+-#define SYSCTL_CLOCK_MASK	0x00000fff
++#define SYSCTL_CLOCK_MASK	0x0000fff0
+ #define SYSCTL_PEREN		0x00000004
+ #define SYSCTL_HCKEN		0x00000002
+ #define SYSCTL_IPGEN		0x00000001
+-- 
+1.5.6.5
+

@@ -1,0 +1,18 @@
+#!/bin/sh
+
+inithostname()
+{
+	boarddata get mac 2>&1 > /dev/null
+	[ $? = 0 ] || return
+
+	local mac="$(boarddata get mac|sed -e 's/://g'|tr '[a-z]' '[A-Z]')"
+	local fc="$(nvram get FirstConfig)"		
+	local hostname_now="$(nvram get hostname)"
+	local hostname_orig="$(nvram getdefault hostname)"
+
+	if [ $fc = "1" -a  $hostname_now = $hostname_orig ]; then
+		nvram set hostname=`nvram get hostname`_$mac
+	fi
+}
+
+inithostname

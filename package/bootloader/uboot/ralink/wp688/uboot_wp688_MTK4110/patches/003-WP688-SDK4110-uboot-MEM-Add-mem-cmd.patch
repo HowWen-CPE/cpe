@@ -1,0 +1,272 @@
+--- uboot-ra4110-old/common/cmd_mem.c	2012-11-28 15:36:34.000000000 +0800
++++ uboot-ra4110/common/cmd_mem.c	2013-01-06 14:28:30.000000000 +0800
+@@ -35,6 +35,19 @@
+ #ifdef CONFIG_HAS_DATAFLASH
+ #include <dataflash.h>
+ #endif
++/*added by sean. Nov 2012,28*/
++#ifdef LITEON_SRC_VALID
++#ifdef CONFIG_LITEON_HW_DIAGNOSE
++#include <net.h>
++#include <watchdog.h>
++
++#define CFG_DEF_LOAD_ADDR "0x80100000"
++
++#define CONFIG_SYS_NO_FLASH 1
++
++#endif
++#endif
++/*end sean*/
+ 
+ extern ulong		NetBootFileXferSize;
+ 
+@@ -1229,3 +1242,249 @@
+ 	"[.b, .w, .l] source target count\n    - copy memory\n"
+ );
+ #endif
++
++/*added by sean. Nov 2012,28*/
++#ifdef LITEON_SRC_VALID
++#ifdef CONFIG_LITEON_HW_DIAGNOSE
++
++int liteon_do_mem_cp ( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
++{
++	ulong	addr, dest, count;
++	int	size;
++
++	if (argc != 4) {
++		printf ("Usage:\n%s\n", cmdtp->usage);
++		return 1;
++	}
++
++	/* Check for size specification.
++	*/
++	if ((size = cmd_get_data_size(argv[0], 4)) < 0)
++		return 1;
++
++	addr = simple_strtoul(argv[1], NULL, 16);
++	addr += base_address;
++
++	dest = simple_strtoul(argv[2], NULL, 16);
++	dest += base_address;
++
++	count = simple_strtoul(argv[3], NULL, 16);
++
++	if (count == 0) {
++		puts ("Zero length ???\n");
++		return 1;
++	}
++
++#ifndef CONFIG_SYS_NO_FLASH
++	/* check if we are copying to Flash */
++	if ( (addr2info(dest) != NULL)
++#ifdef CONFIG_HAS_DATAFLASH
++	   && (!addr_dataflash(dest))
++#endif
++	   ) {
++		int rc;
++
++		puts ("Copy to Flash... ");
++
++		rc = flash_write ((char *)addr, dest, count*size);
++		if (rc != 0) {
++			flash_perror (rc);
++			return (1);
++		}
++		puts ("done\n");
++		return 0;
++	}
++#endif
++
++#ifdef CONFIG_HAS_DATAFLASH
++	/* Check if we are copying from RAM or Flash to DataFlash */
++	if (addr_dataflash(dest) && !addr_dataflash(addr)){
++		int rc;
++
++		puts ("Copy to DataFlash... ");
++
++		rc = write_dataflash (dest, addr, count*size);
++
++		if (rc != 1) {
++			dataflash_perror (rc);
++			return (1);
++		}
++		puts ("done\n");
++		return 0;
++	}
++
++	/* Check if we are copying from DataFlash to RAM */
++	if (addr_dataflash(addr) && !addr_dataflash(dest)
++#ifndef CONFIG_SYS_NO_FLASH
++				 && (addr2info(dest) == NULL)
++#endif
++	   ){
++		int rc;
++		rc = read_dataflash(addr, count * size, (char *) dest);
++		if (rc != 1) {
++			dataflash_perror (rc);
++			return (1);
++		}
++		return 0;
++	}
++
++	if (addr_dataflash(addr) && addr_dataflash(dest)){
++		puts ("Unsupported combination of source/destination.\n\r");
++		return 1;
++	}
++#endif
++
++#ifdef CONFIG_BLACKFIN
++	/* See if we're copying to/from L1 inst */
++	if (addr_bfin_on_chip_mem(dest) || addr_bfin_on_chip_mem(addr)) {
++		memcpy((void *)dest, (void *)addr, count * size);
++		return 0;
++	}
++#endif
++
++	while (count-- > 0) {
++		if (size == 4)
++			*((ulong  *)dest) = *((ulong  *)addr);
++		else if (size == 2)
++			*((ushort *)dest) = *((ushort *)addr);
++		else
++			*((u_char *)dest) = *((u_char *)addr);
++		addr += size;
++		dest += size;
++
++		/* reset watchdog from time to time */
++		if ((count % (64 << 10)) == 0)
++			WATCHDOG_RESET();
++	}
++	return 0;
++}
++
++extern int do_tftpb (cmd_tbl_t *cmdtp, int flag, int argc, char *argv[]);
++extern int liteon_net_common (proto_t proto, cmd_tbl_t *cmdtp, int argc, char *argv[]);
++
++int do_dump(cmd_tbl_t * cmdtp, int flag, int argc, char *argv[])
++{    
++     char tmp[22];
++
++    /*check arguments*/ 
++    if (strncmp(argv[1],"-b",2) || strncmp(argv[3],"-l",2))
++    {
++         printf("Usage:\ndump -b <base_addr> -l <length> <tftp_server ip_address> <file_name>\n");
++         return 0;
++     }
++     else if (argc < 7)
++     {
++         printf("Usage:\ndump -b <base_addr> -l <length> <tftp_server ip_address> <file_name>\n");
++         return 0;
++     }
++
++     /*Temporarily store server ip addr*/
++     NetLiteonServerIP= getenv_IPaddr ("serverip");
++    
++     /*run command*/
++     setenv ("serverip", argv[5]);
++
++     liteon_net_common (TFTP, cmdtp, argc, argv);
++
++     /*Restore server ip addr*/
++     ip_to_string (NetLiteonServerIP, tmp);
++     setenv ("serverip", tmp);
++
++    
++   return 0;
++}
++
++int do_mem_diag ( cmd_tbl_t *cmdtp, int flag, int argc, char *argv[])
++{
++	u32 i, count = simple_strtoul(argv[3], NULL, 10);
++	char *cmd_tftp_argv[3] = {"tftpboot", CFG_DEF_LOAD_ADDR, argv[2]};
++	int size;
++	char size_str[11] = {'0'};
++	char dest_str[11] = {'0'};
++	ulong dest;
++	char *cmd_cp_argv[4] = {"liteon_cp.b", CFG_DEF_LOAD_ADDR, NULL, NULL};
++	char *cmd_dump_argv[7] = {"dump", "-b", NULL, "-l", NULL, NULL, NULL};
++	char file_name[128] = {'0'};
++
++	int err = -1;
++
++	if (argc != 4 || count > 50) {
++		printf ("Usage:\n%s\n", cmdtp->usage);
++		return 1;
++	}
++
++	/*download file from server*/
++	do_tftpb (NULL, 1, 3, cmd_tftp_argv);
++
++	/*get size of download file*/
++	size = NetBootFileXferSize;
++	sprintf(size_str, "0x%x", size);
++	cmd_cp_argv[3] = size_str;
++	cmd_dump_argv[4] = size_str;
++
++	/*calculate dest addr*/
++	dest = (ulong)CFG_LOAD_ADDR + simple_strtoul(size_str, NULL, 16);
++	sprintf(dest_str, "0x%x", dest);
++
++	for (i = 0; i < count; i++) {
++		/*copy to memory pointed by dest*/
++		cmd_cp_argv[2] = dest_str;
++		cmd_dump_argv[2] = dest_str;
++		printf("%d: Copy mem1:%s length:%s -----> mem2:%s\n", i + 1, CFG_DEF_LOAD_ADDR, size_str, dest_str);
++		liteon_do_mem_cp(NULL, 1, 4, cmd_cp_argv);
++
++		/*
++		  *upload contents of dest to server
++		  *
++		  *cmd_dump_agrv[2]	base_addr
++		  *cmd_dump_agrv[4]	size
++		  *cmd_dump_agrv[5]	server IP
++		  *cmd_dump_agrv[6]	file name
++		 */
++
++		cmd_dump_argv[5] = argv[1];
++		
++		/*create different name to upload file*/
++		sprintf(file_name, "%2d_%s", i + 1, argv[2]);
++		cmd_dump_argv[6] = file_name;
++		
++		/*upload board contents to server*/
++		printf("%d: Upload board:%s=====================>server\n", i + 1, cmd_dump_argv[2]);
++		err = do_dump(NULL, 1, 7, cmd_dump_argv);
++		if (err < 0) {
++			printf("Error : dump failed!!!\n");
++			return 1;
++		}
++
++		/*ensure load to different address each time*/
++		dest += 1;
++		sprintf(dest_str, "0x%x", dest);
++
++	}
++
++	return 0;
++}
++
++U_BOOT_CMD(
++ 	dump,	7,	1,	do_dump,
++ 	"dump -dump board content to server\n",
++ 	" -b <base_addr> -l <length> <server_ip> <file_name>\n"
++);
++
++U_BOOT_CMD(
++	mem_diag,    4,    1,    do_mem_diag,
++	"mem_diag      - memory diagnose\n",
++	"<serverip> <file_name> <test_times>\n"
++	"Note:\n"
++	"	test_times <= 50\n"
++	"	Max_size = ((Mem_Size - 2MByte)/2)MByte\n"
++);
++
++/*porting standard cp cmd to here*/
++U_BOOT_CMD(
++	liteon_cp,    4,    1,    liteon_do_mem_cp,
++	"",""
++);
++/*end sean*/
++#endif
++#endif

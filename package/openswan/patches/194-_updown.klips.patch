@@ -1,0 +1,31 @@
+--- openswan-old/programs/_updown.klips/_updown.ip2.in	2014-02-24 17:24:14.000000000 +0800
++++ openswan-new/programs/_updown.klips/_updown.ip2.in	2014-02-24 17:30:13.000000000 +0800
+@@ -511,6 +511,10 @@
+ 	*)
+ 		# Despite not having -6, the ip route commands works for ipv6
+ 		it="ip route $1 $parms $parms2 $parms3"
++		# EZP: add routing rule under each wan routing table
++		type="${PLUTO_INTERFACE%%[0-9]*}"
++		num="${PLUTO_INTERFACE#${type}}"
++		it_tbl="ip route $1 table 1${num} $parms $parms2 $parms3"
+ 		;;
+ 	esac
+ 	oops="`eval $it 2>&1`"
+@@ -534,6 +538,17 @@
+ 	then
+ 	   echo "$0: doroute \`$it_tbl' failed ($oops_tbl)" >&2
+ 	fi
++	# EZP: add routing rule under each wan routing table
++	oops_tbl="`eval $it_tbl 2>&1`"
++	st_tbl=$?
++	if test " $oops_tbl" = " " -a " $st_tbl" != "0"
++	then
++		oops_tbl="wan route add silent error, exit status $st_tbl"
++    fi
++    if test " $oops_tbl" != " " -o " $st_tbl" != " 0"
++    then
++    	echo "$0: doroute \`$it_tbl' failed ($oops_tbl)" >&2
++    fi
+ 	return $st
+ }
+  

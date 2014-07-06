@@ -1,0 +1,94 @@
+From 78d37ce4203c1e6f620976dc1396154384c1b72a Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Fri, 30 Oct 2009 10:08:18 +0530
+Subject: [PATCH] Add RAMBOOT support over SD card boot on P1 and P2 RDB platforms
+
+To use,
+	tftp 11000000 u-boot.bin,
+	go 1107f000
+
+Signed-off-by: Dipen Dudhat <dipen.dudhat@freescale.com>
+---
+ Makefile                     |    4 ++++
+ cpu/mpc85xx/cpu_init_early.c |    2 ++
+ include/configs/P1_P2_RDB.h  |   10 +++++++++-
+ 3 files changed, 15 insertions(+), 1 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index bcb3fe9..c152bf6 100644
+--- a/Makefile
++++ b/Makefile
+@@ -2515,18 +2515,22 @@ P2020DS_config:		unconfig
+ 
+ P1011RDB_config	\
+ P1011RDB_NAND_config \
++P1011RDB_RAMBOOT_config \
+ P1011RDB_SDCARD_config \
+ P1011RDB_SPIFLASH_config \
+ P1020RDB_config	\
+ P1020RDB_NAND_config \
++P1020RDB_RAMBOOT_config \
+ P1020RDB_SDCARD_config \
+ P1020RDB_SPIFLASH_config \
+ P2010RDB_config \
+ P2010RDB_NAND_config \
++P2010RDB_RAMBOOT_config \
+ P2010RDB_SDCARD_config \
+ P2010RDB_SPIFLASH_config \
+ P2020RDB_config \
+ P2020RDB_NAND_config \
++P2020RDB_RAMBOOT_config \
+ P2020RDB_SDCARD_config \
+ P2020RDB_SPIFLASH_config:	unconfig
+ 	@$(MKCONFIG) -t $(@:_config=) P1_P2_RDB ppc mpc85xx p1_p2_rdb freescale
+diff --git a/cpu/mpc85xx/cpu_init_early.c b/cpu/mpc85xx/cpu_init_early.c
+index 32aa94b..465acfa 100644
+--- a/cpu/mpc85xx/cpu_init_early.c
++++ b/cpu/mpc85xx/cpu_init_early.c
+@@ -93,6 +93,7 @@ void cpu_init_early_f(void)
+ 
+ 	write_tlb(mas0, mas1, mas2, mas3, mas7);
+ 
++#if !defined(CONFIG_MK_RAMBOOT)
+ 	/* set up CCSR if we want it moved */
+ #if (CONFIG_SYS_CCSRBAR_DEFAULT != CONFIG_SYS_CCSRBAR_PHYS)
+ 	mas0 = MAS0_TLBSEL(0) | MAS0_ESEL(1);
+@@ -105,6 +106,7 @@ void cpu_init_early_f(void)
+ 
+ 	setup_ccsrbar();
+ #endif
++#endif
+ 
+ 	init_laws();
+ 	invalidate_tlb(0);
+diff --git a/include/configs/P1_P2_RDB.h b/include/configs/P1_P2_RDB.h
+index 25882e3..ff9fb28 100644
+--- a/include/configs/P1_P2_RDB.h
++++ b/include/configs/P1_P2_RDB.h
+@@ -53,6 +53,10 @@
+  */
+ #define CONFIG_SYS_FSL_BOOT_DDR
+ 
++#ifdef CONFIG_MK_RAMBOOT
++#define CONFIG_MK_SDCARD
++#endif
++
+ #ifdef CONFIG_MK_NAND
+ #define CONFIG_NAND_U_BOOT		1
+ #define CONFIG_RAMBOOT_NAND		1
+@@ -487,7 +491,11 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+  * Environment
+  */
+ #if defined(CONFIG_SYS_RAMBOOT)
+-#if defined(CONFIG_RAMBOOT_NAND)
++#if defined(CONFIG_MK_RAMBOOT)
++	#define CONFIG_ENV_IS_NOWHERE	1       /* Store ENV in memory only */
++	#define CONFIG_ENV_ADDR		(CONFIG_SYS_MONITOR_BASE - 0x1000)
++	#define CONFIG_ENV_SIZE		0x2000
++#elif defined(CONFIG_RAMBOOT_NAND)
+ 	#define CONFIG_ENV_IS_IN_NAND	1
+ 	#define CONFIG_ENV_SIZE		CONFIG_SYS_NAND_BLOCK_SIZE
+ 	#define CONFIG_ENV_OFFSET	((512 * 1024) + CONFIG_SYS_NAND_BLOCK_SIZE)
+-- 
+1.5.6.3
+

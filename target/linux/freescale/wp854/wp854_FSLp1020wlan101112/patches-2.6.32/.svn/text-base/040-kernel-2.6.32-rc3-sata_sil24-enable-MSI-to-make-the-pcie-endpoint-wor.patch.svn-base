@@ -1,0 +1,63 @@
+From fafa5c20a8f398f715d934e40ea97e91821b5e9f Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Wed, 21 Oct 2009 16:11:09 +0530
+Subject: [PATCH 1/1] sata_sil24: enable MSI to make the pcie endpoint work
+
+Silicon Image PCIe SATA driver dumped the following oops
+while loading:-
+
+------------[ cut here ]------------
+Badness at c01acbb0 [verbose debug info unavailable]
+NIP: c01acbb0 LR: c01b99e4 CTR: f107afe8
+REGS: ee599c90 TRAP: 0700   Not tainted  (2.6.32-rc3-46847-g035ab2f)
+MSR: 00021000 <ME,CE>  CR: 44082022  XER: 00000000
+TASK = ee5a84b0[1058] 'scsi_eh_0' THREAD: ee598000
+GPR00: 00000001 ee599d40 ee5a84b0 ea62531c 00000000 00000000 00000000 00000001
+GPR08: 00000000 c0395e5c 00000004 00010013 44082028 10098374 c02fde3c ee599eac
+GPR16: 00001388 00000001 ee599df8 ea625520 ea6253c8 000000ec fafbfcfd 00000000
+GPR24: 00000000 00000000 00000001 00000000 ea6253c8 ea624000 ea625520 ea62531c
+NIP [c01acbb0] ata_qc_complete+0x1a0/0x224
+LR [c01b99e4] ata_do_link_abort+0xc4/0x100
+Call Trace:
+[ee599d40] [ea624000] 0xea624000 (unreliable)
+[ee599d60] [c01b99e4] ata_do_link_abort+0xc4/0x100
+[ee599d90] [c01ada00] ata_exec_internal_sg+0x2e8/0x448
+[ee599df0] [c01adbd4] ata_exec_internal+0x74/0x88
+[ee599e30] [c01ae030] ata_dev_read_id+0x1f8/0x570
+[ee599ea0] [c01b9090] ata_eh_recover+0x978/0xe58
+[ee599f20] [c01b9744] ata_do_eh+0x4c/0xb0
+[ee599f40] [f107a450] sil24_error_handler+0x34/0x50 [sata_sil24]
+[ee599f50] [c01ba3bc] ata_scsi_error+0x2f0/0x520
+[ee599f80] [c01998bc] scsi_error_handler+0xd0/0x368
+[ee599fc0] [c004b78c] kthread+0x78/0x7c
+[ee599ff0] [c000f500] kernel_thread+0x4c/0x68
+Instruction dump:
+60008000 901e000c 4bffff54 81630034 656b0001 91630034 4bfffeb8 3d20c039
+39295e5c 80090020 7c000034 5400d97e <0f000000> 2f800000 419efeac 38000001
+
+Enabled MSI in the probe to get past this.
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+ drivers/ata/sata_sil24.c |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/ata/sata_sil24.c b/drivers/ata/sata_sil24.c
+index e6946fc..6d67911 100644
+--- a/drivers/ata/sata_sil24.c
++++ b/drivers/ata/sata_sil24.c
+@@ -1340,6 +1340,11 @@ static int sil24_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
+ 
+ 	sil24_init_controller(host);
+ 
++	if (!pci_enable_msi(pdev)) {
++		dev_printk(KERN_INFO, &pdev->dev, "Using MSI\n");
++		pci_intx(pdev, 0);
++	}
++
+ 	pci_set_master(pdev);
+ 	return ata_host_activate(host, pdev->irq, sil24_interrupt, IRQF_SHARED,
+ 				 &sil24_sht);
+-- 
+1.5.6.5
+

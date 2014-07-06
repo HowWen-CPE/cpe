@@ -1,0 +1,149 @@
+From 2e7c3db0af6d86a2b4353909522334659b4aeb1b Mon Sep 17 00:00:00 2001
+From: Maneesh Gupta <maneesh.gupta@freescale.com>
+Date: Wed, 30 Dec 2009 15:55:45 +0530
+Subject: [PATCH 1/1] Revert "net: Fix OF platform drivers coldplug/hotplug when compiled as modules"
+
+This reverts commit e72701acbe0b35e52d3f04d442837c06b4e64f1c.
+
+Signed-off-by: Maneesh Gupta <maneesh.gupta@freescale.com>
+---
+ drivers/net/can/sja1000/sja1000_of_platform.c |    1 -
+ drivers/net/fec_mpc52xx_phy.c                 |    1 -
+ drivers/net/fs_enet/fs_enet-main.c            |    1 -
+ drivers/net/fs_enet/mii-bitbang.c             |    1 -
+ drivers/net/fs_enet/mii-fec.c                 |    1 -
+ drivers/net/fsl_pq_mdio.c                     |    1 -
+ drivers/net/gianfar.c                         |    4 +++-
+ drivers/net/ibm_newemac/core.c                |    2 --
+ drivers/net/phy/mdio-gpio.c                   |    1 -
+ 9 files changed, 3 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/net/can/sja1000/sja1000_of_platform.c b/drivers/net/can/sja1000/sja1000_of_platform.c
+index 9dd076a..3373560 100644
+--- a/drivers/net/can/sja1000/sja1000_of_platform.c
++++ b/drivers/net/can/sja1000/sja1000_of_platform.c
+@@ -213,7 +213,6 @@ static struct of_device_id __devinitdata sja1000_ofp_table[] = {
+ 	{.compatible = "nxp,sja1000"},
+ 	{},
+ };
+-MODULE_DEVICE_TABLE(of, sja1000_ofp_table);
+ 
+ static struct of_platform_driver sja1000_ofp_driver = {
+ 	.owner = THIS_MODULE,
+diff --git a/drivers/net/fec_mpc52xx_phy.c b/drivers/net/fec_mpc52xx_phy.c
+index ee0f3c6..31e6d62 100644
+--- a/drivers/net/fec_mpc52xx_phy.c
++++ b/drivers/net/fec_mpc52xx_phy.c
+@@ -155,7 +155,6 @@ static struct of_device_id mpc52xx_fec_mdio_match[] = {
+ 	{ .compatible = "mpc5200b-fec-phy", },
+ 	{}
+ };
+-MODULE_DEVICE_TABLE(of, mpc52xx_fec_mdio_match);
+ 
+ struct of_platform_driver mpc52xx_fec_mdio_driver = {
+ 	.name = "mpc5200b-fec-phy",
+diff --git a/drivers/net/fs_enet/fs_enet-main.c b/drivers/net/fs_enet/fs_enet-main.c
+index ec2f503..2bc2d2b 100644
+--- a/drivers/net/fs_enet/fs_enet-main.c
++++ b/drivers/net/fs_enet/fs_enet-main.c
+@@ -1110,7 +1110,6 @@ static struct of_device_id fs_enet_match[] = {
+ #endif
+ 	{}
+ };
+-MODULE_DEVICE_TABLE(of, fs_enet_match);
+ 
+ static struct of_platform_driver fs_enet_driver = {
+ 	.name	= "fs_enet",
+diff --git a/drivers/net/fs_enet/mii-bitbang.c b/drivers/net/fs_enet/mii-bitbang.c
+index 24ff9f4..93b481b 100644
+--- a/drivers/net/fs_enet/mii-bitbang.c
++++ b/drivers/net/fs_enet/mii-bitbang.c
+@@ -221,7 +221,6 @@ static struct of_device_id fs_enet_mdio_bb_match[] = {
+ 	},
+ 	{},
+ };
+-MODULE_DEVICE_TABLE(of, fs_enet_mdio_bb_match);
+ 
+ static struct of_platform_driver fs_enet_bb_mdio_driver = {
+ 	.name = "fsl-bb-mdio",
+diff --git a/drivers/net/fs_enet/mii-fec.c b/drivers/net/fs_enet/mii-fec.c
+index 96eba42..a2d69c1 100644
+--- a/drivers/net/fs_enet/mii-fec.c
++++ b/drivers/net/fs_enet/mii-fec.c
+@@ -219,7 +219,6 @@ static struct of_device_id fs_enet_mdio_fec_match[] = {
+ #endif
+ 	{},
+ };
+-MODULE_DEVICE_TABLE(of, fs_enet_mdio_fec_match);
+ 
+ static struct of_platform_driver fs_enet_fec_mdio_driver = {
+ 	.name = "fsl-fec-mdio",
+diff --git a/drivers/net/fsl_pq_mdio.c b/drivers/net/fsl_pq_mdio.c
+index efbf676..947a02b 100644
+--- a/drivers/net/fsl_pq_mdio.c
++++ b/drivers/net/fsl_pq_mdio.c
+@@ -407,7 +407,6 @@ static struct of_device_id fsl_pq_mdio_match[] = {
+ 	},
+ 	{},
+ };
+-MODULE_DEVICE_TABLE(of, fsl_pq_mdio_match);
+ 
+ static struct of_platform_driver fsl_pq_mdio_driver = {
+ 	.name = "fsl-pq_mdio",
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index 5bf31f1..1e5289f 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -2325,6 +2325,9 @@ static irqreturn_t gfar_error(int irq, void *dev_id)
+ 	return IRQ_HANDLED;
+ }
+ 
++/* work with hotplug and coldplug */
++MODULE_ALIAS("platform:fsl-gianfar");
++
+ static struct of_device_id gfar_match[] =
+ {
+ 	{
+@@ -2333,7 +2336,6 @@ static struct of_device_id gfar_match[] =
+ 	},
+ 	{},
+ };
+-MODULE_DEVICE_TABLE(of, gfar_match);
+ 
+ /* Structure for a device driver */
+ static struct of_platform_driver gfar_driver = {
+diff --git a/drivers/net/ibm_newemac/core.c b/drivers/net/ibm_newemac/core.c
+index 3fae875..c6591cb 100644
+--- a/drivers/net/ibm_newemac/core.c
++++ b/drivers/net/ibm_newemac/core.c
+@@ -24,7 +24,6 @@
+  *
+  */
+ 
+-#include <linux/module.h>
+ #include <linux/sched.h>
+ #include <linux/string.h>
+ #include <linux/errno.h>
+@@ -2989,7 +2988,6 @@ static struct of_device_id emac_match[] =
+ 	},
+ 	{},
+ };
+-MODULE_DEVICE_TABLE(of, emac_match);
+ 
+ static struct of_platform_driver emac_driver = {
+ 	.name = "emac",
+diff --git a/drivers/net/phy/mdio-gpio.c b/drivers/net/phy/mdio-gpio.c
+index 3589713..0e2c8ac 100644
+--- a/drivers/net/phy/mdio-gpio.c
++++ b/drivers/net/phy/mdio-gpio.c
+@@ -238,7 +238,6 @@ static struct of_device_id mdio_ofgpio_match[] = {
+ 	},
+ 	{},
+ };
+-MODULE_DEVICE_TABLE(of, mdio_ofgpio_match);
+ 
+ static struct of_platform_driver mdio_ofgpio_driver = {
+ 	.name = "mdio-gpio",
+-- 
+1.5.6.5
+

@@ -1,0 +1,50 @@
+From 487d2823178f49069e890e7bafccc63d9729b0ec Mon Sep 17 00:00:00 2001
+From: Vivek Mahajan <vivek.mahajan@freescale.com>
+Date: Mon, 12 Oct 2009 18:59:31 +0530
+Subject: [PATCH v2 6/7] powerpc/fsl: 85xx: p202rdb: add two messaging nodes in dts
+
+Originally written by Jason Jin and Mingkai Hu for mpc8536
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+---
+v2: Removed the unused cell-index as per Scott
+
+ arch/powerpc/boot/dts/p2020rdb.dts |   22 ++++++++++++++++++++++
+ 1 files changed, 22 insertions(+), 0 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p2020rdb.dts b/arch/powerpc/boot/dts/p2020rdb.dts
+index da4cb0d..509a3ae 100644
+--- a/arch/powerpc/boot/dts/p2020rdb.dts
++++ b/arch/powerpc/boot/dts/p2020rdb.dts
+@@ -505,6 +505,28 @@
+ 			device_type = "open-pic";
+ 		};
+ 
++		message@41400 {
++			compatible = "fsl,p2020-msg", "fsl,mpic-msg";
++			reg = <0x41400 0x200>;
++			interrupts = <
++				0xb0 2
++				0xb1 2
++				0xb2 2
++				0xb3 2>;
++			interrupt-parent = <&mpic>;
++		};
++
++		message@42400 {
++			compatible = "fsl,p2020-msg", "fsl,mpic-msg";
++			reg = <0x42400 0x200>;
++			interrupts = <
++				0xb4 2
++				0xb5 2
++				0xb6 2
++				0xb7 2>;
++			interrupt-parent = <&mpic>;
++		};
++
+ 		msi@41600 {
+ 			compatible = "fsl,p2020-msi", "fsl,mpic-msi";
+ 			reg = <0x41600 0x80>;
+-- 
+1.5.6.5
+

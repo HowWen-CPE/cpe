@@ -1,0 +1,15 @@
+--- linux-2.6.31_atheros/net/netfilter/nf_conntrack_standalone.c	2013-04-03 13:34:55.000000000 +0800
++++ linux-2.6.31_liteon/net/netfilter/nf_conntrack_standalone.c	2013-02-07 16:39:11.000000000 +0800
+@@ -172,6 +172,12 @@
+ 		goto release;
+ #endif
+ 
++#if defined(CONFIG_NETFILTER_XT_MATCH_LAYER7) || defined(CONFIG_NETFILTER_XT_MATCH_LAYER7_MODULE)
++	if(ct->layer7.app_proto &&
++           seq_printf(s, "l7proto=%s ", ct->layer7.app_proto))
++		return -ENOSPC;
++#endif
++
+ 	if (seq_printf(s, "use=%u\n", atomic_read(&ct->ct_general.use)))
+ 		goto release;
+ 

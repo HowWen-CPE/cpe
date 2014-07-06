@@ -1,0 +1,12 @@
+--- a/drivers/net/ethernet/phys/athrs17_phy.c
++++ b/drivers/net/ethernet/phys/athrs17_phy.c
+@@ -695,6 +695,9 @@ static BOOL _athrs17_mac0_intf(athr_swit
+ 	    printk ("MAC0 as SGMII\n");	
+ //liteon-	    
+             athrs17_reg_write(S17_P0PAD_MODE_REG, (S17_MAC0_SGMII_EN | S17_MAC0_SGMII_DELAY));
++            /* Enable port0 & port6 exchange, <Sean@Liteon>, 2014-02-12 */
++            athrs17_reg_write(S17_P0PAD_MODE_REG,athrs17_reg_read(S17_P0PAD_MODE_REG)|S17_MAC06_EXCHANGE_EN);
++
+ //liteon+            
+             //athrs17_reg_write(S17_SGMII_CTRL_REG , 0xc74164d0); /* SGMII control */
+             athrs17_reg_write(S17_SGMII_CTRL_REG , 0xc78164de); /* SGMII control */

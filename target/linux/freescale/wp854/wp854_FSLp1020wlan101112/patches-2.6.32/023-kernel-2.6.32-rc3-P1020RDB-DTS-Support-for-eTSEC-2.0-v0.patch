@@ -1,0 +1,161 @@
+From c61cc4eb1e114f41a6ab5d7434fc1d3fe622a2c3 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Fri, 16 Oct 2009 11:39:56 +0530
+Subject: [PATCH 08/16] DTS: Support for eTSEC 2.0
+
+This patch adds support for eTSEC 2.0 found in P1020.
+The changes include introduction of the grop nodes to
+the etsec nodes.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ arch/powerpc/boot/dts/p1020rdb.dts |  126 ++++++++++++++++++++++++++++++++++++
+ 1 files changed, 126 insertions(+), 0 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p1020rdb.dts b/arch/powerpc/boot/dts/p1020rdb.dts
+index 4c6d061..e42a15e 100644
+--- a/arch/powerpc/boot/dts/p1020rdb.dts
++++ b/arch/powerpc/boot/dts/p1020rdb.dts
+@@ -19,6 +19,9 @@
+ 	aliases {
+ 		serial0 = &serial0;
+ 		serial1 = &serial1;
++		ethernet0 = &enet0;
++		ethernet1 = &enet1;
++		ethernet2 = &enet2;
+ 		pci0 = &pci0;
+ 		pci1 = &pci1;
+ 	};
+@@ -346,6 +349,129 @@
+ 			};
+ 		};
+ 
++		 mdio@24000 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			compatible = "fsl,etsec2-mdio";
++			reg = <0x24000 0x1000>;
++
++			phy0: ethernet-phy@0 {
++				interrupt-parent = <&mpic>;
++				interrupts = <3 1>;
++				reg = <0x0>;
++			};
++			phy1: ethernet-phy@1 {
++				interrupt-parent = <&mpic>;
++				interrupts = <2 1>;
++				reg = <0x1>;
++			};
++		};
++
++		mdio@25000 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			compatible = "fsl,etsec2-tbi";
++			reg = <0x25000 0x1000>;
++			tbi0: tbi-phy@11 {
++				reg = <0x11>;
++				device_type = "tbi-phy";
++			};
++		};
++
++		enet0: ethernet@B0000 {
++			#address-cells = <1>;
++			#size-cells = <1>;
++			cell-index = <0>;
++			device_type = "network";
++			model = "eTSEC";
++			compatible = "fsl,etsec2";
++			fsl,num_rx_queues = <0x8>;
++			fsl,num_tx_queues = <0x8>;
++			local-mac-address = [ 00 00 00 00 00 00 ];
++			interrupt-parent = <&mpic>;
++			fixed-link = <1 1 1000 0 0>;
++			phy-connection-type = "rgmii-id";
++			queue-group@0{
++				#address-cells = <1>;
++				#size-cells = <1>;
++				reg = <0xB0000 0x1000>;
++				fsl,rx-err-int-map = <0xAA>;
++				fsl,tx-int-map = <0xAA>;
++				interrupts = <29 2 30 2 34 2>;
++			};
++			queue-group@1{
++				#address-cells = <1>;
++				#size-cells = <1>;
++				reg = <0xB4000 0x1000>;
++				fsl,rx-err-int-map = <0x55>;
++				fsl,tx-int-map = <0x55>;
++				interrupts = <17 2 18 2 24 2>;
++			};
++		};
++
++		enet1: ethernet@B1000 {
++			#address-cells = <1>;
++			#size-cells = <1>;
++			cell-index = <0>;
++			device_type = "network";
++			model = "eTSEC";
++			compatible = "fsl,etsec2";
++			fsl,num_rx_queues = <0x8>;
++			fsl,num_tx_queues = <0x8>;
++			local-mac-address = [ 00 00 00 00 00 00 ];
++			interrupt-parent = <&mpic>;
++			phy-handle = <&phy0>;
++			tbi-handle = <&tbi0>;
++			phy-connection-type = "sgmii";
++			queue-group@0{
++				#address-cells = <1>;
++				#size-cells = <1>;
++				reg = <0xB1000 0x1000>;
++				fsl,rx-err-int-map = <0xAA>;
++				fsl,tx-int-map = <0xAA>;
++				interrupts = <35 2 36 2 40 2>;
++			};
++			queue-group@1{
++				#address-cells = <1>;
++				#size-cells = <1>;
++				reg = <0xB5000 0x1000>;
++				fsl,rx-err-int-map = <0x55>;
++				fsl,tx-int-map = <0x55>;
++				interrupts = <51 2 52 2 67 2>;
++			};
++		};
++
++		enet2: ethernet@B2000 {
++			#address-cells = <1>;
++			#size-cells = <1>;
++			cell-index = <0>;
++			device_type = "network";
++			model = "eTSEC";
++			compatible = "fsl,etsec2";
++			fsl,num_rx_queues = <0x8>;
++			fsl,num_tx_queues = <0x8>;
++			local-mac-address = [ 00 00 00 00 00 00 ];
++			interrupt-parent = <&mpic>;
++			phy-handle = <&phy1>;
++			phy-connection-type = "rgmii-id";
++			queue-group@0{
++				#address-cells = <1>;
++				#size-cells = <1>;
++				reg = <0xB2000 0x1000>;
++				fsl,rx-err-int-map = <0xAA>;
++				fsl,tx-int-map = <0xAA>;
++				interrupts = <31 2 32 2 33 2>;
++			};
++			queue-group@1{
++				#address-cells = <1>;
++				#size-cells = <1>;
++				reg = <0xB6000 0x1000>;
++				fsl,rx-err-int-map = <0x55>;
++				fsl,tx-int-map = <0x55>;
++				interrupts = <25 2 26 2 27 2>;
++			};
++		};
++
+ 		usb@22000 {
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+-- 
+1.6.4.2
+

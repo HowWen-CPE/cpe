@@ -1,0 +1,24 @@
+--- boot_atheros/u-boot/include/crc32.h	1970-01-01 07:00:00.000000000 +0700
++++ boot_liteon/u-boot/include/crc32.h	2013-03-29 17:59:14.000000000 +0800
+@@ -0,0 +1,21 @@
++/*
++ * Filename: crc32.c
++ * Description: compute crc checksum.
++ *              
++ *
++ *Version: 0.10
++ *Created: 2012.6.26
++ * 
++ *             
++ *              
++ *Compiler: gcc
++ *Author: Jack Luo
++ */
++
++
++
++void usage(void);  
++void init_crc_table(void);  
++unsigned int calc_buf_crc32(unsigned int checksum,unsigned char * buffer, unsigned int size);  
++ 
++

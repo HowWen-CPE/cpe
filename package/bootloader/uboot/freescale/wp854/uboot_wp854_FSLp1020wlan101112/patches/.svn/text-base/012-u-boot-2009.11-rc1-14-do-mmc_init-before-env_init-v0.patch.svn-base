@@ -1,0 +1,55 @@
+From 964095477fe9f47f07dd034e687a2228849a796c Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Fri, 30 Oct 2009 10:19:54 +0530
+Subject: [PATCH] Make mmc_init before env_init
+
+If the environment variables are saved on the MMC/SD card,
+env_relocat can't relocate env from MMC/SD card without mmc init.
+
+Signed-off-by: Mingkai Hu <Mingkai.hu@freescale.com>
+---
+ lib_ppc/board.c |   14 ++++++++------
+ 1 files changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/lib_ppc/board.c b/lib_ppc/board.c
+index 3651e21..1764515 100644
+--- a/lib_ppc/board.c
++++ b/lib_ppc/board.c
+@@ -2,6 +2,8 @@
+  * (C) Copyright 2000-2006
+  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
+  *
++ * Copyright 2009 Freescale Semiconductor, Inc.
++ *
+  * See file CREDITS for list of people who contributed to this
+  * project.
+  *
+@@ -780,6 +782,12 @@ void board_init_r (gd_t *id, ulong dest_addr)
+ 	nand_init();		/* go init the NAND */
+ #endif
+ 
++#ifdef CONFIG_GENERIC_MMC
++	WATCHDOG_RESET ();
++	puts ("MMC:  ");
++	mmc_initialize (bd);
++#endif
++
+ 	/* relocate environment function pointers etc. */
+ 	env_relocate ();
+ 
+@@ -936,12 +944,6 @@ void board_init_r (gd_t *id, ulong dest_addr)
+ 	scsi_init ();
+ #endif
+ 
+-#ifdef CONFIG_GENERIC_MMC
+-	WATCHDOG_RESET ();
+-	puts ("MMC:  ");
+-	mmc_initialize (bd);
+-#endif
+-
+ #if defined(CONFIG_CMD_DOC)
+ 	WATCHDOG_RESET ();
+ 	puts ("DOC:   ");
+-- 
+1.5.6.3
+

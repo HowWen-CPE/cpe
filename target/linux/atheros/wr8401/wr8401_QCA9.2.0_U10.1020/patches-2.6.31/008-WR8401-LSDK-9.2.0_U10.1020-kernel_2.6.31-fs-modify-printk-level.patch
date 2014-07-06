@@ -1,0 +1,11 @@
+--- linux-2.6.31_atheros/fs/ext2/super.c	2013-04-03 13:31:16.000000000 +0800
++++ linux-2.6.31_liteon/fs/ext2/super.c	2013-02-04 09:36:24.000000000 +0800
+@@ -1067,7 +1067,7 @@
+ 
+ cantfind_ext2:
+ 	if (!silent)
+-		printk("VFS: Can't find an ext2 filesystem on dev %s.\n",
++		printk(KERN_DEBUG "VFS: Can't find an ext2 filesystem on dev %s.\n",
+ 		       sb->s_id);
+ 	goto failed_mount;
+ failed_mount3:

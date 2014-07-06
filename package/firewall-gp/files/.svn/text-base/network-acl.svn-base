@@ -1,0 +1,226 @@
+#!/bin/sh /etc/rc.common
+# /etc/rc.common /etc/init.d/network-acl start [NULL|wan|XXX]
+
+BIN=/sbin/ezp-iptables
+#BASIC_LIST="mss ttl fl_hwaddr snat log nat_pass fw bw"
+#WAN_LIST="rt fr fl bw wf fw"
+#BASIC_LIST="mss ttl fl_hwaddr rt snat log nat_pass fr fl bw wf fw"
+WAN_LIST="fw"
+LAN_LIST="mss ttl fl_hwaddr snat nat_pass log"
+LAN_WAN_LIST="rt devide onetoone fr fl bw wf"
+
+START=30
+TRIGGER=60
+#TRIGGER_STOP=60
+LANTRIGGER=60
+LANTRIGGER_STOP=60
+log_msg="TRIGGER"
+BIN_IPT=$(which iptables)
+single_local_check () {
+    local err;err=0
+    # check enable 
+    case $1 in 
+        ttl|nat_pass|fw|bw) [ "$(nvram show $1_rule 0 enable)" != "1" ] && err=1
+ 		;; 
+        log) [ "$(nvram show $1_rule 0 ipt_enable)" != "1" ] && err=1
+ 		;; 
+ 	*) 	err=0
+    	;;
+    esac
+    return $err
+}
+
+single_local_start () {
+    local err; err=0
+    # lan setup
+    [ "$1" = "lan" ] && {
+        for rule in $LAN_LIST
+        do
+            single_local_check $rule
+            [ "$?" = "0" ] &&
+            {
+                $BIN $rule start || err=1
+            }
+        done
+    }
+    # wan setup
+    [ "$1" = "wan" ] && {
+        for rule in $WAN_LIST
+        do
+            single_local_check $rule
+            [ "$?" = "0" ] &&
+            {
+                $BIN $rule start || err=1
+            }
+        done
+    }
+    # lan-wan setup
+    [ "$1" = "lan-wan" ] && {
+        for rule in $LAN_WAN_LIST
+        do
+            single_local_check $rule
+            [ "$?" = "0" ] &&
+            {
+                $BIN $rule start || err=1
+            }
+        done
+    }
+	#sub modules setup
+    [ "$1" != "lan" ] && [ "$1" != "wan" ] && [ "$1" != "lan-wan" ] && {
+    	single_local_check $1
+    	[ "$?" = "0" ] &&
+    	{
+    		$BIN $1 start || err=1
+    	}
+	}
+    return $err
+}
+
+single_local_stop () {
+    local err; err=0
+    # basic setup
+    [ "$1" = "lan" ] && {
+        for rule in $LAN_LIST
+        do
+            single_local_check $rule
+            [ "$?" = "0" ] &&
+            {
+                $BIN $rule stop || err=1
+            }
+        done
+    }
+    # wan setup
+    [ "$1" = "wan" ] && {
+        for rule in $WAN_LIST
+        do
+            single_local_check $rule
+            [ "$?" = "0" ] &&
+            {
+                $BIN $rule stop || err=1
+            }
+        done
+    }
+    # lan-wan setup
+    [ "$1" = "lan-wan" ] && {
+        for rule in $LAN_WAN_LIST
+        do
+            single_local_check $rule
+            [ "$?" = "0" ] &&
+            {
+                $BIN $rule stop || err=1
+            }
+        done
+    }
+	#sub modules setup
+    [ "$1" != "lan" ] && [ "$1" != "wan" ] && [ "$1" != "lan-wan" ] && {
+    	single_local_check $1
+    	[ "$?" = "0" ] &&
+    	{
+    		$BIN $1 stop || err=1
+    	}
+	}
+    return $err
+}
+
+wan_start () {
+    local err; err=0
+    single_local_start wan || err=1
+    single_local_start lan-wan || err=1
+    return $err
+}
+
+wan_stop () {
+    local err; err=0
+    single_local_stop wan || err=1
+    single_local_stop lan-wan || err=1
+    return $err
+}
+
+lan_start () {
+    local err; err=0
+    single_local_start lan || err=1
+    single_local_start lan-wan || err=1
+    return $err
+}
+lan_stop () {
+    local err; err=0
+    single_local_stop lan || err=1
+    single_local_stop lan-wan || err=1
+    return $err
+}
+
+local_start () {
+    local err; err=0
+	# create all firewall sub rule chains 
+    # primary chains jump to sub rule chains
+    $BIN start || err=1
+    #single_local_start basic || err=1
+    return $err
+}
+
+local_stop () {
+    local err; err=0
+    # 
+    $BIN stop || err=1
+    #single_local_stop basic || err=1
+    return $err
+}
+
+
+start() {
+    # network-acl start
+	#[ "$(nvram show system_mode 0 id)" = "0" ] || return $err
+    
+	feature_judge firewall
+	value=$?
+	[ $value = "1" ] || {
+		[ -z "$TYPE" ] || {
+			local_stop
+		}
+		return $err
+	}
+	#if sub-chains do not exist,create sub chains
+	num=`$BIN_IPT -vnL | grep INPUT | wc -l`
+	[ $num = "1" ] && {
+		local_start
+	}
+    # wan or lan or lan-wan start, network-acl start XXX
+    [ "$#" = "0" ] && {
+        [ "$TYPE" = "wan" ] && {
+            log_msg="****ACL START $TYPE service***"
+            wan_start
+        }
+        [ "$TYPE" = "lan" ] && {
+            log_msg="ACL START  $TYPE service"
+            lan_start
+            #single_local_start $TYPE
+        }
+    }
+	#single sub module start,network-acl start xxx
+    [ "$#" = "1" ] && {
+		log_msg="ACL start $1 service"
+		single_local_start $1
+	}
+    return $err
+}
+
+stop() {
+	# wan or lan or lan-wan stop, network-acl stop XXX
+    [ "$#" = "0" ] && {
+        [ "$TYPE" = "wan" ] && {
+            log_msg="ACL STOP WAN service"
+            wan_stop
+        }
+        [ "$TYPE" = "lan" ] && {
+            log_msg="ACL stop $TYPE service"
+            lan_stop
+            #single_local_stop $1
+        }
+    }
+	#single sub module stop,network-acl stop xxx
+    [ "$#" = "1" ] && {
+		log_msg="ACL stop $1 service"
+		single_local_stop $1
+	}
+    return $err
+}

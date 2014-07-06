@@ -1,0 +1,38 @@
+#ACTION is set {
+#   printdebug
+#}
+
+# For some reasons, 
+ACTION == remove, PHYSDEVDRIVER ~~ (option*|sierra*|rndis_host*|sierra_net*|cdc_ether*) {
+	exec /sbin/wanupnp stop;
+	exec /sbin/usb-remove start;
+}
+
+$include /etc/hotplug2-common.rules
+
+SUBSYSTEM ~~ (net|button|usb|block|scsi_generic) {
+        exec /sbin/hotplug-call %SUBSYSTEM%;
+}
+
+ACTION == add, PHYSDEVDRIVER ~~ (option|sierra) {
+	exec /sbin/wanupnp start wwan;
+#	exec /sbin/wandetect start;
+	next
+}
+
+ACTION == add, PHYSDEVDRIVER ~~ (rndis_host) {
+	exec /sbin/wanupnp start htc;
+#	exec /sbin/wandetect start;
+	next
+}
+
+ACTION == add, PHYSDEVDRIVER ~~ (sierra_net|cdc_ether) {
+	exec /sbin/wanupnp start directip;
+#	exec /sbin/wandetect start;
+	next
+}
+
+DEVICENAME ~~ (watchdog) {
+	exec /sbin/watchdog -t 5 /dev/watchdog;
+	next
+}

@@ -1,0 +1,144 @@
+diff -urN a/rt2860v2/ap/ap_cfg.c b/rt2860v2/ap/ap_cfg.c
+--- a/rt2860v2/ap/ap_cfg.c	2013-05-22 13:18:02.481802414 +0800
++++ b/rt2860v2/ap/ap_cfg.c	2013-05-22 15:41:45.525409216 +0800
+@@ -9074,15 +9074,65 @@
+ 					ConvertMCS2Rate(pEntry->HTPhyMode, &RxDataRate,pAd->CommonCfg.RxMCS,pAd->CommonCfg.RxShortGI);
+ 					ConvertMCS2Rate(pEntry->HTPhyMode, &TxDataRate,pAd->CommonCfg.TxMCS,pAd->CommonCfg.TxShortGI);
+ 
+-					sprintf(msg+strlen(msg), "Current RxTx Rate 			= MCS %d, %dM, %dM, %s, %cGI, %s%s\n",
++					sprintf(msg+strlen(msg), "Current RxTx Rate               = MCS %d, %dM, %dM, %s, %cGI, %s%s\n",
+ 							pAd->CommonCfg.RxMCS,  RxDataRate, TxDataRate, GetBW(pEntry->HTPhyMode.field.BW),
+ 							((lastRxRate>>8) & 0x1)? 'S': 'L',
+ 							phyMode[(lastRxRate>>14) & 0x3],
+ 							((lastRxRate>>9) & 0x3)? ", STBC": " ");
++					
++					if (pEntry->HTPhyMode.field.MODE >= MODE_HTMIX) {
++						sprintf(msg+strlen(msg),"\n%-10s%-6s%-6s%-6s%-6s%-6s%-6s%-6s%-6s%-6s%-6s%-6s%-6s%-6s%-6s%-6s%-6s\n",
++								   "MCS Rate","MCS0", "MCS1", "MCS2", "MCS3", "MCS4", "MCS5", "MCS6", "MCS7", 
++								   "MCS8", "MCS9", "MCS10", "MCS11", "MCS12", "MCS13", "MCS14", "MCS15");
++						sprintf(msg+strlen(msg), "%-10s", "Strength");
++						int k =0;
++						ULONG now = jiffies;
++						for( k = 0; k < 16 ; k++) {
++							if(time_before(now, pEntry->MCSMappingRSSI[k+12].last_time + HZ*30)
++								&& pEntry->MCSMappingRSSI[k+12].Rssi != 0)
++								sprintf(msg+strlen(msg), "%-6d", pEntry->MCSMappingRSSI[k+12].Rssi);
++							else
++								sprintf(msg+strlen(msg), "%-6s", "N/A");
++						}
++						sprintf(msg+strlen(msg), "\n\n");
++					}
++					else if (pEntry->HTPhyMode.field.MODE == MODE_OFDM) {
++						sprintf(msg+strlen(msg),"\n%-10s%-6s%-6s%-6s%-6s%-6s%-6s%-6s%-6s\n",
++								   "MCS Rate","6M", "9M", "12M", "18M", "24M", "36M", "48M", "54M");
++						sprintf(msg+strlen(msg), "%-10s", "Strength");
++						int k =0;
++						ULONG now = jiffies;
++						for( k = 0; k < 8 ; k++) {
++							if(time_before(now, pEntry->MCSMappingRSSI[k+4].last_time + HZ*30)
++								&& pEntry->MCSMappingRSSI[k+4].Rssi != 0)
++								sprintf(msg+strlen(msg), "%-6d", pEntry->MCSMappingRSSI[k+4].Rssi);
++							else
++								sprintf(msg+strlen(msg), "%-6s", "N/A");
++						}
++						
++						sprintf(msg+strlen(msg), "\n\n");
++					}
++					else if (pEntry->HTPhyMode.field.MODE == MODE_CCK) {
++						sprintf(msg+strlen(msg),"\n%-10s%-6s%-6s%-6s%-6s\n",
++								   "MCS Rate","1M", "2M", "5.5M", "11M");
++												sprintf(msg+strlen(msg), "%-10s", "Strength");
++						int k =0;
++						ULONG now = jiffies;
++						for( k = 0; k < 4 ; k++) {
++							if(time_before(now, pEntry->MCSMappingRSSI[k].last_time + HZ*30)
++								&& pEntry->MCSMappingRSSI[k].Rssi != 0)
++								sprintf(msg+strlen(msg), "%-6d", pEntry->MCSMappingRSSI[k].Rssi);
++							else
++								sprintf(msg+strlen(msg), "%-6s", "N/A");
++						}
++						sprintf(msg+strlen(msg), "\n\n");
++					}
++					
+ 				}
++
+ 			}
+ 		}
+-#else
++#else /*WIFI_DRIVER_PRE_PORTING*/
+     	/* Display Last Rx Rate and BF SNR of first Associated entry in MAC table */
+     	if (pAd->MacTab.Size > 0)
+     	{
+@@ -9112,7 +9162,7 @@
+ 				}
+ 			}
+     	}
+-#endif
++#endif /*WIFI_DRIVER_PRE_PORTING*/
+ #else
+     	sprintf(msg+strlen(msg), "RSSI-A                          = %ld\n", (LONG)(pAd->ApCfg.RssiSample.LastRssi0 - pAd->BbpRssiToDbmDelta));
+ 		sprintf(msg+strlen(msg), "RSSI-B (if available)           = %ld\n", (LONG)(pAd->ApCfg.RssiSample.LastRssi1 - pAd->BbpRssiToDbmDelta));
+diff -urN a/rt2860v2/ap/ap_data.c b/rt2860v2/ap/ap_data.c
+--- a/rt2860v2/ap/ap_data.c	2013-05-22 13:18:02.473700849 +0800
++++ b/rt2860v2/ap/ap_data.c	2013-05-22 18:09:29.557303324 +0800
+@@ -4516,6 +4516,31 @@
+ #ifndef WIFI_DRIVER_PRE_PORTING
+ 	pAd->CommonCfg.RxMCS = pRxWI->MCS;
+ 	pAd->CommonCfg.RxShortGI = pRxWI->ShortGI;
++
++	CHAR  RssiIndex = 0;
++	if( pEntry->HTPhyMode.field.MODE >= MODE_HTMIX )
++		RssiIndex = pRxWI->MCS + 12; 
++	else if (pEntry->HTPhyMode.field.MODE == MODE_OFDM)
++		RssiIndex = pRxWI->MCS + 4; 
++	else if (pEntry->HTPhyMode.field.MODE == MODE_CCK)
++		RssiIndex = pRxWI->MCS;
++	if(RssiIndex < 0)
++		RssiIndex = 0;
++	else if(RssiIndex > 27)
++		RssiIndex = 27;
++
++	CHAR rssi0, rssi1;
++	rssi0 = pEntry->RssiSample.LastRssi0;
++	rssi1 = pEntry->RssiSample.LastRssi1;
++	if(rssi0 != 0 && rssi1 != 0)
++		pEntry->MCSMappingRSSI[RssiIndex].Rssi = (LONG)max(rssi0, rssi1);
++	else if( rssi0 == 0 && rssi1 != 0)
++		pEntry->MCSMappingRSSI[RssiIndex].Rssi = rssi1;
++	else if( rssi0 != 0 && rssi1 == 0)
++		pEntry->MCSMappingRSSI[RssiIndex].Rssi = rssi0;
++	else
++		pEntry->MCSMappingRSSI[RssiIndex].Rssi = 0;
++	pEntry->MCSMappingRSSI[RssiIndex].last_time = jiffies;
+ #endif
+ 	if (pRxD->U2M)
+ 	{
+diff -urN a/rt2860v2/include/rtmp.h b/rt2860v2/include/rtmp.h
+--- a/rt2860v2/include/rtmp.h	2013-05-22 13:18:02.389511512 +0800
++++ b/rt2860v2/include/rtmp.h	2013-05-22 15:37:59.497374851 +0800
+@@ -2377,6 +2377,13 @@
+ } FOUR_WAY_HANDSHAKE_PROFILE, *PFOUR_WAY_HANDSHAKE_PROFILE;
+ #endif /* ADHOC_WPA2PSK_SUPPORT */
+ 
++#ifndef WIFI_DRIVER_PRE_PORTING
++typedef struct _MCS_MAPPING_RSSI_ENTRY {
++	LONG Rssi;
++	ULONG last_time;
++}MCS_MAPPING_RSSI_ENTRY, *PMCS_MAPPING_RSSI_ENTRY;
++#endif
++
+ typedef struct _MAC_TABLE_ENTRY {
+ 	/*
+ 	   0:Invalid,
+@@ -2746,6 +2753,11 @@
+ 	UINT32			TdlsKeyLifeTimeCount;
+ 	UCHAR			MatchTdlsEntryIdx; // indicate the index in pAd->StaCfg.DLSEntry
+ #endif // DOT11Z_TDLS_SUPPORT //
++
++#ifndef WIFI_DRIVER_PRE_PORTING
++	MCS_MAPPING_RSSI_ENTRY MCSMappingRSSI[28]; /* 0~3: CCK(1, 2, 5.5, 11); 4~11: OFDM(6,9,12,18,24,36,48,54); 12~27: MCS 0~15*/
++#endif
++
+ } MAC_TABLE_ENTRY, *PMAC_TABLE_ENTRY;
+ 
+ typedef struct _MAC_TABLE {

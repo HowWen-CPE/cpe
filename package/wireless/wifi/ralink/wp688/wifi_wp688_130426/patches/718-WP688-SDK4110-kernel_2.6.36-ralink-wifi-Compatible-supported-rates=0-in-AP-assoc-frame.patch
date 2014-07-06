@@ -1,0 +1,49 @@
+--- a/rt2860v2/ap/apcli_assoc.c
++++ b/rt2860v2/ap/apcli_assoc.c
+@@ -1061,21 +1061,34 @@ static VOID ApCliAssocPostProc(
+ 
+ 	pApCliEntry = &pAd->ApCfg.ApCliTab[IfIndex];
+ 
++
+ 	pApCliEntry->ApCliMlmeAux.BssType = BSS_INFRA;	
+-	pApCliEntry->ApCliMlmeAux.CapabilityInfo = CapabilityInfo & SUPPORTED_CAPABILITY_INFO;
+-	NdisMoveMemory(&pApCliEntry->ApCliMlmeAux.APEdcaParm, pEdcaParm, sizeof(EDCA_PARM));
+ 
+-	/* filter out un-supported rates */
+-	pApCliEntry->ApCliMlmeAux.SupRateLen = SupRateLen;
+-	NdisMoveMemory(pApCliEntry->ApCliMlmeAux.SupRate, SupRate, SupRateLen);
+-    RTMPCheckRates(pAd, pApCliEntry->ApCliMlmeAux.SupRate, &(pApCliEntry->ApCliMlmeAux.SupRateLen));
+-
+-	/* filter out un-supported rates */
+-	pApCliEntry->ApCliMlmeAux.ExtRateLen = ExtRateLen;
+-	NdisMoveMemory(pApCliEntry->ApCliMlmeAux.ExtRate, ExtRate, ExtRateLen);
+-    RTMPCheckRates(pAd, pApCliEntry->ApCliMlmeAux.ExtRate, &(pApCliEntry->ApCliMlmeAux.ExtRateLen));
++	/*
++	  * For Cisco Linksys EA4500 AP, between "Probe Response frame" and "Association 
++	  * Response frame", they have different information about "Supported Rates"  
++	  * and "Extend Supported Rates". This will leads to PC that connect to APClient 
++	  * couldn't connect with AP when the MAC Repeater is supported and enable. 
++	  * Modified by Sean@Liteon, 2013-11-07
++	  */
++	if (!(pApCliEntry->ApCliMlmeAux.SupRateLen != 0 && SupRateLen == 0))
++	{
++		pApCliEntry->ApCliMlmeAux.CapabilityInfo = CapabilityInfo & SUPPORTED_CAPABILITY_INFO;
++		NdisMoveMemory(&pApCliEntry->ApCliMlmeAux.APEdcaParm, pEdcaParm, sizeof(EDCA_PARM));
++
++		/* filter out un-supported rates */
++		pApCliEntry->ApCliMlmeAux.SupRateLen = SupRateLen;
++		NdisMoveMemory(pApCliEntry->ApCliMlmeAux.SupRate, SupRate, SupRateLen);
++		RTMPCheckRates(pAd, pApCliEntry->ApCliMlmeAux.SupRate, &(pApCliEntry->ApCliMlmeAux.SupRateLen));
++
++		/* filter out un-supported rates */
++		pApCliEntry->ApCliMlmeAux.ExtRateLen = ExtRateLen;
++		NdisMoveMemory(pApCliEntry->ApCliMlmeAux.ExtRate, ExtRate, ExtRateLen);
++		RTMPCheckRates(pAd, pApCliEntry->ApCliMlmeAux.ExtRate, &(pApCliEntry->ApCliMlmeAux.ExtRateLen));
+ 
+-	DBGPRINT(RT_DEBUG_TRACE, (HtCapabilityLen ? "%s===> 11n HT STA\n" : "%s===> legacy STA\n", __FUNCTION__));
++		DBGPRINT(RT_DEBUG_TRACE, (HtCapabilityLen ? "%s===> 11n HT STA\n" : "%s===> legacy STA\n", __FUNCTION__));
++
++	}
+ 
+ #ifdef DOT11_N_SUPPORT
+ 	if (HtCapabilityLen > 0 && (pAd->CommonCfg.PhyMode > PHY_11ABGN_MIXED))

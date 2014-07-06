@@ -1,0 +1,251 @@
+From 4135d057fe13255c6779a3d31471b4e50fa2f06b Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Thu, 11 Mar 2010 15:53:42 +0530
+Subject: [PATCH] 85xx/p1_p2_rdb: p1020: rework muxed usb2handling
+
+This patch adds the 2nd USB (muxed with eLBC) node
+depending upon enabling the 'usb2' environment variable
+via hwconfig i.e. "setenv hwconfig usb2", so that linux
+has the 2nd USB controller enabled, which will lead to
+the disabling of the eLBC (NAND, NOR etc).
+
+Also the 2nd USB controller has been left disabled in
+the u-boot, otherwise any changes in the environment
+won't be saved. Enabled agent mode support in USB2
+depending upon "setenv hwconfig usb2:dr_mode=peripheral"
+
+Signed-off-by: Vivek Mahajan <vivek.mahajan@freescale.com>
+Signed-off-by: Harninder Rai <harninder.rai@freescale.com>
+---
+ board/freescale/p1_p2_rdb/p1_p2_rdb.c |  103 +++++++++++++++++++++++++++++++++
+ cpu/mpc85xx/fdt.c                     |  103 ---------------------------------
+ 2 files changed, 103 insertions(+), 103 deletions(-)
+
+diff --git a/board/freescale/p1_p2_rdb/p1_p2_rdb.c b/board/freescale/p1_p2_rdb/p1_p2_rdb.c
+index d79e6aa..fbf561b 100644
+--- a/board/freescale/p1_p2_rdb/p1_p2_rdb.c
++++ b/board/freescale/p1_p2_rdb/p1_p2_rdb.c
+@@ -235,6 +235,109 @@ int board_eth_init(bd_t *bis)
+ #endif
+ 
+ #if defined(CONFIG_OF_BOARD_SETUP)
++void fdt_fixup_add_2nd_usb(void *blob, int agent)
++{
++	const char *soc_compat = "fsl,p1020-immr";
++	const char *lbc_compat = "fsl,p1020-elbc";
++	const u32 *addrcell, *sizecell, *ph;
++	int off, lbcoff, len, err;
++	u32 *regbuf = NULL;
++	u32 *irqbuf = NULL;
++
++	off = fdt_node_offset_by_compatible(blob, -1, soc_compat);
++	if (off < 0) {
++		printf("WARNING: could not find compatible node %s: %s.\n",
++			soc_compat, fdt_strerror(off));
++		return;
++	}
++
++	lbcoff = fdt_node_offset_by_compatible(blob, -1, lbc_compat);
++	if (lbcoff < 0) {
++		printf("WARNING: could not find compatible node %s: %s.\n",
++			lbc_compat, fdt_strerror(lbcoff));
++		return;
++	}
++
++	addrcell = fdt_getprop(blob, off, "#address-cells", NULL);
++	sizecell = fdt_getprop(blob, off, "#size-cells", NULL);
++
++	off = fdt_add_subnode(blob, off, "usb@23000");
++	if (off < 0) {
++		printf("WARNING: could not add 2nd usb node %s.\n",
++				fdt_strerror(off));
++		return;
++	}
++
++	err = fdt_setprop_cell(blob, off, "#address-cells", 1);
++	if (err < 0)
++		printf("WARNING: could not set #address-cell property: %s\n",
++			fdt_strerror(err));
++
++	err = fdt_setprop_cell(blob, off, "#size-cells", 0);
++	if (err < 0)
++		printf("WARNING: could not set #size-cells property: %s\n",
++			fdt_strerror(err));
++
++	err = fdt_setprop_string(blob, off, "compatible", "fsl-usb2-dr");
++	if (err < 0)
++		printf("WARNING: could not set compatible property: %s\n",
++			fdt_strerror(err));
++
++	err = fdt_setprop_string(blob, off, "phy_type", "ulpi");
++	if (err < 0)
++		printf("WARNING: could not set phy_type property: %s\n",
++			fdt_strerror(err));
++
++	if (agent) {
++		err = fdt_setprop_string(blob, off, "dr_mode", "peripheral");
++		if (err < 0)
++			printf("WARNING: could not set dr_mode property: %s\n",
++				fdt_strerror(err));
++	}
++
++	if (addrcell && *addrcell == 2) {
++		regbuf[0] = 0;
++		regbuf[1] = CONFIG_SYS_MPC85xx_USB2_OFFSET;
++		len = 2;
++	} else {
++		regbuf[0] = CONFIG_SYS_MPC85xx_USB2_OFFSET;
++		len = 1;
++	}
++
++	if (sizecell && *sizecell == 2) {
++		regbuf[len] = 0;
++		regbuf[len + 1] = 0x1000;
++		len = 2;
++	} else {
++		regbuf[len] = 0x1000;
++		len++;
++	}
++
++	err = fdt_setprop(blob, off, "reg", regbuf, len * sizeof(u32));
++	if (err < 0)
++		printf("WARNING: could not set <%s> %s\n",
++					"reg", fdt_strerror(err));
++
++	irqbuf[0] = 0x2e;
++	irqbuf[1] = 0x2;
++
++	err = fdt_setprop(blob, off, "interrupts", irqbuf, 2 * sizeof(u32));
++	if (err < 0)
++		printf("WARNING: could not set %s %s\n",
++				"interrupts", fdt_strerror(err));
++
++	ph = fdt_getprop(blob, lbcoff, "interrupt-parent", 0);
++	if (!ph) {
++		printf("WARNING: could not read interrupt-parent property\n");
++		return;
++	}
++
++	err = fdt_setprop(blob, off, "interrupt-parent", ph, sizeof(u32));
++	if (err < 0)
++		printf("WARNING: could not set %s %s\n",
++				"interrupt-parent", fdt_strerror(err));
++}
++
+ void ft_board_setup(void *blob, bd_t *bd)
+ {
+ 	volatile ccsr_gur_t *gur = (void *)CONFIG_SYS_MPC85xx_GUTS_ADDR;
+diff --git a/cpu/mpc85xx/fdt.c b/cpu/mpc85xx/fdt.c
+index 8e93c79..7731f67 100644
+--- a/cpu/mpc85xx/fdt.c
++++ b/cpu/mpc85xx/fdt.c
+@@ -349,106 +349,3 @@ void ft_cpu_setup(void *blob, bd_t *bd)
+ 	fdt_fixup_esdhc(blob, bd);
+ #endif
+ }
+-
+-void fdt_fixup_add_2nd_usb(void *blob, int agent)
+-{
+-	const char *soc_compat = "fsl,p1020-immr";
+-	const char *lbc_compat = "fsl,p1020-elbc";
+-	const u32 *addrcell, *sizecell, *ph;
+-	int off, lbcoff, len, err;
+-	u32 *regbuf = NULL;
+-	u32 *irqbuf = NULL;
+-
+-	off = fdt_node_offset_by_compatible(blob, -1, soc_compat);
+-	if (off < 0) {
+-		printf("WARNING: could not find compatible node %s: %s.\n",
+-			soc_compat, fdt_strerror(off));
+-		return;
+-	}
+-
+-	lbcoff = fdt_node_offset_by_compatible(blob, -1, lbc_compat);
+-	if (lbcoff < 0) {
+-		printf("WARNING: could not find compatible node %s: %s.\n",
+-			lbc_compat, fdt_strerror(lbcoff));
+-		return;
+-	}
+-
+-	addrcell = fdt_getprop(blob, off, "#address-cells", NULL);
+-	sizecell = fdt_getprop(blob, off, "#size-cells", NULL);
+-
+-	off = fdt_add_subnode(blob, off, "usb@23000");
+-	if (off < 0) {
+-		printf("WARNING: could not add 2nd usb node %s.\n",
+-				fdt_strerror(off));
+-		return;
+-	}
+-
+-	err = fdt_setprop_cell(blob, off, "#address-cells", 1);
+-	if (err < 0)
+-		printf("WARNING: could not set #address-cell property: %s\n",
+-		       fdt_strerror(err));
+-
+-	err = fdt_setprop_cell(blob, off, "#size-cells", 0);
+-	if (err < 0)
+-		printf("WARNING: could not set #size-cells property: %s\n",
+-		       fdt_strerror(err));
+-
+-	err = fdt_setprop_string(blob, off, "compatible", "fsl-usb2-dr");
+-	if (err < 0)
+-		printf("WARNING: could not set compatible property: %s\n",
+-		       fdt_strerror(err));
+-
+-	err = fdt_setprop_string(blob, off, "phy_type", "ulpi");
+-	if (err < 0)
+-		printf("WARNING: could not set phy_type property: %s\n",
+-		       fdt_strerror(err));
+-
+-	if (agent) {
+-		err = fdt_setprop_string(blob, off, "dr_mode", "peripheral");
+-		if (err < 0)
+-			printf("WARNING: could not set dr_mode property: %s\n",
+-			       fdt_strerror(err));
+-	}
+-
+-	if (addrcell && *addrcell == 2) {
+-		regbuf[0] = 0;
+-		regbuf[1] = CONFIG_SYS_MPC85xx_USB2_OFFSET;
+-		len = 2;
+-	} else {
+-		regbuf[0] = CONFIG_SYS_MPC85xx_USB2_OFFSET;
+-		len = 1;
+-	}
+-
+-	if (sizecell && *sizecell == 2) {
+-		regbuf[len] = 0;
+-		regbuf[len + 1] = 0x1000;
+-		len += 2;
+-	} else {
+-		regbuf[len] = 0x1000;
+-		len++;
+-	}
+-
+-	err = fdt_setprop(blob, off, "reg", regbuf, len * sizeof(u32));
+-	if (err < 0)
+-		printf("WARNING: could not set <%s> %s\n",
+-					"reg", fdt_strerror(err));
+-
+-	irqbuf[0] = 0x2e;
+-	irqbuf[1] = 0x2;
+-
+-	err = fdt_setprop(blob, off, "interrupts", irqbuf, 2 * sizeof(u32));
+-	if (err < 0)
+-		printf("WARNING: could not set %s %s\n",
+-				"interrupts", fdt_strerror(err));
+-
+-	ph = fdt_getprop(blob, lbcoff, "interrupt-parent", 0);
+-	if (!ph) {
+-		printf("WARNING: could not read interrupt-parent property\n");
+-		return;
+-	}
+-
+-	err = fdt_setprop(blob, off, "interrupt-parent", ph, sizeof(u32));
+-	if (err < 0)
+-		printf("WARNING: could not set %s %s\n",
+-				"interrupt-parent", fdt_strerror(err));
+-}
+-- 
+1.5.6.3
+

@@ -1,0 +1,371 @@
+From 374d3bc589db9f60ad24310c2f88d58b28736f59 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Wed, 11 Nov 2009 19:53:08 +0530
+Subject: [PATCH] gianfar: Introduce napi for cleaning the tx ring(s)
+
+This patch introduces napi for cleaning the tx rings, thus
+seperating out the rx cleaning process from tx cleaning.
+This patch will help in improving the dual core performance
+scenarios.
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ drivers/net/Kconfig   |    8 ++
+ drivers/net/gianfar.c |  189 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ drivers/net/gianfar.h |   13 ++++
+ 3 files changed, 208 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/Kconfig b/drivers/net/Kconfig
+index ac642af..fab9250 100644
+--- a/drivers/net/Kconfig
++++ b/drivers/net/Kconfig
+@@ -2395,6 +2395,14 @@ config GFAR_SKBUFF_RECYCLING
+ 	 used for fast IPv4 packet forwarding. Select this if you would like
+ 	 to improve your latency and throughput performance.
+ 
++config GIANFAR_TXNAPI
++	default n
++	bool "Introduce seperate tx_napi for cleaning the tx ring(V 0.0.1) (EXPERIMENTAL)"
++	depends on GIANFAR && EXPERIMENTAL
++	help
++	  Selecting this option introduces a seperate TX NAPI for cleaning the
++	  tx ring(s).
++
+ config 1588_MUX_eTSEC1
+ 	bool "Selecting 1588 signals over eTSEC1 signals"
+ 	depends on GIANFAR
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index 317c7de..6af5a3f 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -136,7 +136,12 @@ static void free_skb_resources(struct gfar_private *priv);
+ static void gfar_set_multi(struct net_device *dev);
+ static void gfar_set_hash_for_addr(struct net_device *dev, u8 *addr);
+ static void gfar_configure_serdes(struct net_device *dev);
++#ifdef CONFIG_GIANFAR_TXNAPI
++static int gfar_poll_tx(struct napi_struct *napi, int budget);
++static int gfar_poll_rx(struct napi_struct *napi, int budget);
++#else
+ static int gfar_poll(struct napi_struct *napi, int budget);
++#endif
+ #ifdef CONFIG_NET_POLL_CONTROLLER
+ static void gfar_netpoll(struct net_device *dev);
+ #endif
+@@ -145,7 +150,11 @@ static int gfar_accept_fastpath(struct net_device *dev, struct dst_entry *dst);
+ DECLARE_PER_CPU(struct netif_rx_stats, netdev_rx_stat);
+ #endif
+ int gfar_clean_rx_ring(struct gfar_priv_rx_q *rx_queue, int rx_work_limit);
++#ifdef CONFIG_GIANFAR_TXNAPI
++static int gfar_clean_tx_ring(struct gfar_priv_tx_q *tx_queue, int tx_work_limit);
++#else
+ static int gfar_clean_tx_ring(struct gfar_priv_tx_q *tx_queue);
++#endif
+ static int gfar_process_frame(struct net_device *dev, struct sk_buff *skb,
+ 			      int amount_pull);
+ static void gfar_vlan_rx_register(struct net_device *netdev,
+@@ -262,17 +271,30 @@ static void unmap_group_regs(struct gfar_private *priv)
+ static void disable_napi(struct gfar_private *priv)
+ {
+ 	int i = 0;
+-
++#ifdef CONFIG_GIANFAR_TXNAPI
++	for (i = 0; i < priv->num_grps; i++) {
++		napi_disable(&priv->gfargrp[i].napi_tx);
++		napi_disable(&priv->gfargrp[i].napi_rx);
++	}
++#else
+ 	for (i = 0; i < priv->num_grps; i++)
+ 		napi_disable(&priv->gfargrp[i].napi);
++#endif
+ }
+ 
+ static void enable_napi(struct gfar_private *priv)
+ {
+ 	int i = 0;
+ 
++#ifdef CONFIG_GIANFAR_TXNAPI
++	for (i = 0; i < priv->num_grps; i++) {
++		napi_enable(&priv->gfargrp[i].napi_tx);
++		napi_enable(&priv->gfargrp[i].napi_rx);
++	}
++#else
+ 	for (i = 0; i < priv->num_grps; i++)
+ 		napi_enable(&priv->gfargrp[i].napi);
++#endif
+ }
+ 
+ static int gfar_parse_group(struct device_node *np,
+@@ -691,9 +713,19 @@ static int gfar_probe(struct of_device *ofdev,
+ 	dev->netdev_ops = &gfar_netdev_ops;
+ 	dev->ethtool_ops = &gfar_ethtool_ops;
+ 
++#ifdef CONFIG_GIANFAR_TXNAPI
++	/* Seperate napi for tx and rx for each group */
++	for (i = 0; i < priv->num_grps; i++) {
++		netif_napi_add(dev, &priv->gfargrp[i].napi_tx, gfar_poll_tx,
++				GFAR_DEV_WEIGHT);
++		netif_napi_add(dev, &priv->gfargrp[i].napi_rx, gfar_poll_rx,
++				GFAR_DEV_WEIGHT);
++	}
++#else
+ 	/* Register for napi ...We are registering NAPI for each grp */
+ 	for (i = 0; i < priv->num_grps; i++)
+ 		netif_napi_add(dev, &priv->gfargrp[i].napi, gfar_poll, GFAR_DEV_WEIGHT);
++#endif
+ 
+ 	if (priv->device_flags & FSL_GIANFAR_DEV_HAS_CSUM) {
+ 		priv->rx_csum_enable = 1;
+@@ -2113,7 +2145,7 @@ static int gfar_start_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	/* reduce TxBD free count */
+ 	tx_queue->num_txbdfree -= (nr_frags + 1);
+ 
+-	dev->trans_start = jiffies;
++	txq->trans_start = jiffies;
+ 
+ 	/* If the next BD still needs to be cleaned up, then the bds
+ 	   are full.  We need to tell the kernel to stop sending us stuff. */
+@@ -2438,7 +2470,11 @@ static void gfar_timeout(struct net_device *dev)
+ }
+ 
+ /* Interrupt Handler for Transmit complete */
++#ifdef CONFIG_GIANFAR_TXNAPI
++static int gfar_clean_tx_ring(struct gfar_priv_tx_q *tx_queue, int tx_work_limit)
++#else
+ static int gfar_clean_tx_ring(struct gfar_priv_tx_q *tx_queue)
++#endif
+ {
+ 	struct net_device *dev = tx_queue->dev;
+ 	struct gfar_private *priv = netdev_priv(dev);
+@@ -2462,7 +2498,11 @@ static int gfar_clean_tx_ring(struct gfar_priv_tx_q *tx_queue)
+ 	bdp = tx_queue->dirty_tx;
+ 	skb_dirtytx = tx_queue->skb_dirtytx;
+ 
++#ifdef CONFIG_GIANFAR_TXNAPI
++	while ((skb = tx_queue->tx_skbuff[skb_dirtytx]) && !(--tx_work_limit < 0)) {
++#else
+ 	while ((skb = tx_queue->tx_skbuff[skb_dirtytx])) {
++#endif
+ 		frags = skb_shinfo(skb)->nr_frags;
+ 		lbdp = skip_txbd(bdp, frags, base, tx_ring_size);
+ 
+@@ -2520,6 +2560,35 @@ static int gfar_clean_tx_ring(struct gfar_priv_tx_q *tx_queue)
+ 	return howmany;
+ }
+ 
++#ifdef CONFIG_GIANFAR_TXNAPI
++static void gfar_schedule_cleanup_rx(struct gfar_priv_grp *gfargrp)
++{
++	unsigned long flags;
++
++	spin_lock_irqsave(&gfargrp->grplock, flags);
++	if (napi_schedule_prep(&gfargrp->napi_rx)) {
++		gfar_write(&gfargrp->regs->imask, IMASK_RX_DISABLED);
++		__napi_schedule(&gfargrp->napi_rx);
++	} else {
++		gfar_write(&gfargrp->regs->ievent, IEVENT_RX_MASK);
++	}
++	spin_unlock_irqrestore(&gfargrp->grplock, flags);
++}
++
++static void gfar_schedule_cleanup_tx(struct gfar_priv_grp *gfargrp)
++{
++	unsigned long flags;
++
++	spin_lock_irqsave(&gfargrp->grplock, flags);
++	if (napi_schedule_prep(&gfargrp->napi_tx)) {
++		gfar_write(&gfargrp->regs->imask, IMASK_TX_DISABLED);
++		__napi_schedule(&gfargrp->napi_tx);
++	} else {
++		gfar_write(&gfargrp->regs->ievent, IEVENT_TX_MASK);
++	}
++	spin_unlock_irqrestore(&gfargrp->grplock, flags);
++}
++#else
+ static void gfar_schedule_cleanup(struct gfar_priv_grp *gfargrp)
+ {
+ 	unsigned long flags;
+@@ -2538,11 +2607,16 @@ static void gfar_schedule_cleanup(struct gfar_priv_grp *gfargrp)
+ 	spin_unlock_irqrestore(&gfargrp->grplock, flags);
+ 
+ }
++#endif
+ 
+ /* Interrupt Handler for Transmit complete */
+ static irqreturn_t gfar_transmit(int irq, void *grp_id)
+ {
++#ifdef CONFIG_GIANFAR_TXNAPI
++	gfar_schedule_cleanup_tx((struct gfar_priv_grp *)grp_id);
++#else
+ 	gfar_schedule_cleanup((struct gfar_priv_grp *)grp_id);
++#endif
+ 	return IRQ_HANDLED;
+ }
+ 
+@@ -2739,7 +2813,11 @@ static inline void count_errors(unsigned short status, struct net_device *dev)
+ 
+ irqreturn_t gfar_receive(int irq, void *grp_id)
+ {
++#ifdef CONFIG_GIANFAR_TXNAPI
++	gfar_schedule_cleanup_rx((struct gfar_priv_grp *)grp_id);
++#else
+ 	gfar_schedule_cleanup((struct gfar_priv_grp *)grp_id);
++#endif
+ 	return IRQ_HANDLED;
+ }
+ 
+@@ -2944,6 +3022,112 @@ int gfar_clean_rx_ring(struct gfar_priv_rx_q *rx_queue, int rx_work_limit)
+ 	return howmany;
+ }
+ 
++#ifdef CONFIG_GIANFAR_TXNAPI
++static int gfar_poll_tx(struct napi_struct *napi, int budget)
++{
++	struct gfar_priv_grp *gfargrp = container_of(napi,
++					struct gfar_priv_grp, napi_tx);
++	struct gfar_private *priv = gfargrp->priv;
++	struct gfar __iomem *regs = gfargrp->regs;
++	struct gfar_priv_tx_q *tx_queue = NULL;
++	int budget_per_queue = 0, tx_cleaned = 0, i = 0;
++	int left_over_budget = budget, serviced_queues = 0, num_queues = 0;
++	int tx_cleaned_per_queue = 0;
++	unsigned long flags;
++	u32 imask;
++
++	num_queues = gfargrp->num_tx_queues;
++	budget_per_queue = budget/num_queues;
++
++	gfar_write(&regs->ievent, IEVENT_TX_MASK);
++
++	while (num_queues && left_over_budget) {
++		budget_per_queue = left_over_budget/num_queues;
++		left_over_budget = 0;
++
++		for_each_bit(i, &gfargrp->tx_bit_map, priv->num_tx_queues) {
++			if (test_bit(i, &serviced_queues))
++				continue;
++			tx_queue = priv->tx_queue[i];
++			if (spin_trylock_irqsave(&tx_queue->txlock, flags)) {
++				tx_cleaned_per_queue =
++					gfar_clean_tx_ring(tx_queue,
++							budget_per_queue);
++				spin_unlock_irqrestore(&tx_queue->txlock,
++							flags);
++			}
++			tx_cleaned += tx_cleaned_per_queue;
++			if (tx_cleaned_per_queue < budget_per_queue) {
++				left_over_budget = left_over_budget +
++					(budget_per_queue - tx_cleaned_per_queue);
++				set_bit(i, &serviced_queues);
++				num_queues--;
++			}
++		}
++	}
++
++	if (tx_cleaned < budget) {
++		napi_complete(napi);
++		imask = gfar_read(&regs->imask);
++		imask |= IMASK_DEFAULT_TX;
++		gfar_write(&regs->imask, imask);
++		gfar_configure_tx_coalescing(priv, gfargrp->tx_bit_map);
++	}
++
++	return tx_cleaned;
++}
++
++static int gfar_poll_rx(struct napi_struct *napi, int budget)
++{
++	struct gfar_priv_grp *gfargrp = container_of(napi,
++			struct gfar_priv_grp, napi_rx);
++	struct gfar_private *priv = gfargrp->priv;
++	struct gfar __iomem *regs = gfargrp->regs;
++	struct gfar_priv_rx_q *rx_queue = NULL;
++	int rx_cleaned = 0, budget_per_queue = 0, rx_cleaned_per_queue = 0;
++	int i, left_over_budget = budget, serviced_queues = 0, num_queues = 0;
++	u32 imask;
++
++	num_queues = gfargrp->num_rx_queues;
++	budget_per_queue = budget/num_queues;
++
++	gfar_write(&regs->ievent, IEVENT_RX_MASK);
++
++	while (num_queues && left_over_budget) {
++		budget_per_queue = left_over_budget/num_queues;
++		left_over_budget = 0;
++		for_each_bit(i, &gfargrp->rx_bit_map, priv->num_rx_queues) {
++			if (test_bit(i, &serviced_queues))
++				continue;
++			rx_queue = priv->rx_queue[i];
++			rx_cleaned_per_queue = gfar_clean_rx_ring(rx_queue,
++							budget_per_queue);
++			rx_cleaned += rx_cleaned_per_queue;
++			if(rx_cleaned_per_queue < budget_per_queue) {
++				left_over_budget = left_over_budget +
++					(budget_per_queue - rx_cleaned_per_queue);
++				set_bit(i, &serviced_queues);
++				num_queues--;
++			}
++		}
++	}
++
++	if (rx_cleaned < budget) {
++		napi_complete(napi);
++
++		/* Clear the halt bit in RSTAT */
++		gfar_write(&regs->rstat, gfargrp->rstat);
++
++		imask = gfar_read(&regs->imask);
++		imask |= IMASK_DEFAULT_RX;
++		gfar_write(&regs->imask, imask);
++
++		gfar_configure_rx_coalescing(priv, gfargrp->rx_bit_map);
++	}
++
++	return rx_cleaned;
++}
++#else
+ static int gfar_poll(struct napi_struct *napi, int budget)
+ {
+ 	struct gfar_priv_grp *gfargrp = container_of(napi,
+@@ -3014,6 +3198,7 @@ static int gfar_poll(struct napi_struct *napi, int budget)
+ 
+ 	return rx_cleaned;
+ }
++#endif
+ 
+ #ifdef CONFIG_NET_POLL_CONTROLLER
+ /*
+diff --git a/drivers/net/gianfar.h b/drivers/net/gianfar.h
+index 24d5278..0243698 100644
+--- a/drivers/net/gianfar.h
++++ b/drivers/net/gianfar.h
+@@ -410,6 +410,14 @@ extern const char gfar_driver_version[];
+ #define IMASK_RTX_DISABLED ((~(IMASK_RXFEN0 | IMASK_TXFEN | IMASK_BSY)) \
+ 			   & IMASK_DEFAULT)
+ 
++#ifdef CONFIG_GIANFAR_TXNAPI
++#define IMASK_DEFAULT_TX	(IMASK_TXFEN | IMASK_TXBEN)
++#define IMASK_DEFAULT_RX	(IMASK_RXFEN0 | IMASK_BSY)
++#define IMASK_RX_DISABLED	((~IMASK_DEFAULT_RX) \
++				& IMASK_DEFAULT)
++#define IMASK_TX_DISABLED	((~IMASK_DEFAULT_TX) \
++				& IMASK_DEFAULT)
++#endif
+ /* Fifo management */
+ #define FIFO_TX_THR_MASK	0x01ff
+ #define FIFO_TX_STARVE_MASK	0x01ff
+@@ -1146,7 +1154,12 @@ struct gfar_priv_rx_q {
+ 
+ struct gfar_priv_grp {
+ 	spinlock_t grplock __attribute__ ((aligned (SMP_CACHE_BYTES)));
++#ifdef CONFIG_GIANFAR_TXNAPI
++	struct napi_struct napi_tx;
++	struct napi_struct napi_rx;
++#else
+ 	struct	napi_struct napi;
++#endif
+ 	struct gfar_private *priv;
+ 	struct gfar __iomem *regs;
+ 	unsigned int grp_id;
+-- 
+1.5.2.2
+

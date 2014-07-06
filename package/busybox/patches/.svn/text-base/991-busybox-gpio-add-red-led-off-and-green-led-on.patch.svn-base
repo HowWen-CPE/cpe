@@ -1,0 +1,17 @@
+--- busybox-1.11.2-old/init/init.c	2013-01-10 09:00:39.000000000 +0800
++++ busybox-1.11.2-new/init/init.c	2013-01-09 17:55:30.000000000 +0800
+@@ -471,6 +471,14 @@
+ 		messageD(L_LOG, "waiting for enter to start '%s'"
+ 					"(pid %d, tty '%s')\n",
+ 				a->command, getpid(), a->terminal);
++		
++/*Red led off and green led on, Sean@liteon, 2013-01-09----->*/
++#ifdef LITEON_SRC_VALID
++		system("echo 0 > /proc/led_ctrl/red_led_glisten");
++		system("echo 1 > /proc/led_ctrl/pwr_led");
++#endif //LITEON_SRC_VALID
++/*<-----Sean@liteon, 2013-01-09*/
++
+ 		full_write(STDOUT_FILENO, press_enter, sizeof(press_enter) - 1);
+ 		while (safe_read(STDIN_FILENO, &c, 1) == 1 && c != '\n')
+ 			continue;

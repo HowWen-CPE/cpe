@@ -1,0 +1,32 @@
+--- a/programs/_updown.klips/_updown.ip2.in	2014-02-24 17:42:00.000000000 +0800
++++ b/programs/_updown.klips/_updown.ip2.in	2014-02-24 17:45:02.000000000 +0800
+@@ -604,21 +604,29 @@
+ 	# connection to me coming up
+ 	uprule
+ 	# If you are doing a custom version, firewall commands go here.
++	#echo -e "host up ipsec add SNAT rule ${PLUTO_PEER_CLIENT}\n" > /dev/console
++	iptables -t nat -I EZP_SNAT_IPSEC -o ipsec+ -d ${PLUTO_PEER_CLIENT} -j ACCEPT
+ 	;;
+ down-host:*)
+ 	# connection to me going down
+ 	downrule
+ 	# If you are doing a custom version, firewall commands go here.
++	#echo -e "host down ipsec delete SNAT rule ${PLUTO_PEER_CLIENT}\n" > /dev/console
++	iptables -t nat -D EZP_SNAT_IPSEC -o ipsec+ -d ${PLUTO_PEER_CLIENT} -j ACCEPT
+ 	;;
+ up-client:)
+ 	# connection to my client subnet coming up
+ 	uprule
+ 	# If you are doing a custom version, firewall commands go here.
++	#echo -e "client up ipsec add SNAT rule ${PLUTO_PEER_CLIENT}\n" > /dev/console
++	iptables -t nat -I EZP_SNAT_IPSEC -o ipsec+ -d ${PLUTO_PEER_CLIENT} -j ACCEPT
+ 	;;
+ down-client:)
+ 	# connection to my client subnet going down
+ 	downrule
+ 	# If you are doing a custom version, firewall commands go here.
++	#echo -e "client down ipsec delete SNAT rule ${PLUTO_PEER_CLIENT}\n" > /dev/console
++	iptables -t nat -D EZP_SNAT_IPSEC -o ipsec+ -d ${PLUTO_PEER_CLIENT} -j ACCEPT
+ 	;;
+ updateresolvconf-host|updateresolvconf-client)
+ 	# updating resolv.conf using DNS info obtained from the server

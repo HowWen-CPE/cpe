@@ -1,0 +1,160 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2007 OpenWrt.org
+BIN=/usr/sbin/dnsmasq
+CONFIG_FILE=/etc/ethers
+CONFIG_RFILE=/tmp/ethers
+#START=98
+#TRIGGER=20
+LANTRIGGER=20
+LANTRIGGER_STOP=20
+log_msg="DHCP-server"
+
+stop () {
+    [ -f /tmp/resolv.conf ] && {
+        rm -f /tmp/resolv.conf
+        ln -s /tmp/resolv.conf.auto /tmp/resolv.conf
+    }
+    [ -f /var/ethers ] && {
+        rm -f /var/ethers
+        touch /var/ethers
+    }
+    killall dnsmasq
+    [ "$(nvram show lan_dhcps_rule 0 dhcpmode)" = "NONE" ] && {
+        args="-i $(nvram get lan0_ifname)"
+        feature_judge dhcps
+        [ $? = "1" ] && $BIN $args || err=1 
+    }
+    [ "$(nvram show lan_dhcps_rule 0 dhcpmode)" = "RELAY" ] && {
+       args="--dhcp-relay=$(nvram get lan0_ipaddr),$(nvram show lan_dhcps_rule 0 serverAddr), \
+             -i $(nvram get lan0_ifname) -i $(nvram get wan0_ifname)"
+       feature_judge dhcps
+       [ $? = "1" ] && $BIN $args || err=1 
+    }
+    return 0
+}
+
+local_config () {
+    local i;
+    local limit;
+    [ "$(nvram get fl_hwaddr_enable)" = "1" ] && {
+    # construct /etc/ethers 
+    i=0
+    limit=$(nvram get fl_hwaddr_rule_num)
+    while [ $i -lt $limit ];
+    do
+        [ "$(nvram show fl_hwaddr_rule $i dhcp_enable)" = "1" ] && {
+            hwaddr=$(nvram show fl_hwaddr_rule $i hwaddr)
+            ipaddr=$(nvram show fl_hwaddr_rule $i ipaddr)
+            echo "$hwaddr $ipaddr" >> $CONFIG_RFILE
+        }
+        i=$(($i+1))
+    done
+    }
+}
+
+start() {
+    stop
+    feature_judge dhcps
+    [ $? = "0" ] && return 0
+    [ "$(nvram show lan_dhcps_rule 0 dhcpmode)" = "DHCPS" ] && {
+	    local i;
+	    local limit;
+	    i=0
+	    limit=$(nvram get lan_num)
+        pidof dnsmasq > /dev/null && stop
+        local_config
+        # calculate settings
+        while [ "$i" -lt "$limit" ]; do
+            [ "$(nvram show lan_dhcps_rule $i dhcpmode)" = "DHCPS" ] || {
+                i=$(($i + 1))
+                continue
+            }
+            iface="lan${i}"
+            ipaddr=$(nvram get ${iface}_ipaddr)
+            mask=$(nvram get ${iface}_mask)
+            # FIXME !!! We are using one set of dhcp rule.
+            # In the real case, we should apply each lan a rule
+            start=$(nvram show lan_dhcps_rule $i start)
+            num=$(nvram show lan_dhcps_rule $i num)
+            num=$(($num - 1))
+            eval $(ipcalc $ipaddr $mask ${start:-100} ${num:-150})
+            lease=$(nvram show lan_dhcps_rule $i lease)
+
+            domain=$(nvram show lan_dhcps_rule $i domain)
+            args="-z -I lo -a $ipaddr -K -F $START,$END,$NETMASK,${lease:-1h}"
+            # specify the lease file
+            args="${args} -l /var/dhcp.leases -Z "
+
+            # while [ $i -lt $limit ];
+            # do
+            # args="${args} -I $(nvram get wan${i}_ifname) "
+            # i=$(($i+1))
+            # done
+
+            args="${args} ${domain:+-s ${domain}}"
+
+            local dnstype=$(nvram show lan_dhcps_rule $i dnstype)
+            local dnsparam=""
+            case "$dnstype" in
+            "dnsrelay")
+                dnsparam="$(nvram get ${iface}_ipaddr)"
+                [ -z "$dnsparam" ] && \
+                    dnsparam=$(nvram show lan_static_rule $i ipaddr)
+            ;;
+            "opendns")
+                dnsparam="$(nvram show lan_dhcps_rule $i dnsaddr1)"
+            ;;
+            "custom")
+                dnsparam="$(nvram show lan_dhcps_rule $i dnsaddr1)"
+            ;;
+            "googledns")
+                dnsparam="$(nvram show lan_dhcps_rule $i dnsaddr1)"
+            ;;
+            *)
+                dnsparam="$(nvram show wan_dns_rule 0 dns1)"
+            ;;
+            esac
+            dns="${dnsparam:+,$dnsparam}"
+            dnstype=$(nvram show lan_dhcps_rule $i dnstype2)
+            case "$dnstype" in
+            "dnsrelay")
+                dnsparam="$(nvram get ${iface}_ipaddr)"
+                [ -z "$dnsparam" ] && \
+                    dnsparam=$(nvram show lan_static_rule $i ipaddr)
+            ;;
+            "opendns")
+                dnsparam="$(nvram show lan_dhcps_rule $i dnsaddr2)"
+            ;;
+            "googledns")
+                dnsparam="$(nvram show lan_dhcps_rule $i dnsaddr2)"
+            ;;
+            "custom")
+                dnsparam="$(nvram show lan_dhcps_rule $i dnsaddr2)"
+            ;;
+            *)
+                dnsparam="$(nvram show wan_dns_rule 0 dns2)"
+            ;;
+            esac
+            if [ -n "$dns" ]; then
+                dns="${dns}${dnsparam:+,$dnsparam}"
+            else
+                dns="${dnsparam:+,$dnsparam}"
+            fi
+            [ -z "$dns" ] && {
+                [ ! -f "/tmp/resolv.conf" -o -z "$(cat /tmp/resolv.conf)" ] && {
+                    dns=",208.67.220.220,208.67.222.222"
+                }
+            }
+            #[ -n "$dns" ] && {
+            args="${args} --dhcp-option=6$dns"
+            #}
+            args="$args -i $(nvram get ${iface}_ifname)"
+            $BIN $args || err=1 
+            i=$(($i + 1))
+        done
+
+    }
+    return $err
+
+}
+

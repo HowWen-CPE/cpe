@@ -1,0 +1,62 @@
+From e66a9ea679c5f96e83bcd740be05f66c8510db55 Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Thu, 11 Mar 2010 15:49:01 +0530
+Subject: [PATCH] eSDHC 1.8v erratum workaround for P1022 and P1020
+
+On Rev 1.0 of P1022 and P1020 eSDHC controller can't work at 1.8v.
+To remove the capability of the controller, this work around has
+added to unset the 1.8v field in Host capabilities register.
+
+Signed-off-by: Huang Changming <R66093@freescale.com>
+---
+ drivers/mmc/fsl_esdhc.c     |    5 ++++-
+ include/configs/P1_P2_RDB.h |    5 ++++-
+ 2 files changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mmc/fsl_esdhc.c b/drivers/mmc/fsl_esdhc.c
+index 1cf17d6..d5cc6bd 100644
+--- a/drivers/mmc/fsl_esdhc.c
++++ b/drivers/mmc/fsl_esdhc.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright 2007, 2009 Freescale Semiconductor, Inc.
++ * Copyright 2007, 2009-2010 Freescale Semiconductor, Inc.
+  * Andy Fleming
+  *
+  * Based vaguely on the pxa mmc code:
+@@ -407,8 +407,11 @@ static int esdhc_initialize(bd_t *bis)
+ 
+ 	caps = regs->hostcapblt;
+ 
++	/* 1.8V incorrectly set in hardware on P1020 & P1022 eSDHC */
++#ifndef ESDHC_ERRATUM_1_8V
+ 	if (caps & ESDHC_HOSTCAPBLT_VS18)
+ 		mmc->voltages |= MMC_VDD_165_195;
++#endif
+ 	if (caps & ESDHC_HOSTCAPBLT_VS30)
+ 		mmc->voltages |= MMC_VDD_29_30 | MMC_VDD_30_31;
+ 	if (caps & ESDHC_HOSTCAPBLT_VS33)
+diff --git a/include/configs/P1_P2_RDB.h b/include/configs/P1_P2_RDB.h
+index bf467f0..357f74b 100644
+--- a/include/configs/P1_P2_RDB.h
++++ b/include/configs/P1_P2_RDB.h
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright 2009 Freescale Semiconductor, Inc.
++ * Copyright 2009-2010 Freescale Semiconductor, Inc.
+  *
+  * See file CREDITS for list of people who contributed to this
+  * project.
+@@ -560,6 +560,9 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ #ifdef CONFIG_P2020
+ #define CONFIG_SYS_FSL_ESDHC_USE_PIO /* P2020 eSDHC DMA is not functional*/
+ #endif
++#ifdef CONFIG_P1020
++#define ESDHC_ERRATUM_1_8V	1 /* P1020 eSDHC is not functional with 1.8v */
++#endif
+ #endif
+ 
+ #define CONFIG_USB_EHCI
+-- 
+1.5.6.3
+

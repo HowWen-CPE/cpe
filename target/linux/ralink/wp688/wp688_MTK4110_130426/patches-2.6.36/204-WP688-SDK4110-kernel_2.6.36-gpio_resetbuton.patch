@@ -1,0 +1,14 @@
+diff -Nur linux-2.6.36-ra4110/drivers/char_a/ralink_gpio.h linux-2.6.36-ra4110/drivers/char/ralink_gpio.h
+--- linux-2.6.36-ra4110/drivers/char_a/ralink_gpio.h	2013-05-14 14:41:02.134473191 +0800
++++ linux-2.6.36-ra4110/drivers/char/ralink_gpio.h	2013-05-14 14:43:22.149972493 +0800
+@@ -536,4 +536,10 @@
+ 
+ #define RALINK_GPIO(x)			(1 << x)
+ 
++struct gpio_time_record {
++		unsigned long falling;
++		unsigned long rising;
++		struct timer_list        wtd_time;
++	};
++
+ #endif

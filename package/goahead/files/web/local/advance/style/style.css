@@ -1,0 +1,59 @@
+/*.* custom stuff */
+
+div#mainbox {
+    background: #FFF 100% 0 repeat-y;
+}
+#background-cover {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    background-color: black;  
+    opacity: 0.5;
+    filter: alpha(opacity=50);
+}
+#waiting-window {
+    width: 300px;
+    position: absolute;
+    margin: auto;
+    text-align: center;
+    z-index:100;
+    top:15%;
+    left:35%
+}
+#return-window {
+    width: 300px;
+    position: absolute;
+    margin: auto; 
+    text-align: center;
+    z-index: 100; 
+    top:15%;
+    left:30%
+}
+
+.input-window {
+	width: 650px;
+	position: fixed;
+	margin: auto;
+	text-align: center;
+	z-index:100;
+	background-color: black;  
+}
+
+#radial {
+    background: url(images/radial.gif);
+    width: 50px;
+    height: 50px;
+    position: absolute;
+    left: 125px;                       
+    top: 40px;
+}
+.widgetinfo {    
+    font-size: 11px;    
+    color: gray;
+}
+textarea {    
+    margin-left: 20px;    
+    font-size: 12px;    
+    width: 52.3%;
+    font-family: monospace;
+}

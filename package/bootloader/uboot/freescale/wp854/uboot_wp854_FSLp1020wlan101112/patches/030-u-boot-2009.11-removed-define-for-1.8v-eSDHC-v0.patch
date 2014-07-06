@@ -1,0 +1,46 @@
+From e0eeac1f5140402dab5770b857888207567a117b Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Thu, 18 Mar 2010 14:57:39 +0530
+Subject: [PATCH 1/7] [eSDHC]: Reverted define of 1.8v eSDHC Errata
+
+Reverted 1.8v voltage selection for eSDHC from P1 and P2 config
+
+Signed-off-by: Dipen Dudhat <Dipen.Dudhat@freescale.com>
+---
+ drivers/mmc/fsl_esdhc.c     |    2 --
+ include/configs/P1_P2_RDB.h |    4 ----
+ 2 files changed, 0 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/mmc/fsl_esdhc.c b/drivers/mmc/fsl_esdhc.c
+index d5cc6bd..13696ba 100644
+--- a/drivers/mmc/fsl_esdhc.c
++++ b/drivers/mmc/fsl_esdhc.c
+@@ -408,10 +408,8 @@ static int esdhc_initialize(bd_t *bis)
+ 	caps = regs->hostcapblt;
+ 
+ 	/* 1.8V incorrectly set in hardware on P1020 & P1022 eSDHC */
+-#ifndef ESDHC_ERRATUM_1_8V
+ 	if (caps & ESDHC_HOSTCAPBLT_VS18)
+ 		mmc->voltages |= MMC_VDD_165_195;
+-#endif
+ 	if (caps & ESDHC_HOSTCAPBLT_VS30)
+ 		mmc->voltages |= MMC_VDD_29_30 | MMC_VDD_30_31;
+ 	if (caps & ESDHC_HOSTCAPBLT_VS33)
+diff --git a/include/configs/P1_P2_RDB.h b/include/configs/P1_P2_RDB.h
+index c67bff5..f559506 100644
+--- a/include/configs/P1_P2_RDB.h
++++ b/include/configs/P1_P2_RDB.h
+@@ -557,10 +557,6 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ #define CONFIG_FSL_ESDHC
+ #define CONFIG_GENERIC_MMC
+ #define CONFIG_SYS_FSL_ESDHC_ADDR	CONFIG_SYS_MPC85xx_ESDHC_ADDR
+-#if defined(CONFIG_P1020) || defined(CONFIG_P2020)
+-#define ESDHC_ERRATUM_1_8V	1 /* P1020 Rev 1.0/ P2020 Rev 2.0
+-				     eSDHC is not functional with 1.8v */
+-#endif
+ #endif
+ 
+ #define CONFIG_USB_EHCI
+-- 
+1.5.6.5
+

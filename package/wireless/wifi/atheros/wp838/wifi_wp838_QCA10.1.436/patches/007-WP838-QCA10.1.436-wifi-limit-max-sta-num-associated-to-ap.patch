@@ -1,0 +1,29 @@
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/include/ieee80211.h
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/include/ieee80211.h	2014-01-06 11:05:56.872041700 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/include/ieee80211.h	2014-01-06 11:10:09.339189042 +0800
+@@ -1954,7 +1954,10 @@
+  * user configuration.
+  */
+ #define IEEE80211_AID_MAX       2007
+-#define IEEE80211_AID_DEF       128
++/*Under AP mode, modify vap default max association station number from 128 to 64, 
++define single radio max association station number to 64, Sirian@liteon, 2014-01-06*/
++#define IEEE80211_AID_DEF  64
++#define IEEE80211_IC_AID_MAX  64
+ 
+ #define IEEE80211_AID(b)    ((b) &~ 0xc000)
+ 
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/umac/base/ieee80211_node_ap.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/umac/base/ieee80211_node_ap.c	2014-01-06 11:07:14.623076865 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/umac/base/ieee80211_node_ap.c	2014-01-06 11:08:56.632054908 +0800
+@@ -308,7 +308,7 @@
+     if (ni->ni_associd == 0) {
+         u_int16_t aid;
+ 
+-        if(vap->iv_sta_assoc >= vap->iv_max_aid - 1) {
++        if(ic->ic_sta_assoc >= IEEE80211_IC_AID_MAX /*Limit sta num associated to single radio,Sirian@liteon,2014-01-06*/ ||vap->iv_sta_assoc >= vap->iv_max_aid - 1) {
+             IEEE80211_NODE_STATE_UNLOCK(ni);
+             return -1; /* soft client limit reached */
+         }

@@ -1,0 +1,26 @@
+From 2bdc2d84a8cce14b2868af1501d76b7705c7a97d Mon Sep 17 00:00:00 2001
+From: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+Date: Thu, 7 Jan 2010 19:21:14 +0530
+Subject: [PATCH] DTS: Fix units-mask of crypto node for P1020RDB
+
+Signed-off-by: Sandeep Gopalpet <sandeep.kumar@freescale.com>
+---
+ arch/powerpc/boot/dts/p1020rdb.dts |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/arch/powerpc/boot/dts/p1020rdb.dts b/arch/powerpc/boot/dts/p1020rdb.dts
+index 6649192..612e79b 100644
+--- a/arch/powerpc/boot/dts/p1020rdb.dts
++++ b/arch/powerpc/boot/dts/p1020rdb.dts
+@@ -500,7 +500,7 @@
+ 			interrupt-parent = <&mpic>;
+ 			fsl,num-channels = <4>;
+ 			fsl,channel-fifo-len = <24>;
+-			fsl,exec-units-mask = <0x93c>;
++			fsl,exec-units-mask = <0x97c>;
+ 			fsl,descriptor-types-mask = <0x3a30abf>;
+ 		};
+ 
+-- 
+1.5.6.3
+

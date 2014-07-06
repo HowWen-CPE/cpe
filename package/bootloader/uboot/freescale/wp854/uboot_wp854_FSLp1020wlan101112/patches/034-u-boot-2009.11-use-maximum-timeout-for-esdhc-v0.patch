@@ -1,0 +1,48 @@
+From 864bb05b840376c5863a66325d5c9212900dbf84 Mon Sep 17 00:00:00 2001
+From: Dipen Dudhat <dipen.dudhat@freescale.com>
+Date: Thu, 18 Mar 2010 19:21:49 +0530
+Subject: [PATCH 6/7] [eSDHC]: use maximum timeout for eSDHC
+
+The hardware may take longer to timeout, but it's much better than having 
+a too-short timeout value.
+
+This patch is derived from P2020DS BSP Release.
+
+Signed-off-by: Jin Qing <b24347@freescale.com>
+Signed-off-by: Li Yang <leoli@freescale.com>
+Signed-off-by: Dipen Dudhat <Dipen.Dudhat@freescale.com>
+---
+ drivers/mmc/fsl_esdhc.c     |    4 ++++
+ include/configs/P1_P2_RDB.h |    1 +
+ 2 files changed, 5 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/mmc/fsl_esdhc.c b/drivers/mmc/fsl_esdhc.c
+index ed14b2f..6623591 100644
+--- a/drivers/mmc/fsl_esdhc.c
++++ b/drivers/mmc/fsl_esdhc.c
+@@ -217,6 +217,10 @@ static int esdhc_setup_data(struct mmc *mmc, struct mmc_data *data)
+ 	if (timeout < 0)
+ 		timeout = 0;
+ 
++#ifdef CONFIG_SYS_FSL_ESDHC_BROKEN_TIMEOUT
++	timeout = 14;
++#endif
++
+ 	clrsetbits_be32(&regs->sysctl, SYSCTL_TIMEOUT_MASK, timeout << 16);
+ 
+ 	return 0;
+diff --git a/include/configs/P1_P2_RDB.h b/include/configs/P1_P2_RDB.h
+index f559506..d10be6f 100644
+--- a/include/configs/P1_P2_RDB.h
++++ b/include/configs/P1_P2_RDB.h
+@@ -557,6 +557,7 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
+ #define CONFIG_FSL_ESDHC
+ #define CONFIG_GENERIC_MMC
+ #define CONFIG_SYS_FSL_ESDHC_ADDR	CONFIG_SYS_MPC85xx_ESDHC_ADDR
++#define CONFIG_SYS_FSL_ESDHC_BROKEN_TIMEOUT
+ #endif
+ 
+ #define CONFIG_USB_EHCI
+-- 
+1.5.6.5
+

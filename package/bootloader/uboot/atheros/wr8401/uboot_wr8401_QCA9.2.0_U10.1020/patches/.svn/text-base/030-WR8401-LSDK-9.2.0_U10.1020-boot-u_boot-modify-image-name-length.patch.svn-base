@@ -1,0 +1,13 @@
+--- boot_atheros/u-boot/include/image.h	2013-04-03 13:42:56.000000000 +0800
++++ boot_liteon/u-boot/include/image.h	2013-05-03 13:58:25.000000000 +0800
+@@ -134,7 +134,9 @@
+ #define IH_COMP_LZMA		3	/* lzma  Compression Used	*/
+ 
+ #define IH_MAGIC	0x27051956	/* Image Magic Number		*/
+-#define IH_NMLEN		32	/* Image Name Length		*/
++//Modified by Sean@liteon.com, 2013-05-03----->
++#define IH_NMLEN		128	/* Image Name Length		*/
++//<-----Sean@liteon.com, 2013-05-03
+ 
+ /*
+  * all data in network byte order (aka natural aka bigendian)

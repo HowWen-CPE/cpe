@@ -1,0 +1,18 @@
+Index: net-snmp-5.7.2/snmplib/snmpusm.c
+===================================================================
+--- net-snmp-5.7.2.orig/snmplib/snmpusm.c	2013-10-31 09:23:10.632955805 +0800
++++ net-snmp-5.7.2/snmplib/snmpusm.c	2013-10-31 09:23:24.756455657 +0800
+@@ -4017,11 +4017,11 @@
+     *cptr++ = ' ';
+     cptr = read_config_save_octet_string(cptr, (u_char *) user->name,
+                                          (user->name == NULL) ? 0 :
+-                                         strlen(user->name));
++                                         strlen(user->name) + 1);
+     *cptr++ = ' ';
+     cptr = read_config_save_octet_string(cptr, (u_char *) user->secName,
+                                          (user->secName == NULL) ? 0 :
+-                                         strlen(user->secName));
++                                         strlen(user->secName) + 1);
+     *cptr++ = ' ';
+     cptr =
+         read_config_save_objid(cptr, user->cloneFrom, user->cloneFromLen);

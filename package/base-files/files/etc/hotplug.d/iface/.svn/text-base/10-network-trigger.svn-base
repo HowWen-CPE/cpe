@@ -1,0 +1,34 @@
+#!/bin/sh
+lock /tmp/.$TYPE.network-trigger
+
+[ "$ACTION" = "ifup" -a "$TYPE" = "wan" ] && {
+for i in /etc/rc.d/T*; do
+	# william change for 3340
+    [ -x $i ] && /etc/rc.common $i restart 2>&1
+done 
+}
+
+[ "$ACTION" = "ifdown" -a "$TYPE" = "wan" ] && {
+for i in /etc/rc.d/W*; do
+    [ -x $i ] && /etc/rc.common $i stop 2>&1
+done 
+}
+
+[ "$ACTION" = "ifup" -a "$TYPE" = "lan" ] && {
+for i in /etc/rc.d/L*; do
+    [ -x $i ] && /etc/rc.common $i start 2>&1
+done
+	#snat is controled by network-acl,changed by wind 2014-01-06
+    #/sbin/ezp-iptables snat start
+}
+                    
+[ "$ACTION" = "ifdown" -a "$TYPE" = "lan" ] && {
+	#snat is controled by network-acl,changed by wind 2014-01-06
+    #/sbin/ezp-iptables snat stop
+for i in /etc/rc.d/Q*; do
+    [ -x $i ] && /etc/rc.common $i stop 2>&1
+done 
+}
+                                        
+
+lock -u /tmp/.$TYPE.network-trigger

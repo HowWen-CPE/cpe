@@ -1,0 +1,34 @@
+--- a/perf_pwr_offload/drivers/host/wlan/txrx/ol_txrx_event.c
++++ b/perf_pwr_offload/drivers/host/wlan/txrx/ol_txrx_event.c
+@@ -95,7 +95,7 @@ wdi_event_sub(
+     enum WDI_EVENT event)
+ {
+     uint32_t event_index;
+-    wdi_event_subscribe *wdi_sub;
++    wdi_event_subscribe *wdi_sub, *wdi_sub_tmp;
+     /* Input validation */
+     if (!txrx_pdev) {
+         adf_os_print("Invalid txrx_pdev in %s", __FUNCTION__);
+@@ -112,6 +112,7 @@ wdi_event_sub(
+     
+     event_index = event - WDI_EVENT_BASE;
+     wdi_sub = txrx_pdev->wdi_event_list[event_index];
++    wdi_sub_tmp = wdi_sub;
+     /* 
+      *  Check if it is the first subscriber of the event
+      */
+@@ -121,6 +122,14 @@ wdi_event_sub(
+         wdi_sub->priv.prev = NULL;
+         txrx_pdev->wdi_event_list[event_index] = wdi_sub;
+         return A_OK;
++    } else {
++        /* Check if the subscriber of the event already exist, <Sean@Liteon>, 2014-02-11 */
++        do {
++             if (wdi_sub_tmp == event_cb_sub) {
++                adf_os_print("The subscriber of the event already exist in %s\n", __FUNCTION__);
++                return A_ERROR;
++            }
++        } while ((wdi_sub_tmp = wdi_event_next_sub(wdi_sub_tmp)));
+     }
+     event_cb_sub->priv.next = wdi_sub;
+     event_cb_sub->priv.prev = NULL;

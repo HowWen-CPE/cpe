@@ -1,0 +1,45 @@
+--- linux-2.6.32-freescale-p1020-sku/net/wireless/wext.c	2012-07-13 03:19:03.605528262 -0700
++++ linux-liteon-wp854-openwrt/net/wireless/wext.c	2012-07-13 03:21:12.841502958 -0700
+@@ -765,8 +765,13 @@
+ 
+ 	/* Check need for ESSID compatibility for WE < 21 */
+ 	switch (cmd) {
+-	case SIOCSIWESSID:
+ 	case SIOCGIWESSID:
++		//alvin modify for bug 3010, 2011.4.28
++		if (iwp->length == descr->max_tokens + 1)
++			essid_compat = 0;
++		break;
++		//end
++	case SIOCSIWESSID:
+ 	case SIOCSIWNICKN:
+ 	case SIOCGIWNICKN:
+ 		if (iwp->length == descr->max_tokens + 1)
+@@ -790,9 +795,9 @@
+ 	default:
+ 		break;
+ 	}
+-
++	
+ 	iwp->length -= essid_compat;
+-
++	
+ 	/* Check what user space is giving us */
+ 	if (IW_IS_SET(cmd)) {
+ 		/* Check NULL pointer */
+@@ -853,13 +858,14 @@
+ 				return -EFAULT;
+ 		}
+ 	}
+-
++	
+ 	err = handler(dev, info, (union iwreq_data *) iwp, extra);
+ 
+ 	iwp->length += essid_compat;
+ 
+ 	/* If we have something to return to the user */
+ 	if (!err && IW_IS_GET(cmd)) {
++		
+ 		/* Check if there is enough buffer up there */
+ 		if (user_length < iwp->length) {
+ 			err = -E2BIG;

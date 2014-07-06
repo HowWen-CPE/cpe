@@ -1,0 +1,111 @@
+--- a/rt2860v2/ap/ap_repeater.c
++++ b/rt2860v2/ap/ap_repeater.c
+@@ -276,7 +276,9 @@ VOID RTMPRemoveRepeaterEntry(
+ 
+ 	pPrevEntry = NULL;
+ 	pProbeEntry = pAd->ApCfg.ReptCliHash[HashIdx];
+-	ASSERT(pProbeEntry);
++
++	//ASSERT(pProbeEntry);	/* Disable useless print information, Sean@Liteon, 2013-10-18 */
++
+ 	if (pProbeEntry != NULL)
+ 	{
+ 		/* update Hash list*/
+@@ -300,7 +302,11 @@ VOID RTMPRemoveRepeaterEntry(
+ 		} while (pProbeEntry);
+ 	}
+ 	/* not found !!!*/
+-	ASSERT(pProbeEntry != NULL);
++	//ASSERT(pProbeEntry != NULL); /* Disable useless print information, Sean@Liteon, 2013-10-18 */
++
++	/* Fix GP-APP Bug: [4999], Clear CurrentAddress, Sean@Liteon, 2013-10-18 */
++	NdisZeroMemory(pAd->ApCfg.ApCliTab[apidx].RepeaterCli[CliIdx].CurrentAddress, MAC_ADDR_LEN);
++	/* Sean@Liteon, 2013-10-18 */
+ 
+ 	pMapEntry = &pAd->ApCfg.ApCliTab[apidx].RepeaterCliMap[CliIdx];
+ 
+@@ -308,7 +314,7 @@ VOID RTMPRemoveRepeaterEntry(
+ 
+ 	pPrevMapEntry = NULL;
+ 	pProbeMapEntry = pAd->ApCfg.ReptMapHash[HashIdx];
+-	ASSERT(pProbeMapEntry);
++	//ASSERT(pProbeMapEntry); /* Disable useless print information, Sean@Liteon, 2013-10-18 */
+ 	if (pProbeMapEntry != NULL)
+ 	{
+ 		/* update Hash list*/
+@@ -332,12 +338,19 @@ VOID RTMPRemoveRepeaterEntry(
+ 		} while (pProbeMapEntry);
+ 	}
+ 	/* not found !!!*/
+-	ASSERT(pProbeMapEntry != NULL);
++	//ASSERT(pProbeMapEntry != NULL); /* Disable useless print information, Sean@Liteon, 2013-10-18 */
+ 
+ 	pAd->ApCfg.ApCliTab[apidx].RepeaterCli[CliIdx].CliConnectState = 0;
+ 	NdisZeroMemory(pAd->ApCfg.ApCliTab[apidx].RepeaterCli[CliIdx].OriginalAddress, MAC_ADDR_LEN);
+ 
+-	pAd->ApCfg.RepeaterCliSize--;
++	/* Fix GP-APP Bug: [4999], Make sure pAd->ApCfg.RepeaterCliSize >= 0, Sean@Liteon, 2013-10-18 */
++	if (pAd->ApCfg.RepeaterCliSize == 0)
++	{
++		DBGPRINT(RT_DEBUG_WARN, ("pAd->ApCfg.RepeaterCliSize already %d\n", pAd->ApCfg.RepeaterCliSize)); 
++	} else 
++		pAd->ApCfg.RepeaterCliSize--;
++	/* Sean@Liteon, 2013-10-18 */
++	
+ 	NdisReleaseSpinLock(&pAd->ApCfg.ReptCliEntryLock);
+ 
+ 	return;
+--- a/rt2860v2/ap/apcli_ctrl.c
++++ b/rt2860v2/ap/apcli_ctrl.c
+@@ -220,7 +220,7 @@ static VOID ReptCliConnectTimeoutReset(
+ 
+ 	pPrevEntry = NULL;
+ 	pProbeEntry = pAd->ApCfg.ReptCliHash[HashIdx];
+-	ASSERT(pProbeEntry);
++	//ASSERT(pProbeEntry); /* Disable useless print information, Sean@Liteon, 2013-10-18 */
+ 	if (pProbeEntry != NULL)
+ 	{
+ 		/* update Hash list*/
+@@ -244,7 +244,7 @@ static VOID ReptCliConnectTimeoutReset(
+ 		} while (pProbeEntry);
+ 	}
+ 	/* not found !!!*/
+-	ASSERT(pProbeEntry != NULL);
++	//ASSERT(pProbeEntry != NULL); /* Disable useless print information, Sean@Liteon, 2013-10-18 */
+ 
+ 	pMapEntry = &pAd->ApCfg.ApCliTab[pEntry->MatchApCliIdx].RepeaterCliMap[pEntry->MatchLinkIdx];
+ 
+@@ -252,7 +252,7 @@ static VOID ReptCliConnectTimeoutReset(
+ 
+ 	pPrevMapEntry = NULL;
+ 	pProbeMapEntry = pAd->ApCfg.ReptMapHash[HashIdx];
+-	ASSERT(pProbeMapEntry);
++	//ASSERT(pProbeMapEntry); /* Disable useless print information, Sean@Liteon, 2013-10-18 */
+ 	if (pProbeMapEntry != NULL)
+ 	{
+ 		/* update Hash list*/
+@@ -276,7 +276,7 @@ static VOID ReptCliConnectTimeoutReset(
+ 		} while (pProbeMapEntry);
+ 	}
+ 	/* not found !!!*/
+-	ASSERT(pProbeMapEntry != NULL);
++	//ASSERT(pProbeMapEntry != NULL); /* Disable useless print information, Sean@Liteon, 2013-10-18 */
+ 
+ 	NdisZeroMemory(pEntry->OriginalAddress, MAC_ADDR_LEN);
+ 	NdisZeroMemory(pEntry->CurrentAddress, MAC_ADDR_LEN);
+@@ -293,7 +293,14 @@ static VOID ReptCliConnectTimeoutReset(
+ 	pEntry->AssocReqCnt = 0;
+ 	pEntry->CliTriggerTime = 0;
+ 
+-	pAd->ApCfg.RepeaterCliSize--;
++	/* Fix GP-APP Bug: [4999], Make sure pAd->ApCfg.RepeaterCliSize >= 0, Sean@Liteon, 2013-10-18 */
++	if (pAd->ApCfg.RepeaterCliSize == 0)
++	{
++		DBGPRINT(RT_DEBUG_WARN, ("pAd->ApCfg.RepeaterCliSize already %d\n", pAd->ApCfg.RepeaterCliSize)); 
++	} else 
++		pAd->ApCfg.RepeaterCliSize--;
++	/* Sean@Liteon, 2013-10-18 */
++	
+ 	NdisReleaseSpinLock(&pAd->ApCfg.ReptCliEntryLock);
+ }
+ #endif /* MAC_REPEATER_SUPPORT */

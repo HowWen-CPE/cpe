@@ -1,0 +1,720 @@
+--- a/rt2860v2/ap/ap_cfg.c
++++ b/rt2860v2/ap/ap_cfg.c
+@@ -1443,6 +1443,25 @@ typedef struct _IPMacMappingTable
+ 	UCHAR			curMcastAddr[MAC_ADDR_LEN]; /* The multicast mac addr for currecnt received packet destined to ipv4 multicast addr */
+ }IPMacMappingTable;
+ 
++/* Author: Jack, Transplanted by Sean@Liteon, 2013-10-10 */
++typedef struct _IPv6MacMappingEntry
++{
++	UCHAR ipv6Addr[16];	/* In network order */
++	UCHAR macAddr[MAC_ADDR_LEN];
++	ULONG lastTime;
++	struct _IPv6MacMappingEntry *pNext;
++}IPv6MacMappingEntry, *PIPv6MacMappingEntry;
++
++
++typedef struct _IPv6MacMappingTable
++{
++	BOOLEAN			valid;
++	IPv6MacMappingEntry *hash[MAT_MAX_HASH_ENTRY_SUPPORT+1]; /*0~63 for specific station, 64 for broadcast MacAddress */
++	UCHAR			curMcastAddr[MAC_ADDR_LEN];	/* The multicast mac addr for currecnt received packet destined to ipv6 multicast addr */
++}IPv6MacMappingTable;
++/* Sean@Liteon, 2013-10-10 */
++
++
+ INT RTMPAPPrivIoctlSet(
+ 	IN RTMP_ADAPTER *pAd, 
+ 	IN RTMP_IOCTL_INPUT_STRUCT *pIoctlCmdStr)
+@@ -9247,87 +9266,6 @@ VOID RTMPIoctlStatistics(
+ 		sprintf(msg+strlen(msg), "efuseFreeNumber                 = %d\n", efusefreenum);
+ 	}
+ #endif /* RTMP_EFUSE_SUPPORT */    
+-#ifdef MAC_REPEATER_SUPPORT
+-        sprintf(msg+strlen(msg), "MAC Repeater information:\n");
+-
+-
+-        RTMP_IO_READ32(pAd, BKOFF_SLOT_CFG, &RegValue);
+-           sprintf(msg+strlen(msg), "BackOff Slot      : %s slot time, BKOFF_SLOT_CFG(0x1104) = 0x%08x\n", 
+-                OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_SHORT_SLOT_INUSED) ? "short" : "long",
+-                RegValue);
+-#ifdef DOT11_N_SUPPORT
+-         sprintf(msg+strlen(msg),"HT Operating Mode : %d\n", pAd->CommonCfg.AddHTInfo.AddHtInfo2.OperaionMode);
+-    
+-#endif /* DOT11_N_SUPPORT */
+-        
+-         sprintf(msg+strlen(msg),"\n%-19s%-4s%-4s%-4s%-4s%-8s%-7s%-7s%-7s%-10s%-6s%-6s%-6s%-6s%-7s%-7s\n",
+-               "MAC", "AID", "BSS", "PSM", "WMM", "MIMOPS", "RSSI0", "RSSI1", 
+-               "RSSI2", "PhMd", "BW", "MCS", "SGI", "STBC", "Idle", "Rate");
+-        
+-        for (i = MAX_LEN_OF_MAC_TABLE; i < MAX_MAC_TABLE_SIZE_WITH_REPEATER; i++)
+-        {
+-    
+-            PMAC_TABLE_ENTRY pEntry = &pAd->MacTab.Content[i];
+-            if (pEntry && IS_ENTRY_APCLI(pEntry)&& (pEntry->Sst == SST_ASSOC) && (pEntry->bReptCli))
+-            {
+-                DataRate=0;
+-                getRate(pEntry->HTPhyMode, &DataRate);
+-    
+-                 sprintf(msg+strlen(msg),"%02X:%02X:%02X:%02X:%02X:%02X  ",
+-                        pEntry->ReptCliAddr[0], pEntry->ReptCliAddr[1], pEntry->ReptCliAddr[2],
+-                        pEntry->ReptCliAddr[3], pEntry->ReptCliAddr[4], pEntry->ReptCliAddr[5]);
+-                 sprintf(msg+strlen(msg),"%-4d", (int)pEntry->Aid);
+-                 sprintf(msg+strlen(msg),"%-4d", (int)pEntry->apidx);
+-                 sprintf(msg+strlen(msg),"%-4d", (int)pEntry->PsMode);
+-                 sprintf(msg+strlen(msg),"%-4d", (int)CLIENT_STATUS_TEST_FLAG(pEntry, fCLIENT_STATUS_WMM_CAPABLE));
+-#ifdef DOT11_N_SUPPORT
+-                 sprintf(msg+strlen(msg),"%-8d", (int)pEntry->MmpsMode);
+-#endif /* DOT11_N_SUPPORT */
+-                 sprintf(msg+strlen(msg),"%-7d", pEntry->RssiSample.AvgRssi0);
+-                 sprintf(msg+strlen(msg),"%-7d", pEntry->RssiSample.AvgRssi1);
+-                 sprintf(msg+strlen(msg),"%-7d", pEntry->RssiSample.AvgRssi2);
+-                 sprintf(msg+strlen(msg),"%-10s", GetPhyMode(pEntry->HTPhyMode.field.MODE));
+-                 sprintf(msg+strlen(msg),"%-6s", GetBW(pEntry->HTPhyMode.field.BW));
+-                 sprintf(msg+strlen(msg),"%-6d", pEntry->HTPhyMode.field.MCS);
+-                 sprintf(msg+strlen(msg),"%-6d", pEntry->HTPhyMode.field.ShortGI);
+-                 sprintf(msg+strlen(msg),"%-6d", pEntry->HTPhyMode.field.STBC);
+-                 sprintf(msg+strlen(msg),"%-7d", (int)(pEntry->StaIdleTimeout - pEntry->NoDataIdleCount));
+-                 sprintf(msg+strlen(msg),"%-7d", (int)DataRate);
+-                 sprintf(msg+strlen(msg),"%-10d, %d, %d%%\n", pEntry->DebugFIFOCount, pEntry->DebugTxCount, 
+-                            (pEntry->DebugTxCount) ? ((pEntry->DebugTxCount-pEntry->DebugFIFOCount)*100/pEntry->DebugTxCount) : 0);
+-            }
+-        }
+-#endif
+-
+-/* This information may result in MSG buffer overflow. Sean@liteon, 2013-09-06 */
+-#if 0
+-    sprintf(msg+strlen(msg), "MAT information:\n");
+-    if(pIPMacTable!=NULL && pIPMacTable->valid)
+-    {
+-        int j=0;
+-      for(i=0;i<64;i++)
+-      {
+-         pEntry =pIPMacTable->hash[i];         
+-         if(pEntry!=NULL)
+-         {
+-               if((0==strcmp( pIPMacTable->hash[i]->macAddr,pAd->ApCfg.ApCliTab[0].CurrentAddress))||
+-                   (0==strcmp( pIPMacTable->hash[i]->macAddr,pAd->CurrentAddress)))
+-               {
+-                   continue;
+-               }
+-                j++;
+-                sprintf(msg+strlen(msg),"%-4d", j);         
+-                sprintf(msg+strlen(msg),"%02X:%02X:%02X:%02X:%02X:%02X           ", 
+-                    pIPMacTable->hash[i]->macAddr[0], pIPMacTable->hash[i]->macAddr[1], pIPMacTable->hash[i]->macAddr[2],
+-                    pIPMacTable->hash[i]->macAddr[3], pIPMacTable->hash[i]->macAddr[4], pIPMacTable->hash[i]->macAddr[5]);
+-                sprintf(msg+strlen(msg),"%d.%d.%d.%d  \n", 
+-                pIPMacTable->hash[i]->ipAddr & 0xff ,(pIPMacTable->hash[i]->ipAddr>>8) & 0xff,
+-                (pIPMacTable->hash[i]->ipAddr>>16) & 0xff,(pIPMacTable->hash[i]->ipAddr>>24) & 0xff);    
+-         }
+-      }
+-    }
+-#endif
+-/* Sean@liteon */
+ 
+     /* Copy the information into the user buffer */
+     wrq->u.data.length = strlen(msg);
+@@ -9399,6 +9337,248 @@ VOID RTMPIoctlStatistics(
+ }
+ 
+ 
++/* Author: Jack, Transplanted and Modified by Sean@Liteon, 2013-10-10 */
++VOID RTMPIoctlEthernetClient(
++	IN PRTMP_ADAPTER pAd, 
++	IN RTMP_IOCTL_INPUT_STRUCT *wrq)
++{
++	INT Status;
++	PSTRING msg;
++	INT i, hashIdx = 0;
++
++#ifdef MAC_REPEATER_SUPPORT
++	UINT32 RegValue;
++	ULONG DataRate=0;
++#endif
++
++	os_alloc_mem(pAd, (UCHAR **)&msg, sizeof(CHAR)*(2048*2));
++	if (msg == NULL) {
++		return;
++	}
++
++	memset(msg, 0x00, 2048*2);
++	sprintf(msg, "\n");
++
++#ifdef MAC_REPEATER_SUPPORT
++	if(1 == pAd->ApCfg.bMACRepeaterEn)
++	{
++		sprintf(msg+strlen(msg), "MAC Repeater information:\n");
++
++
++		RTMP_IO_READ32(pAd, BKOFF_SLOT_CFG, &RegValue);
++		sprintf(msg+strlen(msg), "BackOff Slot      : %s slot time, BKOFF_SLOT_CFG(0x1104) = 0x%08x\n", 
++			OPSTATUS_TEST_FLAG(pAd, fOP_STATUS_SHORT_SLOT_INUSED) ? "short" : "long",
++			RegValue);
++#ifdef DOT11_N_SUPPORT
++		sprintf(msg+strlen(msg),"HT Operating Mode : %d\n", pAd->CommonCfg.AddHTInfo.AddHtInfo2.OperaionMode);
++#endif /* DOT11_N_SUPPORT */
++
++		sprintf(msg+strlen(msg),"\n%-19s%-4s%-4s%-4s%-4s%-8s%-7s%-7s%-7s%-10s%-6s%-6s%-6s%-6s%-7s%-7s\n",
++			"MAC", "AID", "BSS", "PSM", "WMM", "MIMOPS", "RSSI0", "RSSI1", 
++			"RSSI2", "PhMd", "BW", "MCS", "SGI", "STBC", "Idle", "Rate");
++
++		for (i = MAX_LEN_OF_MAC_TABLE; i < MAX_MAC_TABLE_SIZE_WITH_REPEATER; i++)
++		{
++
++			PMAC_TABLE_ENTRY pEntry = &pAd->MacTab.Content[i];
++			if (pEntry && IS_ENTRY_APCLI(pEntry)&& (pEntry->Sst == SST_ASSOC) && (pEntry->bReptCli))
++			{
++				DataRate=0;
++				getRate(pEntry->HTPhyMode, &DataRate);
++
++				sprintf(msg+strlen(msg),"%02X:%02X:%02X:%02X:%02X:%02X  ",
++				pEntry->ReptCliAddr[0], pEntry->ReptCliAddr[1], pEntry->ReptCliAddr[2],
++				pEntry->ReptCliAddr[3], pEntry->ReptCliAddr[4], pEntry->ReptCliAddr[5]);
++				sprintf(msg+strlen(msg),"%-4d", (int)pEntry->Aid);
++				sprintf(msg+strlen(msg),"%-4d", (int)pEntry->apidx);
++				sprintf(msg+strlen(msg),"%-4d", (int)pEntry->PsMode);
++				sprintf(msg+strlen(msg),"%-4d", (int)CLIENT_STATUS_TEST_FLAG(pEntry, fCLIENT_STATUS_WMM_CAPABLE));
++#ifdef DOT11_N_SUPPORT
++				sprintf(msg+strlen(msg),"%-8d", (int)pEntry->MmpsMode);
++#endif /* DOT11_N_SUPPORT */
++				sprintf(msg+strlen(msg),"%-7d", pEntry->RssiSample.AvgRssi0);
++				sprintf(msg+strlen(msg),"%-7d", pEntry->RssiSample.AvgRssi1);
++				sprintf(msg+strlen(msg),"%-7d", pEntry->RssiSample.AvgRssi2);
++				sprintf(msg+strlen(msg),"%-10s", GetPhyMode(pEntry->HTPhyMode.field.MODE));
++				sprintf(msg+strlen(msg),"%-6s", GetBW(pEntry->HTPhyMode.field.BW));
++				sprintf(msg+strlen(msg),"%-6d", pEntry->HTPhyMode.field.MCS);
++				sprintf(msg+strlen(msg),"%-6d", pEntry->HTPhyMode.field.ShortGI);
++				sprintf(msg+strlen(msg),"%-6d", pEntry->HTPhyMode.field.STBC);
++				sprintf(msg+strlen(msg),"%-7d", (int)(pEntry->StaIdleTimeout - pEntry->NoDataIdleCount));
++				sprintf(msg+strlen(msg),"%-7d", (int)DataRate);
++				sprintf(msg+strlen(msg),"%-10d, %d, %d%%\n", pEntry->DebugFIFOCount, pEntry->DebugTxCount, 
++					(pEntry->DebugTxCount) ? ((pEntry->DebugTxCount-pEntry->DebugFIFOCount)*100/pEntry->DebugTxCount) : 0);
++			}
++		}
++	} 
++	else
++	{
++#endif
++		IPMacMappingTable *pIPMacTable=NULL;
++		IPMacMappingEntry	*pEntry = NULL, *pPrev = NULL;
++		IPv6MacMappingTable *pIPv6MacTable=NULL;
++		IPv6MacMappingEntry   *pIPv6Entry = NULL, *pIPv6Prev = NULL;
++		MAT_STRUCT	*pMatCfg = &(pAd->MatCfg);
++		int j=0;
++		ULONG   now;
++
++
++		sprintf(msg+strlen(msg), "MAT information:\n");
++
++		pIPMacTable=(IPMacMappingTable *)pAd->MatCfg.MatTableSet.IPMacTable;
++		if((pIPMacTable == NULL) || !(pIPMacTable->valid))
++		{
++			DBGPRINT(RT_DEBUG_ERROR, ("%s():Invalid IPMacTable!!!\n", __FUNCTION__));
++			goto LableIPv6MacTable;
++		}
++
++		for(hashIdx = 0; hashIdx < 64 ; hashIdx++)
++		{
++			pPrev = pEntry = pIPMacTable->hash[hashIdx];         
++
++			while(pEntry)
++			{
++				/* Skip to AP client's own MAC address, Sean@Liteon, 2013-11-01 */
++				if(!strncmp(pAd->ApCfg.ApCliTab[0].CurrentAddress, pEntry->macAddr, 6))
++				{
++					pIPMacTable->hash[hashIdx] = pEntry->pNext;
++					pEntry = pIPMacTable->hash[hashIdx];
++					pAd->MatCfg.nodeCount--;
++					continue;
++				}
++
++				/* 
++				    Modified, Sean@Liteon, 2013-10-10 
++				    The operation before will leads to the system halted.
++				*/
++				NdisGetSystemUpTime(&now);
++				if (RTMP_TIME_AFTER(now, pEntry->lastTime + MAT_TB_ENTRY_AGEOUT_TIME))
++				{
++					/* Remove the aged entry */
++					if (pEntry == pIPMacTable->hash[hashIdx])
++					{
++						pIPMacTable->hash[hashIdx]= pEntry->pNext;
++						pPrev = pIPMacTable->hash[hashIdx];
++					}
++					else 
++					{   
++						pPrev->pNext = pEntry->pNext;
++					}
++					MATDBEntryFree(pMatCfg, (PUCHAR)pEntry);
++
++					DBGPRINT(RT_DEBUG_TRACE, ("%s():Remove age-out entry!\n",__FUNCTION__));
++
++					pEntry = (pPrev == NULL ? NULL: pPrev->pNext);
++					pMatCfg->nodeCount--;
++
++					continue;
++				}
++				/* Sean@Liteon, 2013-10-10 */
++
++				j++;
++				sprintf(msg+strlen(msg),"%-3d", j);  
++
++				sprintf(msg+strlen(msg),"%02X:%02X:%02X:%02X:%02X:%02X   ", 
++				pEntry->macAddr[0], pEntry->macAddr[1], pEntry->macAddr[2],
++				pEntry->macAddr[3], pEntry->macAddr[4], pEntry->macAddr[5]);
++
++				sprintf(msg+strlen(msg),"%d.%d.%d.%d\n", 
++				pEntry->ipAddr & 0xff ,(pEntry->ipAddr>>8) & 0xff,
++				(pEntry->ipAddr>>16) & 0xff,(pEntry->ipAddr>>24) & 0xff);    
++
++				pPrev = pEntry;
++				pEntry=pEntry->pNext;
++			}
++		}
++
++LableIPv6MacTable:
++
++		pIPv6MacTable=(IPv6MacMappingTable *)pAd->MatCfg.MatTableSet.IPv6MacTable;
++		if(pIPv6MacTable ==NULL || !(pIPv6MacTable->valid))
++		{
++			DBGPRINT(RT_DEBUG_ERROR, ("%s():Invalid IPv6MacTable!!!\n", __FUNCTION__));
++			goto LableErr;
++		}
++		
++		for(hashIdx = 0; hashIdx < 64; hashIdx++)
++		{
++			pIPv6Entry = pIPv6Prev = pIPv6MacTable->hash[hashIdx];         
++			while(pIPv6Entry)
++			{
++				/* Skip to AP client's own MAC address, Sean@Liteon, 2013-11-01 */
++				if(!strncmp(pAd->ApCfg.ApCliTab[0].CurrentAddress, pIPv6Entry->macAddr, 6))
++				{
++					pIPv6MacTable->hash[hashIdx] = pIPv6Entry->pNext;
++					pIPv6Entry = pIPv6MacTable->hash[hashIdx];
++					pAd->MatCfg.nodeCount--;
++					continue;
++				}
++
++				NdisGetSystemUpTime(&now);
++
++				/* 
++				    Modified, Sean@Liteon, 2013-10-14 
++				    The operation before will leads to the system halted.
++				*/
++				if (RTMP_TIME_AFTER(now, pIPv6Entry->lastTime + MAT_TB_ENTRY_AGEOUT_TIME))
++				{
++					/* Remove the aged entry */
++					if (pIPv6Entry == pIPv6MacTable->hash[hashIdx])
++					{
++						pIPv6MacTable->hash[hashIdx]= pIPv6Entry->pNext;
++						pIPv6Prev = pIPv6MacTable->hash[hashIdx];
++					}
++					else 
++					{   
++						pIPv6Prev->pNext = pIPv6Entry->pNext;
++					}
++					MATDBEntryFree(pMatCfg, (PUCHAR)pIPv6Entry);
++
++					DBGPRINT(RT_DEBUG_TRACE, ("%s():Remove age-out entry!\n",__FUNCTION__));
++
++					pIPv6Entry = (pIPv6Prev == NULL ? NULL: pIPv6Prev->pNext);
++					pMatCfg->nodeCount--;
++
++					continue;
++				} 
++				/* Sean@Liteon, 2013-10-14 */
++
++				j++;
++				sprintf(msg+strlen(msg),"%-3d", j);         
++				sprintf(msg+strlen(msg),"%02X:%02X:%02X:%02X:%02X:%02X   ", 
++					pIPv6Entry->macAddr[0], pIPv6Entry->macAddr[1], 
++					pIPv6Entry->macAddr[2], pIPv6Entry->macAddr[3], 
++					pIPv6Entry->macAddr[4], pIPv6Entry->macAddr[5]);
++
++				sprintf(msg+strlen(msg),"%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x\n", 
++					pIPv6Entry->ipv6Addr[0], pIPv6Entry->ipv6Addr[1], 
++					pIPv6Entry->ipv6Addr[2], pIPv6Entry->ipv6Addr[3],
++					pIPv6Entry->ipv6Addr[4] ,pIPv6Entry->ipv6Addr[5], 
++					pIPv6Entry->ipv6Addr[6], pIPv6Entry->ipv6Addr[7],
++					pIPv6Entry->ipv6Addr[8], pIPv6Entry->ipv6Addr[9], 
++					pIPv6Entry->ipv6Addr[10], pIPv6Entry->ipv6Addr[11],
++					pIPv6Entry->ipv6Addr[12], pIPv6Entry->ipv6Addr[13],
++					pIPv6Entry->ipv6Addr[14], pIPv6Entry->ipv6Addr[15]);
++
++				pIPv6Prev = pIPv6Entry; //Add, Sean@Liteon, 2013-10-14 
++				pIPv6Entry=pIPv6Entry->pNext;
++			}
++		}
++#ifdef MAC_REPEATER_SUPPORT
++	}
++#endif
++
++	/* Copy the information into the user buffer */
++	wrq->u.data.length = strlen(msg);
++	Status = copy_to_user(wrq->u.data.pointer, msg, wrq->u.data.length);
++
++LableErr:
++	os_free_mem(NULL, msg);
++
++}
++/* Sean@Liteon */
++
++
+ #ifdef DOT11_N_SUPPORT
+ /* 
+     ==========================================================================
+@@ -12906,6 +13086,12 @@ INT RTMP_AP_IoctlHandle(
+ 			RTMPIoctlStatistics(pAd, wrq);
+ 			break;
+ 
++/* Author: Jack, Transplanted by Sean@Liteon, 2013-10-10 */
++              case CMD_RTPRIV_IOCTL_ETHERNETCLIENT:
++			RTMPIoctlEthernetClient(pAd, wrq);
++			break;
++/* Sean@Liteon, 2013-10-10 */
++
+ #ifdef WSC_AP_SUPPORT
+ 		case CMD_RTPRIV_IOCTL_WSC_PROFILE:
+ 		    RTMPIoctlWscProfile(pAd, wrq);
+--- a/rt2860v2/common/cmm_mat_iparp.c
++++ b/rt2860v2/common/cmm_mat_iparp.c
+@@ -157,6 +157,55 @@ static inline NDIS_STATUS getSrcIPFromIp
+ 	
+ }
+ 
++
++/* Author: Jack, Transplanted by Sean@Liteon, 2013-10-10 */
++static NDIS_STATUS IPMacRemoveAgeOutEntry(
++	IN MAT_STRUCT		*pMatCfg)
++{
++	IPMacMappingTable *pIPMacTable;
++	IPMacMappingEntry	*pEntry = NULL, *pPrev = NULL;
++	ULONG			now;
++	INT             i;
++
++        pIPMacTable = (IPMacMappingTable *)pMatCfg->MatTableSet.IPMacTable;
++
++        for(i=0;i<64;i++)
++        {
++             pEntry = pPrev= pIPMacTable->hash[i];
++             
++             while(pEntry)
++             {                   
++                     NdisGetSystemUpTime(&now);
++                     if (RTMP_TIME_AFTER(now, pEntry->lastTime + MAT_TB_ENTRY_AGEOUT_TIME))
++                     {
++                         /* Remove the aged entry */
++                         if (pEntry == pIPMacTable->hash[i])
++                         {
++                             pIPMacTable->hash[i]= pEntry->pNext;
++                             pPrev = pIPMacTable->hash[i];
++                         }
++                         else 
++                         {   
++                             pPrev->pNext = pEntry->pNext;
++                         }
++                         MATDBEntryFree(pMatCfg, (PUCHAR)pEntry);
++			 DBGPRINT(RT_DEBUG_ERROR, ("%s():Remove age-out entry!\n",__FUNCTION__));
++                         pEntry = (pPrev == NULL ? NULL: pPrev->pNext);
++                         pMatCfg->nodeCount--;
++                     } 
++                     else
++                     {
++                         pPrev = pEntry;
++                         pEntry = pEntry->pNext;
++                     }
++
++             }
++        }
++    
++}
++/* Sean@Liteon, 2013-10-10 */
++
++
+ static NDIS_STATUS IPMacTableUpdate(
+ 	IN MAT_STRUCT		*pMatCfg,
+ 	IN PUCHAR			pMacAddr,
+@@ -175,6 +224,20 @@ static NDIS_STATUS IPMacTableUpdate(
+ 	if (!pIPMacTable->valid)
+ 		return FALSE;
+ 
++	/* 
++	  * Author: Jack Luo, 
++	  * Description: Remove the age-out entry,
++	  * Transplanted and Moidified: Sean@Liteon, 
++	  * Date: 2013-10-10 
++	  */
++	IPMacRemoveAgeOutEntry(pMatCfg);
++	if(pMatCfg->nodeCount > 63)
++	{
++		DBGPRINT(RT_DEBUG_WARN, ("%s():Mac Table is full!\n",__FUNCTION__));
++		return FALSE;
++	}
++	/* Sean@Liteon, 2013-10-10 */
++
+ 	hashIdx = MAT_IP_ADDR_HASH_INDEX(ipAddr);
+ 
+ 	pEntry = pPrev = pIPMacTable->hash[hashIdx];
+@@ -185,7 +248,7 @@ static NDIS_STATUS IPMacTableUpdate(
+ 		/* Find a existed IP-MAC Mapping entry */
+ 		if (ipAddr == pEntry->ipAddr)
+ 		{
+-			/*	DBGPRINT(RT_DEBUG_TRACE, ("%s(): Got the Mac(%02x:%02x:%02x:%02x:%02x:%02x) of mapped IP(%d.%d.%d.%d)\n",
++			/*	DBGPRINT(RT_DEBUG_ERROR, ("0 %s(): Got the Mac(%02x:%02x:%02x:%02x:%02x:%02x) of mapped IP(%d.%d.%d.%d)\n",
+ 						__FUNCTION__, pEntry->macAddr[0],pEntry->macAddr[1],pEntry->macAddr[2], pEntry->macAddr[3],pEntry->macAddr[4],
+ 						pEntry->macAddr[5], (ipAddr>>24) & 0xff, (ipAddr>>16) & 0xff, (ipAddr>>8) & 0xff, ipAddr & 0xff)); 
+ 			*/
+@@ -221,7 +284,7 @@ static NDIS_STATUS IPMacTableUpdate(
+ 			}
+ 		}
+ 	}
+-
++    
+ 
+ 	/* Allocate a new IPMacMapping entry and insert into the hash */
+ 	pNewEntry = (IPMacMappingEntry *)MATDBEntryAlloc(pMatCfg, sizeof(IPMacMappingEntry));
+@@ -307,7 +370,10 @@ static PUCHAR IPMacTableLookUp(
+ 		We didn't find any matched Mac address, our policy is treat it as
+ 		broadcast packet and send to all.
+ 	*/
+-	return pIPMacTable->hash[IPMAC_TB_HASH_INDEX_OF_BCAST]->macAddr;
++
++	/* Author: Jack, Transplanted by Sean@Liteon, 2013-10-10 */
++	//return pIPMacTable->hash[IPMAC_TB_HASH_INDEX_OF_BCAST]->macAddr;
++	return NULL;
+ 	
+ }
+ 
+@@ -466,6 +532,7 @@ static PUCHAR MATProto_ARP_Tx(
+ 	NET_PRO_ARP_HDR *arpHdr;
+ 	PUCHAR pPktHdr;
+ 	PNDIS_PACKET newSkb = NULL;
++	INT Status;
+ 
+ 	pPktHdr = GET_OS_PKT_DATAPTR(pSkb);
+ 	
+@@ -487,14 +554,22 @@ static PUCHAR MATProto_ARP_Tx(
+ 	isUcastMac = IS_UCAST_MAC(pSMac);
+ 	isGoodIP = IS_GOOD_IP(get_unaligned32((PUINT) pSIP));
+ 	
+-/*	
++	/*	
+ 	DBGPRINT(RT_DEBUG_TRACE,("%s(): ARP Pkt=>senderIP=%d.%d.%d.%d, senderMac=%02x:%02x:%02x:%02x:%02x:%02x\n",
+ 			__FUNCTION__, pSIP[0], pSIP[1], pSIP[2], pSIP[3],
+ 			pSMac[0],pSMac[1],pSMac[2],pSMac[3],pSMac[4],pSMac[5]));	
+-*/
++	*/
+ 	if (isUcastMac && isGoodIP)
+-		IPMacTableUpdate(pMatCfg, pSMac, get_unaligned32((PUINT) pSIP));
++		Status = IPMacTableUpdate(pMatCfg, pSMac, get_unaligned32((PUINT) pSIP));
+ 
++	/* If the MAC table update failed, do not replace the sender MAC, Sean@Liteon, 2013-10-14 */
++	if (!Status)
++	{
++		DBGPRINT(RT_DEBUG_WARN, ("%s():Failed to Update the MAC Table!!!\n",__FUNCTION__));
++		return NULL;
++	}
++	/* Sean@Liteon */
++	
+ 	/*
+ 		For outgoing unicast mac, we need to replace the senderMAC as ourself to make
+ 		the receiver can send to us.
+--- a/rt2860v2/common/cmm_mat_ipv6.c
++++ b/rt2860v2/common/cmm_mat_ipv6.c
+@@ -184,6 +184,52 @@ NDIS_STATUS  dumpIPv6MacTb(
+ }
+ 
+ 
++/* Author: Jack, Transplanted by Sean@Liteon, 2013-10-10 */
++static NDIS_STATUS IPv6MacRemoveAgeOutEntry(
++	IN MAT_STRUCT		*pMatCfg)
++{
++	IPv6MacMappingTable *pIPMacTable;
++	IPv6MacMappingEntry	*pEntry = NULL, *pPrev = NULL;
++	ULONG			now;
++        INT             i;
++
++        pIPMacTable = (IPv6MacMappingTable *)pMatCfg->MatTableSet.IPv6MacTable;
++
++        for(i=0;i<64;i++)
++        {
++             pEntry = pPrev = pIPMacTable->hash[i];
++             
++             while(pEntry)
++             {                   
++                     NdisGetSystemUpTime(&now);
++                     if (RTMP_TIME_AFTER(now, pEntry->lastTime + MAT_TB_ENTRY_AGEOUT_TIME))
++                     {
++                         /* Remove the aged entry */
++                         if (pEntry == pIPMacTable->hash[i])
++                         {
++                             pIPMacTable->hash[i]= pEntry->pNext;
++                             pPrev = pIPMacTable->hash[i];
++                         }
++                         else 
++                         {   
++                             pPrev->pNext = pEntry->pNext;
++                         }
++                         MATDBEntryFree(pMatCfg, (PUCHAR)pEntry);
++                         DBGPRINT(RT_DEBUG_ERROR, ("%s():Remove age-out entry!\n",__FUNCTION__));
++                         pEntry = (pPrev == NULL ? NULL: pPrev->pNext);
++                         pMatCfg->nodeCount--;
++                     } 
++                     else
++                     {
++                         pPrev = pEntry;
++                         pEntry = pEntry->pNext;
++                     }
++
++             }
++        }
++}
++/* Sean@Liteon, 2013-10-10 */    
++
+ 
+ static NDIS_STATUS IPv6MacTableUpdate(
+ 	IN MAT_STRUCT		*pMatCfg,
+@@ -199,7 +245,22 @@ static NDIS_STATUS IPv6MacTableUpdate(
+ 	pIPv6MacTable = (IPv6MacMappingTable *)pMatCfg->MatTableSet.IPv6MacTable;
+ 	if ((!pIPv6MacTable) || (!pIPv6MacTable->valid))
+ 		return FALSE;
+-	
++
++	/* 
++	  * Author: Jack Luo, 
++	  * Description: Remove the age-out entry,
++	  * Transplanted and Moidified: Sean@Liteon, 
++	  * Date: 2013-10-10 
++	  */
++        IPv6MacRemoveAgeOutEntry(pMatCfg);
++
++        if(pMatCfg->nodeCount > 63)
++        {
++		DBGPRINT(RT_DEBUG_WARN, ("%s():Mac Table is full!\n",__FUNCTION__));
++		return FALSE;
++	}
++	/* Sean@Liteon, 2013-10-10 */
++
+ 	hashIdx = MAT_IPV6_ADDR_HASH_INDEX(pIPv6Addr);
+ 	pEntry = pPrev = pIPv6MacTable->hash[hashIdx];
+ 	while(pEntry)
+@@ -234,6 +295,7 @@ static NDIS_STATUS IPv6MacTableUpdate(
+ 				
+ 				pEntry = (pPrev == NULL ? NULL: pPrev->pNext);
+ 				pMatCfg->nodeCount--;
++
+         	} 
+ 			else
+ 			{
+@@ -243,7 +305,6 @@ static NDIS_STATUS IPv6MacTableUpdate(
+         }
+ 	}
+ 
+-
+ 	/* Allocate a new IPv6MacMapping entry and insert into the hash */
+ 	pNewEntry = (IPv6MacMappingEntry *)MATDBEntryAlloc(pMatCfg, sizeof(IPv6MacMappingEntry));
+ 	if (pNewEntry != NULL)
+@@ -323,7 +384,10 @@ static PUCHAR IPv6MacTableLookUp(
+ 		We didn't find any matched Mac address, our policy is treat it as
+ 		broadcast packet and send to all.
+ 	*/
+-	return pIPv6MacTable->hash[IPV6MAC_TB_HASH_INDEX_OF_BCAST]->macAddr;
++	
++	/* Author: Jack, Transplanted by Sean@Liteon, 2013-10-10 */
++	//return pIPv6MacTable->hash[IPV6MAC_TB_HASH_INDEX_OF_BCAST]->macAddr;
++	return NULL;
+ 	
+ }
+ 
+@@ -612,6 +676,7 @@ static PUCHAR MATProto_IPv6_Tx(
+ 	HEADER_802_3 *pEthHdr;
+ 	RT_IPV6_HDR *pIPv6Hdr;
+ 	PNDIS_PACKET newSkb = NULL;
++	INT Status;
+ 	
+ 	pIPv6Hdr = (RT_IPV6_HDR *)pLayerHdr;
+ 	pEthHdr = (HEADER_802_3 *)(GET_OS_PKT_DATAPTR(pSkb));
+@@ -623,8 +688,16 @@ static PUCHAR MATProto_IPv6_Tx(
+ 	
+ 	needUpdate = needUpdateIPv6MacTB(pSrcMac, (RT_IPV6_ADDR *)(&pIPv6Hdr->srcAddr));
+ 	if (needUpdate)
+-		IPv6MacTableUpdate(pMatCfg, pSrcMac, (CHAR *)(&pIPv6Hdr->srcAddr));
++		Status = IPv6MacTableUpdate(pMatCfg, pSrcMac, (CHAR *)(&pIPv6Hdr->srcAddr));
+ 
++	/* If the MAC table update failed, do not handle the sender MAC, Sean@Liteon, 2013-10-14 */
++	if (!Status)
++	{
++		DBGPRINT(RT_DEBUG_WARN,("%s(): Failed to Update the MAC Table!!!\n", __FUNCTION__));
++		return NULL;
++		
++	}
++	/* Sean@Liteon, 2013-10-14 */
+ 
+ 	/* We need to traverse the whole IPv6 Header and extend headers to check about the ICMPv6 pacekt. */
+ 	
+--- a/rt2860v2/include/mat.h
++++ b/rt2860v2/include/mat.h
+@@ -174,6 +174,7 @@ typedef struct _MAT_STRUCT_
+ 	BOOLEAN				bMACRepeaterEn;
+ #endif /* MAC_REPEATER_SUPPORT */
+ 	UINT32				nodeCount;		/* the number of nodes which connect to Internet via us. */
++	UINT32                        clientCount;     /* Author: Jack, Transplanted by Sean@Liteon, 2013-10-10 */	
+ 	VOID				*pPriv;
+ }MAT_STRUCT;
+ 
+--- a/rt2860v2/include/os/rt_os.h
++++ b/rt2860v2/include/os/rt_os.h
+@@ -70,6 +70,7 @@
+ 
+ #define RTPRIV_IOCTL_SHOW							(SIOCIWFIRSTPRIV + 0x11)
+ 
++#define RTPRIV_IOCTL_ETHERNETCLIENT                 (SIOCIWFIRSTPRIV + 0x0B)  /* Author: Jack, Transplanted by Sean@Liteon, 2013-10-10 */
+ 
+ #ifdef WSC_STA_SUPPORT
+ #define RTPRIV_IOCTL_SET_WSC_PROFILE_U32_ITEM       (SIOCIWFIRSTPRIV + 0x14)
+@@ -123,6 +124,7 @@
+ #define RTPRIV_IOCTL_GET_MAC_TABLE					(SIOCIWFIRSTPRIV + 0x0F)
+ #define RTPRIV_IOCTL_GET_MAC_TABLE_STRUCT	(SIOCIWFIRSTPRIV + 0x1F)	/* modified by Red@Ralink, 2009/09/30 */
+ #define RTPRIV_IOCTL_STATIC_WEP_COPY                (SIOCIWFIRSTPRIV + 0x10)
++#define RTPRIV_IOCTL_ETHERNETCLIENT                 (SIOCIWFIRSTPRIV + 0x0B)  /* Author: Jack, Transplanted by Sean@Liteon, 2013-10-10 */
+ 
+ #define RTPRIV_IOCTL_SHOW							(SIOCIWFIRSTPRIV + 0x11)
+ #define RTPRIV_IOCTL_WSC_PROFILE                    (SIOCIWFIRSTPRIV + 0x12)
+--- a/rt2860v2/include/rtmp_cmd.h
++++ b/rt2860v2/include/rtmp_cmd.h
+@@ -123,6 +123,7 @@ typedef enum _CMD_RTPRIV_IOCTL_AP {
+ 	CMD_RTPRIV_IOCTL_GET_MAC_TABLE,
+ 	CMD_RTPRIV_IOCTL_GSITESURVEY,
+ 	CMD_RTPRIV_IOCTL_STATISTICS,
++	CMD_RTPRIV_IOCTL_ETHERNETCLIENT, /* Author: Jack, Transplanted by Sean@Liteon, 2013-10-10 */
+ 	CMD_RTPRIV_IOCTL_QUERY_BATABLE,
+ 	CMD_RTPRIV_IOCTL_E2P,
+ 	CMD_RTPRIV_IOCTL_BBP,
+--- a/rt2860v2/os/linux/ap_ioctl.c
++++ b/rt2860v2/os/linux/ap_ioctl.c
+@@ -102,6 +102,12 @@ struct iw_priv_args ap_privtab[] = {
+   "assoc_ap_info"},
+ /* Sean@Liteon */
+ 
++/* Author: Jack, Transplanted & Modified by Sean@Liteon, 2013-10-10 */
++{ RTPRIV_IOCTL_ETHERNETCLIENT,
++  IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | 1024,
++  "eth_cli"},
++/* Sean@Liteon, 2013-10-10 */
++
+ #ifndef WIFI_DRIVER_PRE_PORTING
+  /* Added by Bruce Liu, 2012-12-25 */
+ { RTPRIV_IOCTL_ACK_TIMEOUT,
+@@ -415,6 +421,12 @@ INT rt28xx_ap_ioctl(
+ 			RTMP_AP_IoctlHandle(pAd, wrq, CMD_RTPRIV_IOCTL_STATISTICS, 0, NULL, 0);
+ 			break;
+ 
++		/* Author: Jack, Transplanted by Sean@Liteon, 2013-10-10 */
++            	case RTPRIV_IOCTL_ETHERNETCLIENT:
++			RTMP_AP_IoctlHandle(pAd, wrq, CMD_RTPRIV_IOCTL_ETHERNETCLIENT, 0, NULL, 0);
++			break;
++		/* Sean@Liteon, 2013-10-10 */
++
+ #ifdef WSC_AP_SUPPORT
+ 		case RTPRIV_IOCTL_WSC_PROFILE:
+ 			RTMP_AP_IoctlHandle(pAd, wrq, CMD_RTPRIV_IOCTL_WSC_PROFILE, 0, NULL, 0);

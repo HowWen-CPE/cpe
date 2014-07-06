@@ -1,0 +1,14 @@
+--- a/rt2860v2/common/cmm_mat.c
++++ b/rt2860v2/common/cmm_mat.c
+@@ -215,7 +215,10 @@ PUCHAR MATEngineTxHandle(
+ #ifndef WIFI_DRIVER_PRE_PORTING										
+ 			IF_DEV_CONFIG_OPMODE_ON_AP(pAd)
+ 			{
+-				if(1==pAd->ApCfg.ApCliTab[((ifIdx-64)/16)].Addr_Mode)/*4 address apcli*/
++
++
++				if((ifIdx >= 64 && 1==pAd->ApCfg.ApCliTab[((ifIdx-64)/16)].Addr_Mode)	
++				|| (ifIdx < 64 && ifIdx >=0 && 1==pAd->ApCfg.ApCliTab[ifIdx].Addr_Mode))/*4 address apcli*/
+ 				{   
+ 					pMacAddr= pPktHdr+MAC_ADDR_LEN;
+ 				}

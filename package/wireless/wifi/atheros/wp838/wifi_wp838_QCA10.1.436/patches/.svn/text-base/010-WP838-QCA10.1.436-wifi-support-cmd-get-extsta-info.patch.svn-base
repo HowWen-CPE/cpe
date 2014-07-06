@@ -1,0 +1,232 @@
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/include/ieee80211_ioctl.h
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/os/linux/include/ieee80211_ioctl.h	2014-02-11 13:52:09.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/include/ieee80211_ioctl.h	2014-02-11 13:52:09.000000000 +0800
+@@ -1106,6 +1106,9 @@
+  */
+ enum {
+     IEEE80211_EXT_IOCTL_AP_INFO = 0x0001,
++#ifdef ATH_EXT_AP
++	IEEE80211_EXT_IOCTL_EXTSTA_INFO = 0x0002,	//Get MAC-IP info. in the back of ext-STA, Felix@liteon, 2014-1-8 
++#endif
+ };
+ /* End, Sean@Liteon */
+ 
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c	2014-02-11 13:52:09.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c	2014-02-11 14:01:36.000000000 +0800
+@@ -12557,6 +12557,119 @@
+     return (error ? -EFAULT : 0);
+ }
+ 
++#ifdef ATH_EXT_AP
++/**********************************************
++ *Description	: Traversal the binary tree and put ext-STA info into buffer "p". 
++ *Input		: root	---root pointer of the MAC-IP binary tree
++ *			  p		---pointer of buffer which would be transfer to user space
++ *			  ext_index	---make a index for the nodes on the binary tree
++ *Return 		: none
++ *Author 		: Felix@liteon
++ *Date		: 2014-1-8
++***********************************************/
++static void
++get_extsta_info(mi_node_t *root, u_int32_t now, void *p, u_int32_t *ext_index)
++{
++	if(!root || !p) {
++		return;
++	}
++
++	if(!root->left) {
++		if((now - root->timestamp_ms) < MITBL_AGAING_PERIOD){
++			*ext_index = *ext_index + 1;
++			sprintf(p + strlen(p), "   ");
++			sprintf(p + strlen(p), "%-10d", *ext_index);	
++			sprintf(p + strlen(p), "%02X:%02X:%02X:%02X:%02X:%02X   ", 
++													root->h_dest[0], root->h_dest[1], root->h_dest[2],
++													root->h_dest[3], root->h_dest[4], root->h_dest[5]);
++			if(root->ip_ver == ATH_MITBL_IPV4){
++				sprintf(p + strlen(p), "%d.%d.%d.%d\n", root->ip[0], root->ip[1],\
++														root->ip[2], root->ip[3]);
++			}else if(root->ip_ver == ATH_MITBL_IPV6){
++				sprintf(p + strlen(p), "%d.%d.%d.%d.%d.%d.%d.%d.%d.%d.%d.%d.%d.%d.%d.%d\n", \
++													root->ip[0], root->ip[1],\
++													root->ip[2], root->ip[3],\
++													root->ip[4], root->ip[5],\
++													root->ip[6], root->ip[7],\
++													root->ip[8], root->ip[9],\
++													root->ip[10], root->ip[11],\
++													root->ip[12], root->ip[13],\
++													root->ip[14], root->ip[15]);
++			}
++		}
++	} else {
++		get_extsta_info(root->left, now, p, ext_index);
++		get_extsta_info(root->right, now, p, ext_index);
++	}	
++}
++
++/* ********************************************
++ *Description	: Refresh the binary tree and then get ext-STA info. copy the data
++ *			  to user space from kernel space.
++ *Author 		: Felix@liteon
++ *Date		: 2014-1-8
++***********************************************/
++static int 
++ieee80211_ioctl_getextstainfo(struct net_device *dev, struct iwreq *iwr)
++{
++    osif_dev  *osifp = ath_netdev_priv(dev);
++    wlan_if_t vap = osifp->os_if;
++
++	void *p;
++	int error;
++	
++	struct timeout_entries kick_entries[NUM_MITBL_IP];
++	
++	if (vap->iv_ic->ic_table->busy == 0){
++		vap->iv_ic->ic_table->busy = 1;
++	}else{
++		printk("%s---ic_table is busy\n", __func__);
++		return 0;
++	}
++	OS_MEMZERO(kick_entries, NUM_MITBL_IP * sizeof(struct timeout_entries));
++	
++	p = OS_MALLOC(osifp->os_handle, iwr->u.data.length, GFP_KERNEL);
++	if (p == NULL)
++		return -ENOMEM;
++	OS_MEMZERO(p, iwr->u.data.length);
++	
++	if (vap->iv_opmode == IEEE80211_M_STA){
++	if (adf_os_unlikely(IEEE80211_VAP_IS_EXT_AP_ENABLED(vap))){
++			u_int32_t ext_index = 0;
++			u_int32_t now = (u_int32_t)CONVERT_SYSTEM_TIME_TO_MS(OS_GET_TIMESTAMP());
++
++			sprintf(p + strlen(p), "   ");
++			sprintf(p + strlen(p), "%-10s%-20s%-64s\n", "INDEX", "MAC", "IP");
++
++			IEEE80211_VAP_LOCK(vap);
++			#if MI_TABLE_AS_TREE
++			get_extsta_info(vap->iv_ic->ic_table->ic_miroot, now, p, &ext_index);
++			#else
++			sprintf(p + strlen(p), "%s\n", "invalid:This command has not support array");
++			#endif
++			IEEE80211_VAP_UNLOCK(vap);
++			
++		}else{
++			sprintf(p + strlen(p), "%s\n", "invalid:VAP should be in 3 address mode");
++		}
++    }else{	
++		sprintf(p + strlen(p), "%s\n", "invalid:VAP should be in STA mode");
++	}
++	
++	iwr->u.data.length = strlen(p);
++	
++	error = _copy_to_user(iwr->u.data.pointer, p, iwr->u.data.length);
++
++	if(p != NULL){
++		OS_FREE(p);
++	}
++
++	vap->iv_ic->ic_table->busy = 0;
++	
++	return (error ? -EFAULT : 0);
++}
++#endif
++
+ /*
+ * Extension handle private ioctl requests.
+ */
+@@ -12586,11 +12699,15 @@
+     switch (cmd) {
+     case IEEE80211_EXT_IOCTL_AP_INFO:
+         return ieee80211_ioctl_getapinfo(dev, iwr);
+-        
++#ifdef ATH_EXT_AP
++    case IEEE80211_EXT_IOCTL_EXTSTA_INFO:	// Get extsta MAC/IP info, Felix@liteon, 2014-1-8
++		return ieee80211_ioctl_getextstainfo(dev, iwr);
++#endif
+     default:
+         break;
+     }
+ 
++	return -EOPNOTSUPP;
+ }
+ /* End, Sean@Liteon */
+ 
+@@ -15066,7 +15183,8 @@
+         subcmd = iwr->u.data.flags;
+         
+ 	return ieee80211_ioctl_handle(dev, iwr, subcmd);
+-       
++    default:
++		break;
+     }
+     return -EOPNOTSUPP;
+ }
+Index: wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/tools/wlanconfig.c
+===================================================================
+--- wifi_QCA_10.1.436.orig/drivers/wlan_modules/os/linux/tools/wlanconfig.c	2014-02-11 13:52:09.000000000 +0800
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/tools/wlanconfig.c	2014-02-11 13:52:09.000000000 +0800
+@@ -85,7 +85,7 @@
+ static void list_capabilities(const char *ifname);
+ static void list_wme(const char *ifname);
+ static void list_apinfo(const char *ifname);//Get AP information, Sean@Liteon, 2013-12-11 
+-
++static void list_extsta(const char *ifname);//Get extsta info. Felix@liteon 2014-1-8
+ static void ieee80211_status(const char *ifname);
+ 
+ static void usage(void);
+@@ -194,6 +194,8 @@
+ 				list_wme(ifname);
+ 			else if (streq(arg, "assocapinfo")) /*Get AP security information, Sean@Liteon, 2013-12-11 */
+ 				list_apinfo(ifname);
++			else if (streq(arg, "extsta")) /* Get est-STA info. Felix@liteon, 2014-1-8 */
++				list_extsta(ifname);
+ 		} else				/* NB: for compatibility */
+ 			list_stations(ifname);
+ #if UMAC_SUPPORT_NAWDS
+@@ -1083,6 +1085,44 @@
+     free(buf);
+ }
+ 
++/* 
++ * list ext-STAs. Felix@liteon, 2014-1-3 ----->
++*/
++#define LIST_EXTSTA_ALLOC_SIZE 5 * 1024 
++static void list_extsta(const char *ifname)
++{
++	u_int8_t *buf;
++	int s;
++	struct iwreq iwr;
++	
++	buf = malloc(LIST_EXTSTA_ALLOC_SIZE);
++	if(buf == NULL)
++	{
++		fprintf (stderr, "Unable to allocate memory for extsta information\n");
++		return;
++	}
++	
++	s = socket(AF_INET, SOCK_DGRAM, 0);
++	if (s < 0){
++        free(buf);
++        err(1, "socket(SOCK_DRAGM)");
++    }
++
++	memset(&iwr, 0, sizeof(iwr));
++	strncpy(iwr.ifr_name, ifname, sizeof(iwr.ifr_name));
++	iwr.u.data.pointer = (void *)buf;
++	iwr.u.data.length = LIST_EXTSTA_ALLOC_SIZE;
++	iwr.u.data.flags = IEEE80211_EXT_IOCTL_EXTSTA_INFO;
++
++	if (ioctl(s, IEEE80211_IOCTL_LITEON_EXTEND, &iwr) < 0){
++		free(buf);
++		errx(1, "unable to get extsta information");
++	}
++	
++	printf("%s\n", buf);
++	free(buf);
++}
++/* <----- */
+ int
+ char2addr(char* addr)
+ {

@@ -1,0 +1,57 @@
+--- a/include/cmd_confdefs.h
++++ b/include/cmd_confdefs.h
+@@ -112,7 +112,6 @@
+ 			CFG_CMD_CACHE	| \
+ 			CFG_CMD_CDP	| \
+ 			CFG_CMD_DATE	| \
+-			CFG_CMD_DHCP	| \
+ 			CFG_CMD_DIAG	| \
+ 			CFG_CMD_DOC	| \
+ 			CFG_CMD_DTT	| \
+--- a/lib_mips/board.c
++++ b/lib_mips/board.c
+@@ -1881,6 +1881,10 @@ void board_init_r (gd_t *id, ulong dest_
+ 	{
+ 		BootType = '1';
+ 	}
++       //for burn-in test 
++    	if(bootram != NULL && strlen(bootram) == 1 && bootram[0]== '2')
++	{
++		BootType = '6';
+ 	}
+ 	//addd end
+ 	while (timer1 > 0) {
+@@ -1895,7 +1899,7 @@ void board_init_r (gd_t *id, ulong dest_
+ 					BootType = tmpType;
+ 					choose = 1;
+ 				}
+-				if ((BootType < '0' || BootType > '5') && (BootType != '7') && (BootType != '8') && (BootType != '9'))
++				if ((BootType < '0' || BootType > '5') && (BootType != '6' ) && (BootType != '7') && (BootType != '8') && (BootType != '9'))
+ 					BootType = '3';
+ 				
+ 				printf("\n\rYou choosed %c\n\n", BootType);
+@@ -2061,6 +2065,13 @@ void board_init_r (gd_t *id, ulong dest_
+ 			}
+ 			break;
+ #endif // RALINK_CMDLINE //
++              case '6':
++		      //for burn-in test
++                     run_command("setenv bootfile cpeimage.ram",0);
++                     run_command("setenv loadaddr 0x1000000",0);
++                     run_command("dhcp",0);
++                     run_command("bootm 0x1000000",0);
++                     break;
+ #ifdef RALINK_UPGRADE_BY_SERIAL
+ 		case '7':
+ 			printf("\n%d: System Load Boot Loader then write to Flash via Serial. \n", SEL_LOAD_BOOT_WRITE_FLASH_BY_SERIAL);
+--- a/net/Makefile
++++ b/net/Makefile
+@@ -27,7 +27,7 @@ include $(TOPDIR)/config.mk
+ 
+ LIB	= libnet.a
+ 
+-OBJS	= net.o tftp.o eth.o 
++OBJS	= net.o tftp.o eth.o bootp.o
+ all:	$(LIB)
+ 
+ $(LIB):	$(START) $(OBJS)

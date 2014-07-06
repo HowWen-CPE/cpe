@@ -1,0 +1,1474 @@
+--- a/drivers/wlan_modules/include/ieee80211.h
++++ b/drivers/wlan_modules/include/ieee80211.h
+@@ -2259,4 +2259,47 @@ struct ieee80211_ie_wide_bw_switch {
+ #include <poppack.h>
+ #endif
+ 
++/* 80211x Frame Element Definition, Sean@Liteon, 2013-12-11 */
++typedef struct _ieee80211_variable_ies {
++    u_char element_id;
++    u_char length;		/* Number of bytes in data field */
++    u_char data[1];
++} IEEE80211_VARIABLE_IES, *PIEEE80211_VARIABLE_IES;
++
++typedef struct GNU_PACKED {
++    u_char   eid;
++    u_char   len;
++    u_char   octet[1];
++} EID_STRUCT,*PEID_STRUCT, BEACON_EID_STRUCT, *PBEACON_EID_STRUCT;
++
++typedef struct __packed _RSN_IE_HEADER_STRUCT {
++    u_char eid;
++    u_char length;
++    u_int16_t version;		/* Little endian format */
++} RSN_IE_HEADER_STRUCT, *PRSN_IE_HEADER_STRUCT;
++
++/* Cipher suite selector types */
++typedef struct __packed _CIPHER_SUITE_STRUCT {
++    u_char oui[3];
++    u_char type;
++} CIPHER_SUITE_STRUCT, *PCIPHER_SUITE_STRUCT;
++
++/* Authentication and Key Management suite selector */
++typedef struct __packed _AKM_SUITE_STRUCT {
++    u_char oui[3];
++    u_char type;
++} AKM_SUITE_STRUCT, *PAKM_SUITE_STRUCT;
++
++/* BSS Type definitions */
++#define IEEE80211_BSS_ADHOC                       0	/* = Ndis802_11IBSS */
++#define IEEE80211_BSS_INFRA                       1	/* = Ndis802_11Infrastructure */
++#define IEEE80211_BSS_ANY                         2	/* = Ndis802_11AutoUnknown */
++#define IEEE80211_BSS_MONITOR			            3	/* = Ndis802_11Monitor */
++
++/* Macro definition for judge capability information, Sean@Liteon, 2013-12-11 */
++#define CAP_IS_ESS_ON(x)                 (((x) & 0x0001) != 0)
++#define CAP_IS_PRIVACY_ON(x)             (((x) & 0x0010) != 0)
++
++/* End, Sean@Liteon */
++
+ #endif /* _NET80211_IEEE80211_H_ */
+--- a/drivers/wlan_modules/os/linux/include/ieee80211_ioctl.h
++++ b/drivers/wlan_modules/os/linux/include/ieee80211_ioctl.h
+@@ -1091,9 +1091,22 @@ struct ieee80211_ioc_channel {
+ #define IEEE80211_IOCTL_CONFIG_GENERIC  (SIOCDEVPRIVATE+12)
+ #define SIOCIOCTLTX99                   (SIOCDEVPRIVATE+13)
+ #define IEEE80211_IOCTL_P2P_BIG_PARAM   (SIOCDEVPRIVATE+14)
+-#define SIOCDEVVENDOR                   (SIOCDEVPRIVATE+15)    /* Used for ATH_SUPPORT_LINUX_VENDOR */
++#define SIOCDEVVENDOR                   (SIOCDEVPRIVATE+17)    /* Used for ATH_SUPPORT_LINUX_VENDOR */
+ #define	IEEE80211_IOCTL_GET_SCAN_SPACE  (SIOCDEVPRIVATE+16)
+ 
++/* CMD: Get information, Sean@Liteon, 2013-12-11 */
++#define	IEEE80211_IOCTL_LITEON_EXTEND  (SIOCDEVPRIVATE+15)
++
++/* 
++ * LITEON Ioctl Command Handle ID,
++ * Sean@Liteon, 2013-12-11 
++ */
++enum {
++    IEEE80211_EXT_IOCTL_AP_INFO = 0x0001,
++};
++/* End, Sean@Liteon */
++
++
+ struct ieee80211_clone_params {
+ 	char		icp_name[IFNAMSIZ];	/* device name */
+ 	u_int16_t	icp_opmode;		/* operating mode */
+--- a/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c
++++ b/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c
+@@ -49,6 +49,10 @@
+ #endif
+ #include "ieee80211_ioctl_acfg.h"
+ #include <ol_txrx_dbg.h>
++
++/* For 11ac 5G RSSI, Sean@Liteon, 2014-02-07 */
++//#include <ol_if_athvar.h>
++
+ #define ONEMBPS 1000
+ #define THREE_HUNDRED_MBPS 300000
+ #define NETDEV_TO_VAP(_dev) (((osif_dev *)netdev_priv(_dev))->os_if)
+@@ -563,6 +567,7 @@ ieee80211_ioctl_giwap(struct net_device
+         if(osnetdev->is_up) {
+             wlan_vap_get_bssid(vap, bssid);
+             IEEE80211_ADDR_COPY(&ap_addr->sa_data, bssid);
++            
+         } else {
+             IEEE80211_ADDR_COPY(&ap_addr->sa_data, zero_bssid);
+         }
+@@ -7076,7 +7081,7 @@ ieee80211_ioctl_getmode(struct net_devic
+     debug_print_ioctl(dev->name, IEEE80211_IOCTL_GETMODE, "getmode") ;
+ 	
+ 	phymode = wlan_get_desired_phymode(vap);
+-				
++    
+     for (i = 0; mappings[i].name != NULL ; i++) 
+ 	{
+ 		if (phymode == mappings[i].mode)
+@@ -12168,6 +12173,273 @@ ieee80211_ioctl_get_scan_space(struct ne
+     return 0;
+ }
+ 
++/* Get encryption type, Sean@Liteon, 2013-12-11 */
++char * 
++ieee80211_get_encrypt_type(char enc)
++{
++    if(enc == Ndis802_11WEPDisabled)
++        return "NONE";
++    if(enc == Ndis802_11WEPEnabled)
++        return "WEP";
++    if(enc == Ndis802_11Encryption2Enabled)
++        return "TKIP";
++    if(enc == Ndis802_11Encryption3Enabled)
++        return "AES";
++    if(enc == Ndis802_11Encryption4Enabled)
++        return "TKIPAES";
++#ifdef ATH_SUPPORT_WAPI
++    if(enc == Ndis802_11EncryptionSMS4Enabled)
++        return "SMS4";
++#endif /* ATH_SUPPORT_WAPI */
++    else
++        return "UNKNOW";
++}
++
++/* Get Auth Mode, Sean@Liteon, 2013-12-11 */
++char * 
++ieee80211_get_auth_mode(char auth)
++{
++    if(auth == Ndis802_11AuthModeOpen)
++        return "OPEN";
++    if(auth == Ndis802_11AuthModeShared)
++        return "SHARED";
++    if(auth == Ndis802_11AuthModeAutoSwitch)
++        return "AUTOWEP";
++    if(auth == Ndis802_11AuthModeWPA)
++        return "WPA";
++    if(auth == Ndis802_11AuthModeWPAPSK)
++        return "WPAPSK";
++    if(auth == Ndis802_11AuthModeWPANone)
++        return "WPANONE";
++    if(auth == Ndis802_11AuthModeWPA2)
++        return "WPA2";
++    if(auth == Ndis802_11AuthModeWPA2PSK)
++        return "WPA2PSK";
++    if(auth == Ndis802_11AuthModeWPA1WPA2)
++        return "WPA1WPA2";
++    if(auth == Ndis802_11AuthModeWPA1PSKWPA2PSK)
++        return "WPA1PSKWPA2PSK";
++#ifdef ATH_SUPPORT_WAPI
++    if(auth == Ndis802_11AuthModeWAICERT)
++        return "WAI-CERT";
++    if(auth == Ndis802_11AuthModeWAIPSK)
++        return "WAI-PSK";
++#endif /* ATH_SUPPORT_WAPI */
++
++    return "UNKNOW";
++}	
++
++void
++ieee80211_parse_security( IEEE80211_BSS_ENTRY *pbss, char sec_str[])
++{
++    NDIS_802_11_ENCRYPTION_STATUS	ap_cipher = Ndis802_11EncryptionDisabled;
++    NDIS_802_11_AUTHENTICATION_MODE	ap_auth_mode = Ndis802_11AuthModeOpen;
++
++    OS_MEMZERO(sec_str, 32);
++    if ((Ndis802_11AuthModeWPA <= pbss->auth_mode) &&
++         (pbss->auth_mode <= Ndis802_11AuthModeWPA1PSKWPA2PSK)) {
++        if (pbss->auth_mode == Ndis802_11AuthModeWPANone) {
++            ap_auth_mode = pbss->auth_mode;
++            ap_cipher = pbss->wpa.pair_cipher;
++        } else if (pbss->auth_mode_aux == Ndis802_11AuthModeOpen) {
++            ap_auth_mode = pbss->auth_mode;
++            
++            if ((ap_auth_mode == Ndis802_11AuthModeWPA) || 
++                (ap_auth_mode == Ndis802_11AuthModeWPAPSK)) {
++                if (pbss->wpa.pair_cipher_aux == Ndis802_11WEPDisabled)
++                    ap_cipher = pbss->wpa.pair_cipher;
++                else 
++                    ap_cipher = Ndis802_11Encryption4Enabled;
++            } else if ((ap_auth_mode == Ndis802_11AuthModeWPA2) || 
++                    (ap_auth_mode == Ndis802_11AuthModeWPA2PSK)) {
++                if (pbss->wpa2.pair_cipher_aux == Ndis802_11WEPDisabled)
++                    ap_cipher = pbss->wpa2.pair_cipher;
++                else 
++                    ap_cipher = Ndis802_11Encryption4Enabled;
++                }
++        } else if ((pbss->auth_mode == Ndis802_11AuthModeWPAPSK) || 
++                        (pbss->auth_mode == Ndis802_11AuthModeWPA2PSK)) {
++            if ((pbss->auth_mode_aux == Ndis802_11AuthModeWPAPSK) ||
++                (pbss->auth_mode_aux == Ndis802_11AuthModeWPA2PSK))
++                ap_auth_mode = Ndis802_11AuthModeWPA1PSKWPA2PSK;
++            else
++                ap_auth_mode = pbss->auth_mode;
++
++            if (pbss->wpa.pair_cipher != pbss->wpa2.pair_cipher)
++                ap_cipher = Ndis802_11Encryption4Enabled;
++            else if ((pbss->wpa.pair_cipher == pbss->wpa2.pair_cipher) &&
++                        (pbss->wpa.pair_cipher_aux != pbss->wpa2.pair_cipher_aux))
++                ap_cipher = Ndis802_11Encryption4Enabled;
++            else if ((pbss->wpa.pair_cipher == pbss->wpa2.pair_cipher) &&
++                        (pbss->wpa.pair_cipher_aux == pbss->wpa2.pair_cipher_aux) &&
++                        (pbss->wpa.pair_cipher_aux != Ndis802_11WEPDisabled))
++                ap_cipher = Ndis802_11Encryption4Enabled;
++            else if ((pbss->wpa.pair_cipher == pbss->wpa2.pair_cipher) &&
++                        (pbss->wpa.pair_cipher_aux == pbss->wpa2.pair_cipher_aux) &&
++                        (pbss->wpa.pair_cipher_aux == Ndis802_11WEPDisabled))
++                ap_cipher = pbss->wpa.pair_cipher;
++        } else if ((pbss->auth_mode == Ndis802_11AuthModeWPA) || 
++            (pbss->auth_mode == Ndis802_11AuthModeWPA2)) {
++            if ((pbss->auth_mode_aux == Ndis802_11AuthModeWPA) ||
++                (pbss->auth_mode_aux == Ndis802_11AuthModeWPA2))
++                ap_auth_mode = Ndis802_11AuthModeWPA1WPA2;
++            else
++                ap_auth_mode = pbss->auth_mode;
++
++            if (pbss->wpa.pair_cipher != pbss->wpa2.pair_cipher)
++                ap_cipher = Ndis802_11Encryption4Enabled;
++            else if ((pbss->wpa.pair_cipher == pbss->wpa2.pair_cipher) &&
++                        (pbss->wpa.pair_cipher_aux != pbss->wpa2.pair_cipher_aux))
++                ap_cipher = Ndis802_11Encryption4Enabled;
++            else if ((pbss->wpa.pair_cipher == pbss->wpa2.pair_cipher) &&
++                        (pbss->wpa.pair_cipher_aux == pbss->wpa2.pair_cipher_aux) &&
++                        (pbss->wpa.pair_cipher_aux != Ndis802_11WEPDisabled))
++                ap_cipher = Ndis802_11Encryption4Enabled;
++            else if ((pbss->wpa.pair_cipher == pbss->wpa2.pair_cipher) &&
++                        (pbss->wpa.pair_cipher_aux == pbss->wpa2.pair_cipher_aux) &&
++                        (pbss->wpa.pair_cipher_aux == Ndis802_11WEPDisabled))
++                ap_cipher = pbss->wpa.pair_cipher;
++        }
++
++        sprintf(sec_str, "%s/%s", ieee80211_get_auth_mode((char)ap_auth_mode), 
++                                                 ieee80211_get_encrypt_type((char)ap_cipher));		
++    }else {
++        ap_auth_mode = pbss->auth_mode;
++        ap_cipher = pbss->wep_status;
++        
++        if (ap_cipher == Ndis802_11WEPDisabled)
++            sprintf(sec_str, "NONE");
++        else if (ap_cipher == Ndis802_11WEPEnabled)
++            sprintf(sec_str, "WEP");
++        else
++            sprintf(sec_str, "%s/%s", ieee80211_get_auth_mode((char)ap_auth_mode), 
++                                                     ieee80211_get_encrypt_type((char)ap_cipher));		
++    }
++
++}
++
++/* Get Associated AP information, Sean@Liteon, 2013-12-11 */
++static int
++ieee80211_ioctl_getapinfo(struct net_device *dev, struct iwreq *iwr)
++{
++    osif_dev  *osifp = ath_netdev_priv(dev);
++    wlan_if_t vap = osifp->os_if;
++    //struct ol_ath_softc_net80211 *scn = ath_netdev_priv(vap->iv_ic->ic_osdev->netdev);
++    int error;
++    size_t space = 4*sizeof(char)*(1024);
++    void *p;
++    IEEE80211_BSS_ENTRY *pbss = &(vap->iv_ap_info);
++    char security_str[32];
++    char rssi0, rssi1, rssi2;
++    u_char  zero_ssid[IEEE80211_ADDR_LEN] = {0x00};
++    u_int8_t beacon_info_count = vap->iv_beacon_info_count;
++
++    debug_print_ioctl(dev->name, IEEE80211_EXT_IOCTL_AP_INFO, "get_ap_info") ;
++
++    /* Is AP up ??? */
++    if (!(osifp->is_up))
++        return -EFAULT;
++
++    /* 
++     *need locking to prevent changing the iv_bss 
++     */
++    IEEE80211_VAP_LOCK(vap);
++    if (vap->iv_bss) {
++        /* Is associated??? */
++        if (!OS_MEMCMP(zero_ssid, vap->iv_bss->ni_bssid, IEEE80211_ADDR_LEN) ){
++            IEEE80211_VAP_UNLOCK(vap);
++            return -EFAULT;
++        }
++    }
++    IEEE80211_VAP_UNLOCK(vap);
++
++    p = (void *)OS_MALLOC(osifp->os_handle, space, GFP_KERNEL);
++    if (p == NULL)
++        return -ENOMEM;
++
++    OS_MEMZERO(p, space);
++
++    /* SSID */
++    sprintf(p + strlen(p), "SSID:%s\n", pbss->ssid);
++    
++    /* BSSID */
++    sprintf(p + strlen(p), "BSSID:%02X:%02X:%02X:%02X:%02X:%02X\n", 
++                                        vap->iv_bss->ni_bssid[0], vap->iv_bss->ni_bssid[1], 
++                                        vap->iv_bss->ni_bssid[2], vap->iv_bss->ni_bssid[3], 
++                                        vap->iv_bss->ni_bssid[4], vap->iv_bss->ni_bssid[5]); 
++
++    /*Security*/
++    ieee80211_parse_security(pbss, security_str);
++    sprintf(p + strlen(p), "Security:%s\n", security_str);
++
++    /* RSSI */
++    if (!strcmp(vap->iv_ic->ic_osdev->netdev->name, "wifi0")) {
++        while (beacon_info_count--) {
++            if(!OS_MEMCMP(vap->iv_beacon_info[beacon_info_count].essid,vap->iv_essid,vap->iv_esslen)) {
++                rssi0 = vap->iv_beacon_info[beacon_info_count].rssi_ctl_0 + ATH_DEFAULT_NOISE_FLOOR;
++                rssi1 = vap->iv_beacon_info[beacon_info_count].rssi_ctl_1 + ATH_DEFAULT_NOISE_FLOOR;
++                rssi2 = vap->iv_beacon_info[beacon_info_count].rssi_ctl_2 + ATH_DEFAULT_NOISE_FLOOR;
++
++                break;
++            }
++        }
++    } else if (!strcmp(vap->iv_ic->ic_osdev->netdev->name, "wifi1")) {
++        rssi0=rssi1=rssi2=30;//rssi0 = scn->scn_stats.rx_rssi_chain0.rx_rssi_pri20 + ATH_DEFAULT_NOISE_FLOOR; //peter debug
++        //rssi1 = scn->scn_stats.rx_rssi_chain1.rx_rssi_pri20 + ATH_DEFAULT_NOISE_FLOOR;
++        //rssi2 = scn->scn_stats.rx_rssi_chain2.rx_rssi_pri20 + ATH_DEFAULT_NOISE_FLOOR;
++
++    }
++
++    sprintf(p + strlen(p), "Chain0 RSSI:%ddBm\n", rssi0);
++    sprintf(p + strlen(p), "Chain1 RSSI:%ddBm\n", rssi1);
++    sprintf(p + strlen(p), "Chain2 RSSI:%ddBm\n", rssi2);
++
++    iwr->u.data.length = strlen(p);
++    error = _copy_to_user(iwr->u.data.pointer, p, iwr->u.data.length);
++
++    if (p != NULL)
++        OS_FREE(p);
++    
++    return (error ? -EFAULT : 0);
++}
++
++/*
++* Extension handle private ioctl requests.
++*/
++int
++ieee80211_ioctl_handle(struct net_device *dev, struct iwreq *iwr, int cmd)
++{
++    wlan_if_t vap = NETDEV_TO_VAP(dev);
++    
++#ifdef ATH_SUPPORT_HTC
++    struct ieee80211com *ic;
++#endif
++    
++    if (!vap) {
++       return -EINVAL;
++    }
++#ifdef ATH_SUPPORT_HTC
++    ic = vap->iv_ic;
++    if ((!ic) ||
++        (ic && ic->ic_delete_in_progress)) {
++        printk("%s : #### delete is in progress, ic %p \n", __func__, ic);
++        return -EINVAL;
++    }
++#endif
++
++    debug_print_ioctl(dev->name, cmd, "IEEE80211_IOCTL_LITEON_EXTEND");
++
++    switch (cmd) {
++    case IEEE80211_EXT_IOCTL_AP_INFO:
++        return ieee80211_ioctl_getapinfo(dev, iwr);
++        
++    default:
++        break;
++    }
++
++}
++/* End, Sean@Liteon */
++
+ #ifdef notyet
+ 
+ #if WIRELESS_EXT >= 18
+@@ -14483,6 +14755,7 @@ static struct ioctl_name_tbl ioctl_names
+     {IEEE80211_IOCTL_GETMAC, "IEEE80211_IOCTL_GETMAC"},
+     {IEEE80211_IOCTL_P2P_BIG_PARAM, "IEEE80211_IOCTL_P2P_BIG_PARAM"},
+     {IEEE80211_IOCTL_GET_SCAN_SPACE, "IEEE80211_IOCTL_GET_SCAN_SPACE"},
++    {IEEE80211_IOCTL_LITEON_EXTEND, "IEEE80211_IOCTL_LITEON_EXTEND"}, //Get AP information, Sean@Liteon, 2013-12-11 
+     {0, NULL}
+ };
+ 
+@@ -14561,7 +14834,11 @@ ieee80211_ioctl(struct net_device *dev,
+     wlan_if_t vap = NETDEV_TO_VAP(dev);
+ #ifdef ATH_SUPPORT_HTC
+     struct ieee80211com *ic;
+-#endif    
++#endif
++
++    u_int16_t subcmd; //Sean@Liteon, 2013-12-11
++    struct iwreq *iwr = (struct iwreq *)ifr; //For subcmd, Sean@Liteon, 2013-12-11
++    
+     if (!vap) {
+        return -EINVAL;
+     }
+@@ -14625,6 +14902,12 @@ ieee80211_ioctl(struct net_device *dev,
+         return ieee80211_set_vap_vendor_param(dev, ifr->ifr_data);
+     case LINUX_PVT_GET_VENDORPARAM:
+         return ieee80211_get_vap_vendor_param(dev, ifr->ifr_data);
++    /*Extend handle ioctl, Sean@Liteon, 2013-12-11 */
++    case IEEE80211_IOCTL_LITEON_EXTEND:
++        subcmd = iwr->u.data.flags;
++        
++	return ieee80211_ioctl_handle(dev, iwr, subcmd);
++       
+     }
+     return -EOPNOTSUPP;
+ }
+--- a/drivers/wlan_modules/os/linux/tools/wlanconfig.c
++++ b/drivers/wlan_modules/os/linux/tools/wlanconfig.c
+@@ -84,6 +84,8 @@ static void list_channels(const char *if
+ static void list_keys(const char *ifname);
+ static void list_capabilities(const char *ifname);
+ static void list_wme(const char *ifname);
++static void list_apinfo(const char *ifname);//Get AP information, Sean@Liteon, 2013-12-11 
++
+ static void ieee80211_status(const char *ifname);
+ 
+ static void usage(void);
+@@ -119,7 +121,7 @@ static int set_max_rate(const char *ifna
+ 
+ size_t strlcat(char *dst, const char *src, size_t siz);
+ 
+-int	verbose = 0;
++int	verbose = 1;
+ 
+ int
+ main(int argc, char *argv[])
+@@ -190,6 +192,8 @@ main(int argc, char *argv[])
+ 				list_capabilities(ifname);
+ 			else if (streq(arg, "wme"))
+ 				list_wme(ifname);
++			else if (streq(arg, "assocapinfo")) /*Get AP security information, Sean@Liteon, 2013-12-11 */
++				list_apinfo(ifname);
+ 		} else				/* NB: for compatibility */
+ 			list_stations(ifname);
+ #if UMAC_SUPPORT_NAWDS
+@@ -439,7 +443,7 @@ ieee80211_ieee2mhz(u_int chan)
+  * Convert MHz frequency to IEEE channel number.
+  */
+ static u_int
+-ieee80211_mhz2ieee(u_int freq)
++ieee80211_mhz2ieee(u_int16_t freq)
+ {
+ #define IS_CHAN_IN_PUBLIC_SAFETY_BAND(_c) ((_c) > 4940 && (_c) < 4990)
+ 
+@@ -667,7 +671,7 @@ printies(const u_int8_t *vp, int ielen,
+             printie(" RSN", vp, 2+vp[1], maxcols);
+             break;
+ 		default:
+-			printie(" ???", vp, 2+vp[1], maxcols);
++			//printie(" ???", vp, 2+vp[1], maxcols);
+ 			break;
+ 		}
+ 		ielen -= 2+vp[1];
+@@ -799,6 +803,7 @@ list_scan(const char *ifname)
+ 	char ssid[14];
+ 	uint8_t *cp;
+ 	int len;
++        char max_rate[5]={0};
+ 
+ 	len = get80211priv(ifname, IEEE80211_IOCTL_SCAN_RESULTS,
+ 			    buf, sizeof(buf));
+@@ -823,12 +828,13 @@ list_scan(const char *ifname)
+ 
+ 		sr = (struct ieee80211req_scan_result *) cp;
+ 		vp = (u_int8_t *)(sr+1);
+-		printf("%-14.*s  %s  %3d  %3dM %2d:%-2d  %3d %-4.4s"
++                sprintf(max_rate, "%dM", getmaxrate(sr->isr_rates, sr->isr_nrates));
++		printf("%-14.*s  %-s  %3d  %-4s %-2d:%-2d  %-3d %-4.4s"
+ 			, copy_essid(ssid, sizeof(ssid), vp, sr->isr_ssid_len)
+ 				, ssid
+ 			, ieee80211_ntoa(sr->isr_bssid)
+-			, ieee80211_mhz2ieee(sr->isr_freq)
+-			, getmaxrate(sr->isr_rates, sr->isr_nrates)
++			, sr->isr_freq
++                        , max_rate
+ 			, (int8_t) sr->isr_rssi, sr->isr_noise
+ 			, sr->isr_intval
+ 			, getcaps(sr->isr_capinfo)
+@@ -1036,6 +1042,47 @@ again:
+ 	}
+ }
+ 
++/*
++ *Get AP information, Sean@Liteon, 2013-12-11 
++ */
++static void
++list_apinfo(const char *ifname)
++{
++#define LIST_APINFO_ALLOC_SIZE 2*sizeof(char)*1024
++
++    uint8_t *buf;
++    struct iwreq iwr;
++    uint8_t *cp;
++    int s, len;
++
++    buf = malloc(LIST_APINFO_ALLOC_SIZE);
++    if(!buf) {
++        fprintf (stderr, "Unable to allocate memory for ap information\n");
++        return;
++    } 
++
++    s = socket(AF_INET, SOCK_DGRAM, 0);
++    if (s < 0){
++        free(buf);
++        err(1, "socket(SOCK_DRAGM)");
++    }
++
++    (void) memset(&iwr, 0, sizeof(iwr));
++    (void) strncpy(iwr.ifr_name, ifname, sizeof(iwr.ifr_name));
++    iwr.u.data.pointer = (void *) buf;
++    iwr.u.data.length = LIST_APINFO_ALLOC_SIZE;
++    iwr.u.data.flags = IEEE80211_EXT_IOCTL_AP_INFO;
++    
++    if (ioctl(s, IEEE80211_IOCTL_LITEON_EXTEND, &iwr) < 0){
++        free(buf);
++        errx(1, "unable to get ap information");
++    }
++
++    printf("%s\n", buf);
++
++    free(buf);
++}
++
+ int
+ char2addr(char* addr)
+ {
+--- a/drivers/wlan_modules/umac/include/ieee80211_mlme.h
++++ b/drivers/wlan_modules/umac/include/ieee80211_mlme.h
+@@ -502,6 +502,19 @@ int ieee80211_parse_beacon(struct ieee80
+                            struct ieee80211_channel             *bcn_recv_chan,
+                            struct ieee80211_scanentry_params    *scan_entry_parameters);
+ 
++/* 
++ *Function declaration, Sean@Liteon, 2013-12-11 
++ */
++int
++ieee80211_update_bss_entry(struct ieee80211vap          *vap,
++                            struct ieee80211_beacon_frame          *beacon_frame,
++                            struct ieee80211_frame     *wh,
++                            int                        subtype,
++                            u_int32_t                    frame_length);
++/* 
++ *End, Sean@Liteon 
++ */
++
+ void ieee80211_mlme_node_leave(struct ieee80211_node *ni);
+ bool ieee80211_mlme_check_all_nodes_asleep(ieee80211_vap_t vap);
+ 
+--- a/drivers/wlan_modules/umac/include/ieee80211_var.h
++++ b/drivers/wlan_modules/umac/include/ieee80211_var.h
+@@ -1383,6 +1383,90 @@ struct ieee80211_tim_set {
+ 	u_int16_t aid;
+ };
+ 
++/* Add new authentication modes, Sean@Liteon, 2013-12-11 */
++typedef enum _NDIS_802_11_AUTHENTICATION_MODE {
++    Ndis802_11AuthModeOpen,
++    Ndis802_11AuthModeShared,
++    Ndis802_11AuthModeAutoSwitch,
++    Ndis802_11AuthModeWPA,
++    Ndis802_11AuthModeWPAPSK,
++    Ndis802_11AuthModeWPANone,
++    Ndis802_11AuthModeWPA2,
++    Ndis802_11AuthModeWPA2PSK,
++    Ndis802_11AuthModeWPA1WPA2,
++    Ndis802_11AuthModeWPA1PSKWPA2PSK,
++#ifdef ATH_SUPPORT_WAPI
++    Ndis802_11AuthModeWAICERT,	/* WAI certificate authentication */
++    Ndis802_11AuthModeWAIPSK,	/* WAI pre-shared key */
++#endif				/* ATH_SUPPORT_WAPI */
++    Ndis802_11AuthModeMax	/* Not a real mode, defined as upper bound */
++} NDIS_802_11_AUTHENTICATION_MODE, *PNDIS_802_11_AUTHENTICATION_MODE;
++
++/* Added new encryption types, Sean@Liteon, 2013-12-11  */
++typedef enum _NDIS_802_11_WEP_STATUS {
++    Ndis802_11WEPEnabled,
++    Ndis802_11Encryption1Enabled = Ndis802_11WEPEnabled,
++    Ndis802_11WEPDisabled,
++    Ndis802_11EncryptionDisabled = Ndis802_11WEPDisabled,
++    Ndis802_11WEPKeyAbsent,
++    Ndis802_11Encryption1KeyAbsent = Ndis802_11WEPKeyAbsent,
++    Ndis802_11WEPNotSupported,
++    Ndis802_11EncryptionNotSupported = Ndis802_11WEPNotSupported,
++    Ndis802_11Encryption2Enabled,
++    Ndis802_11Encryption2KeyAbsent,
++    Ndis802_11Encryption3Enabled,
++    Ndis802_11Encryption3KeyAbsent,
++    Ndis802_11Encryption4Enabled,	/* TKIP or AES mix */
++    Ndis802_11Encryption4KeyAbsent,
++    Ndis802_11GroupWEP40Enabled,
++    Ndis802_11GroupWEP104Enabled,
++#ifdef ATH_SUPPORT_WAPI
++    Ndis802_11EncryptionSMS4Enabled,	/* WPI SMS4 support */
++#endif /* ATH_SUPPORT_WAPI */
++} NDIS_802_11_WEP_STATUS, *PNDIS_802_11_WEP_STATUS, 
++NDIS_802_11_ENCRYPTION_STATUS, *PNDIS_802_11_ENCRYPTION_STATUS;
++
++typedef struct _ieee80211_cipher_suite	{
++    NDIS_802_11_ENCRYPTION_STATUS	pair_cipher;		/* Unicast cipher 1, this one has more secured cipher suite */
++    NDIS_802_11_ENCRYPTION_STATUS	pair_cipher_aux;	/* Unicast cipher 2 if AP announce two unicast cipher suite */
++    NDIS_802_11_ENCRYPTION_STATUS	group_cipher;	/* Group cipher */
++    u_int16_t					rsn_capability;	/* RSN capability from beacon */
++    u_int8_t						bmix_mode;		/* Indicate Pair & Group cipher might be different */
++} IEEE80211_CIPHER_SUITE, *PIEEE80211_CIPHER_SUITE;
++/* End, Sean@Liteon, 2013-12-11 */
++
++typedef struct _ieee80211_bss_entry {
++    u_int8_t   bssid[IEEE80211_ADDR_LEN];
++    u_int8_t   channel;
++    u_int8_t   central_channel;	/*Store the wide-band central channel for 40MHz.  .used in 40MHz AP. Or this is the same as Channel. */
++    u_int8_t   bss_type;
++    u_int8_t   atim_win;
++    u_int8_t   beacon_period;
++	
++    u_int8_t   rssi;
++
++    u_int8_t   privacy;			/* Indicate security function ON/OFF. Don't mess up with auth mode. */
++
++    u_int8_t   ssid_len;
++    int8_t      ssid[IEEE80211_MAX_LEN_OF_SSID];
++
++    u_int8_t  bses;
++	
++    /* New for WPA2 */
++    IEEE80211_CIPHER_SUITE wpa;			/* AP announced WPA cipher suite */
++    IEEE80211_CIPHER_SUITE wpa2;			/* AP announced WPA2 cipher suite */
++#ifdef ATH_SUPPORT_WAPI
++    IEEE80211_CIPHER_SUITE wapi;			/* AP announced WAPI cipher suite */
++#endif /* ATH_SUPPORT_WAPI */
++
++    NDIS_802_11_AUTHENTICATION_MODE	auth_mode_aux;	/* Addition mode for WPA2 / WPA capable AP */
++    NDIS_802_11_AUTHENTICATION_MODE	auth_mode;
++    NDIS_802_11_WEP_STATUS	wep_status;				/* Unicast Encryption Algorithm extract from VAR_IE */
++    u_int16_t				var_ie_len;				/* Length of next VIE include EID & Length */
++    u_char					var_ies[IEEE80211_MAX_VIE_LEN];
++
++}IEEE80211_BSS_ENTRY, *PIEEE80211_BSS_ENTRY;
++
+ typedef struct ieee80211vap {
+     TAILQ_ENTRY(ieee80211vap)         iv_next;    /* list of vap instances */
+ 
+@@ -1831,6 +1915,8 @@ typedef struct ieee80211vap {
+     u_int8_t                   iv_rc_num_retries;       /* Number of HW retries across rate-series */
+     int                        iv_bcast_fixedrate;      /* Bcast data rate */
+     u_int16_t                  iv_vht_mcsmap;           /* VHT MCS MAP */
++
++    IEEE80211_BSS_ENTRY iv_ap_info;		/* Get AP Information, Sean@Liteon, 2013-12-11 */
+ } IEEE80211VAP, *PIEEE80211VAP;
+ 
+ #ifndef __ubicom32__
+--- a/drivers/wlan_modules/umac/mlme/ieee80211_mgmt.c
++++ b/drivers/wlan_modules/umac/mlme/ieee80211_mgmt.c
+@@ -1912,7 +1912,7 @@ ieee80211_parse_beacon(struct ieee80211v
+ 
+     info_element = &(beacon_frame->info_elements);
+     remaining_ie_length = beacon_frame_length - BEACON_INFO_ELEMENT_OFFSET;
+-    
++
+     OS_MEMZERO(scan_entry_parameters, sizeof(*scan_entry_parameters));
+     
+     if(bcn_recv_chan == NULL) {
+@@ -2269,6 +2269,743 @@ ieee80211_parse_beacon(struct ieee80211v
+     return EOK;
+ }
+ 
++/* OUI definition for WPA/RSN/WAPI element, Sean@Liteon, 2013-12-11 */
++u_char IEEE80211_SEC_SES_OUI[] = {0x00, 0x90, 0x4c};
++u_char IEEE80211_SEC_WPA_OUI[] = {0x00, 0x50, 0xf2, 0x01};
++u_char IEEE80211_SEC_RSN_OUI[] = {0x00, 0x0f, 0xac};
++u_char IEEE80211_SEC_WAPI_OUI[] = {0x00, 0x14, 0x72};
++
++/* Parse the IEEE8021.x Probe Rsp frame, Sean@Liteon, 2013-12-11 */
++static int
++ieee80211_parse_probe_rsp(struct ieee80211vap	*vap,
++                        struct ieee80211_beacon_frame	*beacon_frame,
++                        const struct ieee80211_frame         *wh,
++                        u_int32_t    beacon_frame_length,
++                        int   subtype,
++                        u_char *pbssid, 
++                        char ssid[], 
++                        char *pssid_len, 
++                        u_int8_t	*pbss_type,
++                        u_int16_t	*pcapability_info,
++                        u_int16_t	*len_vie,
++                        IEEE80211_VARIABLE_IES	*pvie)
++{
++/*
++* Offset of IE's in beacon frames: header size plus timestamp, beacon_interval and capability.
++*/
++#define BEACON_INFO_ELEMENT_OFFSET    (offsetof(struct ieee80211_beacon_frame, info_elements))
++
++    u_int32_t                        remaining_ie_length;
++    u_char				  *ptr;
++    PEID_STRUCT         peid;
++    u_int8_t	ssid_flag, rsn_flag, wpa_flag;
++#if ATH_SUPPORT_WAPI
++    u_int8_t	wapi_flag;
++#endif
++
++
++    /*
++     * Get BSSID from Probe Rsp header 
++     */
++    OS_MEMCPY(pbssid, wh->i_addr3, IEEE80211_ADDR_LEN);
++
++    /*
++    * beacon/probe response frame format
++    *  [8] time stamp
++    *  [2] beacon interval
++    *  [2] capability information
++    *  [tlv] ssid
++    *  [tlv] supported rates
++    *  [tlv] country information
++    *  [tlv] parameter set (FH/DS)
++    *  [tlv] erp information
++    *  [tlv] extended supported rates
++    *  [tlv] WME
++    *  [tlv] WPA or RSN
++    *  [tlv] Atheros Advanced Capabilities
++    */
++    IEEE80211_VERIFY_LENGTH(beacon_frame_length, BEACON_INFO_ELEMENT_OFFSET);
++
++    peid = &(beacon_frame->info_elements);
++    remaining_ie_length = beacon_frame_length - BEACON_INFO_ELEMENT_OFFSET;
++
++    ptr = &(beacon_frame->capability);
++    *len_vie = 0;
++
++    ssid_flag = rsn_flag = wpa_flag = 0;
++#if ATH_SUPPORT_WAPI
++    wapi_flag = 0;
++#endif
++
++    /* get capability info from payload and advance the pointer*/
++    OS_MEMMOVE(pcapability_info, ptr, 2);
++    ptr += 2;
++
++    /* Converted to bigendian format */
++    *pcapability_info = le16toh(*pcapability_info);
++
++    if (CAP_IS_ESS_ON(*pcapability_info)) 
++        *pbss_type = IEEE80211_BSS_INFRA;
++    else 
++        *pbss_type = IEEE80211_BSS_ADHOC;
++
++    /* Walk through to check nothing is malformed */
++    while (remaining_ie_length >= sizeof(struct ieee80211_ie_header)) {
++        /* At least one more header is present */
++        remaining_ie_length -= sizeof(struct ieee80211_ie_header);
++
++        if (peid->len== 0) {
++            peid += 1;    /* next IE */
++            continue;
++        }
++
++        if (remaining_ie_length < peid->len) {
++            /* Incomplete/bad info element */
++            return -EINVAL;
++        }
++
++        /* New info_element needs also be added in ieee80211_scan_entry_update */
++        switch (peid->eid) {
++        case IEEE80211_ELEMID_SSID:
++            /* Already has one SSID EID in this Probe Rsp, ignore the second one*/
++            if (ssid_flag)
++                break;
++            
++            if(peid->len <= IEEE80211_MAX_LEN_OF_SSID) {
++                OS_MEMMOVE(ssid, peid->octet, peid->len);
++                *pssid_len = peid->len;
++            } 
++			
++            /* Check whether the SSID is we need??? */
++            if (strncmp(vap->iv_bss->ni_bssid, pbssid, IEEE80211_ADDR_LEN) ||
++		 strncmp(vap->iv_des_ssid[0].ssid, 
++				ssid, 
++				(vap->iv_des_ssid[0].len > IEEE80211_MAX_LEN_OF_SSID) ?
++				(IEEE80211_MAX_LEN_OF_SSID) :
++				(vap->iv_des_ssid[0].len)))
++                return -EINVAL;
++
++            ssid_flag++;
++
++            break;
++            
++        case IEEE80211_ELEMID_RSN:
++            /* Already has one RSN EID in this Probe Rsp, ignore the second one*/
++            if (rsn_flag)
++                break;
++
++            /* There is no OUI for version anymore, check the group cipher OUI before copying*/
++            if (!OS_MEMCMP(peid->octet + 2, IEEE80211_SEC_RSN_OUI, 3)) {
++                /* Copy to pVIE which will report to microsoft bssid list.*/
++                ptr = (u_char *) pvie;
++                OS_MEMMOVE(ptr + *len_vie, &peid->eid, peid->len+ 2);
++                *len_vie += (peid->len + 2);
++                rsn_flag++;
++            }
++
++            break;
++#if ATH_SUPPORT_WAPI
++        case IEEE80211_ELEMID_WAPI:
++            /* Already has one WAPI EID in this Probe Rsp, ignore the second one*/
++            if (wapi_flag)
++                break;
++
++            if (!OS_MEMCMP(peid->octet + 4, IEEE80211_SEC_WAPI_OUI, 3)) {
++                /* Copy to pVIE*/
++                ptr = (u_char *) pvie;
++                OS_MEMMOVE(ptr + *len_vie, &peid->eid, peid->len + 2);
++                *len_vie += (peid->len + 2);
++                wapi_flag++;
++            }
++            break;
++#endif
++        case IEEE80211_ELEMID_VENDOR:
++            /* Already has one WPA EID in this Probe Rsp, ignore the second one*/
++            if (wpa_flag)
++                break;
++
++            if (!OS_MEMCMP(peid->octet, IEEE80211_SEC_WPA_OUI, 4)) {
++                /* Copy to pVIE which will report to bssid list.*/
++                ptr = (u_char *) pvie;
++                OS_MEMMOVE(ptr + *len_vie, &peid->eid, peid->len + 2);
++                *len_vie += (peid->len + 2);
++                wpa_flag++;
++            }
++
++            break;
++
++        default:
++            IEEE80211_DISCARD_IE(vap, IEEE80211_MSG_ELEMID,
++                                                 "unhandled",
++                                                 "id %u, len %u",
++                                                 peid->eid,
++                                                 peid->len);
++            break;
++        }
++
++        /* Consume info element */
++        remaining_ie_length -= peid->len;
++
++        /* Go to next IE */
++        peid = (PEID_STRUCT)((u_char *)peid + 2 + peid->len);        
++
++    }
++
++    return EOK;
++}
++
++/* Parse the security information, Sean@Liteon, 2013-12-11 */
++static void 
++ieee80211_bss_cipher_parse(IEEE80211_BSS_ENTRY *pbss)
++{
++    PEID_STRUCT	peid;
++    u_char *ptmp;
++    PRSN_IE_HEADER_STRUCT	prsn_header;
++    PCIPHER_SUITE_STRUCT			pcipher;
++    PAKM_SUITE_STRUCT				pakm;
++    u_int16_t		count;
++    u_int32_t		length;
++    NDIS_802_11_ENCRYPTION_STATUS	tmp_cipher;
++
++
++    /* wep_status will be reset later, if AP announce TKIP or AES on the beacon frame.*/
++    if (pbss->privacy)
++    {
++        pbss->wep_status 	= Ndis802_11WEPEnabled;
++    }
++    else
++    {
++        pbss->wep_status 	= Ndis802_11WEPDisabled;
++    }
++    
++    /* Set default to disable & open authentication before parsing variable IE*/
++    pbss->auth_mode = Ndis802_11AuthModeOpen;
++    pbss->auth_mode_aux	= Ndis802_11AuthModeOpen;
++
++    /* Init WPA setting*/
++    pbss->wpa.pair_cipher = Ndis802_11WEPDisabled;
++    pbss->wpa.pair_cipher_aux = Ndis802_11WEPDisabled;
++    pbss->wpa.group_cipher = Ndis802_11WEPDisabled;
++    pbss->wpa.rsn_capability = 0;
++    pbss->wpa.bmix_mode = FALSE;
++
++    /* Init wpa2 setting*/
++    pbss->wpa2.pair_cipher = Ndis802_11WEPDisabled;
++    pbss->wpa2.pair_cipher_aux = Ndis802_11WEPDisabled;
++    pbss->wpa2.group_cipher = Ndis802_11WEPDisabled;
++    pbss->wpa2.rsn_capability = 0;
++    pbss->wpa2.bmix_mode = FALSE;
++
++#ifdef ATH_SUPPORT_WAPI
++    /* Init WAPI setting*/
++    pbss->wapi.pair_cipher = Ndis802_11WEPDisabled;
++    pbss->wapi.pair_cipher_aux = Ndis802_11WEPDisabled;
++    pbss->wapi.group_cipher = Ndis802_11WEPDisabled;
++    pbss->wapi.rsn_capability = 0;
++    pbss->wapi.bmix_mode = FALSE;
++#endif /* ATH_SUPPORT_WAPI */
++
++    length = (int32_t) pbss->var_ie_len;
++
++    while (length > 0) {
++        /* Parse cipher suite base on WPA1 & wpa2, they should be parsed differently*/
++        ptmp = ((u_char *) pbss->var_ies) + pbss->var_ie_len - length;
++        peid = (PEID_STRUCT) ptmp;
++        
++        switch (peid->eid) {
++        case IEEE80211_ELEMID_VENDOR:
++            if ((!OS_MEMCMP(peid->octet, IEEE80211_SEC_SES_OUI, 3) )&& (peid->len == 7)) {
++                pbss->bses = TRUE;
++                break;
++            }				
++            else if ((!OS_MEMCMP(peid->octet, IEEE80211_SEC_WPA_OUI, 4)) != 1) {
++                /* if unsupported vendor specific IE*/
++                break;
++            }	
++            
++            /*
++            Skip OUI, version, and multicast suite
++            This part should be improved in the future when AP supported multiple cipher suite.
++            For now, it's OK since almost all APs have fixed cipher suite supported.
++            */
++            ptmp   += 11;
++
++            /* 
++            Cipher Suite Selectors from Spec P802.11i/D3.2 P26.
++            Value	   Meaning
++            0			None
++            1			WEP-40
++            2			Tkip
++            3			WRAP
++            4			AES
++            5			WEP-104
++            */
++            /* Parse group cipher*/
++            switch (*ptmp) {
++            case 1:
++                pbss->wpa.group_cipher = Ndis802_11GroupWEP40Enabled;
++                break;
++            case 5:
++                pbss->wpa.group_cipher = Ndis802_11GroupWEP104Enabled;
++                break;
++            case 2:
++                pbss->wpa.group_cipher = Ndis802_11Encryption2Enabled;
++                break;
++            case 4:
++                pbss->wpa.group_cipher = Ndis802_11Encryption3Enabled;
++                break;
++            default:
++                break;
++            }
++        
++            /* number of unicast suite*/
++            ptmp += 1;
++
++            /* skip all unicast cipher suites*/
++            count = (ptmp[1]<<8) + ptmp[0];
++
++            ptmp += sizeof(u_int16_t);
++
++            /* Parsing all unicast cipher suite*/
++            while (count > 0) {
++                /* Skip OUI*/
++                ptmp += 3; 
++
++                tmp_cipher = Ndis802_11WEPDisabled;
++                switch (*ptmp)
++                {
++                case 1:
++                case 5: /* Although WEP is not allowed in wpa related auth mode, we parse it anyway*/
++                    tmp_cipher = Ndis802_11Encryption1Enabled;
++                    break;
++                case 2:
++                    tmp_cipher = Ndis802_11Encryption2Enabled;
++                    break;
++                case 4:
++                    tmp_cipher = Ndis802_11Encryption3Enabled;
++                    break;
++                default:
++                    break;
++                }
++
++                if (tmp_cipher > pbss->wpa.pair_cipher) {
++                    /* Move the lower cipher suite to pair_cipher_aux*/
++                    pbss->wpa.pair_cipher_aux = pbss->wpa.pair_cipher;
++                    pbss->wpa.pair_cipher	= tmp_cipher;
++                } else {
++                    pbss->wpa.pair_cipher_aux = tmp_cipher;
++                }
++
++                ptmp++;
++                count--;
++            }
++
++            /* 4. get AKM suite counts*/
++            count = (ptmp[1]<<8) + ptmp[0];
++            ptmp += sizeof(u_int16_t);
++            ptmp += 3; 
++
++            switch (*ptmp) {
++            case 1:
++                /* Set AP support WPA-enterprise mode*/
++                if (pbss->auth_mode == Ndis802_11AuthModeOpen)
++                    pbss->auth_mode = Ndis802_11AuthModeWPA;
++                else
++                    pbss->auth_mode_aux = Ndis802_11AuthModeWPA;
++                break;
++            case 2:
++                /* Set AP support WPA-PSK mode*/
++                if (pbss->auth_mode == Ndis802_11AuthModeOpen)
++                    pbss->auth_mode = Ndis802_11AuthModeWPAPSK;
++                else
++                    pbss->auth_mode_aux = Ndis802_11AuthModeWPAPSK;
++                
++                break;
++            default:
++                break;
++            }
++        
++            ptmp += 1;
++
++            /* Fixed for WPA-None*/
++            if (pbss->bss_type == IEEE80211_BSS_ADHOC) {
++                pbss->auth_mode	  = Ndis802_11AuthModeWPANone;
++                pbss->auth_mode_aux = Ndis802_11AuthModeWPANone;
++                pbss->wep_status   = pbss->wpa.group_cipher;
++                /* Patched bugs for old driver*/
++                if (pbss->wpa.pair_cipher_aux == Ndis802_11WEPDisabled)
++                    pbss->wpa.pair_cipher_aux = pbss->wpa.group_cipher;
++                
++            } else
++                pbss->wep_status   = pbss->wpa.pair_cipher;					
++
++            /* Check the Pair & Group, if different, turn on mixed mode flag*/
++            if (pbss->wpa.group_cipher != pbss->wpa.pair_cipher)
++                pbss->wpa.bmix_mode = TRUE;
++
++            break;
++
++        case IEEE80211_ELEMID_RSN:
++            prsn_header = (PRSN_IE_HEADER_STRUCT) ptmp;
++
++            /* 0. Version must be 1*/
++            if (le16toh(prsn_header->version) != 1)
++                break;
++            
++            ptmp += sizeof(RSN_IE_HEADER_STRUCT);
++
++            /* 1. Check group cipher*/
++            pcipher = (PCIPHER_SUITE_STRUCT) ptmp;
++            if (OS_MEMCMP(ptmp, IEEE80211_SEC_RSN_OUI, 3))
++                break;
++
++            /* Parse group cipher*/
++            switch (pcipher->type) {
++            case 1:
++                pbss->wpa2.group_cipher = Ndis802_11GroupWEP40Enabled;
++                break;
++            case 5:
++                pbss->wpa2.group_cipher = Ndis802_11GroupWEP104Enabled;
++                break;
++            case 2:
++                pbss->wpa2.group_cipher = Ndis802_11Encryption2Enabled;
++                break;
++            case 4:
++                pbss->wpa2.group_cipher = Ndis802_11Encryption3Enabled;
++                break;
++            default:
++                break;
++            }
++            
++            /* set to correct offset for next parsing*/
++            ptmp += sizeof(CIPHER_SUITE_STRUCT);
++
++            /* 2. Get pairwise cipher counts*/
++            count = (ptmp[1]<<8) + ptmp[0];
++            ptmp += sizeof(u_int16_t);			
++
++            /* 3. Get pairwise cipher*/
++            /* Parsing all unicast cipher suite*/
++            while (count > 0) {
++                /* Skip OUI*/
++                pcipher = (PCIPHER_SUITE_STRUCT) ptmp; 
++                tmp_cipher = Ndis802_11WEPDisabled;
++                
++                switch (pcipher->type) {
++                case 1:
++                case 5: /* Although WEP is not allowed in WPA related auth mode, we parse it anyway*/
++                    tmp_cipher = Ndis802_11Encryption1Enabled;
++                    break;
++                case 2:
++                    tmp_cipher = Ndis802_11Encryption2Enabled;
++                    break;
++                case 4:
++                    tmp_cipher = Ndis802_11Encryption3Enabled;
++                    break;
++                default:
++                    break;
++                }
++                
++                if (tmp_cipher > pbss->wpa2.pair_cipher) {
++                    /* Move the lower cipher suite to pair_cipher_aux*/
++                    pbss->wpa2.pair_cipher_aux = pbss->wpa2.pair_cipher;
++                    pbss->wpa2.pair_cipher	 = tmp_cipher;
++                } else {
++                    pbss->wpa2.pair_cipher_aux = tmp_cipher;
++                }
++                
++                ptmp += sizeof(CIPHER_SUITE_STRUCT);
++                count--;
++            }
++
++            /* 4. get AKM suite counts*/
++            count = (ptmp[1]<<8) + ptmp[0];
++            ptmp += sizeof(u_int16_t);
++
++            /* 5. Get AKM ciphers*/
++            /* Parsing all AKM ciphers*/
++            while (count > 0) {					
++                pakm = (PAKM_SUITE_STRUCT) ptmp; 
++                
++                if (OS_MEMCMP(ptmp, IEEE80211_SEC_RSN_OUI, 3))
++                    break;
++
++                switch (pakm->type) {
++                case 0:
++                    if (pbss->auth_mode == Ndis802_11AuthModeOpen)
++                        pbss->auth_mode = Ndis802_11AuthModeWPANone;
++                    else
++                        pbss->auth_mode_aux = Ndis802_11AuthModeWPANone;
++                    break;                                                        
++                case 1:
++                    /* Set AP support WPA-enterprise mode*/
++                    if (pbss->auth_mode == Ndis802_11AuthModeOpen)
++                        pbss->auth_mode = Ndis802_11AuthModeWPA2;
++                    else
++                        pbss->auth_mode_aux = Ndis802_11AuthModeWPA2;
++                    break;
++                case 2:
++                    /* Set AP support WPA-PSK mode*/
++                    if (pbss->auth_mode == Ndis802_11AuthModeOpen)
++                        pbss->auth_mode = Ndis802_11AuthModeWPA2PSK;
++                    else
++                        pbss->auth_mode_aux = Ndis802_11AuthModeWPA2PSK;
++                    break;
++                default:
++                    if (pbss->auth_mode == Ndis802_11AuthModeOpen)
++                        pbss->auth_mode = Ndis802_11AuthModeMax;
++                    else
++                        pbss->auth_mode_aux = Ndis802_11AuthModeMax;
++                    break;
++                }
++                
++                ptmp += sizeof(AKM_SUITE_STRUCT);
++                count--;
++            }
++
++            /* Fixed for WPA-None*/
++            if (pbss->bss_type == IEEE80211_BSS_ADHOC) {
++                pbss->wpa.pair_cipher_aux = pbss->wpa2.pair_cipher_aux;
++                pbss->wpa.group_cipher = pbss->wpa2.group_cipher;
++                pbss->wep_status = pbss->wpa.group_cipher;
++                
++                /* Patched bugs for old driver*/
++                if (pbss->wpa.pair_cipher_aux == Ndis802_11WEPDisabled)
++                    pbss->wpa.pair_cipher_aux = pbss->wpa.group_cipher;
++            }
++            
++            pbss->wep_status   = pbss->wpa2.pair_cipher;					
++
++            /* 6. Get RSN capability*/
++            pbss->wpa2.rsn_capability = (ptmp[1]<<8) + ptmp[0];
++            ptmp += sizeof(u_int16_t);
++
++            /* Check the Pair & Group, if different, turn on mixed mode flag*/
++            if (pbss->wpa2.group_cipher != pbss->wpa2.pair_cipher)
++                pbss->wpa2.bmix_mode = TRUE;
++
++            break;
++#ifdef ATH_SUPPORT_WAPI
++        case IEEE80211_ELEMID_WAPI:
++            prsn_header = (PRSN_IE_HEADER_STRUCT) ptmp;
++
++            /* 0. The version number must be 1*/
++            if (le16toh(prsn_header->version) != 1)
++                break;
++            
++            ptmp += sizeof(RSN_IE_HEADER_STRUCT);
++
++            /* 1. Get AKM suite counts*/
++            OS_MEMMOVE(&count, ptmp, sizeof(u_int16_t));	
++            count = htole16(count);				
++            ptmp += sizeof(u_int16_t);
++
++            /* 2. Get AKM ciphers*/
++            pakm = (PAKM_SUITE_STRUCT) ptmp;
++            
++            if (OS_MEMCMP(ptmp, IEEE80211_SEC_WAPI_OUI, 3))
++                break;
++
++            switch (pakm->type) {					
++            case 1:
++                /* Support WAI certificate authentication*/
++                pbss->auth_mode = Ndis802_11AuthModeWAICERT;						
++                break;
++            case 2:
++                /* Support WAI PSK*/
++                pbss->auth_mode = Ndis802_11AuthModeWAIPSK;						
++                break;
++            default:
++                break;
++            }
++            
++            ptmp += (count * sizeof(AKM_SUITE_STRUCT));
++
++            /* 3. Get pairwise cipher counts*/
++            OS_MEMMOVE(&count, ptmp, sizeof(u_int16_t));	
++            count = htole16(count);	
++            ptmp += sizeof(u_int16_t);			
++
++            /* 4. Get pairwise cipher*/
++            /* Parsing all unicast cipher suite*/
++            while (count > 0) {
++                if (OS_MEMCMP(ptmp, IEEE80211_SEC_WAPI_OUI, 3))
++                    break;
++
++                /* Skip OUI*/
++                pcipher = (PCIPHER_SUITE_STRUCT) ptmp;					
++                tmp_cipher = Ndis802_11WEPDisabled;
++                
++                switch (pcipher->type) {
++                case 1:						
++                    tmp_cipher = Ndis802_11EncryptionSMS4Enabled;
++                    break;
++                default:
++                    break;
++                }
++
++                if (tmp_cipher > pbss->wapi.pair_cipher) {
++                    /* Move the lower cipher suite to pair_cipher_aux*/
++                    pbss->wapi.pair_cipher_aux = pbss->wapi.pair_cipher;
++                    pbss->wapi.pair_cipher = tmp_cipher;
++                } else {
++                    pbss->wapi.pair_cipher_aux = tmp_cipher;
++                }
++                
++                ptmp += sizeof(CIPHER_SUITE_STRUCT);
++                count--;
++            }
++
++            /* 5. Check group cipher*/
++            if (OS_MEMCMP(ptmp, IEEE80211_SEC_WAPI_OUI, 3))
++                break;
++
++            pcipher = (PCIPHER_SUITE_STRUCT) ptmp;				
++            /* Parse group cipher*/
++            switch (pcipher->type) {
++            case 1:
++                pbss->wapi.group_cipher = Ndis802_11EncryptionSMS4Enabled;
++                break;
++            default:
++                break;
++            }
++            
++            /* set to correct offset for next parsing*/
++            ptmp += sizeof(CIPHER_SUITE_STRUCT);
++
++            /* update the encryption type*/
++            pbss->wep_status = pbss->wapi.pair_cipher;
++
++            /* update the wapi capability*/
++            pbss->wapi.rsn_capability = (ptmp[1]<<8) + ptmp[0];
++            ptmp += sizeof(u_int16_t);
++
++            break;
++#endif /* ATH_SUPPORT_WAPI */				
++        default:
++            break;
++        }
++        
++        length -= (peid->len + 2);
++    }
++}
++
++/* Invoke the Parse Probe Rsp & Security function, Sean@Liteon, 2013-12-11 */
++int
++ieee80211_update_bss_entry(struct ieee80211vap          *vap,
++                        struct ieee80211_beacon_frame          *beacon_frame,
++                        struct ieee80211_frame     *wh,
++                        int                        subtype,
++                        u_int32_t                    frame_length)
++{       
++    u_char bssid[IEEE80211_ADDR_LEN];
++    char *ssid = NULL;
++    u_int8_t ssid_len = 0;
++    u_char zero_ssid[32] = {0x00};
++    u_int16_t capability_info;
++    u_int8_t   bss_type;
++    u_int16_t length_vie;
++    PIEEE80211_BSS_ENTRY pbss = &(vap->iv_ap_info);
++    IEEE80211_VARIABLE_IES *pvie = NULL;
++    char *vie = NULL;
++    int8_t status = 0; 
++
++    ssid = (u_char *)kmalloc(IEEE80211_MAX_LEN_OF_SSID, GFP_KERNEL);
++    if (ssid == NULL) {
++        return ENOMEM;
++    } else {
++        /* 
++         * Clear the contents of this pointer is pointed to before, avoid it affects the 
++         * accurancy of  what we need to get .
++         */
++        OS_MEMZERO(ssid, IEEE80211_MAX_LEN_OF_SSID);
++    }
++    
++    vie = (char *)kmalloc(IEEE80211_MAX_VIE_LEN, GFP_KERNEL);
++    if (vie == NULL) {
++        kfree(ssid);
++        return ENOMEM;
++    } else {
++        /* Reason is the same as the above. */
++        OS_MEMZERO(vie, IEEE80211_MAX_VIE_LEN);
++    }
++
++    pvie = (IEEE80211_VARIABLE_IES *)vie;
++    pvie->length= 0;
++
++    /* Check for invalid/incomplete beacon frame */
++    if (frame_length < 0) {
++        status = 1;
++        goto fail;
++    }
++
++    if (ieee80211_parse_probe_rsp(vap, 
++                                                beacon_frame, 
++                                                wh, 
++                                                frame_length, 
++                                                subtype, 
++                                                bssid,
++                                                ssid,
++                                                &ssid_len,
++                                                &bss_type, 
++                                                &capability_info, 
++                                                &length_vie, 
++                                                pvie) != EOK) {
++        status = 1;
++        goto fail;
++    }
++
++    OS_MEMCPY(pbss->bssid, bssid, IEEE80211_ADDR_LEN);
++
++    if (ssid_len > 0) {
++        /* 
++        *For hidden SSID AP, it might send beacon with SSID len equal to 0
++        * Or send beacon /probe response with SSID len matching real SSID length,
++        * but SSID is all zero. such as "00-00-00-00" with length 4.
++        * We have to prevent this case overwrite correct table
++        */
++        if (OS_MEMCMP(ssid, zero_ssid, ssid_len)) {
++            OS_MEMZERO(pbss->ssid, IEEE80211_MAX_LEN_OF_SSID);
++            OS_MEMMOVE(pbss->ssid, ssid, ssid_len);
++            pbss->ssid_len = ssid_len;
++        }
++    } else {
++        /* avoid  Hidden SSID form beacon to overwirite correct SSID from probe response */
++        if (!OS_MEMCMP(ssid, zero_ssid, ssid_len))
++        {
++            OS_MEMZERO(pbss->ssid, IEEE80211_MAX_LEN_OF_SSID);
++            pbss->ssid_len = 0;
++        }
++    }
++
++    pbss->bss_type = bss_type;
++
++    /* The privacy bit indicate security is ON, it maight be WEP, TKIP or AES*/
++    /* Combine with AuthMode, they will decide the connection methods.*/
++    pbss->privacy = CAP_IS_PRIVACY_ON(capability_info);
++
++    /* New for microsoft Variable IEs*/
++    if (length_vie != 0) {
++        pbss->var_ie_len = length_vie;
++        OS_MEMMOVE(pbss->var_ies, pvie, pbss->var_ie_len);
++    } else {
++        pbss->var_ie_len = 0;
++    }
++
++    ieee80211_bss_cipher_parse(pbss);
++
++fail:
++    if (ssid != NULL)
++        kfree(ssid);
++
++    if (vie != NULL)
++        kfree(vie);
++
++    return status?NULL:EOK;
++
++}
++/* End, Sean@Liteon */
++
+ ieee80211_scan_entry_t
+ ieee80211_update_beacon(struct ieee80211_node      *ni,
+                         wbuf_t                     wbuf,
+@@ -2302,6 +3039,7 @@ ieee80211_update_beacon(struct ieee80211
+     return scan_entry;
+ }
+ 
++
+ static int
+ ieee80211_recv_beacon(struct ieee80211_node *ni, wbuf_t wbuf, int subtype, struct ieee80211_rx_status *rs)
+ {
+@@ -2309,13 +3047,14 @@ ieee80211_recv_beacon(struct ieee80211_n
+     struct ieee80211_frame                       *wh;
+     ieee80211_scan_entry_t                       scan_entry;
+     u_int8_t                                     *ssid;
+-
++	
+     wh = (struct ieee80211_frame *)wbuf_header(wbuf);
+ 
+     scan_entry = ieee80211_update_beacon(ni, wbuf, wh, subtype, rs);
+     if (scan_entry != NULL)
+     {
+         ssid = ieee80211_scan_entry_ssid(scan_entry, &vap->iv_esslen);
++	
+         if (ssid != NULL)
+         OS_MEMCPY(vap->iv_essid, ssid, vap->iv_esslen);
+     }
+--- a/drivers/wlan_modules/umac/scan/ieee80211_scanentry.c
++++ b/drivers/wlan_modules/umac/scan/ieee80211_scanentry.c
+@@ -1853,6 +1853,21 @@ ieee80211_scan_table_update(struct ieee8
+         return NULL; 
+     }
+ 
++    /* 
++     * Invoke ieee80211_update_bss_entry to get associated AP information by
++     * parse the probe rsp frame.
++     * Sean@Liteon, 2013-12-11
++     */
++    if (subtype == IEEE80211_FC0_SUBTYPE_PROBE_RESP)
++    	ieee80211_update_bss_entry(vap, 
++    				beacon_frame, 
++    				wh, 
++    				subtype, 
++    				beacon_length);
++    /*
++     * End, Sean@Liteon
++     */
++	
+     if (scan_entry_parameters.chan == NULL) {
+         IEEE80211_SCANENTRY_PRINTF(ic, IEEE80211_MSG_SCANENTRY, 
+             "%s: error: no channel MACADDR=%02X:%02X:%02X:%02X:%02X:%02X\n",
+--- a/drivers/wlan_modules/include/_ieee80211.h
++++ b/drivers/wlan_modules/include/_ieee80211.h
+@@ -474,6 +474,10 @@ struct ieee80211_channel_list {
+ 
+ 
+ 
++/* Add the max length of SSID & IE, Sean@Liteon, 2013-12-11 */
++#define IEEE80211_MAX_LEN_OF_SSID 32
++#define IEEE80211_MAX_VIE_LEN 1024
++
+ struct ieee80211_rateset {
+     u_int8_t                rs_nrates;
+     u_int8_t                rs_rates[IEEE80211_RATE_MAXSIZE];

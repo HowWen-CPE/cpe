@@ -1,0 +1,18 @@
+--- linux-2.6.36-ra4110/arch/mips/ralink/cmdline.c	2012-12-10 16:32:06.000000000 +0800
++++ linux-2.6.36-ra4110_new/arch/mips/ralink/cmdline.c	2012-12-27 11:32:43.921480000 +0800
+@@ -43,7 +43,15 @@
+ 
+ #if defined (CONFIG_RT2880_ROOTFS_IN_FLASH)
+ #ifdef CONFIG_SYSFS
++/*modify image name length, daniel@liteon,2012-10-15----->*/
++#ifdef LITEON_SRC_VALID
++char rt2880_cmdline[]="console=ttyS1,57600";
++#else
+ char rt2880_cmdline[]="console=ttyS1,57600n8 root=/dev/mtdblock5";
++#endif //LITEON_SRC_VALID
++/*<-----daniel@liteon,2012-10-15*/
++
++
+ #else
+ char rt2880_cmdline[]="console=ttyS1,57600n8 root=1f05";
+ #endif

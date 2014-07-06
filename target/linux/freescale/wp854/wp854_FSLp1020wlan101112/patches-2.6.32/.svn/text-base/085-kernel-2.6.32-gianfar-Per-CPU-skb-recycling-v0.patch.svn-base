@@ -1,0 +1,242 @@
+From 0df3947be41dcb15b5ce8597d2d18058c966f89e Mon Sep 17 00:00:00 2001
+From: Tarun Garg <b10794@freescale.com>
+Date: Mon, 1 Feb 2010 23:10:49 +0530
+Subject: [PATCH] gianfar: Per CPU skb recycling
+
+This patch implements per CPU skb recycling buffers. This improves IPv4
+forwarding performance  when packet steering and per cpu tx queues
+are used in gianfar driver.
+
+Signed-off-by: Tarun Garg <b10794@freescale.com>
+---
+ drivers/net/gianfar.c |  129 +++++++++++++++++++++++++++++++++++++++++++------
+ drivers/net/gianfar.h |    3 +
+ 2 files changed, 116 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index fd14938..f37c53a 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -829,12 +829,27 @@ static int gfar_cpu_poll(struct napi_struct *napi, int budget)
+ 	struct gfar_private *priv;
+ 	int amount_pull;
+ 	struct shared_buffer *buf = &per_cpu(gfar_cpu_dev, !cpu).tx_queue;
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	struct gfar_skb_handler *sh = &cpu_dev->sh;
++	unsigned long flags;
++#endif
+ 
+ 	while (budget--) {
+ 		if (atomic_read(&buf->buff_cnt) == 0) {
+ 			break;
+ 		} else {
+ 			skb = buf->buffer[buf->out];
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++			if (sh->recycle_count > 0) {
++				spin_lock_irqsave(&sh->lock, flags);
++				buf->buffer[buf->out] = sh->recycle_queue;
++				sh->recycle_queue = buf->buffer[buf->out]->next;
++				sh->recycle_count--;
++				spin_unlock_irqrestore(&sh->lock, flags);
++			} else {
++				buf->buffer[buf->out] = NULL;
++			}
++#endif
+ 			buf->out = (buf->out + 1) % GFAR_CPU_BUFF_SIZE;
+ 			atomic_dec(&buf->buff_cnt);
+ 
+@@ -959,6 +974,9 @@ void gfar_cpu_dev_init(void)
+ 		hrtimer_init(&cpu_dev->intr_coalesce_timer, CLOCK_MONOTONIC,
+ 			 HRTIMER_MODE_ABS);
+ 		cpu_dev->intr_coalesce_timer.function = gfar_cpu_timer_handle;
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++		gfar_reset_skb_handler(&cpu_dev->sh);
++#endif
+ 
+ 		cpu_dev->enabled = 1;
+ 	}
+@@ -1014,6 +1032,11 @@ int distribute_packet(struct net_device *dev,
+ 	unsigned char *eth;
+ 	struct shared_buffer *buf;
+ 	ktime_t time;
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	struct gfar_skb_handler *sh;
++	struct sk_buff *new_skb;
++	unsigned long flags;
++#endif
+ 
+ 	skb_data = skb->data;
+ 	skb_len = skb->len;
+@@ -1043,6 +1066,25 @@ int distribute_packet(struct net_device *dev,
+ 		kfree_skb(skb);    /* buffer full, drop packet */
+ 		return 0;
+ 	}
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	sh = &cpu_dev->sh;
++	if (sh->recycle_count < sh->recycle_max) {
++		if (buf->buffer[buf->in] != NULL)
++			new_skb = buf->buffer[buf->in];
++		else
++			new_skb = gfar_new_skb(dev);
++
++		/* put the obtained/allocated skb into
++		current cpu's recycle buffer */
++		if (new_skb) {
++			spin_lock_irqsave(&sh->lock, flags);
++			new_skb->next = sh->recycle_queue;
++			sh->recycle_queue = new_skb;
++			sh->recycle_count++;
++			spin_unlock_irqrestore(&sh->lock, flags);
++		}
++	}
++#endif
+ 
+ 	/* inform other cpu which dev this skb was received on */
+ 	skb->dev = dev;
+@@ -3299,7 +3341,12 @@ static int gfar_kfree_skb(struct sk_buff *skb, int qindex)
+ 		qindex = 0;
+ #endif
+ 	if (skb->truesize == priv->rx_queue[qindex]->rx_skbuff_truesize) {
+-		sh = per_cpu_ptr(priv->rx_queue[qindex]->local_sh,
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++		if (rcv_pkt_steering && priv->sps)
++			sh = &__get_cpu_var(gfar_cpu_dev).sh;
++		else
++#endif
++			sh = per_cpu_ptr(priv->rx_queue[qindex]->local_sh,
+ 							smp_processor_id());
+ 		/* loosly checking */
+ 		if (likely(sh->recycle_count < sh->recycle_max)) {
+@@ -3485,6 +3532,10 @@ int gfar_clean_rx_ring(struct gfar_priv_rx_q *rx_queue, int rx_work_limit)
+ 	struct sk_buff *local_head;
+ 	unsigned long flags;
+ 	struct gfar_skb_handler *local_sh;
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	struct sk_buff *local_tail;
++	int temp;
++#endif
+ #endif
+ 
+ 	/* Get the first full descriptor */
+@@ -3498,18 +3549,28 @@ int gfar_clean_rx_ring(struct gfar_priv_rx_q *rx_queue, int rx_work_limit)
+ 				priv->padding;
+ 
+ #ifdef CONFIG_GFAR_SKBUFF_RECYCLING
+-	local_sh = per_cpu_ptr(rx_queue->local_sh, smp_processor_id());
+-	if (local_sh->recycle_queue) {
+-		local_head = local_sh->recycle_queue;
+-		free_skb = local_sh->recycle_count;
+-		local_sh->recycle_queue = NULL;
+-		local_sh->recycle_count = 0;
+-	} else {
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	if (rcv_pkt_steering && priv->sps) {
+ 		local_head = NULL;
+ 		free_skb = 0;
++		sh = &__get_cpu_var(gfar_cpu_dev).sh;
++	} else {
++#endif
++		local_sh = per_cpu_ptr(rx_queue->local_sh, smp_processor_id());
++		if (local_sh->recycle_queue) {
++			local_head = local_sh->recycle_queue;
++			free_skb = local_sh->recycle_count;
++			local_sh->recycle_queue = NULL;
++			local_sh->recycle_count = 0;
++		} else {
++			local_head = NULL;
++			free_skb = 0;
++		}
++		/* global skb_handler for this device */
++		sh = &rx_queue->skb_handler;
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
+ 	}
+-	/* global skb_handler for this device */
+-	sh = &rx_queue->skb_handler;
++#endif
+ #endif
+ 
+ 	while (!((bdp->status & RXBD_EMPTY) || (--rx_work_limit < 0))) {
+@@ -3519,12 +3580,18 @@ int gfar_clean_rx_ring(struct gfar_priv_rx_q *rx_queue, int rx_work_limit)
+ #ifdef CONFIG_GFAR_SKBUFF_RECYCLING
+ 		if (!free_skb && sh->recycle_count) {
+ 			/* refill local buffer */
+-			spin_lock_irqsave(&sh->lock, flags);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++			if (!(rcv_pkt_steering && priv->sps))
++#endif
++				spin_lock_irqsave(&sh->lock, flags);
+ 			local_head = sh->recycle_queue;
+ 			free_skb = sh->recycle_count;
+ 			sh->recycle_queue = NULL;
+ 			sh->recycle_count = 0;
+-			spin_unlock_irqrestore(&sh->lock, flags);
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++			if (!(rcv_pkt_steering && priv->sps))
++#endif
++				spin_unlock_irqrestore(&sh->lock, flags);
+ 		}
+ 		if (local_head) {
+ 			newskb = local_head;
+@@ -3609,11 +3676,41 @@ int gfar_clean_rx_ring(struct gfar_priv_rx_q *rx_queue, int rx_work_limit)
+ 	}
+ 
+ #ifdef CONFIG_GFAR_SKBUFF_RECYCLING
+-	if (free_skb) {
+-		/* return to local_sh for next time */
+-		local_sh->recycle_queue = local_head;
+-		local_sh->recycle_count = free_skb;
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	if (rcv_pkt_steering && priv->sps) {
++		if (free_skb > 0) {
++			/* return left over skb to cpu's recycle buffer */
++			if (sh->recycle_max >= (sh->recycle_count + free_skb)) {
++				temp = free_skb - 1;
++				local_tail = local_head;
++				while (temp--)
++					local_tail = local_tail->next;
++
++				local_tail->next = sh->recycle_queue;
++				sh->recycle_queue = local_head;
++				sh->recycle_count += free_skb;
++			} else {
++				/* free the left over skbs if recycle buffer
++				cant accomodate */
++				temp = free_skb;
++				while (temp--) {
++					local_tail = local_head;
++					local_head = local_head->next;
++					if (local_tail)
++						dev_kfree_skb_any(local_tail);
++				}
++			}
++		}
++	} else {
++#endif
++		if (free_skb) {
++			/* return to local_sh for next time */
++			local_sh->recycle_queue = local_head;
++			local_sh->recycle_count = free_skb;
++		}
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
+ 	}
++#endif
+ 	priv->extra_stats.rx_skbr += howmany_reuse;
+ #endif
+ 
+diff --git a/drivers/net/gianfar.h b/drivers/net/gianfar.h
+index 3d5425b..9281c87 100644
+--- a/drivers/net/gianfar.h
++++ b/drivers/net/gianfar.h
+@@ -1323,6 +1323,9 @@ struct gfar_cpu_dev {
+ 	struct fsl_msg_unit *msg_virtual_rx;
+ 	char int_name[GFAR_INT_NAME_MAX];
+ 	int enabled;
++#ifdef CONFIG_GFAR_SKBUFF_RECYCLING
++	struct gfar_skb_handler sh;
++#endif
+ };
+ 
+ extern int rcv_pkt_steering;
+-- 
+1.5.6.3
+

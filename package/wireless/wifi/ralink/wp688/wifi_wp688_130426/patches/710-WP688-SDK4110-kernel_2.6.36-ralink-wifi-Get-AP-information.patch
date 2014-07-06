@@ -1,0 +1,846 @@
+--- a/rt2860v2/ap/ap_cfg.c
++++ b/rt2860v2/ap/ap_cfg.c
+@@ -14483,3 +14483,178 @@ VOID RTMPIoctlCutTxPowerScope(
+ }
+ #endif
+ /*<-----daniel@liteon,2013-8-19*/
++
++
++/* Get the AP's information associated with APClient, Sean@Liteon, 2013-09-17 */
++/* 
++    ==========================================================================
++    Description:
++        Get the AP's information associated with APClient
++    Arguments:
++        pAdSrc                    Pointer to our adapter
++        wrq                         Pointer to the ioctl argument
++
++    Return Value:
++        None
++
++    Note:
++        Usage: 
++               1.) iwpriv apclii0 assoc_ap_info   ==> Get the AP's information associated with APClient
++    ==========================================================================
++*/
++
++VOID RTMPIoctlAssocAPInfo(
++	IN VOID *pAdSrc, 
++	IN RTMP_IOCTL_INPUT_STRUCT *wrq)
++{
++        PRTMP_ADAPTER pAd = (PRTMP_ADAPTER)pAdSrc;
++	PSTRING msg;
++	UCHAR idx, i;
++	INT Status;
++	PAPCLI_STRUCT pApCliEntry = NULL;
++	BSS_ENTRY *pBss = NULL;
++	STRING		SecurityStr[32] = {0};
++	STRING		RSSIStr[32] = {0};
++	NDIS_802_11_ENCRYPTION_STATUS	ap_cipher = Ndis802_11EncryptionDisabled;
++	NDIS_802_11_AUTHENTICATION_MODE	ap_auth_mode = Ndis802_11AuthModeOpen;
++
++
++	os_alloc_mem(pAd, (UCHAR **)&msg, sizeof(CHAR)*(2048));
++	if (msg == NULL) {
++		DBGPRINT(RT_DEBUG_ERROR, ("%s(): os_alloc_mem() fail!!!\n", __FUNCTION__));
++		return;
++	}
++
++	memset(msg, 0x00, 2048);
++	sprintf(msg, "\n");
++
++	sprintf(msg+strlen(msg), "%-10s%-35s%-20s%-23s%-20s\n", 
++		"Index", "SSID", "BSSID", "Security", "RSSI");
++
++	for (idx = 0; idx < pAd->ApCfg.ApCliInfRunned; idx++)
++	{
++		pApCliEntry = &pAd->ApCfg.ApCliTab[idx];
++
++		pBss = &(pApCliEntry->AssocAPInfo);
++
++		sprintf(msg+strlen(msg), "%-10d", idx + 1);
++	        sprintf(msg+strlen(msg), "%-35s", pBss->Ssid);
++	        sprintf(msg+strlen(msg), "%02X:%02X:%02X:%02X:%02X:%02X   ", 
++				pBss->Bssid[0], pBss->Bssid[1], pBss->Bssid[2],
++				pBss->Bssid[3], pBss->Bssid[4], pBss->Bssid[5]);
++
++		/*Security*/
++		RTMPZeroMemory(SecurityStr, 32);
++		if ((Ndis802_11AuthModeWPA <= pBss->AuthMode) &&
++			(pBss->AuthMode <= Ndis802_11AuthModeWPA1PSKWPA2PSK))
++		{
++			if (pBss->AuthMode == Ndis802_11AuthModeWPANone)
++			{
++				ap_auth_mode = pBss->AuthMode;
++					ap_cipher = pBss->WPA.PairCipher;
++			}
++			else if (pBss->AuthModeAux == Ndis802_11AuthModeOpen)
++			{
++				ap_auth_mode = pBss->AuthMode;
++				if ((ap_auth_mode == Ndis802_11AuthModeWPA) || 
++					(ap_auth_mode == Ndis802_11AuthModeWPAPSK))
++				{
++					if (pBss->WPA.PairCipherAux == Ndis802_11WEPDisabled)
++						ap_cipher = pBss->WPA.PairCipher;
++					else 
++						ap_cipher = Ndis802_11Encryption4Enabled;
++				}
++				else if ((ap_auth_mode == Ndis802_11AuthModeWPA2) || 
++						 (ap_auth_mode == Ndis802_11AuthModeWPA2PSK))
++				{
++					if (pBss->WPA2.PairCipherAux == Ndis802_11WEPDisabled)
++						ap_cipher = pBss->WPA2.PairCipher;
++					else 
++						ap_cipher = Ndis802_11Encryption4Enabled;
++				}
++			}
++			else if ((pBss->AuthMode == Ndis802_11AuthModeWPAPSK) || 
++					 (pBss->AuthMode == Ndis802_11AuthModeWPA2PSK))
++			{
++				if ((pBss->AuthModeAux == Ndis802_11AuthModeWPAPSK) ||
++					(pBss->AuthModeAux == Ndis802_11AuthModeWPA2PSK))
++					ap_auth_mode = Ndis802_11AuthModeWPA1PSKWPA2PSK;
++				else
++					ap_auth_mode = pBss->AuthMode;
++				
++				if (pBss->WPA.PairCipher != pBss->WPA2.PairCipher)
++					ap_cipher = Ndis802_11Encryption4Enabled;
++				else if ((pBss->WPA.PairCipher == pBss->WPA2.PairCipher) &&
++						 (pBss->WPA.PairCipherAux != pBss->WPA2.PairCipherAux))
++					ap_cipher = Ndis802_11Encryption4Enabled;
++				else if ((pBss->WPA.PairCipher == pBss->WPA2.PairCipher) &&
++						 (pBss->WPA.PairCipherAux == pBss->WPA2.PairCipherAux) &&
++						 (pBss->WPA.PairCipherAux != Ndis802_11WEPDisabled))
++					ap_cipher = Ndis802_11Encryption4Enabled;
++				else if ((pBss->WPA.PairCipher == pBss->WPA2.PairCipher) &&
++						 (pBss->WPA.PairCipherAux == pBss->WPA2.PairCipherAux) &&
++						 (pBss->WPA.PairCipherAux == Ndis802_11WEPDisabled))
++					ap_cipher = pBss->WPA.PairCipher;
++			}
++			else if ((pBss->AuthMode == Ndis802_11AuthModeWPA) || 
++					 (pBss->AuthMode == Ndis802_11AuthModeWPA2))
++			{
++				if ((pBss->AuthModeAux == Ndis802_11AuthModeWPA) ||
++					(pBss->AuthModeAux == Ndis802_11AuthModeWPA2))
++					ap_auth_mode = Ndis802_11AuthModeWPA1WPA2;
++				else
++					ap_auth_mode = pBss->AuthMode;
++				
++				if (pBss->WPA.PairCipher != pBss->WPA2.PairCipher)
++					ap_cipher = Ndis802_11Encryption4Enabled;
++				else if ((pBss->WPA.PairCipher == pBss->WPA2.PairCipher) &&
++						 (pBss->WPA.PairCipherAux != pBss->WPA2.PairCipherAux))
++					ap_cipher = Ndis802_11Encryption4Enabled;
++				else if ((pBss->WPA.PairCipher == pBss->WPA2.PairCipher) &&
++						 (pBss->WPA.PairCipherAux == pBss->WPA2.PairCipherAux) &&
++						 (pBss->WPA.PairCipherAux != Ndis802_11WEPDisabled))
++					ap_cipher = Ndis802_11Encryption4Enabled;
++				else if ((pBss->WPA.PairCipher == pBss->WPA2.PairCipher) &&
++						 (pBss->WPA.PairCipherAux == pBss->WPA2.PairCipherAux) &&
++						 (pBss->WPA.PairCipherAux == Ndis802_11WEPDisabled))
++					ap_cipher = pBss->WPA.PairCipher;
++			}
++
++			sprintf(SecurityStr, "%s/%s", GetAuthMode((CHAR)ap_auth_mode), GetEncryptType((CHAR)ap_cipher));		
++		}			
++		else
++		{
++			ap_auth_mode = pBss->AuthMode;
++			ap_cipher = pBss->WepStatus;		
++			if (ap_cipher == Ndis802_11WEPDisabled)
++				sprintf(SecurityStr, "NONE");
++			else if (ap_cipher == Ndis802_11WEPEnabled)
++				sprintf(SecurityStr, "WEP");
++			else
++				sprintf(SecurityStr, "%s/%s", GetAuthMode((CHAR)ap_auth_mode), GetEncryptType((CHAR)ap_cipher));		
++		}
++		
++		sprintf(msg+strlen(msg), "%-23s", SecurityStr);
++
++		/* RSSI string */
++		sprintf(RSSIStr, "%ld dBm/%ld dBm", 
++			(LONG)(pAd->ApCfg.RssiSample.LastRssi0 - pAd->BbpRssiToDbmDelta),
++			(LONG)(pAd->ApCfg.RssiSample.LastRssi1 - pAd->BbpRssiToDbmDelta));
++
++		sprintf(msg+strlen(msg), "%-20s\n", RSSIStr);
++		
++	}
++
++	/* Copy the information into the user buffer */
++	wrq->u.data.length = strlen(msg);
++	Status = copy_to_user(wrq->u.data.pointer, msg, wrq->u.data.length);
++	if (Status)
++	{
++		DBGPRINT(RT_DEBUG_ERROR, ("%s(): copy_to_user() fail!!!\n", __FUNCTION__));
++	}
++
++	os_free_mem(NULL, msg);
++
++}
++/* Sean@liteon, 2013-09-17 */
++
+--- a/rt2860v2/include/os/rt_os.h
++++ b/rt2860v2/include/os/rt_os.h
+@@ -92,6 +92,9 @@
+ #endif
+ /*<-----daniel@liteon,2013-9-4*/
+ 
++/* Get the AP's information associated with APClient, Sean@Liteon, 2013-09-17 */
++#define RTPRIV_IOCTL_ASSOC_AP_INFO (SIOCIWFIRSTPRIV + 0x1B)
++
+ #endif /* CONFIG_STA_SUPPORT */
+ 
+ #ifdef CONFIG_AP_SUPPORT
+@@ -146,6 +149,10 @@
+ #endif
+ /*<-----daniel@liteon,2013-9-4*/
+ 
++/* Get the AP's information associated with APClient, Sean@Liteon, 2013-09-17 */
++#define RTPRIV_IOCTL_ASSOC_AP_INFO (SIOCIWFIRSTPRIV + 0x1B)
++
++
+ #endif /* CONFIG_AP_SUPPORT */
+ 
+ #endif /* _RT_OS_H_ */
+--- a/rt2860v2/include/rt_os_net.h
++++ b/rt2860v2/include/rt_os_net.h
+@@ -282,9 +282,11 @@ VOID RTMPIoctlCutTxPowerScope(
+ #endif
+ /*<-----daniel@liteon,2013-9-4*/
+ 
+-
+-
+-
++/* Get the AP's information associated with APClient, Sean@Liteon, 2013-09-17 */
++VOID RTMPIoctlAssocAPInfo(
++	IN VOID *pAdSrc, 
++	IN RTMP_IOCTL_INPUT_STRUCT *wrq);
++/* Sean@Liteon */
+ 
+ VOID RTMPDrvOpen(
+ 	IN VOID						*pAd);
+--- a/rt2860v2/os/linux/ap_ioctl.c
++++ b/rt2860v2/os/linux/ap_ioctl.c
+@@ -96,6 +96,12 @@ struct iw_priv_args ap_privtab[] = {
+ #endif
+ /*<-----daniel@liteon,2013-9-4*/
+ 
++/* Get the AP's information associated with APClient, Sean@Liteon, 2013-09-17 */
++{ RTPRIV_IOCTL_ASSOC_AP_INFO,
++  IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | 1024,
++  "assoc_ap_info"},
++/* Sean@Liteon */
++
+ #ifndef WIFI_DRIVER_PRE_PORTING
+  /* Added by Bruce Liu, 2012-12-25 */
+ { RTPRIV_IOCTL_ACK_TIMEOUT,
+@@ -450,17 +456,23 @@ INT rt28xx_ap_ioctl(
+ /* Get channel information, Sean@Liteon, 2013-08-29 */
+ 		case RTPRIV_IOCTL_CHANNEL_INFO:
+ 			RTMPIoctlChannelInfo(pAd, wrq);
+-		break;
++			break;
+ /* Sean@Liteon */	
+ 
+ /*add for cutting CutTxPowerScope function, daniel@liteon,2013-9-4----->*/	
+ #ifdef LITEON_SRC_VALID
+ 		case RTPRIV_IOCTL_CutTxPowerScope:
+ 			RTMPIoctlCutTxPowerScope(pAd, wrq);
+-		break;
++			break;
+ #endif
+ /*<-----daniel@liteon,2013-9-4*/
+ 
++/* Get the AP's information associated with APClient, Sean@Liteon, 2013-09-17 */
++		case RTPRIV_IOCTL_ASSOC_AP_INFO:
++			RTMPIoctlAssocAPInfo(pAd, wrq);
++			break;
++/* Sean@Liteon */
++
+ 		default:
+ /*			DBGPRINT(RT_DEBUG_ERROR, ("IOCTL::unknown IOCTL's cmd = 0x%08x\n", cmd)); */
+ 			Status = RTMP_IO_EOPNOTSUPP;
+--- a/rt2860v2/ap/apcli_sync.c
++++ b/rt2860v2/ap/apcli_sync.c
+@@ -432,6 +432,554 @@ VOID APCliAdjustChannelRelatedValue(
+ }
+ /* Ended by Bruce Liu */
+ 
++
++/* 
++	Revision History:
++	Who			When			What
++	--------	----------		---------------------------------------------------
++	Sean Kong	2013-11-26      	Parse AP's Bss Cipher which is associated with current AP-Client
++*/
++extern UCHAR	WPA_OUI[];
++
++extern UCHAR	SES_OUI[];
++
++extern UCHAR	ZeroSsid[32];
++
++static VOID ApCliBssCipherParse(
++	IN OUT	PBSS_ENTRY	pBss)
++{
++	PEID_STRUCT 		 pEid;
++	PUCHAR				pTmp;
++	PRSN_IE_HEADER_STRUCT			pRsnHeader;
++	PCIPHER_SUITE_STRUCT			pCipher;
++	PAKM_SUITE_STRUCT				pAKM;
++	USHORT							Count;
++	INT								Length;
++	NDIS_802_11_ENCRYPTION_STATUS	TmpCipher;
++
++	
++	/* WepStatus will be reset later, if AP announce TKIP or AES on the beacon frame.*/
++	
++	if (pBss->Privacy)
++	{
++		pBss->WepStatus 	= Ndis802_11WEPEnabled;
++	}
++	else
++	{
++		pBss->WepStatus 	= Ndis802_11WEPDisabled;
++	}
++	/* Set default to disable & open authentication before parsing variable IE*/
++	pBss->AuthMode		= Ndis802_11AuthModeOpen;
++	pBss->AuthModeAux	= Ndis802_11AuthModeOpen;
++
++	/* Init WPA setting*/
++	pBss->WPA.PairCipher	= Ndis802_11WEPDisabled;
++	pBss->WPA.PairCipherAux = Ndis802_11WEPDisabled;
++	pBss->WPA.GroupCipher	= Ndis802_11WEPDisabled;
++	pBss->WPA.RsnCapability = 0;
++	pBss->WPA.bMixMode		= FALSE;
++
++	/* Init WPA2 setting*/
++	pBss->WPA2.PairCipher	 = Ndis802_11WEPDisabled;
++	pBss->WPA2.PairCipherAux = Ndis802_11WEPDisabled;
++	pBss->WPA2.GroupCipher	 = Ndis802_11WEPDisabled;
++	pBss->WPA2.RsnCapability = 0;
++	pBss->WPA2.bMixMode 	 = FALSE;
++
++#ifdef WAPI_SUPPORT
++	/* Init WAPI setting*/
++	pBss->WAPI.PairCipher	 = Ndis802_11WEPDisabled;
++	pBss->WAPI.PairCipherAux = Ndis802_11WEPDisabled;
++	pBss->WAPI.GroupCipher	 = Ndis802_11WEPDisabled;
++	pBss->WAPI.RsnCapability = 0;
++	pBss->WAPI.bMixMode 	 = FALSE;
++#endif /* WAPI_SUPPORT */
++	
++	Length = (INT) pBss->VarIELen;
++
++	while (Length > 0)
++	{
++		/* Parse cipher suite base on WPA1 & WPA2, they should be parsed differently*/
++		pTmp = ((PUCHAR) pBss->VarIEs) + pBss->VarIELen - Length;
++		pEid = (PEID_STRUCT) pTmp;
++		switch (pEid->Eid)
++		{
++			case IE_WPA:
++				if (NdisEqualMemory(pEid->Octet, SES_OUI, 3) && (pEid->Len == 7))
++				{
++					pBss->bSES = TRUE;
++					break;
++				}				
++				else if (NdisEqualMemory(pEid->Octet, WPA_OUI, 4) != 1)
++				{
++					/* if unsupported vendor specific IE*/
++					break;
++				}				
++				/*
++					Skip OUI, version, and multicast suite
++					This part should be improved in the future when AP supported multiple cipher suite.
++					For now, it's OK since almost all APs have fixed cipher suite supported.
++				*/
++				pTmp   += 11;
++
++				/* 
++					Cipher Suite Selectors from Spec P802.11i/D3.2 P26.
++					Value	   Meaning
++					0			None
++					1			WEP-40
++					2			Tkip
++					3			WRAP
++					4			AES
++					5			WEP-104
++				*/
++				/* Parse group cipher*/
++				switch (*pTmp)
++				{
++					case 1:
++						pBss->WPA.GroupCipher = Ndis802_11GroupWEP40Enabled;
++						break;
++					case 5:
++						pBss->WPA.GroupCipher = Ndis802_11GroupWEP104Enabled;
++						break;
++					case 2:
++						pBss->WPA.GroupCipher = Ndis802_11Encryption2Enabled;
++						break;
++					case 4:
++						pBss->WPA.GroupCipher = Ndis802_11Encryption3Enabled;
++						break;
++					default:
++						break;
++				}
++				/* number of unicast suite*/
++				pTmp   += 1;
++
++				/* skip all unicast cipher suites*/
++				Count = (pTmp[1]<<8) + pTmp[0];
++				pTmp   += sizeof(USHORT);
++
++				/* Parsing all unicast cipher suite*/
++				while (Count > 0)
++				{
++					/* Skip OUI*/
++					pTmp += 3;
++					TmpCipher = Ndis802_11WEPDisabled;
++					switch (*pTmp)
++					{
++						case 1:
++						case 5: /* Although WEP is not allowed in WPA related auth mode, we parse it anyway*/
++							TmpCipher = Ndis802_11Encryption1Enabled;
++							break;
++						case 2:
++							TmpCipher = Ndis802_11Encryption2Enabled;
++							break;
++						case 4:
++							TmpCipher = Ndis802_11Encryption3Enabled;
++							break;
++						default:
++							break;
++					}
++					
++					if (TmpCipher > pBss->WPA.PairCipher)
++					{
++						/* Move the lower cipher suite to PairCipherAux*/
++						pBss->WPA.PairCipherAux = pBss->WPA.PairCipher;
++						pBss->WPA.PairCipher	= TmpCipher;
++					}
++					else
++					{
++						pBss->WPA.PairCipherAux = TmpCipher;
++					}
++					
++					pTmp++;
++					Count--;
++				}
++				
++				/* 4. get AKM suite counts*/
++				Count = (pTmp[1]<<8) + pTmp[0];
++				pTmp   += sizeof(USHORT);
++				pTmp   += 3;
++				
++				switch (*pTmp)
++				{
++					case 1:
++						/* Set AP support WPA-enterprise mode*/
++						if (pBss->AuthMode == Ndis802_11AuthModeOpen)
++							pBss->AuthMode = Ndis802_11AuthModeWPA;
++						else
++							pBss->AuthModeAux = Ndis802_11AuthModeWPA;
++						break;
++					case 2:
++						/* Set AP support WPA-PSK mode*/
++						if (pBss->AuthMode == Ndis802_11AuthModeOpen)
++							pBss->AuthMode = Ndis802_11AuthModeWPAPSK;
++						else
++							pBss->AuthModeAux = Ndis802_11AuthModeWPAPSK;
++						break;
++					default:
++						break;
++				}
++				pTmp   += 1;
++
++				/* Fixed for WPA-None*/
++				if (pBss->BssType == BSS_ADHOC)
++				{
++					pBss->AuthMode	  = Ndis802_11AuthModeWPANone;
++					pBss->AuthModeAux = Ndis802_11AuthModeWPANone;
++					pBss->WepStatus   = pBss->WPA.GroupCipher;
++					/* Patched bugs for old driver*/
++					if (pBss->WPA.PairCipherAux == Ndis802_11WEPDisabled)
++						pBss->WPA.PairCipherAux = pBss->WPA.GroupCipher;
++				}
++				else
++					pBss->WepStatus   = pBss->WPA.PairCipher;					
++				
++				/* Check the Pair & Group, if different, turn on mixed mode flag*/
++				if (pBss->WPA.GroupCipher != pBss->WPA.PairCipher)
++					pBss->WPA.bMixMode = TRUE;
++				
++				break;
++
++			case IE_RSN:
++				pRsnHeader = (PRSN_IE_HEADER_STRUCT) pTmp;
++				
++				/* 0. Version must be 1*/
++				if (le2cpu16(pRsnHeader->Version) != 1)
++					break;
++				pTmp   += sizeof(RSN_IE_HEADER_STRUCT);
++
++				/* 1. Check group cipher*/
++				pCipher = (PCIPHER_SUITE_STRUCT) pTmp;
++				if (!RTMPEqualMemory(pTmp, RSN_OUI, 3))
++					break;
++
++				/* Parse group cipher*/
++				switch (pCipher->Type)
++				{
++					case 1:
++						pBss->WPA2.GroupCipher = Ndis802_11GroupWEP40Enabled;
++						break;
++					case 5:
++						pBss->WPA2.GroupCipher = Ndis802_11GroupWEP104Enabled;
++						break;
++					case 2:
++						pBss->WPA2.GroupCipher = Ndis802_11Encryption2Enabled;
++						break;
++					case 4:
++						pBss->WPA2.GroupCipher = Ndis802_11Encryption3Enabled;
++						break;
++					default:
++						break;
++				}
++				/* set to correct offset for next parsing*/
++				pTmp   += sizeof(CIPHER_SUITE_STRUCT);
++
++				/* 2. Get pairwise cipher counts*/
++				Count = (pTmp[1]<<8) + pTmp[0];
++				pTmp   += sizeof(USHORT);			
++
++				/* 3. Get pairwise cipher*/
++				/* Parsing all unicast cipher suite*/
++				while (Count > 0)
++				{
++					/* Skip OUI*/
++					pCipher = (PCIPHER_SUITE_STRUCT) pTmp;
++					TmpCipher = Ndis802_11WEPDisabled;
++					switch (pCipher->Type)
++					{
++						case 1:
++						case 5: /* Although WEP is not allowed in WPA related auth mode, we parse it anyway*/
++							TmpCipher = Ndis802_11Encryption1Enabled;
++							break;
++						case 2:
++							TmpCipher = Ndis802_11Encryption2Enabled;
++							break;
++						case 4:
++							TmpCipher = Ndis802_11Encryption3Enabled;
++							break;
++						default:
++							break;
++					}
++					if (TmpCipher > pBss->WPA2.PairCipher)
++					{
++						/* Move the lower cipher suite to PairCipherAux*/
++						pBss->WPA2.PairCipherAux = pBss->WPA2.PairCipher;
++						pBss->WPA2.PairCipher	 = TmpCipher;
++					}
++					else
++					{
++						pBss->WPA2.PairCipherAux = TmpCipher;
++					}
++					pTmp += sizeof(CIPHER_SUITE_STRUCT);
++					Count--;
++				}
++				
++				/* 4. get AKM suite counts*/
++				/*Count	= *(PUSHORT) pTmp;*/
++				Count = (pTmp[1]<<8) + pTmp[0];
++				pTmp   += sizeof(USHORT);
++
++				/* 5. Get AKM ciphers*/
++				/* Parsing all AKM ciphers*/
++				while (Count > 0)
++				{					
++					pAKM = (PAKM_SUITE_STRUCT) pTmp;
++					if (!RTMPEqualMemory(pTmp, RSN_OUI, 3))
++						break;
++
++					switch (pAKM->Type)
++					{
++						case 0:
++							if (pBss->AuthMode == Ndis802_11AuthModeOpen)
++								pBss->AuthMode = Ndis802_11AuthModeWPANone;
++							else
++								pBss->AuthModeAux = Ndis802_11AuthModeWPANone;
++							break;                                                        
++						case 1:
++							/* Set AP support WPA-enterprise mode*/
++							if (pBss->AuthMode == Ndis802_11AuthModeOpen)
++								pBss->AuthMode = Ndis802_11AuthModeWPA2;
++							else
++								pBss->AuthModeAux = Ndis802_11AuthModeWPA2;
++							break;
++						case 2:
++							/* Set AP support WPA-PSK mode*/
++							if (pBss->AuthMode == Ndis802_11AuthModeOpen)
++								pBss->AuthMode = Ndis802_11AuthModeWPA2PSK;
++							else
++								pBss->AuthModeAux = Ndis802_11AuthModeWPA2PSK;
++
++
++							break;
++						default:
++							if (pBss->AuthMode == Ndis802_11AuthModeOpen)
++								pBss->AuthMode = Ndis802_11AuthModeMax;
++							else
++								pBss->AuthModeAux = Ndis802_11AuthModeMax;
++							break;
++					}
++					pTmp   += sizeof(AKM_SUITE_STRUCT);
++					Count--;
++				}
++
++				/* Fixed for WPA-None*/
++				if (pBss->BssType == BSS_ADHOC)
++				{
++					pBss->WPA.PairCipherAux = pBss->WPA2.PairCipherAux;
++					pBss->WPA.GroupCipher	= pBss->WPA2.GroupCipher;
++					pBss->WepStatus 		= pBss->WPA.GroupCipher;
++					/* Patched bugs for old driver*/
++					if (pBss->WPA.PairCipherAux == Ndis802_11WEPDisabled)
++						pBss->WPA.PairCipherAux = pBss->WPA.GroupCipher;
++				}
++				pBss->WepStatus   = pBss->WPA2.PairCipher;					
++				
++				/* 6. Get RSN capability*/
++				/*pBss->WPA2.RsnCapability = *(PUSHORT) pTmp;*/
++				pBss->WPA2.RsnCapability = (pTmp[1]<<8) + pTmp[0];
++				pTmp += sizeof(USHORT);
++				
++				/* Check the Pair & Group, if different, turn on mixed mode flag*/
++				if (pBss->WPA2.GroupCipher != pBss->WPA2.PairCipher)
++					pBss->WPA2.bMixMode = TRUE;
++				
++				break;
++#ifdef WAPI_SUPPORT
++			case IE_WAPI:
++				pRsnHeader = (PRSN_IE_HEADER_STRUCT) pTmp;
++
++				/* 0. The version number must be 1*/
++				if (le2cpu16(pRsnHeader->Version) != 1)
++					break;
++				pTmp += sizeof(RSN_IE_HEADER_STRUCT);
++
++				/* 1. Get AKM suite counts*/
++				NdisMoveMemory(&Count, pTmp, sizeof(USHORT));	
++	    			Count = cpu2le16(Count);				
++				pTmp += sizeof(USHORT);
++
++				/* 2. Get AKM ciphers*/
++				pAKM = (PAKM_SUITE_STRUCT) pTmp;
++				if (!RTMPEqualMemory(pTmp, WAPI_OUI, 3))
++					break;
++
++				switch (pAKM->Type)
++				{					
++					case 1:
++						/* Support WAI certificate authentication*/
++						pBss->AuthMode = Ndis802_11AuthModeWAICERT;						
++						break;
++					case 2:
++						/* Support WAI PSK*/
++						pBss->AuthMode = Ndis802_11AuthModeWAIPSK;						
++						break;
++					default:
++						break;
++				}
++				pTmp += (Count * sizeof(AKM_SUITE_STRUCT));
++
++				/* 3. Get pairwise cipher counts*/
++				NdisMoveMemory(&Count, pTmp, sizeof(USHORT));	
++	    			Count = cpu2le16(Count);	
++				pTmp += sizeof(USHORT);			
++
++				/* 4. Get pairwise cipher*/
++				/* Parsing all unicast cipher suite*/
++				while (Count > 0)
++				{
++					if (!RTMPEqualMemory(pTmp, WAPI_OUI, 3))
++						break;
++				
++					/* Skip OUI*/
++					pCipher = (PCIPHER_SUITE_STRUCT) pTmp;					
++					TmpCipher = Ndis802_11WEPDisabled;
++					switch (pCipher->Type)
++					{
++						case 1:						
++							TmpCipher = Ndis802_11EncryptionSMS4Enabled;
++							break;
++						default:
++							break;
++					}
++					
++					if (TmpCipher > pBss->WAPI.PairCipher)
++					{
++						/* Move the lower cipher suite to PairCipherAux*/
++						pBss->WAPI.PairCipherAux = pBss->WAPI.PairCipher;
++						pBss->WAPI.PairCipher	 = TmpCipher;
++					}
++					else
++					{
++						pBss->WAPI.PairCipherAux = TmpCipher;
++					}
++					pTmp += sizeof(CIPHER_SUITE_STRUCT);
++					Count--;
++				}
++				
++				/* 5. Check group cipher*/
++				if (!RTMPEqualMemory(pTmp, WAPI_OUI, 3))
++					break;
++				
++				pCipher = (PCIPHER_SUITE_STRUCT) pTmp;				
++				/* Parse group cipher*/
++				switch (pCipher->Type)
++				{
++					case 1:
++						pBss->WAPI.GroupCipher = Ndis802_11EncryptionSMS4Enabled;
++						break;
++					default:
++						break;
++				}
++				/* set to correct offset for next parsing*/
++				pTmp += sizeof(CIPHER_SUITE_STRUCT);
++
++				/* update the encryption type*/
++				pBss->WepStatus = pBss->WAPI.PairCipher;
++
++				/* update the WAPI capability*/
++				pBss->WAPI.RsnCapability = (pTmp[1]<<8) + pTmp[0];
++				pTmp += sizeof(USHORT);
++
++				break;
++#endif /* WAPI_SUPPORT */				
++			default:
++				break;
++		}
++		Length -= (pEid->Len + 2);
++	}
++}
++
++
++/* 
++    ==========================================================================
++    Description:
++        Set the AP information to the AP-Client's BSS Entry
++    ==========================================================================
++ */
++static VOID ApCliBssEntrySet(
++	IN PAPCLI_STRUCT pApCliEntry,
++	IN PUCHAR pBssid, 
++	IN CHAR Ssid[], 
++	IN UCHAR SsidLen, 
++	IN UCHAR BssType, 
++	IN USHORT BeaconPeriod, 
++	IN PCF_PARM pCfParm, 
++	IN USHORT AtimWin, 
++	IN USHORT CapabilityInfo, 
++	IN USHORT LengthVIE,	
++	IN PNDIS_802_11_VARIABLE_IEs pVIE) 
++{
++	BSS_ENTRY *pBss = &(pApCliEntry->AssocAPInfo);
++
++	COPY_MAC_ADDR(pBss->Bssid, pBssid);
++
++	if (SsidLen > 0)
++	{
++		/* For hidden SSID AP, it might send beacon with SSID len equal to 0*/
++		/* Or send beacon /probe response with SSID len matching real SSID length,*/
++		/* but SSID is all zero. such as "00-00-00-00" with length 4.*/
++		/* We have to prevent this case overwrite correct table*/
++		if (NdisEqualMemory(Ssid, ZeroSsid, SsidLen) == 0)
++		{
++		    NdisZeroMemory(pBss->Ssid, MAX_LEN_OF_SSID);
++			NdisMoveMemory(pBss->Ssid, Ssid, SsidLen);
++			pBss->SsidLen = SsidLen;
++			pBss->Hidden = 0;
++		}
++	}
++	else
++	{
++		/* avoid  Hidden SSID form beacon to overwirite correct SSID from probe response */
++		if (NdisEqualMemory(pBss->Ssid, ZeroSsid, pBss->SsidLen))
++		{
++			NdisZeroMemory(pBss->Ssid, MAX_LEN_OF_SSID);
++			pBss->SsidLen = 0;
++		}
++	}
++	
++	pBss->BssType = BssType;
++	pBss->BeaconPeriod = BeaconPeriod;
++	if (BssType == BSS_INFRA) 
++	{
++		if (pCfParm->bValid) 
++		{
++			pBss->CfpCount = pCfParm->CfpCount;
++			pBss->CfpPeriod = pCfParm->CfpPeriod;
++			pBss->CfpMaxDuration = pCfParm->CfpMaxDuration;
++			pBss->CfpDurRemaining = pCfParm->CfpDurRemaining;
++		}
++	} 
++	else 
++	{
++		pBss->AtimWin = AtimWin;
++	}
++
++	NdisGetSystemUpTime(&pBss->LastBeaconRxTime);
++	pBss->CapabilityInfo = CapabilityInfo;
++	/* The privacy bit indicate security is ON, it maight be WEP, TKIP or AES*/
++	/* Combine with AuthMode, they will decide the connection methods.*/
++	pBss->Privacy = CAP_IS_PRIVACY_ON(pBss->CapabilityInfo);
++
++	/* New for microsoft Fixed IEs*/
++	pBss->FixIEs.BeaconInterval = BeaconPeriod;
++	pBss->FixIEs.Capabilities = CapabilityInfo;
++
++	/* New for microsoft Variable IEs*/
++	if (LengthVIE != 0)
++	{
++		pBss->VarIELen = LengthVIE;
++		NdisMoveMemory(pBss->VarIEs, pVIE, pBss->VarIELen);
++	}
++	else
++	{
++		pBss->VarIELen = 0;
++	}
++
++	ApCliBssCipherParse(pBss);
++	
++}
++/* End, SeanKong@Liteon, 2013-11-26 */
++
++
+ /* 
+     ==========================================================================
+     Description:
+@@ -606,6 +1154,15 @@ static VOID ApCliPeerProbeRspAtJoinActio
+ 			matchFlag = TRUE;
+ 
+ 
++		/* 
++		  * Parse the AP's Bss Cipher which is associated with current AP-Client 
++		  * and save to pApCliEntry->AssocAPInfo, 
++		  * SeanKong@Liteon, 2013-11-26
++		  */
++		ApCliBssEntrySet(pApCliEntry, Bssid, (PCHAR)Ssid, SsidLen, BssType, BeaconPeriod, 
++			&Cf, AtimWin, CapabilityInfo, LenVIE, pVIE);
++		/* End, SeanKong@Liteon, 2013-11-26 */
++
+ 		DBGPRINT(RT_DEBUG_TRACE, ("SYNC - bssidEqualFlag=%d, ssidEqualFlag=%d, matchFlag=%d\n", bssidEqualFlag, ssidEqualFlag, matchFlag));
+ 		if (matchFlag)
+ 		{
+--- a/rt2860v2/include/rtmp.h
++++ b/rt2860v2/include/rtmp.h
+@@ -2997,6 +2997,8 @@ typedef struct _APCLI_STRUCT {
+ 	UCHAR SNonce[32];	/* SNonce for WPA-PSK */
+ 	UCHAR GNonce[32];	/* GNonce for WPA-PSK from authenticator */
+ 
++	BSS_ENTRY AssocAPInfo; /* For AP's information, SeanKong@Liteon, 2013-11-26 */
++	
+ #ifdef WSC_AP_SUPPORT
+ 	WSC_CTRL WscControl;
+ #endif /* WSC_AP_SUPPORT */

@@ -1,0 +1,42 @@
+From 5f4cb79bc15329b72676104ec09878d068eadea0 Mon Sep 17 00:00:00 2001
+From: Tarun Garg <b10794@freescale.com>
+Date: Fri, 5 Mar 2010 12:44:15 +0530
+Subject: [PATCH] gianfar: prevents user to change mtu when RPS is enabled
+
+MTU change makes all skbs of a device to be destroyed
+and re-allocated according to new mtu size. But the skbs
+in cpu queues (used in RPS) cant be destroyed when mtu
+of a device changes since cpu queue contains skbs from all
+devices. If mtu of one of the device is increased and a
+smaller size skb is recycled to this device from the cpu
+queue, then the system can panic when a packet bigger
+than skb size is received and put into this skb.
+
+If MTU change is required along with RPS, then MTU of all
+ETSEC devices should be changed to the new value before
+RPS is enabled in the system.
+---
+ drivers/net/gianfar.c |    7 +++++++
+ 1 files changed, 7 insertions(+), 0 deletions(-)
+
+diff --git a/drivers/net/gianfar.c b/drivers/net/gianfar.c
+index 07d20f6..b72920b 100644
+--- a/drivers/net/gianfar.c
++++ b/drivers/net/gianfar.c
+@@ -2965,6 +2965,13 @@ static int gfar_change_mtu(struct net_device *dev, int new_mtu)
+ 	int oldsize = priv->rx_buffer_size;
+ 	int frame_size = new_mtu + ETH_HLEN;
+ 
++#ifdef CONFIG_GFAR_SW_PKT_STEERING
++	if (rcv_pkt_steering && priv->sps) {
++		printk(KERN_ERR "Can't change mtu with rcv_pkt_steering on\n");
++		return -EINVAL;
++	}
++#endif
++
+ 	if (priv->vlgrp)
+ 		frame_size += VLAN_HLEN;
+ 
+-- 
+1.5.6.3
+

@@ -1,0 +1,241 @@
+#!/bin/sh /etc/rc.common
+BIN=/usr/sbin/xl2tpd
+RUN_D=/var/run/xl2tpd
+PID_F=$RUN_D/xl2tpd_server.pid
+L2TPD_CONFIG_FILE=/etc/xl2tpd/l2tpServer/xl2tpd_server.conf
+L2TPD_CONFIG_RFILE=/tmp/xl2tpd_server.conf
+PPP_CONFIG_FILE=/etc/ppp/l2tpServer/options.xl2tpd_server
+PPP_CONFIG_RFILE=/tmp/options.xl2tpd_server
+CHAP_FILE=/etc/ppp/chap-secrets
+CHAP_RFILE=/tmp/chap-secrets
+IPSEC_CONFIG_FILE=/etc/ipsec.conf
+IPSEC_CONFIG_RFILE=/tmp/ipsec.conf
+IPSEC_PSK_SECRETS=/etc/ipsec.secrets
+IPSEC_PSK_RSECRETS=/tmp/ipsec.secrets
+TRIGGER=80
+TRIGGER_STOP=80
+LANTRIGGER=80
+LANTRIGGER_STOP=80
+log_msg="L2TP-server"
+
+ipsec_config () {
+    #configure IPsec conf and secret
+   	rm -rf $IPSEC_CONFIG_RFILE
+   	rm -rf $IPSEC_PSK_RSECRETS
+   	touch $IPSEC_PSK_RSECRETS
+   	touch $IPSEC_CONFIG_RFILE
+   	[ -L $IPSEC_PSK_SECRETS  ] || ln -sf $IPSEC_PSK_RSECRETS $IPSEC_PSK_SECRETS
+
+   	echo "version 2.0" >> $IPSEC_CONFIG_FILE
+   	echo "" >> $IPSEC_CONFIG_FILE
+   	echo "config setup" >> $IPSEC_CONFIG_FILE
+   	echo "	nat_traversal=yes" >> $IPSEC_CONFIG_FILE
+   	echo "	nhelpers=0" >> $IPSEC_CONFIG_FILE
+   	echo "	plutodebug=none" >> $IPSEC_CONFIG_FILE
+   	echo "	protostack=klips" >> $IPSEC_CONFIG_FILE
+   	echo "	virtual_private=%v4:172.16.0.0/12,%v4:192.168.0.0/16,%v4:!192.168.1.0/24,%v4:10.0.0.0/8" >> $IPSEC_CONFIG_FILE
+
+   	i=0
+   	limit=$(nvram get wan_num)
+   	WAN_IPADDR="$(nvram get wan0_ipaddr)"
+   	if_str=""
+   	while [ $i -lt $limit ];
+   	do
+       	[ -n "$(nvram get wan${i}_ipaddr)" ] && \
+           	if_str="${if_str}ipsec${i}=$(nvram get wan${i}_ifname) "
+       	i=$(($i+1))
+   	done
+
+   	echo "	interfaces=\"$if_str\"" >> $IPSEC_CONFIG_FILE
+   	echo "" >> $IPSEC_CONFIG_FILE
+	echo "conn l2tp-psk">>$IPSEC_CONFIG_FILE      
+	echo "	authby=secret">>$IPSEC_CONFIG_FILE        
+	echo "	pfs=no">>$IPSEC_CONFIG_FILE        
+	echo "	auto=add">>$IPSEC_CONFIG_FILE        
+	echo "	rekey=no">>$IPSEC_CONFIG_FILE        
+	echo "	left=$WAN_IPADDR">>$IPSEC_CONFIG_FILE        
+	echo "	leftprotoport=17/1701">>$IPSEC_CONFIG_FILE        
+	echo "	right=%any">>$IPSEC_CONFIG_FILE        
+	echo "	rightprotoport=17/%any">>$IPSEC_CONFIG_FILE        
+	echo "	rightsubnet=vhost:%priv,%no">>$IPSEC_CONFIG_FILE        
+	echo "" >> $IPSEC_CONFIG_FILE
+	echo "include /etc/ipsec.d/examples/no_oe.conf" >>$IPSEC_CONFIG_FILE 
+	#configure IPsec secrets
+   	echo "$(nvram get wan0_ipaddr) %any : PSK \"$(nvram show l2tpd_rule 0 psk_value)\"" >> $IPSEC_PSK_SECRETS
+}
+
+local_config () {
+    local i;
+    local limit;
+    
+
+    startip="$(nvram show l2tpd_rule 0 remoteip)"
+    range_start="$(echo ${startip} | cut -f4 -d".")"
+    remoteip_range="$(nvram show l2tpd_rule 0 remoteip_range)"
+    range_end="$((${remoteip_range} + ${range_start} - 1))"
+    endip="${startip%.*}.$range_end"
+ 
+    # l2tpd_server.conf
+    rm -rf $L2TPD_CONFIG_RFILE
+    echo "[global]" >> $L2TPD_CONFIG_FILE
+    [ "$(nvram show l2tpd_rule 0 l2tpOIPsec_enable)" = "0" ] && \
+    	echo ";ipsec saref = yes" >> $L2TPD_CONFIG_FILE
+    [ "$(nvram show l2tpd_rule 0 l2tpOIPsec_enable)" = "1" ] && \
+    	echo "ipsec saref = yes" >> $L2TPD_CONFIG_FILE
+    echo "" >> $L2TPD_CONFIG_FILE
+    echo "[lns default]" >> $L2TPD_CONFIG_FILE
+    echo "ip range = $startip-$endip" >> $L2TPD_CONFIG_FILE
+    echo "local ip = $(nvram show l2tpd_rule 0 localip)" >> $L2TPD_CONFIG_FILE
+    echo "ppp debug = yes" >> $L2TPD_CONFIG_FILE
+    echo "pppoptfile = $PPP_CONFIG_FILE" >> $L2TPD_CONFIG_FILE
+    echo "length bit = yes" >> $L2TPD_CONFIG_FILE
+    echo "" >> $L2TPD_CONFIG_FILE
+          
+    # options.l2tpd_server
+    rm -rf $PPP_CONFIG_RFILE
+    echo "auth" >> $PPP_CONFIG_FILE
+    echo "name \"$(nvram show l2tpd_rule 0 name)\"" >> $PPP_CONFIG_FILE
+    echo "ipcp-accept-local" >> $PPP_CONFIG_FILE
+    echo "ipcp-accept-remote" >> $PPP_CONFIG_FILE
+    echo "lcp-echo-failure 3" >> $PPP_CONFIG_FILE
+    echo "lcp-echo-interval $(nvram show l2tpd_rule 0 redialperiod)" >> $PPP_CONFIG_FILE
+    echo "mtu $(nvram show l2tpd_rule 0 mtu)" >> $PPP_CONFIG_FILE
+    echo "mru $(nvram show l2tpd_rule 0 mru)" >> $PPP_CONFIG_FILE
+    echo "debug" >> $PPP_CONFIG_FILE
+    echo "idle 1800" >> $PPP_CONFIG_FILE
+    echo "lock" >> $PPP_CONFIG_FILE
+    echo "noccp" >> $PPP_CONFIG_FILE
+    echo "connect-delay 5000" >> $PPP_CONFIG_FILE
+    [ "$(nvram show l2tpd_rule 0 proxyarp_enable)" = "0" ] && \
+    	echo "noproxyarp" >> $PPP_CONFIG_FILE
+    [ "$(nvram show l2tpd_rule 0 proxyarp_enable)" = "1" ] && \
+    	echo "proxyarp" >> $PPP_CONFIG_FILE
+    [ "$(nvram show l2tpd_rule 0 dns_auto_enable)" = "0" ] && \
+    	echo "ms-dns $(nvram show l2tpd_rule 0 dns)" >> $PPP_CONFIG_FILE
+    [ "$(nvram show l2tpd_rule 0 dns_auto_enable)" = "1" ] && \
+    	echo "ms-dns $(nvram get lan0_ipaddr)" >> $PPP_CONFIG_FILE
+    
+    # auth type chap
+    [ "$(nvram show l2tpd_rule 0 chap_enable)" = "0" ] && \
+   		echo "refuse-chap" >> $PPP_CONFIG_FILE 
+    [ "$(nvram show l2tpd_rule 0 chap_enable)" = "1" ] && \
+    	echo "require-chap" >> $PPP_CONFIG_FILE
+          
+    # auth type mschap
+    [ "$(nvram show l2tpd_rule 0 mschap_enable)" = "0" ] && \
+    	echo "refuse-mschap" >> $PPP_CONFIG_FILE 
+    [ "$(nvram show l2tpd_rule 0 mschap_enable)" = "1" ] && \
+    	echo "require-mschap" >> $PPP_CONFIG_FILE 
+          
+    # auth type mschap-v2
+    [ "$(nvram show l2tpd_rule 0 mschapv2_enable)" = "0" ] && \
+    	echo "refuse-mschap-v2" >> $PPP_CONFIG_FILE
+    [ "$(nvram show l2tpd_rule 0 mschapv2_enable)" = "1" ] && \
+    	echo "require-mschap-v2" >> $PPP_CONFIG_FILE
+    [ "$(nvram show l2tpd_rule 0 eap_enable)" = "0" ] && \
+    	echo "refuse-eap" >> $PPP_CONFIG_FILE
+    [ "$(nvram show l2tpd_rule 0 eap_enable)" = "1" ] && \
+    	echo "require-eap" >> $PPP_CONFIG_FILE
+  
+    # auth type pap
+    [ "$(nvram show l2tpd_rule 0 pap_enable)" = "0" ] && \
+    	echo "refuse-pap" >> $PPP_CONFIG_FILE
+    [ "$(nvram show l2tpd_rule 0 pap_enable)" = "1" ] && \
+    	echo "require-pap" >> $PPP_CONFIG_FILE
+ 
+    echo "" >> $PPP_CONFIG_FILE
+    # chap-secrets
+	i=0
+	limit=$(nvram get l2tpd_user_rule_num)
+
+  	rm -rf $CHAP_RFILE
+  	touch $CHAP_RFILE
+
+	#echo "#USERNAME  PROVIDER  PASSWORD  IPADDRESS" >> $CHAP_RFILE
+    #echo "\"LITEON\" \"LITEON\" \"LITEON\" *" >> $CHAP_RFILE
+
+    # For sharing with L2TP, provider should be *.
+	# provider=$(nvram show l2tpd_rule 0 name)
+	while [ $i -lt $limit ]; do
+    	[ "$(nvram show l2tpd_user_rule $i enable)" = "1" ] && {
+       		username=$(nvram show l2tpd_user_rule $i username)
+       		passwd=$(nvram show l2tpd_user_rule $i passwd)
+       		echo "\"$username\" * \"$passwd\" *" >> $CHAP_FILE
+       	}
+
+       	[ "$(nvram show l2tpd_user_rule $i enable)" = "0" ] && {
+       		username=$(nvram show l2tpd_user_rule $i username)
+       		passwd=$(nvram show l2tpd_user_rule $i passwd)
+       		echo "\#\"$username\" * \"$passwd\" *" >> $CHAP_FILE
+       	}
+       	i=$(($i+1))
+    done
+}
+
+start () {
+	feature_judge l2tps
+	value=$?
+	[ $value = "1" ] || return $err
+    [ "$(nvram show l2tpd_rule 0 enable)" = "1" ] && {
+        local_config
+    [ -n "$(pidof xl2tpd)" ] && stop
+
+	wanipaddr="$(nvram get wan0_ipaddr)"
+	wandevice="$(nvram get wan0_ifname)"
+	lanipaddr="$(nvram get lan0_ipaddr)"
+	lanmask="$(nvram get lan0_mask)"
+	landevice="$(nvram get lan0_ifname)"
+    [ "$(nvram show l2tpd_rule 0 l2tpOIPsec_enable)" = "1" ] && {
+    	ipsec_config
+        /usr/sbin/iptables -t filter -F EZP_FL_IPSEC && \ 
+        /usr/sbin/iptables -t filter -A EZP_FL_IPSEC -p udp -i "$wandevice" -d "$wanipaddr" --dport 500 -j ACCEPT
+   		sleep 2
+   		ipsec setup --start >/dev/null 2>&1
+   		/usr/sbin/iptables -t filter -A SMB_L2TPD_CONNECT -p udp -i $landevice -s $lanipaddr/$lanmask --dport 1701 -j EZP_LOG_DROP
+	}
+	# kernel modules
+	for m in arc4 sha1 slhc crc-ccitt slhc ppp_generic ppp_async ppp_mppe_mppc; do
+	  insmod $m >/dev/null 2>&1
+    done
+
+        #allow l2tp connect to access into DUT from WAN,add by kissth 2014-03-07
+		[ "$(nvram show l2tpd_rule 0 l2tpOIPsec_enable)" = "0" ] && {
+		   /usr/sbin/iptables -t filter -A SMB_L2TPD_CONNECT -p udp -i $wandevice -d $wanipaddr --dport 1701 -m state --state NEW -j EZP_LOG_ACCEPT
+   		}
+		startip="$(nvram show l2tpd_rule 0 remoteip)"
+		range_init="$(echo ${startip} | cut -f4 -d".")"
+		remoteip_range="$(nvram show l2tpd_rule 0 remoteip_range)"
+		prefix="$(echo ${startip} | cut -f1-3 -d".")"
+		endip="${prefix}.$((${remoteip_range} + ${range_init} - 1))"
+		#dig a hole 
+        /usr/sbin/iptables -t filter -I SMB_L2TPD_FORWARD -m state --state NEW -m iprange --src-range "${startip}"-"${endip}" -d $(nvram get lan0_ipaddr)/$(nvram get lan0_mask) -j ACCEPT
+		myPath="/var/run/xl2tpd/"
+		[ ! -d "$myPath" ] && mkdir "$myPath"
+		xl2tpd -c $L2TPD_CONFIG_RFILE -p $PID_F
+    } 
+}
+
+stop () {
+	[ "$(nvram show l2tpd_rule 0 enable)" = "1" ] && {
+		#fix the hole
+    	/usr/sbin/iptables -t filter -F SMB_L2TPD_FORWARD 
+		#clear SMB_L2TPD_CONNECT
+		/usr/sbin/iptables -t filter -F SMB_L2TPD_CONNECT
+		#These codes will help clean the activity connections. 
+    	[ "$(nvram show l2tpd_rule 0 l2tpOIPsec_enable)" = "1" ] && {
+    		ipsec setup --stop >/dev/null 2>&1
+    		/usr/sbin/iptables -t filter -F EZP_FL_IPSEC   
+    		rm -rf $IPSEC_CONFIG_RFILE
+    		rm -rf $IPSEC_PSK_RSECRETS
+    		touch $IPSEC_PSK_RSECRETS
+    		touch $IPSEC_CONFIG_RFILE
+    	}
+    	kill -9 "$(cat /var/run/xl2tpd/xl2tpd_server.pid)" >/dev/null 2>&1
+    	ppp_pid=`ps w | grep l2tpServer | awk '{print $1}'`
+    	[ -n "$ppp_pid" ] && {
+			for pid_ppp in $ppp_pid ; do
+	  			kill -9 $pid_ppp >/dev/null 2>&1
+    		done
+    	}
+    }
+}

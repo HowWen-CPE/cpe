@@ -1,0 +1,49 @@
+From ae8f0477056d1e850ec1b26aecc26f8dcd139c9b Mon Sep 17 00:00:00 2001
+From: Eric Dumazet <eric.dumazet@gmail.com>
+Date: Thu, 29 Oct 2009 00:10:37 +0000
+Subject: [PATCH 1/1] net: fix kmemcheck annotations
+
+struct sk_buff kmemcheck annotations enlarged this structure by 8/16 bytes
+
+Fix this by moving 'protocol' inside flags1 bitfield,
+and queue_mapping inside flags2 bitfield.
+
+Signed-off-by: Eric Dumazet <eric.dumazet@gmail.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ include/linux/skbuff.h |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
+index 52804b5..964437c 100644
+--- a/include/linux/skbuff.h
++++ b/include/linux/skbuff.h
+@@ -356,8 +356,8 @@ struct sk_buff {
+ 				ipvs_property:1,
+ 				peeked:1,
+ 				nf_trace:1;
++	__be16			protocol:16;
+ 	kmemcheck_bitfield_end(flags1);
+-	__be16			protocol;
+ 
+ 	void			(*destructor)(struct sk_buff *skb);
+ #if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
+@@ -373,7 +373,6 @@ struct sk_buff {
+ #endif
+ 
+ 	int			iif;
+-	__u16			queue_mapping;
+ #ifdef CONFIG_NET_SCHED
+ 	__u16			tc_index;	/* traffic control index */
+ #ifdef CONFIG_NET_CLS_ACT
+@@ -382,6 +381,7 @@ struct sk_buff {
+ #endif
+ 
+ 	kmemcheck_bitfield_begin(flags2);
++	__u16			queue_mapping:16;
+ #ifdef CONFIG_IPV6_NDISC_NODETYPE
+ 	__u8			ndisc_nodetype:2;
+ #endif
+-- 
+1.5.6.5
+
