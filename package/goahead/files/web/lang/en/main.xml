@@ -278,7 +278,7 @@
 <message msgid="dash_info ifstat wan up" msgstr="Up" />
 <message msgid="dash_info ifstat lan"	msgstr="LAN" />
 <message msgid="dash_info ifstat lan up" msgstr="Up" />
-<message msgid="dash_info ifstat wlan" msgstr="WLAN2.4G" />
+<message msgid="dash_info ifstat wlan" msgstr="WLAN" />
 <message msgid="dash_info ifstat-1 wlan" msgstr="WLAN2.4G-1" />
 <message msgid="dash_info ifstat-2 wlan" msgstr="WLAN2.4G-2" />
 <message msgid="dash_info ifstat1 wlan" msgstr="WLAN5G" />

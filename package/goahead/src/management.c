@@ -2268,7 +2268,7 @@ int getWLANStatistics(int eid, webs_t wp, int argc, char_t **argv)
 			sprintf(txBStr, "%lld", WLAN2GTXBytesPerSecSta);
 			sprintf(rxBStr, "%lld", WLAN2GRXBytesPerSecSta);
 
-			websWrite(wp, T("<tr ><td width='10%'><center><span class='table_left'>%s</span></center></td>"), "WLAN2.4G");
+			websWrite(wp, T("<tr ><td width='10%'><center><span class='table_left'>%s</span></center></td>"), "WLAN");
 			websWrite(wp, T("<td width='19%'><center><span class='table_font'>%s</span></center></td>"), txStr);
 			websWrite(wp, T("<td width='19%'><center><span class='table_font'>%s</span></center></td>"), rxStr);
 			websWrite(wp, T("<td width='14%'><center><span class='table_font'>%s</span></center></td>"), coStr);
