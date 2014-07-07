@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 [ $# = 0 ] && { echo "  $0 <group>"; exit; }
 . /etc/functions.sh

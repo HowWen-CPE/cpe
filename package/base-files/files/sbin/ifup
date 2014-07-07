@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh
 
 [ $# = 0 ] && { echo "  $0 <group>"; exit; }
 . /etc/functions.sh

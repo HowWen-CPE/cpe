@@ -550,7 +550,9 @@ int get_sta_assoc_bssid(int radio, char *bssid)
     char c;
     //Get the last field on line containing 'Access Point' but doesn't contains Not-Associated
     sprintf(cmd, "iwconfig %s | awk '/Access Point/{if(0==match($0, \"Not-Associated\")){print $NF}}'> /tmp/sta_bssid", ifacename);
-    EXE_COMMAND(cmd);
+	system(cmd);
+	//EXE_COMMAND(cmd);
+
     fin = fopen("/tmp/sta_bssid","r");
 
 	if(!fin) {
@@ -571,7 +573,9 @@ int get_sta_assoc_bssid(int radio, char *bssid)
 	}
 	
     fclose(fin);
-    EXE_COMMAND("rm -f /tmp/sta_bssid");    
+	//printf("bssid = %s\n", bssid);
+    //EXE_COMMAND("rm -f /tmp/sta_bssid");    
+    system("rm -f /tmp/sta_bssid");
     /*Get STA BSSID From NVRAM*/
     return T_SUCCESS;
 }
@@ -607,7 +611,8 @@ int get_sta_assoc_rssi(int radio, char *rssi)
 	//Chged by Andy Yu in 20140224: Assocapinfo Information Format Chged
 	sprintf(cmd, "wlanconfig %s list assocapinfo "
 		"| awk '/Chain/{gsub(\"dBm\",\"\"); print substr($0,13)}' > /tmp/rssi.dat", ifacename);
-	EXE_COMMAND(cmd);
+	//EXE_COMMAND(cmd);
+	system(cmd);
 
     FILE *fp;
     if (NULL == (fp = fopen("/tmp/rssi.dat", "r"))) {
@@ -638,7 +643,8 @@ int get_sta_assoc_rssi(int radio, char *rssi)
     }
 	
     fclose(fp);
-	EXE_COMMAND("rm -fr /tmp/rssi.dat");
+	//EXE_COMMAND("rm -fr /tmp/rssi.dat");
+	system("rm -fr /tmp/rssi.dat");
     return T_SUCCESS;
 }
 
@@ -778,7 +784,8 @@ int get_sta_assoc_ssid(int radio, char *ssid)
     char c;
     //use sed to get ssid
 	sprintf(cmd, "iwconfig %s | awk '/ESSID/{print}' | sed 's/[^\"]*\"\\(.*\\)\"[^\"]*/\\1/g' > /tmp/sta_ssid", ifacename);
-	EXE_COMMAND(cmd);
+	//EXE_COMMAND(cmd);
+	system(cmd);
 	fin = fopen("/tmp/sta_ssid","r");
 	if(NULL == fin) {
 		return T_FAILURE;
@@ -792,7 +799,8 @@ int get_sta_assoc_ssid(int radio, char *ssid)
 	}
 	ssid[i] = '\0';
 	fclose(fin);
-	EXE_COMMAND("rm -f /tmp/sta_ssid");    
+	//EXE_COMMAND("rm -f /tmp/sta_ssid");    
+	system("rm -f /tmp/sta_ssid");
 
     return T_SUCCESS;
 }
@@ -902,7 +910,8 @@ int get_sta_assoc_authmode(int radio, int *auth_mode, int *enc_type)
 	//sprintf(cmd, "wlanconfig %s list assocapinfo | awk '{if(2==NR){print}}' | cut -b56-78 > /tmp/sta_security", ifacename);
 	//Chged By Andy Yu in 20140214
 	sprintf(cmd, "wlanconfig %s list assocapinfo | awk '/Security/{print substr($0,10)}' > /tmp/sta_security", ifacename);
-	EXE_COMMAND(cmd);
+	//EXE_COMMAND(cmd);
+	system(cmd);
 
 	fin = fopen("/tmp/sta_security","r");
 	if(NULL == fin) {
@@ -958,7 +967,8 @@ int get_sta_assoc_authmode(int radio, int *auth_mode, int *enc_type)
 	}
 
 	fclose(fin);
-	EXE_COMMAND("rm -f /tmp/sta_security");    
+	//EXE_COMMAND("rm -f /tmp/sta_security"); 
+	system("rm -f /tmp/sta_security");
 
 	return T_SUCCESS;
 }

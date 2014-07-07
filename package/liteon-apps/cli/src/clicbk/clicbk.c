@@ -47,7 +47,7 @@ extern int set_config_sta(int radio);
 void init_global_config()
 {
 	int i = 0;
-	char buf[128] = {0};
+	char buf[256] = {0};
 	char *value = NULL;
 
 	//initial value
@@ -187,18 +187,30 @@ void init_global_config()
 	strcpy(security->name, CLI_NAME_SECURITY);
 	strcpy(security->params[0].param_name, SECURITY_AUTH_MODE);
 	ezplib_get_attr_val("wl0_apcli_rule", 0, "secmode", buf, 128, EZPLIB_USE_CLI);
-	if (strcmp(buf, ""))
-		strcpy(security->params[0].value, buf);
+	strcpy(security->params[0].value, buf);
+
 	//param1 encryption type
-	memset(buf, 0, sizeof(buf));
 	strcpy(security->params[1].param_name, SECURITY_ENC_TYPE);
-	ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "crypto", buf, 128, EZPLIB_USE_CLI);
-	strcpy(security->params[1].value, buf);
-	//param2 psk
-	memset(buf, 0, sizeof(buf));
-	strcpy(security->params[2].param_name, SECURITY_KEY);
-	ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "key", buf, 128, EZPLIB_USE_CLI);
-	strcpy(security->params[2].value, buf);
+
+	if (!strcmp(buf, "psk")) {
+		memset(buf, 0, sizeof(buf));
+		ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "crypto", buf, 128, EZPLIB_USE_CLI);
+		strcpy(security->params[1].value, buf);
+		//param2 psk
+		memset(buf, 0, sizeof(buf));
+		strcpy(security->params[2].param_name, SECURITY_KEY);
+		ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "key", buf, 128, EZPLIB_USE_CLI);
+		strcpy(security->params[2].value, buf);
+	} else if (!strcmp(buf, "psk2")) {
+		memset(buf, 0, sizeof(buf));
+		ezplib_get_attr_val("wl0_apcli_sec_wpa2_rule", 0, "crypto", buf, 128, EZPLIB_USE_CLI);
+		strcpy(security->params[1].value, buf);
+		//param2 psk
+		memset(buf, 0, sizeof(buf));
+		strcpy(security->params[2].param_name, SECURITY_KEY);
+		ezplib_get_attr_val("wl0_apcli_sec_wpa2_rule", 0, "key", buf, 128, EZPLIB_USE_CLI);
+		strcpy(security->params[2].value, buf);
+	}
 	
 	global_configs[CLI_INDEX_SECURITY].item = security;
 	global_configs[CLI_INDEX_SECURITY].item_index = CLI_INDEX_SECURITY;
@@ -221,6 +233,8 @@ void init_global_config()
 void write_to_nvram()
 {
 	int i = 0, j = 0;
+	char buf[256] = {0};
+	char sec_mode[32] = {0};
 
 	for (i = 0; i < GLOBAL_CONFIGS_COUNT; i++) {
 		struct item_config *item = global_configs[i].item;
@@ -245,20 +259,28 @@ void write_to_nvram()
 				break;
 			case CLI_INDEX_SECURITY:
 				for (j = 0; j < 3; j++) {
+					memset(buf, 0, sizeof(buf));
 					struct param_pair *pair = NULL;
 					pair = &(item->params[j]);
 
 					if (!pair)
 						continue;
-					printf("param name: %s\n", pair->param_name);
+					
 					if (!strcmp(pair->param_name, SECURITY_AUTH_MODE)) {
 						ezplib_replace_attr("wl0_apcli_rule", 0, "secmode", pair->value);
+						strcpy(sec_mode, pair->value);
 					} 
 					else if (!strcmp(pair->param_name, SECURITY_ENC_TYPE)) {
-						ezplib_replace_attr("wl0_apcli_sec_wpa_rule", 0, "crypto", pair->value);
+						if (!strcmp(sec_mode, "psk"))
+							ezplib_replace_attr("wl0_apcli_sec_wpa_rule", 0, "crypto", pair->value);
+						else if (!strcmp(sec_mode, "psk2"))
+							ezplib_replace_attr("wl0_apcli_sec_wpa2_rule", 0, "crypto", pair->value);
 					}
 					else if (!strcmp(pair->param_name, SECURITY_KEY)) {
-						ezplib_replace_attr("wl0_apcli_sec_wpa_rule", 0, "key", pair->value);
+						if (!strcmp(sec_mode, "psk"))
+							ezplib_replace_attr("wl0_apcli_sec_wpa_rule", 0, "key", pair->value);
+						else if (!strcmp(sec_mode, "psk2"))
+							ezplib_replace_attr("wl0_apcli_sec_wpa2_rule", 0, "key", pair->value);
 					}
 				}
 				
@@ -329,6 +351,7 @@ void debug_global_config()
 {
 	int i = 0, j = 0;
 
+	//if (1) {
 	if (cli_debug) {
 		for (i = 0; i < GLOBAL_CONFIGS_COUNT; i++) {
 			struct item_config *item = global_configs[i].item;
@@ -1166,10 +1189,6 @@ int securityGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	char enc_type[32] = {0};
 
 	ezplib_get_attr_val("wl0_apcli_rule", 0, "secmode", auth_mode, 32, EZPLIB_USE_CLI);
-
-	ezplib_get_attr_val("wl0_apcli_sec_wpa2_rule", 0, "crypto", enc_type, 32, EZPLIB_USE_CLI);
-	if (cli_debug)
-		printf("%s, %s\n", auth_mode, enc_type);
 	
 	if (!strcmp(auth_mode, "none")) {
 		uiPrintf("Security: none\n");
@@ -1178,6 +1197,7 @@ int securityGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 		uiPrintf("Security: open\n");
 	}
 	else if (!strcmp(auth_mode, "psk")) {
+		ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "crypto", enc_type, 32, EZPLIB_USE_CLI);
 		if (!strcmp(enc_type, "aes")) {
 			uiPrintf("Security: WPA-psk/AES\n");
 		}
@@ -1189,6 +1209,7 @@ int securityGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 		} 
 	} 
 	else if (!strcmp(auth_mode, "psk2")) {
+		ezplib_get_attr_val("wl0_apcli_sec_wpa2_rule", 0, "crypto", enc_type, 32, EZPLIB_USE_CLI);
 		if (!strcmp(enc_type, "aes")) {
 			uiPrintf("Security: WPA2-psk/AES\n");	
 		}
@@ -1285,7 +1306,7 @@ int securitySet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 
    mode_int = atoi(mode);
    enc_type_int = atoi(enc_type);
-   //if (cli_debug)
+   if (cli_debug)
    	  printf("authmode = %d, encrptiontype = %d, psk = %s\n",
    	  		mode_int, enc_type_int, psk);
    
@@ -1696,8 +1717,6 @@ int debugCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	system(cmd);
 
 	//connectrssi and disconnectrssi
-	//connrssi = nvram_safe_get("connectrssithr");
-	//disconnrssi = nvram_safe_get("disconnectrssithr");
 	ezplib_get_attr_val("wl0_apcli_rule", 0, "connrssi", buf, 32, EZPLIB_USE_CLI);
 
 	memset(cmd, 0, sizeof(cmd));

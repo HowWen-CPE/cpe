@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh
 . /etc/network.sh
 . /etc/functions.sh
 
