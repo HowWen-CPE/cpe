@@ -819,7 +819,7 @@ int connectRssiThresholdGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtT
 	//system("echo 'Connect Rssi Threshold:' $(iwpriv sta0 get_connrssi | awk '{print $2}' | cut -c 14-)");
 	ezplib_get_attr_val("wl0_apcli_rule", 0, "connrssi", buf, 32, EZPLIB_USE_CLI);
 
-	uiPrintf("1Connect Rssi Threshold: %s\n", buf);
+	uiPrintf("Connect Rssi Threshold: %s\n", buf);
 	
 	return CLI_PARSE_OK;
 }
@@ -839,7 +839,7 @@ int disconnectRssiThresholdGet(CLI *pCli, char *pToken, struct parse_token_s *pN
 	
 	ezplib_get_attr_val("wl0_apcli_rule", 0, "disconnrssi", buf, 32, EZPLIB_USE_CLI);
 
-	uiPrintf("1Disconnect Rssi Threshold: %s\n", buf);
+	uiPrintf("Disconnect Rssi Threshold: %s\n", buf);
 
 	return CLI_PARSE_OK;
 }
@@ -1175,7 +1175,7 @@ int securityGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 		uiPrintf("Security: none\n");
 	}
 	else if (!strcmp(auth_mode, "disabled")) {
-		uiPrintf("Security: wep\n");
+		uiPrintf("Security: open\n");
 	}
 	else if (!strcmp(auth_mode, "psk")) {
 		if (!strcmp(enc_type, "aes")) {
@@ -1677,6 +1677,7 @@ int debugCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	char *sys_name = NULL;
 	char *connrssi = NULL;
 	char *disconnrssi = NULL;
+	char buf[32] = {0};
 
 	//write to nvram
 	write_to_nvram();
@@ -1695,16 +1696,19 @@ int debugCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	system(cmd);
 
 	//connectrssi and disconnectrssi
-	connrssi = nvram_safe_get("connectrssithr");
-	disconnrssi = nvram_safe_get("disconnectrssithr");
+	//connrssi = nvram_safe_get("connectrssithr");
+	//disconnrssi = nvram_safe_get("disconnectrssithr");
+	ezplib_get_attr_val("wl0_apcli_rule", 0, "connrssi", buf, 32, EZPLIB_USE_CLI);
 
 	memset(cmd, 0, sizeof(cmd));
-	sprintf(cmd, "iwpriv sta0 connrssi %d", (atoi(connrssi) + 95));
+	sprintf(cmd, "iwpriv sta0 connrssi %d", (atoi(buf) + 95));
 	printf("%s\n", cmd);
 	system(cmd);
 
+	memset(buf, 0, sizeof(buf));
+	ezplib_get_attr_val("wl0_apcli_rule", 0, "disconnrssi", buf, 32, EZPLIB_USE_CLI);
 	memset(cmd, 0, sizeof(cmd));
-	sprintf(cmd, "iwpriv sta0 disconnrssi %d", (atoi(disconnrssi) + 95));
+	sprintf(cmd, "iwpriv sta0 disconnrssi %d", (atoi(buf) + 95));
 	printf("%s\n", cmd);
 	system(cmd);
 	
