@@ -232,7 +232,7 @@ int portlinkstatusGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl);
 //security
 #define SECURITY_AUTH_MODE     "authmode"
 #define SECURITY_ENC_TYPE      "enctype"
-#define SECURITY_key           "key"
+#define SECURITY_KEY           "key"
 
 //read/write
 #define ONLYREAD              1

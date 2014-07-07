@@ -8,7 +8,6 @@
 * -----------------------------------------------------------------------------------------------------------------
 * v0.1     2014/05/05     Mario Huang              Create this file
 */
-
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -101,8 +100,8 @@ LOCAL struct parse_token_s setCmdTbl[] = {
 		accountSet, NULL, NULL, NULL, 0},
     {"rssithr", "Set disconnect or connect rssi thresshold, Usage: set rssithr conn_value1 disconn_value2",
      rssithrSet, NULL, NULL, NULL, 0},
-	{"connrssithr", "Set connect rssi threshold, Usage: set connrssithr -10", connectRssiThresholdSet, NULL, NULL, NULL, 0},
-	{"disrssithr", "Set disnnect rssi threshold, Usage: set disrssithr -20", disconnectRssiThresholdSet, NULL, NULL, NULL, 0},
+	//{"connrssithr", "Set connect rssi threshold, Usage: set connrssithr -10", connectRssiThresholdSet, NULL, NULL, NULL, 0},
+	//{"disrssithr", "Set disnnect rssi threshold, Usage: set disrssithr -20", disconnectRssiThresholdSet, NULL, NULL, NULL, 0},
 	{"dhcp", "Set dhcp status, Usage: set security enable|disable", dhcpSet, NULL, NULL, NULL, 0},
 	{"ipaddr", "Set IP address, Usage: Usage: set ipaddr 192.168.1.2", ipAddrSet, &applyActionTbl[APPLY_IFADDR], NULL,CLI_SUPERUSER, 0},
     {"netmask", "Set IP subnet mask, Usage: set netmask 24", ipmaskSet, &applyActionTbl[APPLY_IFADDR],NULL, NULL, 0},

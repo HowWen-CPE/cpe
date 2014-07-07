@@ -125,9 +125,10 @@ void init_global_config()
 	}
 	strcpy(conn_rssi_thr->name, CLI_NAME_CONNRSSIHR);
 	strcpy(conn_rssi_thr->params[0].param_name, CLI_NAME_CONNRSSIHR);
-	value = nvram_safe_get("connectrssithr");
-	if (value && strcmp(value, ""))
-		strcpy(conn_rssi_thr->params[0].value, value);
+	//value = nvram_safe_get("connectrssithr");
+	memset(buf, 0, sizeof(buf));
+	ezplib_get_attr_val("wl0_apcli_rule", 0, "connrssi", buf, 32, EZPLIB_USE_CLI);
+	strcpy(conn_rssi_thr->params[0].value, buf);
 	global_configs[CLI_INDEX_CONNRSSITHR].item = conn_rssi_thr;
 	global_configs[CLI_INDEX_CONNRSSITHR].item_index = CLI_INDEX_CONNRSSITHR;
 
@@ -139,9 +140,10 @@ void init_global_config()
 	}
 	strcpy(disconn_rssi_thr->name, CLI_NAME_DISCONNRSSITHR);
 	strcpy(disconn_rssi_thr->params[0].param_name, CLI_NAME_DISCONNRSSITHR);
-	value = nvram_safe_get("disconnectrssithr");
-	if (value && strcmp(value, ""))
-		strcpy(disconn_rssi_thr->params[0].value, value);
+	//value = nvram_safe_get("disconnectrssithr");
+	memset(buf, 0, sizeof(buf));
+	ezplib_get_attr_val("wl0_apcli_rule", 0, "disconnrssi", buf, 32, EZPLIB_USE_CLI);
+	strcpy(disconn_rssi_thr->params[0].value, buf);
 	global_configs[CLI_INDEX_DISCONNRSSITHR].item = disconn_rssi_thr;
 	global_configs[CLI_INDEX_DISCONNRSSITHR].item_index = CLI_INDEX_DISCONNRSSITHR;
 
@@ -181,15 +183,22 @@ void init_global_config()
 		uiPrintf("malloc fail\n");
 		exit(0);
 	}
+	//param0 auth mode
 	strcpy(security->name, CLI_NAME_SECURITY);
 	strcpy(security->params[0].param_name, SECURITY_AUTH_MODE);
 	ezplib_get_attr_val("wl0_apcli_rule", 0, "secmode", buf, 128, EZPLIB_USE_CLI);
 	if (strcmp(buf, ""))
 		strcpy(security->params[0].value, buf);
+	//param1 encryption type
 	memset(buf, 0, sizeof(buf));
 	strcpy(security->params[1].param_name, SECURITY_ENC_TYPE);
 	ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "crypto", buf, 128, EZPLIB_USE_CLI);
 	strcpy(security->params[1].value, buf);
+	//param2 psk
+	memset(buf, 0, sizeof(buf));
+	strcpy(security->params[2].param_name, SECURITY_KEY);
+	ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "key", buf, 128, EZPLIB_USE_CLI);
+	strcpy(security->params[2].value, buf);
 	
 	global_configs[CLI_INDEX_SECURITY].item = security;
 	global_configs[CLI_INDEX_SECURITY].item_index = CLI_INDEX_SECURITY;
@@ -241,14 +250,14 @@ void write_to_nvram()
 
 					if (!pair)
 						continue;
-
+					printf("param name: %s\n", pair->param_name);
 					if (!strcmp(pair->param_name, SECURITY_AUTH_MODE)) {
 						ezplib_replace_attr("wl0_apcli_rule", 0, "secmode", pair->value);
 					} 
 					else if (!strcmp(pair->param_name, SECURITY_ENC_TYPE)) {
 						ezplib_replace_attr("wl0_apcli_sec_wpa_rule", 0, "crypto", pair->value);
 					}
-					else if (!strcmp(pair->param_name, SECURITY_key)) {
+					else if (!strcmp(pair->param_name, SECURITY_KEY)) {
 						ezplib_replace_attr("wl0_apcli_sec_wpa_rule", 0, "key", pair->value);
 					}
 				}
@@ -270,12 +279,12 @@ void write_to_nvram()
 				break;
 			case CLI_INDEX_DISCONNRSSITHR:
 				if (!strcmp(item->params[0].param_name, CLI_NAME_DISCONNRSSITHR))
-					nvram_set("disconnectrssithr", item->params[0].value);
+					ezplib_replace_attr("wl0_apcli_rule", 0, "disconnrssi", item->params[0].value);
 				
 				break;
 			case CLI_INDEX_CONNRSSITHR:
 				if (!strcmp(item->params[0].param_name, CLI_NAME_CONNRSSIHR))
-					nvram_set("connectrssithr", item->params[0].value);
+					ezplib_replace_attr("wl0_apcli_rule", 0, "connrssi",  item->params[0].value);
 				
 				break;
 			case CLI_INDEX_ACCOUNT:
@@ -806,14 +815,11 @@ int connectRssiThresholdSet(CLI *pCli, char *pToken, struct parse_token_s *pNxtT
   ***********************************************************************/
 int connectRssiThresholdGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 {
-	char *ptr = NULL;
+	char buf[32] = {0};
 	//system("echo 'Connect Rssi Threshold:' $(iwpriv sta0 get_connrssi | awk '{print $2}' | cut -c 14-)");
-	ptr = nvram_safe_get("connectrssithr");
+	ezplib_get_attr_val("wl0_apcli_rule", 0, "connrssi", buf, 32, EZPLIB_USE_CLI);
 
-	if (ptr)
-		uiPrintf("Connect Rssi Threshold: %d\n", atoi(ptr));
-	else
-		uiPrintf("Connect Rssi Threshold: --\n");
+	uiPrintf("1Connect Rssi Threshold: %s\n", buf);
 	
 	return CLI_PARSE_OK;
 }
@@ -829,14 +835,11 @@ int connectRssiThresholdGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtT
 int disconnectRssiThresholdGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 {
 	//system("echo 'Disconnect Rssi Threshold:' $(iwpriv sta0 get_disconnrssi | awk '{print $2}' | cut -c 17-)");
-	char *ptr = NULL;
+	char buf[32] = {0};
 	
-	ptr = nvram_safe_get("disconnectrssithr");
+	ezplib_get_attr_val("wl0_apcli_rule", 0, "disconnrssi", buf, 32, EZPLIB_USE_CLI);
 
-	if (ptr)
-		uiPrintf("Disconnect Rssi Threshold: %d\n", atoi(ptr));
-	else
-		uiPrintf("Disconnect Rssi Threshold: --\n");
+	uiPrintf("1Disconnect Rssi Threshold: %s\n", buf);
 
 	return CLI_PARSE_OK;
 }
@@ -1165,7 +1168,9 @@ int securityGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	ezplib_get_attr_val("wl0_apcli_rule", 0, "secmode", auth_mode, 32, EZPLIB_USE_CLI);
 
 	ezplib_get_attr_val("wl0_apcli_sec_wpa2_rule", 0, "crypto", enc_type, 32, EZPLIB_USE_CLI);
-	printf("%s, %s\n", auth_mode, enc_type);
+	if (cli_debug)
+		printf("%s, %s\n", auth_mode, enc_type);
+	
 	if (!strcmp(auth_mode, "none")) {
 		uiPrintf("Security: none\n");
 	}
@@ -1227,7 +1232,7 @@ int securitySet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
    if ( tokenCount(pCli) != total_param) {
 	   uiPrintf("Usage: set security -m auth -e enc_type -p psk\n");
 	   uiPrintf("-m auth mode. 0-none, 1-WPAPSK, 2-WPA2PSK, 3-WPA/WPA2PSK\n");
-	   uiPrintf("-e encryption type. 0-none, 1-TKIP, 2-AES, 3-TKIPAES\n");
+	   uiPrintf("-e encryption type. 1-TKIP, 2-AES, 3-TKIPAES\n");
 	   uiPrintf("-p pre-shared key\n");
 	   return CLI_PARSE_NOMESSAGE;
    }
@@ -1276,10 +1281,14 @@ int securitySet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
    //second parameter
    strcpy(item.params[1].param_name, SECURITY_ENC_TYPE);
    //third parameter
-   strcpy(item.params[2].param_name, SECURITY_key);
+   strcpy(item.params[2].param_name, SECURITY_KEY);
 
    mode_int = atoi(mode);
    enc_type_int = atoi(enc_type);
+   //if (cli_debug)
+   	  printf("authmode = %d, encrptiontype = %d, psk = %s\n",
+   	  		mode_int, enc_type_int, psk);
+   
    if (mode_int == AUTHMODE_WEP) {
 	   strcpy(item.params[0].value, "disabled");
    } 
@@ -1301,8 +1310,11 @@ int securitySet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	   else if (enc_type_int == ENCRY_AES) {
 	      strcpy(item.params[1].value, "aes");
 	   } 
-	   ezplib_replace_attr("wl0_apcli_sec_wpa2_rule", 0, "key", psk);
 	    strcpy(item.params[2].value, psk);
+	} else if (mode_int == AUTHMODE_NONE){
+		strcpy(item.params[0].value, "none");
+		strcpy(item.params[1].value, "");
+		strcpy(item.params[2].value, "");
 	} else {
 		uiPrintf("Invalid security, authMode: %s, encType: %s\n", 
 			mode, enc_type);
@@ -1510,7 +1522,8 @@ int ipaddrGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 		}
 		memset(&item, 0, sizeof(struct item_config));
 		get_value(CLI_NAME_IPADDR, &item);
-		uiPrintf("name: %s, param name: %s, param value: %s\n", item.name, item.params[0].param_name, item.params[0].value);
+		if (cli_debug)
+			uiPrintf("name: %s, param name: %s, param value: %s\n", item.name, item.params[0].param_name, item.params[0].value);
 	}else{
 		value = nvram_safe_get("lan0_ipaddr");
 		if (value ==NULL)
@@ -1687,14 +1700,12 @@ int debugCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 
 	memset(cmd, 0, sizeof(cmd));
 	sprintf(cmd, "iwpriv sta0 connrssi %d", (atoi(connrssi) + 95));
-	if (cli_debug)
-		printf("%s\n", cmd);
+	printf("%s\n", cmd);
 	system(cmd);
 
 	memset(cmd, 0, sizeof(cmd));
 	sprintf(cmd, "iwpriv sta0 disconnrssi %d", (atoi(disconnrssi) + 95));
-	if (cli_debug)
-		printf("%s\n", cmd);
+	printf("%s\n", cmd);
 	system(cmd);
 	
 	return CLI_PARSE_OK;
