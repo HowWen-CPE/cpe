@@ -21,6 +21,7 @@
 #include "NGWizard.h"
 #include "SelectConectionDlg.h"
 #include "HostSetting.h"
+#include "LoginRC.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -524,7 +525,15 @@ int CUpgraderDoc::GetDataFromSocket(char* buffer, //[in] ½ÓÊÕsocketÊý¾ÝµÄ»º³åµÄÖ
 		{
 			HexToULONG(buffer, 2 , npBufferIndex , &m_RecieveData.m_SendData.m_AuthData.m_uRequestMethod);
 		}
-		break;	
+		break;
+	case UCP_METHOD_UPLOAD:{
+		HexToint(buffer, 1 , npBufferIndex , &m_RecieveData.m_SendData.upload_result);
+		break;
+		}
+	case UCP_METHOD_DOWNLOAD:{
+		HexToint(buffer, 1 , npBufferIndex , &m_RecieveData.m_SendData.download_result);
+		break;
+		}
 	default:
 		//ASSERT(FALSE);
 		break;

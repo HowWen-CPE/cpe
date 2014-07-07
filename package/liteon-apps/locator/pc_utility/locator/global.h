@@ -46,6 +46,8 @@ extern CUpgraderApp theApp;
 #define UCP_METHOD_REBOOT		0x000B
 #define UCP_METHOD_GET_HOST     0x000E
 #define UCP_METHOD_SET_HOST     0x000F
+#define UCP_METHOD_DOWNLOAD     0x0010
+#define UCP_METHOD_UPLOAD		0x0011
 
 #define WEP_HEX					0x00
 #define WEP_ASCII				0x01
@@ -99,6 +101,8 @@ extern CUpgraderApp theApp;
 #define UCP_CODE_WLAN_OPMODE	0x32
 #define UCP_CODE_5GWLAN_OPMODE	0x33
 #define UCP_CODE_HTTP_TYPE      0x34
+#define UCP_CODE_UPLOAD_FNAME	0x35
+#define UCP_CODE_DOWNLOAD_FNAME	0x36
 
 #define UCP_CODE_END			0xFF
 

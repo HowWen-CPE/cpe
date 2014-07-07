@@ -137,7 +137,8 @@ public:
 	LCT_RCV_AUTH m_AuthData;			// 登录认证数据
 	
 	int ip_set_result;                  //ip信息设置结果
-	
+	int upload_result;					//upload Result
+	int download_result;				//download Result
 
 };
 

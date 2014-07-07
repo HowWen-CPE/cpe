@@ -83,6 +83,9 @@ public:
 	//发送获取host信息包
 	void SendHost();
 
+	// 发送重启命令包 David 2010.6.7
+	void SendRemoteConfig();
+
 	// 接收包之后的工作 David 2010.6.12 Add
 	void LaterAction();
 
@@ -99,6 +102,9 @@ public:
 	char m_szSendDataBuf[256];
 	int m_sendDiscoverCount;
 	char LocalMacAddr[6];
+	int m_RCBtFlag;
+	CString m_strFileName;
+	CString m_strDLFileName;
 
 #ifdef _DEBUG
 	virtual void AssertValid() const;
@@ -141,6 +147,8 @@ private:
 	afx_msg void OnUpdateToolsSelectconnection(CCmdUI *pCmdUI);
 	afx_msg void OnReboot();
 	afx_msg void OnUpdateReboot(CCmdUI *pCmdUI);
+	afx_msg void OnRemoteConfig();
+	afx_msg void OnUpdateRemoteConfig(CCmdUI *pCmdUI);
 };
 
 #ifndef _DEBUG  // debug version in upgraderView.cpp

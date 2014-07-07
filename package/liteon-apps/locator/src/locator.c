@@ -76,10 +76,13 @@ Because the ipaddress and netmask do not write into config file which are get fr
 #define UDP_METHOD_AUTH             0x0005
 #define UDP_METHOD_GET_INFO         0x000A
 #define UDP_METHOD_REBOOT           0x000B
-#define UCP_METHOD_GET_SN               0x000C
-#define UCP_METHOD_SET_SN               0x000D
-#define UCP_METHOD_GET_HOST     0x000E
-#define UCP_METHOD_SET_HOST     0x000F
+#define UCP_METHOD_GET_SN           0x000C
+#define UCP_METHOD_SET_SN           0x000D
+#define UCP_METHOD_GET_HOST     	0x000E
+#define UCP_METHOD_SET_HOST     	0x000F
+#define UDP_METHOD_DOWNLOAD     	0x0010
+#define UDP_METHOD_UPLOAD     		0x0011
+
 
 #define UDP_CODE_AUTH_NAME          0x01
 #define UDP_CODE_DEVICE_NAME        0x02
@@ -123,6 +126,8 @@ Because the ipaddress and netmask do not write into config file which are get fr
 #define UDP_CODE_WLAN_OPMODE		0x32
 #define UDP_CODE_5GWLAN_OPMODE		0x33
 #define UDP_CODE_HTTP_TYPE       	0x34
+#define UDP_CODE_UPLOAD_FNAME       0x35
+#define UDP_CODE_DOWNLOAD_FNAME     0x36
 
 #define CFG_MAX_PASSPHRASEKEY        64
 #define MAX_UDP_PACKET_SIZE          512
@@ -163,6 +168,9 @@ Because the ipaddress and netmask do not write into config file which are get fr
 #define UDP_CODE_WLAN_CLIENT		1
 #define HTTPS_DISABLE              	0
 #define HTTPS_ENABLE              	1
+#define LOAD_FAIL              		0
+#define LOAD_SUCCESS              	1
+#define LOAD_FILE_ERROR             2
 
 
 #define DEVICE_TYPE "Access Point"       //define the device_type
@@ -623,6 +631,246 @@ getifaddr(const char * ifname, char * buf, int len)
 	return 0;
 }
 
+/********* Remote Import Configuration: Added By Andy Yu in 2014/04/28 *******/
+int upLoadImport(char *filename)
+{
+	print_debug("upLoadImport\n");
+	FILE *fp;
+	FILE *tmp;
+	FILE *tmp1;
+	FILE *tmp2;
+	int impflag = 1;
+	int ret = -1;
+	char *p;
+	char cmd[512] = {0};
+	char rmcmd[512] = {0};
+	char fname[272] = {0};
+	char fileMd5[64] = {0};
+	char calMd5[64] = {0};
+	char buf[1024] = {0};
+	char prodValue[2] = {0};
+	
+	sprintf(fname, "/tmp/%s", filename);
+	sprintf(rmcmd, "rm -rf %s", fname);
+	
+	if(NULL == (fp = fopen(fname, "r")))
+	{
+		system(rmcmd);
+		printf("ERROR: UPLOAD IMPORT Error\n");
+		return -1;
+	}
+	else
+	{
+		//Get FirstLine: file md5sum
+		fgets(fileMd5, sizeof(fileMd5), fp);
+		fclose(fp);
+
+		//Delete FirstLine
+		sprintf(cmd, "sed '1d' %s > /tmp/upLoadCfg", fname);
+		system(cmd);
+
+		//Calculate MD5 Value
+		memset(cmd, 0, sizeof(cmd));
+		sprintf(cmd, "md5sum /tmp/upLoadCfg | cut -d' ' -f 1 > /tmp/upLoadCfg.md5");
+		system(cmd);
+
+		sprintf(rmcmd, "rm -rf %s /tmp/upLoadCfg /tmp/upLoadCfg.md5", fname);
+		if(NULL == (tmp = fopen("/tmp/upLoadCfg.md5", "r")))
+		{
+			system(rmcmd);
+			printf("ERROR: UPLOAD IMPORT Error1\n");
+			return -1;
+		}
+		else
+		{
+			fgets(calMd5, sizeof(calMd5), tmp);
+			fclose(tmp);
+
+			if(!strcmp(fileMd5, calMd5))
+			{
+				if(NULL == (tmp1 = fopen("/tmp/upLoadCfg", "r")))
+				{
+					system(rmcmd);
+					printf("ERROR: UPLOAD IMPORT Error3\n");
+					return -1;
+				}
+				else
+				{
+					fgets(buf, sizeof(buf), tmp1);
+					fclose(tmp1);
+
+					if((p = strstr(buf, "EZP_LOG")) == NULL)
+					{
+						system(rmcmd);
+						printf("ERROR: UPLOAD IMPORT Error4\n");
+						return -1;
+					}
+
+					if((p = strstr(p + strlen("EZP_LOG"), "EZP_")) == NULL)
+					{
+            			system(rmcmd);
+						printf("ERROR: UPLOAD IMPORT Error5\n");
+            			return -1;
+        			}
+        			p += strlen("EZP_");
+
+					strcpy(prodValue, nvram_safe_get("prod_cat"));
+					if(p[0] != prodValue[0])
+					{
+						system(rmcmd);
+						printf("ERROR: UPLOAD IMPORT Error6\n");
+            			return -1;
+					}
+
+					strcpy(prodValue, nvram_safe_get("prod_subcat"));
+					if(p[1] != prodValue[0])
+					{
+						system(rmcmd);
+						printf("ERROR: UPLOAD IMPORT Error7\n");
+            			return -1;
+					}
+				}
+			}
+			else
+			{
+				system(rmcmd);
+				printf("ERROR: UPLOAD IMPORT Error2\n");
+				return -1;
+			}
+		}
+	}
+
+	ret = system("nvram import /tmp/upLoadCfg; echo $? > /tmp/importFlag");
+	if(NULL == (tmp2 = fopen("/tmp/importFlag", "r")))
+	{
+		system(rmcmd);
+		system("rm -rf /tmp/importFlag");
+		printf("ERROR: UPLOAD IMPORT Error8\n");
+		return -1;
+	}
+	else
+	{
+		fscanf(tmp2, "%d", &impflag);
+		fclose(tmp2);
+		
+		if(0 != impflag)
+		{
+			system(rmcmd);
+			system("rm -rf /tmp/importFlag");
+			printf("ERROR: UPLOAD IMPORT Error9\n");
+			return -1;
+		}
+	}
+	
+	system("nvram commit");
+	system(rmcmd);
+	system("rm -rf /tmp/importFlag");
+	return 0;
+}
+
+/********* Remote UPLoad Configuration: Added By Andy Yu in 2014/04/15 *******/
+int upLoad(char *ipaddr, char *filename, int *flag)
+{
+	print_debug("upLoad\n");
+	int ret = 0;
+	int loadflag = 1;
+	char cmd[128] = {0};
+	char rmcmd[128] = {0};
+	FILE *fp;
+	*flag = LOAD_FAIL;
+	
+	sprintf(cmd,"cd /tmp && tftp -r %s -g %s; echo $? > /tmp/upLoadFlag", filename, ipaddr);
+	system(cmd);
+	sprintf(rmcmd,"rm -rf /tmp/%s", filename);
+	
+	
+    if (NULL == (fp = fopen("/tmp/upLoadFlag", "r")))
+	{
+		system(rmcmd);
+		system("rm -rf /tmp/upLoadFlag");
+        return -1;
+    } 
+    else
+	{
+		fscanf(fp, "%d", &loadflag);
+		if (0 == loadflag)
+		{
+			ret = upLoadImport(filename);
+			if(-1 == ret)
+			{
+				*flag = LOAD_FILE_ERROR;
+			}
+			else
+			{
+				*flag = LOAD_SUCCESS;
+			}
+		}
+		else
+		{
+			*flag = LOAD_FAIL;
+		}
+	}
+	
+    fclose(fp);
+
+	system(rmcmd);
+	system("rm -rf /tmp/upLoadFlag");
+
+	return 0;
+}
+
+/********* Remote DownLoad Configuration: Added By Andy Yu in 2014/04/15 *******/
+int downLoad(char *ipaddr, char *filename, int *flag)
+{
+	print_debug("downLoad\n");
+	int loadflag = 1;
+	char cmd[128] = {0};
+	char rmcmd[128] = {0};
+	FILE *fp;
+	*flag = LOAD_FAIL;
+
+	system("nvram export /tmp/DLRom.cfg");
+	system("md5sum /tmp/DLRom.cfg | cut -d' ' -f 1 > /tmp/DLRom.cfg.md5");
+	sprintf(cmd, "cat /tmp/DLRom.cfg.md5 /tmp/DLRom.cfg > /tmp/%s", filename);
+	system(cmd);
+
+	memset(cmd, 0x00, sizeof(cmd));
+	sprintf(cmd,"cd /tmp && tftp -l %s -p %s; echo $? > /tmp/downLoadFlag", filename, ipaddr);
+	system(cmd);
+
+	sprintf(rmcmd, "rm -rf /tmp/%s", filename);
+	
+    if (NULL == (fp = fopen("/tmp/downLoadFlag", "r")))
+	{
+		system(rmcmd);
+		system("rm -rf /tmp/DLRom.cfg");
+		system("rm -rf /tmp/DLRom.cfg.md5");
+		system("rm -rf /tmp/downLoadFlag");
+        return -1;
+    } 
+    else
+	{
+		fscanf(fp, "%d", &loadflag);
+		if (0 == loadflag)
+		{
+			*flag = LOAD_SUCCESS;
+		}
+		else
+		{
+			*flag = LOAD_FAIL;
+		}
+	}
+	
+    fclose(fp);
+	
+	system(rmcmd);
+	system("rm -rf /tmp/DLRom.cfg");
+	system("rm -rf /tmp/DLRom.cfg.md5");
+	system("rm -rf /tmp/downLoadFlag");
+
+	return 0;
+}
+
 /* get the firmware version */
 int firmwareVersionGet(char verstr[])
 {
@@ -917,7 +1165,7 @@ int sysLanEnetAddrGet(char *enetAdrs)
 		printf("get the mac socket file descriptor faild!\n");
 
 	memset(ethdev,0,sizeof(ethdev));
-	ezplib_get_attr_val("port_device_rule", 0, "port_device", ethdev, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+	ezplib_get_attr_val("port_device_rule", 0, "port_device", ethdev, sizeof(ethdev), EZPLIB_USE_CLI);
 	strcpy(ifr.ifr_name, ethdev);
 	if (ioctl(macsock, SIOCGIFHWADDR, &ifr)<0)
 		perror("ioctl:\n");
@@ -997,9 +1245,9 @@ int getWIFIRSSI(int radio, char *buf)
 	char rssitmp[30] = {0};
 	char iOpMode[32] = {0};
 	if (RADIO_2G == radio) {
-		ezplib_get_attr_val("wl_mode_rule", 0, "mode", iOpMode, 32, EZPLIB_USE_CLI);
+		ezplib_get_attr_val("wl_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
 	} else {
-		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", iOpMode, 32, EZPLIB_USE_CLI);
+		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
 	}
 	if (!strcmp(iOpMode, "client")) {
 		ret = get_sta_assoc_rssi(radio, rssitmp);
@@ -1043,9 +1291,9 @@ int getAPConnectBSSID(int radio, char *buf)
 	char macBuf[18] = {0};
 	char iOpMode[32] = {0};
 	if (RADIO_2G == radio) {
-		ezplib_get_attr_val("wl_mode_rule", 0, "mode", iOpMode, 32, EZPLIB_USE_CLI);
+		ezplib_get_attr_val("wl_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
 	} else {
-		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", iOpMode, 32, EZPLIB_USE_CLI);
+		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
 	}
 	if (!strcmp(iOpMode, "client")) {
 		ret = get_sta_assoc_bssid(radio, macBuf);
@@ -1068,9 +1316,9 @@ int getAPConnectStatus(int radio, int *associated)
 	char iOpMode[32] = {0};
 	
 	if (RADIO_2G == radio) {
-		ezplib_get_attr_val("wl_mode_rule", 0, "mode", iOpMode, 32, EZPLIB_USE_CLI);
+		ezplib_get_attr_val("wl_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
 	} else {
-		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", iOpMode, 32, EZPLIB_USE_CLI);
+		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
 	}	
 	if (!strcmp(iOpMode, "client")) {
 		ret = get_sta_assoc_status(radio, &assotmp);
@@ -1231,7 +1479,7 @@ IpInfo get_local_ipinfo(){
 	int idx;
 	print_debug("get_local_ipinfo begin...\n");
 	memset(bridgetemp,0,sizeof(bridgetemp));
-	ezplib_get_attr_val("system_rule", 0, "name", bridgetemp, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+	ezplib_get_attr_val("system_rule", 0, "name", bridgetemp, sizeof(bridgetemp), EZPLIB_USE_CLI);
 	//config_get(bridgetemp,10,"network.mode.bridge");
 	char bridge;
 	if (strcmp(bridgetemp, "ur") == 0 || strcmp(bridgetemp, "ap") == 0 || strcmp(bridgetemp, "sta0") == 0){
@@ -1241,7 +1489,7 @@ IpInfo get_local_ipinfo(){
 	}
 	printf("ipinfo.bridge = %d\n", ipinfo.bridge);
 	//value = nvram_safe_get("lan0_proto");
-	ezplib_get_attr_val("lan0_proto", 0, "curr", lan0proto, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+	ezplib_get_attr_val("lan0_proto", 0, "curr", lan0proto, sizeof(lan0proto), EZPLIB_USE_CLI);
 	/*memset(dhcptemp, 0, sizeof(dhcptemp));
 	  config_get(dhcptemp, 10, "network.lan.proto");*/
 	if (strcmp(lan0proto, "static") == 0)
@@ -1387,7 +1635,7 @@ HostInfo  get_local_hostinfo()
 
 	memset(domainNameTemp,0,sizeof(domainNameTemp));
 	//config_get(domainNameTemp, 255, "pedestal_client.server.domainsname");
-	ezplib_get_attr_val("lan_dhcps_rule", 0, "domain", domainNameTemp, TMP_LEN, EZPLIB_USE_CLI);
+	ezplib_get_attr_val("lan_dhcps_rule", 0, "domain", domainNameTemp, sizeof(domainNameTemp), EZPLIB_USE_CLI);
 	//memcpy(hostInfo.domainName, domainNameTemp, sizeof(domainNameTemp)); 
 	strcpy(hostInfo.domainName,domainNameTemp);
 	hostInfo.domainName_length = strlen(hostInfo.domainName);
@@ -1485,7 +1733,9 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 	       iWlanOPMode	        = 0,
 	       ipSetFlag 			= 0,
 	       associated			= 0,
-		   https_enable			= 0;
+		   https_enable			= 0,
+		   loadFlag				= 0,
+		   dloadFlag			= 0;
 
 	u8_t   authType             = 0x00,
 	       flags                = 0x00,
@@ -1495,7 +1745,8 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 	       *test,
 	       MacAddr[18],
 	       MacAddrTemp[6],
-	       rssi[30];
+	       rssi[30],
+	       loadFile			= 0x00;
 
 	u32_t  gateWay              = 0xFFFFFF00,
 	       ipMask               = 0x00000000,
@@ -1503,10 +1754,11 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 	       hostIpAddress     = 0x00000000;
 
 	u16_t  len                  = 0x0000,
-	       method                = 0x0000,
-	       requestMode           = 0x0000,
-	       vlanp                 = 0x0000,
-	       vlanid                = 0x0000;
+	       method               = 0x0000,
+	       requestMode          = 0x0000,
+	       vlanp                = 0x0000,
+	       vlanid               = 0x0000,
+	       fileNameLen			= 0x0000;			 
 
 	char   authTemp[33],
 	       authname[30],
@@ -1540,7 +1792,9 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 	       hostname[255],
 	       ModeTmpBuf[32],
 	       dev_name[32],
-		   http_type[10];  //HTTP or HTTPS
+		   http_type[10],  //HTTP or HTTPS
+		   clientAddr[32], //UpLoad or Download tftp IPAddr
+		   fileName[256];  //UPLOAD Server FileName
 
 	//***********************
 	char sntemp[50];
@@ -1549,6 +1803,7 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 	char *mask;
 	int idx;
 
+	struct in_addr addrtmp;
 	struct ip *ipstr = &pReplyDataHeader->ipLayer;
 	struct udphdr *udpstr = &pReplyDataHeader->udpHeader;
 	struct vlanhdr vlanheader;
@@ -1603,7 +1858,7 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 
 			// Device Type
 			netbuf_fwd_write_u8(UDP_CODE_DEVICE_TYPE, &pSDB);
-			ezplib_get_attr_val("system_mode", 0, "name", opmodetemp, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+			ezplib_get_attr_val("system_mode", 0, "name", opmodetemp, sizeof(opmodetemp), EZPLIB_USE_CLI);
 			if (strncmp(opmodetemp, "normal", 6) == 0)
 			{
 				len = 6;           
@@ -1696,7 +1951,7 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 
 			memset(bridgetemp,0,sizeof(bridgetemp));
 			//config_get(bridgetemp,10,"device.mode.router");
-			ezplib_get_attr_val("system_mode", 0, "name", bridgetemp, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+			ezplib_get_attr_val("system_mode", 0, "name", bridgetemp, sizeof(bridgetemp), EZPLIB_USE_CLI);
 			char bridge;//router-1 ap-0
 
 			if (strcmp(bridgetemp, "ur") == 0 || strcmp(bridgetemp, "ap") == 0 || strcmp(bridgetemp, "sta0") == 0){
@@ -1717,7 +1972,7 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 			netbuf_fwd_write_u8(1, &pSDB);
 			//config_get(dhcptemp, 10, "network.lan.proto");
 			//value = nvram_safe_get("lan0_proto");
-			ezplib_get_attr_val("lan0_proto", 0, "curr", lan0proto, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+			ezplib_get_attr_val("lan0_proto", 0, "curr", lan0proto, sizeof(lan0proto), EZPLIB_USE_CLI);
 			if (strcmp(lan0proto, "static") == 0)
 				dhcp_enable = DHCP_DISABLE;
 			else
@@ -1832,7 +2087,7 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 			netbuf_fwd_write_u8(1, &pSDB);
 			//config_get(dhcptemp, 10, "network.lan.proto");
 			//value = nvram_safe_get("lan0_proto");
-			ezplib_get_attr_val("lan0_proto", 0, "curr", lan0proto, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+			ezplib_get_attr_val("lan0_proto", 0, "curr", lan0proto, sizeof(lan0proto), EZPLIB_USE_CLI);
 			if (strcmp(lan0proto, "static") == 0)
 				dhcp_enable = DHCP_DISABLE;
 			else
@@ -1921,7 +2176,7 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 			netbuf_fwd_write_u8(1, &pSDB);
 			//config_get(opmodetemp, 5, "wireless.wifi0.operation_mode");
 			//config_get(opmodetemp, 5, "wireless.ath0.mode");
-			ezplib_get_attr_val("system_mode", 0, "name", opmodetemp, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+			ezplib_get_attr_val("system_mode", 0, "name", opmodetemp, sizeof(opmodetemp), EZPLIB_USE_CLI);
 			if (strncmp(opmodetemp, "normal", 6) == 0)
 				iOpMode = OPERATION_MODE_NORMAL;                // Router			
 			else if(strncmp(opmodetemp, "ap", 2) == 0)
@@ -2003,7 +2258,7 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 			if(iOpMode == OPERATION_MODE_AP || iOpMode == OPERATION_MODE_NORMAL
 				|| iOpMode == OPERATION_MODE_WISP1 || iOpMode == OPERATION_MODE_STA1)
 			{
-				ezplib_get_attr_val("wl0_sec_rule", 0, "secmode", authtemp, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+				ezplib_get_attr_val("wl0_sec_rule", 0, "secmode", authtemp, sizeof(authtemp), EZPLIB_USE_CLI);
 				print_debug("secmode= %s \n",authtemp);
 				if (strcmp(authtemp, "psk") == 0)  // WPA/PSK
 				{
@@ -2118,10 +2373,10 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 			memset(MacAddrTemp, 0, sizeof(MacAddrTemp));
 			if(iOpMode == OPERATION_MODE_AP || iOpMode == OPERATION_MODE_NORMAL
 				|| iOpMode == OPERATION_MODE_WISP1 || iOpMode == OPERATION_MODE_STA1) {
-				ezplib_get_attr_val("wl_ap_device_rule", 0, "ssid0_device", dev_name, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+				ezplib_get_attr_val("wl_ap_device_rule", 0, "ssid0_device", dev_name, sizeof(dev_name), EZPLIB_USE_CLI);
 			}
 			else if(iOpMode == OPERATION_MODE_STA0 || iOpMode == OPERATION_MODE_WISP0) {
-				ezplib_get_attr_val("wl_sta_device_rule", 0, "sta_device", dev_name, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+				ezplib_get_attr_val("wl_sta_device_rule", 0, "sta_device", dev_name, sizeof(dev_name), EZPLIB_USE_CLI);
 			}
 			netbuf_fwd_write_u8(UDP_CODE_WLAN_MACADDR, &pSDB);
 			sysAddrGet(dev_name, MacAddrTemp);
@@ -2176,10 +2431,10 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 			memset(MacAddrTemp, 0, sizeof(MacAddrTemp));
 			if(iOpMode == OPERATION_MODE_AP || iOpMode == OPERATION_MODE_NORMAL
 				|| iOpMode == OPERATION_MODE_WISP0 || iOpMode == OPERATION_MODE_STA0) {
-				ezplib_get_attr_val("wl_ap_device_rule", 1, "ssid0_device", dev_name, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+				ezplib_get_attr_val("wl_ap_device_rule", 1, "ssid0_device", dev_name, sizeof(dev_name), EZPLIB_USE_CLI);
 			}
 			else if(iOpMode == OPERATION_MODE_STA1 || iOpMode == OPERATION_MODE_WISP1) {
-				ezplib_get_attr_val("wl_sta_device_rule", 1, "sta_device", dev_name, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+				ezplib_get_attr_val("wl_sta_device_rule", 1, "sta_device", dev_name, sizeof(dev_name), EZPLIB_USE_CLI);
 			}
 			netbuf_fwd_write_u8(UDP_CODE_5GWLAN_MACADDR, &pSDB);
 			sysAddrGet(dev_name, MacAddrTemp);
@@ -2269,7 +2524,7 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 			if(iOpMode == OPERATION_MODE_AP || iOpMode == OPERATION_MODE_NORMAL
 				|| iOpMode == OPERATION_MODE_WISP0 || iOpMode == OPERATION_MODE_STA0)
 			{
-				ezplib_get_attr_val("wl1_sec_rule", 0, "secmode", authtemp, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+				ezplib_get_attr_val("wl1_sec_rule", 0, "secmode", authtemp, sizeof(authtemp), EZPLIB_USE_CLI);
 				print_debug("secmode= %s \n",authtemp);
 				if (strcmp(authtemp, "psk") == 0)  // WPA/PSK
 				{
@@ -2380,7 +2635,7 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 			memset(ModeTmpBuf, 0, sizeof(ModeTmpBuf));
 			netbuf_fwd_write_u8(UDP_CODE_WLAN_OPMODE, &pSDB);
 			netbuf_fwd_write_u8(1, &pSDB);
-			ezplib_get_attr_val("wl_mode_rule", 0, "mode", ModeTmpBuf, 32, EZPLIB_USE_CLI);
+			ezplib_get_attr_val("wl_mode_rule", 0, "mode", ModeTmpBuf, sizeof(ModeTmpBuf), EZPLIB_USE_CLI);
 			if (!strcmp(ModeTmpBuf, "client"))
 			{
 				iWlanOPMode = UDP_CODE_WLAN_CLIENT;
@@ -2397,7 +2652,7 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 			memset(ModeTmpBuf, 0, sizeof(ModeTmpBuf));
 			netbuf_fwd_write_u8(UDP_CODE_5GWLAN_OPMODE, &pSDB);
 			netbuf_fwd_write_u8(1, &pSDB);
-			ezplib_get_attr_val("wl1_mode_rule", 0, "mode", ModeTmpBuf, 32, EZPLIB_USE_CLI);
+			ezplib_get_attr_val("wl1_mode_rule", 0, "mode", ModeTmpBuf, sizeof(ModeTmpBuf), EZPLIB_USE_CLI);
 			if (!strcmp(ModeTmpBuf, "client"))
 			{
 				iWlanOPMode = UDP_CODE_WLAN_CLIENT;
@@ -2449,7 +2704,7 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 						 netbuf_fwd_write_u8(UCP_CODE_DOMAIN_NAME, &pSDB);
 
 						 //config_get(domainname, 255, "pedestal_client.server.domainsname");
-						 ezplib_get_attr_val("lan_dhcps_rule", 0, "domain", domainname, TMP_LEN, EZPLIB_USE_CLI);
+						 ezplib_get_attr_val("lan_dhcps_rule", 0, "domain", domainname, sizeof(domainname), EZPLIB_USE_CLI);
 						 len = strlen(domainname);
 						 print_debug("domainname %s\n",domainname);
 						 netbuf_fwd_write_u8(len, &pSDB);
@@ -2622,6 +2877,80 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 					 break;
 
 					 //----------------------------------------------------------
+					 /********************* Remote upLoad device after sending the success buffer back ***********************/
+
+		case UDP_METHOD_UPLOAD:
+					 print_debug("UDP_METHOD_UPLOAD\n");
+					 netbuf_fwd_write_u16(method, &pSDB);
+					 para->sendPacketLength += 2;
+					 loadFlag = LOAD_FAIL;
+
+					 //Server IP Address
+					 memset(clientAddr, 0, sizeof(clientAddr));
+					 memset(&addrtmp, 0, sizeof(addrtmp));
+					 addrtmp.s_addr = (u32_t)(htonl(para->clientAddr)); 
+					 strcpy(clientAddr, inet_ntoa(addrtmp));
+
+					 //Server FileName
+					 loadFile = 0;
+					 fileNameLen = 0;
+					 memset(fileName, 0x00, sizeof(fileName));
+					 loadFile = netbuf_fwd_read_u8(requestBuffer);
+					 fileNameLen = netbuf_fwd_read_u8(requestBuffer);
+					 switch(loadFile)
+					 {
+					 	case UDP_CODE_UPLOAD_FNAME:
+							memcpy(fileName, *requestBuffer, fileNameLen);
+							break;
+						default:
+							printf("ERROR: UPLOAD NO FileName\n");
+							return;
+					 }
+					 
+					 upLoad(clientAddr, fileName, &loadFlag);
+					 netbuf_fwd_write_u8(loadFlag, &pSDB);
+					 para->sendPacketLength += 1;
+					 sendPacketToPC(pReplyDataHeader, para, test, ipstr, udpstr);
+					 break;
+
+					 //----------------------------------------------------------
+					 /********************* Remote downLoad device config after sending the success buffer back ***********************/
+
+		case UDP_METHOD_DOWNLOAD:
+					 print_debug("UDP_METHOD_DOWNLOAD\n");
+					 netbuf_fwd_write_u16(method, &pSDB);
+					 para->sendPacketLength += 2;
+					 dloadFlag = LOAD_FAIL;
+
+					 //Server IP Address
+					 memset(clientAddr, 0, sizeof(clientAddr));
+					 memset(&addrtmp, 0, sizeof(addrtmp));
+					 addrtmp.s_addr = (u32_t)(htonl(para->clientAddr)); 
+					 strcpy(clientAddr, inet_ntoa(addrtmp));
+
+					 //Server FileName
+					 loadFile = 0;
+					 fileNameLen = 0;
+					 memset(fileName, 0x00, sizeof(fileName));
+					 loadFile = netbuf_fwd_read_u8(requestBuffer);
+					 fileNameLen = netbuf_fwd_read_u8(requestBuffer);
+					 switch(loadFile)
+					 {
+					 	case UDP_CODE_DOWNLOAD_FNAME:
+							memcpy(fileName, *requestBuffer, fileNameLen);
+							break;
+						default:
+							printf("ERROR: UPLOAD NO FileName\n");
+							return;
+					 }
+					 
+					 downLoad(clientAddr, fileName, &dloadFlag);
+					 netbuf_fwd_write_u8(dloadFlag, &pSDB);
+					 para->sendPacketLength += 1;
+					 sendPacketToPC(pReplyDataHeader, para, test, ipstr, udpstr);
+					 break;
+
+					 //----------------------------------------------------------
 					 /********************* set ip mask gateway and dhcpable, apply the setting after sending the success buffer back ***********************/
 
 		case UDP_METHOD_SET_IP:{
@@ -2744,15 +3073,15 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 
 				       //config_get(authname, 30, "password.@auth[0].username");
 				       //config_get(authname, 30, "password.auth.username");
-				       ezplib_get_attr_val("http_rule", 0, "curusername", authname, SHORT_BUF_LEN, EZPLIB_USE_CLI);
+				       ezplib_get_attr_val("http_rule", 0, "curusername", authname, sizeof(authname), EZPLIB_USE_CLI);
 				       //config_get(authpassword, 40, "password.@auth[0].userpasswd");
 				       if(!strcmp(authname, "admin"))
 				       {
-					       ezplib_get_attr_val("http_rule", 0, "admpasswd", authpassword,TMP_LEN, EZPLIB_USE_CLI);
+					       ezplib_get_attr_val("http_rule", 0, "admpasswd", authpassword,sizeof(authpassword), EZPLIB_USE_CLI);
 				       }
 				       else
 				       {
-					       ezplib_get_attr_val("http_rule", 0, "passwd", authpassword,TMP_LEN, EZPLIB_USE_CLI);
+					       ezplib_get_attr_val("http_rule", 0, "passwd", authpassword,sizeof(authpassword), EZPLIB_USE_CLI);
 				       }
 
 				       //config_get(authpassword, 40, "password.auth.password");
@@ -2832,6 +3161,16 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 		case UDP_METHOD_REBOOT:
 			printf("apply UDP_METHOD_REBOOT\n");
 			system("reboot");
+			break;
+
+			//upload, apply the reboot
+		case UDP_METHOD_UPLOAD:
+			printf("apply UDP_METHOD_UPLOAD\n");
+			if(LOAD_SUCCESS == loadFlag)
+			{
+				printf("UPLOAD SUCCESS, Reboot\n");
+				system("reboot");
+			}
 			break;
 
 		case UCP_METHOD_SET_HOST:
@@ -2940,12 +3279,12 @@ void sendPacketToPC(locator_udp_reply_packet_header * pReplyDataHeader, UdpParam
 
 		//add the vlan header
 		//config_get(vlanptemp, 6, "network.lan.priority");
-		ezplib_get_attr_val("vlan_rule", 0, "name", vlanidtemp,TMP_LEN, EZPLIB_USE_CLI);
+		ezplib_get_attr_val("vlan_rule", 0, "name", vlanidtemp,sizeof(vlanidtemp), EZPLIB_USE_CLI);
 		print_debug("network.lan.priority =%s\n",vlantemp);
 		vlanp = (u16_t)atoi(vlanptemp);  
 		print_debug("vlanp= %d\n",vlanp);
 		//config_get(vlanidtemp, 6, "network.lan.mngvlanid");
-		ezplib_get_attr_val("vlan_rule", 0, "vid", vlanidtemp,TMP_LEN, EZPLIB_USE_CLI);
+		ezplib_get_attr_val("vlan_rule", 0, "vid", vlanidtemp,sizeof(vlanidtemp), EZPLIB_USE_CLI);
 		vlanid = (u16_t)atoi(vlanidtemp);
 
 		vlanheader.vlanpcid = 0xffff;

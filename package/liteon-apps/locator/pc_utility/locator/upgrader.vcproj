@@ -444,6 +444,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\LoginRC.cpp"
+				>
+			</File>
+			<File
 				RelativePath="MainFrm.cpp"
 				>
 				<FileConfiguration
@@ -1167,6 +1171,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\LoginRC.h"
+				>
+			</File>
+			<File
 				RelativePath="MainFrm.h"
 				>
 			</File>
@@ -1381,6 +1389,10 @@
 			</File>
 			<File
 				RelativePath="res\Toolbar.bmp"
+				>
+			</File>
+			<File
+				RelativePath=".\res\ToolbarTest.bmp"
 				>
 			</File>
 			<File

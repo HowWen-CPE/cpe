@@ -84,7 +84,7 @@ END
 // Bitmap
 //
 
-IDB_TOOLBAR             BITMAP                  "res\\Toolbar.bmp"
+IDB_TOOLBAR             BITMAP                  "res\\ToolbarRC.bmp"
 #endif    // Chinese (P.R.C.) resources
 /////////////////////////////////////////////////////////////////////////////
 
@@ -120,7 +120,7 @@ BEGIN
 END
 
 IDD_DEVICE_INFO DIALOGEX 0, 0, 282, 420
-STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU 
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Device Information"
 FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
@@ -559,6 +559,21 @@ BEGIN
     CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,39,55,3,3
 END
 
+IDD_LOGIN_RC DIALOGEX 0, 0, 195, 87
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Login"
+FONT 10, "Arial", 0, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_USERNAME_RC,57,10,127,14,ES_MULTILINE | ES_AUTOHSCROLL,WS_EX_TRANSPARENT
+    EDITTEXT        IDC_PASSWORD_RC,57,31,127,14,ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "&UPLOAD",IDUPLOAD,12,70,50,14
+    PUSHBUTTON      "&Cancel",IDCANCEL,129,70,50,14
+    LTEXT           "User Name:",IDC_STATIC,13,12,40,8
+    LTEXT           "Password:",IDC_STATIC,13,32,35,8
+    LTEXT           "Default User Name: admin Password:1234",IDC_STATIC_DEFAULT_USER,7,53,180,10,SS_NOTIFY | WS_BORDER
+    PUSHBUTTON      "&DOWNLOAD",IDDOWNLOAD,70,70,50,14
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -713,6 +728,12 @@ BEGIN
         RIGHTMARGIN, 332
         TOPMARGIN, 7
         BOTTOMMARGIN, 217
+    END
+
+    IDD_LOGIN_RC, DIALOG
+    BEGIN
+        RIGHTMARGIN, 187
+        BOTTOMMARGIN, 84
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -1090,7 +1111,7 @@ FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
     LTEXT           "Copyright (C) 2013-2015",IDC_STATIC,62,63,75,8
     DEFPUSHBUTTON   "OK",IDOK,143,70,40,14,WS_GROUP
-    LTEXT           "Version 1.4.0",IDC_STATIC,69,50,53,8
+    LTEXT           "Version 1.5.0",IDC_STATIC,69,50,53,8
 END
 
 IDD_TFTP_PROGESS DIALOG  0, 0, 187, 63
@@ -1196,6 +1217,7 @@ BEGIN
         MENUITEM "Reboot device(&R)",           ID_REBOOT
         MENUITEM SEPARATOR
         MENUITEM "Select Adapter(&A)",          ID_TOOLS_SELECTCONNECTION
+        MENUITEM "Remote Config",               ID_REMOTE_CONFIG
     END
     POPUP "&View"
     BEGIN
@@ -1242,8 +1264,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,4,0,0
- PRODUCTVERSION 4,1,0,0
+ FILEVERSION 1,5,0,0
+ PRODUCTVERSION 5,1,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -1259,12 +1281,12 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "FileDescription", "Locator MFC Application"
-            VALUE "FileVersion", "1, 4, 0, 0"
+            VALUE "FileVersion", "1, 5, 0, 0"
             VALUE "InternalName", "Locator"
             VALUE "LegalCopyright", "Copyright (C) 2013"
             VALUE "OriginalFilename", "locator.EXE"
             VALUE "ProductName", "Locator Application"
-            VALUE "ProductVersion", "1, 4, 0, 0"
+            VALUE "ProductVersion", "1, 5, 0, 0"
         END
     END
     BLOCK "VarFileInfo"
@@ -1298,6 +1320,12 @@ BEGIN
     IDS_DEVICE_INFO         "Device Info"
     IDS_CONN_WEB            "Web Setting"
     IDS_PROPSHT_CAPTION     "Setting Wizard"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_REBOOT              "Reboot Device"
+    IDS_REMOTE_CONFIG       "Remote Config"
 END
 
 STRINGTABLE 
@@ -1442,6 +1470,12 @@ BEGIN
     ID_WEB                  "Web Management"
     ID_WIRELESS             "Wireless Setting"
     ID_WIZARD               "Setup Wizard"
+    ID_REBOOT               "Reboot Device"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_REMOTE_CONFIG        "Remote Configuration"
 END
 
 STRINGTABLE 
@@ -1467,11 +1501,6 @@ END
 STRINGTABLE 
 BEGIN
     IDS_WMODE_STATICG       "2.4GHz Super G static"
-END
-
-STRINGTABLE 
-BEGIN
-    IDS_REBOOT              "Reboot Device"
 END
 
 #endif    // English (U.S.) resources
