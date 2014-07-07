@@ -376,6 +376,7 @@ int applycfgCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int cancelcfgCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int accessCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int debugCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl);
+int mfgCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int factorydefaultSet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int httpsCliCmdx(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int countryCodeCliCmdSet(CLI * pCli, char *pToken,

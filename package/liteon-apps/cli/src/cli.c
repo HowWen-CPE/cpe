@@ -125,6 +125,7 @@ struct parse_token_s cmdTbl[] = {
     {"factory", "Factory default", factorydefaultSet, NULL, NULL, NULL, 0},
     {"set", NULL, genericCmdHandler, NULL, setCmdTbl, NULL, 0},
     {"debug", "enable debug", debugCmdHandler, NULL, NULL, CLI_HIDDENCMD, 0},
+    {"mfg", "mfg", mfgCmdHandler, NULL, NULL, CLI_HIDDENCMD, 0},
     //{"version", "Software version", versionHandler, NULL, NULL, NULL, 0},
 
     PARSE_TOKEN_DELIMITER

@@ -1652,6 +1652,124 @@ int accessCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 {
 	return CLI_PARSE_ACCESS_LINUX;
 }
+ /*
+ * Private Function
+ * parse the mac  and store into *addr.
+ * the format is HH:HH:HH:HH:HH:HH
+ */
+ #define MAC_ADDR_LEN 17
+int inet_atonmac(const char *s, char *addr, int addr_len)
+{
+
+    char Tmac[] = "HH:HH:HH:HH:HH:HH";
+    unsigned char mac_addr[18];
+    char *tmp = mac_addr;
+    char c;
+    char *ptr = (char *)s;
+    int val = 0;
+    int i, j;
+    int allzero = 1;
+    int all0xff = 1;
+
+    memset(mac_addr,0,sizeof(mac_addr));
+
+    if(addr_len != 17)
+        return -1;
+
+    i = j = 0;
+    while(1){
+        c = *ptr++;
+        if ( Tmac[i] == 'H' ){
+            
+            /* must be hex char. */
+            val = val * 16;
+            if ( isdigit(c) ){
+                val += c - '0';
+                mac_addr[i] = c;
+            }else if(c >= 'a' && c <= 'f'){
+                val += c - 'a' + 10;
+                mac_addr[i] = c;
+            }else if(c >= 'A' && c <= 'F'){
+                val += c - 'a' + 10;
+                mac_addr[i] = c;
+            }else
+                return -1;
+        } else{
+            /* here should be : */
+            if(j == 0){
+                int x;
+                
+                //donn't distinguish globle or local mac
+                x = val & 0x01;
+                if(x != 0)
+                    return -1;
+            }
+            
+            if(val != 0){
+                allzero = 0;
+            }
+
+            val = 0;
+            j++;
+            if(j == 6){
+                if ((c != '\0') || allzero){
+                    return -1;
+                }
+
+                memcpy(addr,mac_addr,addr_len);
+                return 0;
+            }
+            if(c != ':'){
+                return 0;
+            }else{
+                mac_addr[i] = c;
+            }
+        }
+        ++i;
+    }   
+
+	return 0;
+}
+ /***********************************************************************
+ * Function Name : mfgCmdHandler
+ * Description    : mfg
+ * Input         : @pCli, cli control structure
+ *                    @pToken, token
+ *                    @pNxtTbl, next token
+ * Output        : 
+ * Return value  : CLI_PARSE_OK, command success
+ ***********************************************************************/
+int mfgCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
+{
+	char *param = NULL;
+	unsigned char m_addr[18] = {0};
+    char *tmp_addr = m_addr;
+	
+	if ( tokenCount(pCli) > 1 ) {
+		uiPrintf(SETFALIED);
+		return CLI_PARSE_NOMESSAGE;
+	}
+
+	param = tokenPop(pCli);
+
+	if (!param)
+		return CLI_PARSE_INVALID_PARAMETER;
+
+	if (strlen(param) != MAC_ADDR_LEN) {
+		uiPrintf("Invalid MAC address\n");
+		return CLI_PARSE_INPUT_ERROR;
+	}
+
+	if (inet_atonmac(param, tmp_addr, MAC_ADDR_LEN) < 0) {
+		uiPrintf("Invalid MAC address\n");
+		return CLI_PARSE_INPUT_ERROR;
+	}
+
+	//TBD, store MAC address
+
+
+	return CLI_PARSE_OK;
+}
  /***********************************************************************
  * Function Name : debugCmdHandler
  * Description    : print debug information
