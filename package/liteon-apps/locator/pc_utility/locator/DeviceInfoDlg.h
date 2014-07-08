@@ -21,6 +21,7 @@ public:
 // Dialog Data
 	//{{AFX_DATA(CDeviceInfoDlg)
 	enum { IDD = IDD_DEVICE_INFO };
+	CString m_strMPname;
 	CString	m_strFwVer;
 	CString	m_strIpAddr;
 	CString	m_strMacAddr;

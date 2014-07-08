@@ -79,6 +79,7 @@ public:
 	int m_nSecurity;		// 安全类型
 	int m_nEncryptionOnOff;
 	int m_nSuperG;
+	CString m_strModelProductName;
 	CString m_strDeviceName;
 	CString m_strFirmware;
 	char m_szcharWlanMACAddress[18];

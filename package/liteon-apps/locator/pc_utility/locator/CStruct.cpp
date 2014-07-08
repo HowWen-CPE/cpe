@@ -42,6 +42,7 @@ void LCT_RCV_GETINFO::ClearData()
 	m_nSecurity = 0;
 	m_nEncryptionOnOff = 0;
 	m_nSuperG = 0;
+	m_strModelProductName.Empty();
 	m_strDeviceName.Empty();
 	m_strFirmware.Empty();
 	memset(m_szcharWlanMACAddress, 0, sizeof(m_szcharWlanMACAddress));

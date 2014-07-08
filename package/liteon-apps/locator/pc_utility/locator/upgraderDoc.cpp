@@ -331,6 +331,10 @@ int CUpgraderDoc::GetDataFromSocket(char* buffer, //[in] ½ÓÊÕsocketÊý¾ÝµÄ»º³åµÄÖ
 					HexToint(buffer, GetLen , npBufferIndex , &m_RecieveData.bridge);
 					
 					break;
+				case UCP_CODE_PRODUCTNAME:
+					HexToChar(buffer, GetLen , npBufferIndex , szDeviceTemp);
+					m_RecieveData.m_SendData.m_GetinfoData.m_strModelProductName = szDeviceTemp;
+					break;
 				case UCP_CODE_DEVICE_NAME:
 					HexToChar(buffer, GetLen , npBufferIndex , szDeviceTemp);
 					m_RecieveData.m_SendData.m_DiscoverData.m_strDeviceName = szDeviceTemp;

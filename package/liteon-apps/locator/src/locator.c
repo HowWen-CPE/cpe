@@ -128,6 +128,7 @@ Because the ipaddress and netmask do not write into config file which are get fr
 #define UDP_CODE_HTTP_TYPE       	0x34
 #define UDP_CODE_UPLOAD_FNAME       0x35
 #define UDP_CODE_DOWNLOAD_FNAME     0x36
+#define UDP_CODE_MODELNAME          0x37
 
 #define CFG_MAX_PASSPHRASEKEY        64
 #define MAX_UDP_PACKET_SIZE          512
@@ -1274,10 +1275,10 @@ int getWirelessMode(int radio, int *mode)
 	ret = get_wirelessmode(radio, &wmode);
 	if (T_FAILURE == ret) {
 		if (RADIO_2G == radio) {
-			*mode = WMODE_11BGN;
-		} else {
 			*mode = WMODE_11AN;
-		}
+		} /*else {
+			*mode = WMODE_11AN;
+		}*/
 	} else {
 		*mode = wmode;
 	}
@@ -1794,7 +1795,8 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 	       dev_name[32],
 		   http_type[10],  //HTTP or HTTPS
 		   clientAddr[32], //UpLoad or Download tftp IPAddr
-		   fileName[256];  //UPLOAD Server FileName
+		   fileName[256],  //UPLOAD Server FileName
+		   *modelName = NULL; //Model name
 
 	//***********************
 	char sntemp[50];
@@ -2235,7 +2237,10 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 				}
 			}
 			else if(iOpMode == OPERATION_MODE_STA0 || iOpMode == OPERATION_MODE_WISP0) {
-				channel_get.chan_number = 200;
+				ret = get_current_channel(0, &channel_get);
+				if (T_FAILURE == ret) {
+					channel_get.chan_number = 0;
+				}
 			}	
 			netbuf_fwd_write_u8(UDP_CODE_CHANNEL, &pSDB);
 			netbuf_fwd_write_u8(1, &pSDB);
@@ -2663,6 +2668,21 @@ void locator_Recv_Udp_Netbuf(UdpParams *para, u64_t src_addr, u16_t sequence, u1
 			}
 			netbuf_fwd_write_u8(iWlanOPMode, &pSDB);
 			para->sendPacketLength += 3;
+
+			//Model name
+			netbuf_fwd_write_u8(UDP_CODE_MODELNAME, &pSDB);
+			modelName= nvram_safe_get("license_key");
+			if (modelName) {
+				len=strlen(modelName);
+				netbuf_fwd_write_u8(len, &pSDB);
+				sprintf(pSDB, modelName, len);
+			} else {
+				len = 0;
+				netbuf_fwd_write_u8(len, &pSDB);
+				sprintf(pSDB, "", len);
+			}
+			pSDB += len;
+			para->sendPacketLength += (len+2);
 			
 			//END
 			netbuf_fwd_write_u8(UDP_CODE_END, &pSDB);

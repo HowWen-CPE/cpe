@@ -2110,6 +2110,9 @@ void CUpgraderView::ShowDeviceInfoDlg()
 	char charTemp[33];
 	CUpgraderDoc* pDoc = GetDocument();
 	ASSERT(NULL != pDoc);
+	// Model Product name
+	dlgInfo.m_strMPname = pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_strModelProductName;
+
 	// Device Name
 	dlgInfo.m_strModelName = pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_strDeviceName;
 
@@ -2313,8 +2316,89 @@ void CUpgraderView::ShowDeviceInfoDlg()
 	}
 	else
 	{
-		sprintf(charTemp, "Channel %d/ %dMHz",pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nChannel, 
-		2407+(pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nChannel*5));
+		//sprintf(charTemp, "Channel %d/ %dMHz",pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nChannel, 
+		//2407+(pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nChannel*5));
+		switch (pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nChannel)
+		{
+			case 0:
+				sprintf(charTemp, "Unkown");
+				break;
+			case 36:
+				sprintf(charTemp, "Channel 36/ 5180MHz");
+				break;
+			case 40:
+				sprintf(charTemp, "Channel 40/ 5200MHz");
+				break;
+			case 44:
+				sprintf(charTemp, "Channel 44/ 5220MHz");
+				break;
+			case 48:
+				sprintf(charTemp, "Channel 48/ 5240MHz");
+				break;
+			case 52:
+				sprintf(charTemp, "Channel 52/ 5260MHz");
+				break;
+			case 56:
+				sprintf(charTemp, "Channel 56/ 5280MHz");
+				break;
+			case 60:
+				sprintf(charTemp, "Channel 60/ 5300MHz");
+				break;
+			case 64:
+				sprintf(charTemp, "Channel 64/ 5320MHz");
+				break;
+			case 100:
+				sprintf(charTemp, "Channel 100/ 5500MHz");
+				break;
+			case 104:
+				sprintf(charTemp, "Channel 104/ 5520MHz");
+				break;
+			case 108:
+				sprintf(charTemp, "Channel 108/ 5540MHz");
+				break;
+			case 112:
+				sprintf(charTemp, "Channel 112/ 5560MHz");
+				break;
+			case 116:
+				sprintf(charTemp, "Channel 116/ 5580MHz");
+				break;
+			case 120:
+				sprintf(charTemp, "Channel 120/ 5600MHz");
+				break;
+			case 124:
+				sprintf(charTemp, "Channel 124/ 5620MHz");
+				break;
+			case 128:
+				sprintf(charTemp, "Channel 128/ 5640MHz");
+				break;
+			case 132:
+				sprintf(charTemp, "Channel 132/ 5660MHz");
+				break;
+			case 136:
+				sprintf(charTemp, "Channel 136/ 5680MHz");
+				break;
+			case 140:
+				sprintf(charTemp, "Channel 140/ 5700MHz");
+				break;
+			case 149:
+				sprintf(charTemp, "Channel 149/ 5745MHz");
+				break;
+			case 153:
+				sprintf(charTemp, "Channel 153/ 5765MHz");
+				break;
+			case 157:
+				sprintf(charTemp, "Channel 157/ 5785MHz");
+				break;
+			case 161:
+				sprintf(charTemp, "Channel 161/ 5805MHz");
+				break;
+			case 165:
+				sprintf(charTemp, "Channel 165/ 5825MHz");
+				break;
+			default:
+				sprintf(charTemp, "--");
+				break;
+		}
 	}
 	dlgInfo.m_strChannel = charTemp;
 

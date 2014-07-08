@@ -105,6 +105,8 @@
 #define IDC_STATIC_IP                   1011
 #define IDC_WLAN_MACADDR_STATIC         1011
 #define IDC_STATIC_MASK                 1012
+#define IDC_MODEL_STATIC2               1012
+#define IDC_MODELPRODUCT_STATIC         1012
 #define IDC_STATIC_GATEWAY              1013
 #define IDC_SUB_MASK                    1018
 #define IDC_GATEWAY                     1019
@@ -332,7 +334,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        258
+#define _APS_NEXT_RESOURCE_VALUE        259
 #define _APS_NEXT_COMMAND_VALUE         32783
 #define _APS_NEXT_CONTROL_VALUE         1174
 #define _APS_NEXT_SYMED_VALUE           101

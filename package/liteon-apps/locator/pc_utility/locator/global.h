@@ -103,6 +103,7 @@ extern CUpgraderApp theApp;
 #define UCP_CODE_HTTP_TYPE      0x34
 #define UCP_CODE_UPLOAD_FNAME	0x35
 #define UCP_CODE_DOWNLOAD_FNAME	0x36
+#define UCP_CODE_PRODUCTNAME    0x37
 
 #define UCP_CODE_END			0xFF
 
