@@ -1744,6 +1744,7 @@ int mfgCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	char *param = NULL, *subcmd = NULL;
 	unsigned char m_addr[18] = {0};
     char *tmp_addr = m_addr;
+	char buf[256] = {0};
 	
 	if ( tokenCount(pCli) > 2 ) {
 		uiPrintf(SETFALIED);
@@ -1753,22 +1754,25 @@ int mfgCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	subcmd = tokenPop(pCli);
 	param = tokenPop(pCli);
 
-	if (!param)
+	if (!param || !subcmd)
 		return CLI_PARSE_INVALID_PARAMETER;
 
-	if (strlen(param) != MAC_ADDR_LEN) {
-		uiPrintf("Invalid MAC address\n");
-		return CLI_PARSE_INPUT_ERROR;
+	if (!strncmp(subcmd, "mac", strlen(subcmd))) {
+		if (strlen(param) != MAC_ADDR_LEN) {
+			uiPrintf("Invalid MAC address\n");
+			return CLI_PARSE_INPUT_ERROR;
+		}
+
+		if (inet_atonmac(param, tmp_addr, MAC_ADDR_LEN) < 0) {
+			//uiPrintf("Invalid MAC address\n");
+			return CLI_PARSE_INPUT_ERROR;
+		}
+
+		//TBD, store MAC address
+		sprintf(buf, "boarddata set mac %s", tmp_addr);
+		system(buf);
 	}
-
-	if (inet_atonmac(param, tmp_addr, MAC_ADDR_LEN) < 0) {
-		uiPrintf("Invalid MAC address\n");
-		return CLI_PARSE_INPUT_ERROR;
-	}
-
-	//TBD, store MAC address
-
-
+	
 	return CLI_PARSE_OK;
 }
  /***********************************************************************
