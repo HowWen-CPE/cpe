@@ -1741,15 +1741,16 @@ int inet_atonmac(const char *s, char *addr, int addr_len)
  ***********************************************************************/
 int mfgCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 {
-	char *param = NULL;
+	char *param = NULL, *subcmd = NULL;
 	unsigned char m_addr[18] = {0};
     char *tmp_addr = m_addr;
 	
-	if ( tokenCount(pCli) > 1 ) {
+	if ( tokenCount(pCli) > 2 ) {
 		uiPrintf(SETFALIED);
 		return CLI_PARSE_NOMESSAGE;
 	}
 
+	subcmd = tokenPop(pCli);
 	param = tokenPop(pCli);
 
 	if (!param)
