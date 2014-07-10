@@ -34,11 +34,11 @@ ALL_EXE += $(USB_UPGRADE_CGI)
 all:	$(ALL_EXE)
 
 $(UPLOAD_CGI): upload.cgi.o crc32.o
-	$(CC) crc32.o upload.cgi.o -o $@ $(EZP_CFLAGS)
+	$(CC) -L ../../nvram -lnvram crc32.o upload.cgi.o -o $@ $(EZP_CFLAGS)
 	$(STRIP) --remove-section=.note --remove-section=.comment $@
 
 $(UPLOAD_BOOTLOADER_CGI): upload_bootloader.cgi.o
-	$(CC) upload_bootloader.cgi.o -o $@
+	$(CC) -L ../../nvram -lnvram  upload_bootloader.cgi.o -o $@
 	$(STRIP) --remove-section=.note --remove-section=.comment $@
 
 $(UPLOAD_SETTINGS): upload_settings.cgi.o
@@ -92,7 +92,7 @@ clean:
 #	Dependencies
 #
 upload.cgi.o: upload.cgi.c
-	$(CC) -DUPLOAD_FIRMWARE_SUPPORT -DCONFIG_RT2880_ROOTFS_IN_FLASH -DPIH_MAGIC=$(PIH_MAGIC) -c upload.cgi.c -o $@
+	$(CC) -DUPLOAD_FIRMWARE_SUPPORT -DCONFIG_RT2880_ROOTFS_IN_FLASH -DPIH_MAGIC=$(PIH_MAGIC) -I ../../nvram  -c upload.cgi.c -o $@
 #upload.cgi.o: upload.cgi.c $(CONF_H)
 #	$(CC) -DUPLOAD_FIRMWARE_SUPPORT -I$(CONF) -c upload.cgi.c -o $@
 
@@ -102,7 +102,7 @@ crc32.o: crc32.c
 #	$(CC) -DUSE_HOSTCC -I$(CONF) -c crc32.c -o $@
 
 upload_bootloader.cgi.o: upload.cgi.c
-	$(CC) -DUPLOAD_BOOTLOADER_SUPPORT -c upload.cgi.c -o $@
+	$(CC) -DUPLOAD_BOOTLOADER_SUPPORT -I ../../nvram -c upload.cgi.c -o $@
 #upload_bootloader.cgi.o: upload.cgi.c $(CONF_H)
 #	$(CC) -DUPLOAD_BOOTLOADER_SUPPORT -I$(CONF) -c upload.cgi.c -o $@
 

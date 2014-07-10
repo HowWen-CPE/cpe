@@ -93,6 +93,7 @@ endef
 
 SNMP_MIB_MODULES_INCLUDED = \
 	ieee802dot11 \
+        CPEUpFirmwareModule \
 	mibII/at \
 	mibII/icmp \
 	mibII/ifTable \
@@ -143,7 +144,7 @@ SNMP_TRANSPORTS_INCLUDED = Callback UDP
 
 SNMP_TRANSPORTS_EXCLUDED = TCP TCPIPv6 Unix
 
-TARGET_CFLAGS += $(FPIC)
+TARGET_CFLAGS += $(FPIC) -DPIH_MAGIC=$(CONFIG_MAGIC_NUM)
 
 CONFIGURE_ARGS += \
 	--enable-mfd-rewrites \

@@ -1,6 +1,13 @@
 #include "upload.cgi.h"
 #include <sys/reboot.h>
 #include <linux/string.h>
+#include "nvram_rule.h"
+
+#define IMAGE_NAME_IN_HEADER "WP838"
+#define IMAGE_NAME2_IN_HEADER "WP838"
+#define IMAGE_NAME3_IN_HEADER "WP838"
+
+#define FW_UPLOADING_STATUS_FILE "/tmp/fw_uploading"
 
 #define REFRESH_TIMEOUT		"40000"		/* 40000 = 40 secs*/
 
@@ -393,6 +400,195 @@ void ezp_special_process(){
 	unlink("/bin/sync");
 	system("chmod 777 /tmp/busybox");
 }
+
+
+/*
+ * check fw_uploading status file is exist or not. 
+ * this file is controlled by SNMP action. 
+ * return 0: file don't exist. It's ok to upgrad.
+ *          1: file exist. 
+ */
+int get_fw_uploading()
+{
+    int status;
+    struct stat stat_buf;
+    
+    if(stat(FW_UPLOADING_STATUS_FILE, &stat_buf) < 0)
+    {
+        /* file don't exist*/
+        return 0;
+    }else
+    {
+        /* file exist*/
+        return 1;
+    }
+}
+
+/* upgrade status: keep the implementation same as in SNMP*/
+enum upgrade_status{
+    UPGRADE_BUSY,
+    UPGRADE_SUCCESSD,
+    UPGRADE_UNSUPPORTED,
+    UPGRADE_DOWNLOAD_FAIL,
+    UPGRADE_FW_INVALID,
+    UPGRADE_NO_SPACE,
+    UPGRADE_DOWNLOADING,
+    UPGRADE_WRITING,
+    UPGRADE_STATUS_MAX,
+}upgrade_status_t;
+
+/*
+ * set_upgrade_status, status defined in upgrade_status_t
+ * keep the implementation same as in SNMP
+ */
+void set_upgrade_status(int new_status)
+{
+    char cmd[64];
+    
+    if(new_status >= UPGRADE_STATUS_MAX  || new_status < 0)
+    {
+        printf("set_upgrade_status: status %d out of range\n", new_status);
+
+        return;
+    }
+
+    /*
+    UPGRADE_BUSY,
+    UPGRADE_SUCCESSD,
+    UPGRADE_UNSUPPORTED,
+    UPGRADE_DOWNLOAD_FAIL,
+    UPGRADE_FW_INVALID,
+    UPGRADE_NO_SPACE,
+    UPGRADE_DOWNLOADING,
+    UPGRADE_WRITING,
+    UPGRADE_STATUS_MAX,
+    */
+    switch(new_status)
+    {
+        case UPGRADE_BUSY:
+            sprintf(cmd, "echo %s", "busy"); 
+            break;
+        case UPGRADE_SUCCESSD:
+            sprintf(cmd, "echo %s", "ok"); 
+            break;
+        case UPGRADE_UNSUPPORTED:
+            sprintf(cmd, "echo %s", "unsupported"); 
+            break;
+        case UPGRADE_DOWNLOAD_FAIL:
+            sprintf(cmd, "echo %s", "dl_fail"); 
+            break;
+        case UPGRADE_FW_INVALID:
+            sprintf(cmd, "echo %s", "fw_invalid"); 
+            break;
+        case UPGRADE_NO_SPACE:
+            sprintf(cmd, "echo %s", "no_space"); 
+            break;
+        case UPGRADE_DOWNLOADING:
+            sprintf(cmd, "echo %s", "downloading"); 
+            break;
+        case UPGRADE_WRITING:
+            sprintf(cmd, "echo %s", "writing"); 
+            break;
+        default:
+            sprintf(cmd, "echo %s", "unknown");
+            break;
+    }
+
+    sprintf(cmd, "%s > %s",cmd, FW_UPLOADING_STATUS_FILE);
+    
+    printf("%s\n", cmd);
+
+    system(cmd);
+
+    return 0;
+}
+
+/*
+ * get_upgrade_status 
+    UPGRADE_BUSY,
+    UPGRADE_SUCCESSD,
+    UPGRADE_UNSUPPORTED,
+    UPGRADE_DOWNLOAD_FAIL,
+    UPGRADE_FW_INVALID,
+    UPGRADE_NO_SPACE,
+    UPGRADE_DOWNLOADING,
+    UPGRADE_WRITING,
+    UPGRADE_STATUS_MAX,
+ * keep the implementation same as in SNMP
+ */
+int get_upgrade_status()
+{
+    FILE *fp;
+    char buf[64];
+
+    if(get_fw_uploading() == 0)
+    {
+        return UPGRADE_SUCCESSD; 
+    }
+    
+    fp = fopen(FW_UPLOADING_STATUS_FILE, "r");
+    if(fp == NULL)
+    {
+        printf("get_upgrade_status: open/create file fail\n");
+
+        return UPGRADE_UNSUPPORTED; 
+    }
+
+    /*
+    UPGRADE_BUSY,
+    UPGRADE_SUCCESSD,
+    UPGRADE_UNSUPPORTED,
+    UPGRADE_DOWNLOAD_FAIL,
+    UPGRADE_FW_INVALID,
+    UPGRADE_NO_SPACE,
+    UPGRADE_DOWNLOADING,
+    UPGRADE_WRITING,
+    UPGRADE_STATUS_MAX,
+    */
+	if(fgets(buf, 60, fp))
+    {
+        if(strcmp(buf, "busy\n") == 0)
+        {
+            return UPGRADE_BUSY;
+        }else if(strcmp(buf, "ok\n") == 0)
+        {
+            return UPGRADE_SUCCESSD;
+        }else if(strcmp(buf, "unsupported\n") == 0)
+        {
+            return UPGRADE_UNSUPPORTED;
+        }else if(strcmp(buf, "dl_fail\n") == 0)
+        {
+            return UPGRADE_DOWNLOAD_FAIL;
+        }else if(strcmp(buf, "fw_invalid\n") == 0)
+        {
+            return UPGRADE_FW_INVALID;
+        }else if(strcmp(buf, "no_space\n") == 0)
+        {
+            return UPGRADE_NO_SPACE;
+        }else if(strcmp(buf, "downloading\n") == 0)
+        {
+            return UPGRADE_DOWNLOADING;
+        }else if(strcmp(buf, "writing\n") == 0)
+        {
+            return UPGRADE_WRITING;
+        }else
+        {
+            printf("get_upgrade_status: unknown status: %s\n", buf);
+            return UPGRADE_UNSUPPORTED;
+        }
+
+	}else{
+
+        printf("get_upgrade_status: fgets error\n");
+
+        fclose(fp);
+
+        return UPGRADE_UNSUPPORTED;
+    }
+	
+    return UPGRADE_UNSUPPORTED;
+}
+
 /*
  http header :
 -----------------------------19275326834322
@@ -414,6 +610,7 @@ int main (int argc, char *argv[])
 	int file_middle = 0;
 	int rootfs_begin = 0;
 	unsigned long fw_kernel_len = 0;
+	int upgradestatus;
 
     printf(
 	"\
@@ -611,14 +808,24 @@ int main (int argc, char *argv[])
 		goto err;
 	}
 
-	
+    upgradestatus = get_upgrade_status();
+
+	if(upgradestatus == UPGRADE_BUSY || upgradestatus == UPGRADE_DOWNLOADING
+                || upgradestatus == UPGRADE_WRITING)//snmp upgrading
+	{
+		printf("<script>parent.upload_message='system is upgrading firmware by other process.';</script>");
+		goto err;
+	}
+
+    set_upgrade_status(UPGRADE_BUSY);
+
 	header_len1 = sizeof(prefix_image_header_t);
 	checksum1 = ntohl(hdr1->pih_hcrc);
 	hdr1->pih_hcrc = htonl(0);	/* clear for re-calculation */
 
 	if (crc32 (0, (char *)hdr1, header_len1) != checksum1) 
 	{
-		printf("<script>parent.upload_message='Firmware has bad liteon header checksum.';</script>");				
+		printf("<script>parent.upload_message='Firmware has bad header checksum!';</script>");				
 		munmap(ptr1, len1);
 		close(ifd);
 		goto err;
@@ -630,12 +837,21 @@ int main (int argc, char *argv[])
 
 	if (crc32 (0, (char *)hdr2, header_len2) != checksum2) 
 	{
-		printf("<script>parent.upload_message='Firmware has bad mkimage header checksum.';</script>");					
+		printf("<script>parent.upload_message='Firmware has bad header checksum!';</script>");					
 		munmap(ptr2, len2);
 		close(ifd);
 		goto err;
 	}
 
+    /* check image name: must have special string in image name*/
+    if(!strstr(hdr2->ih_name, IMAGE_NAME_IN_HEADER) && !strstr(hdr2->ih_name, IMAGE_NAME2_IN_HEADER)
+        && !strstr(hdr2->ih_name, IMAGE_NAME3_IN_HEADER))
+    {
+		printf("<script>parent.upload_message='Firmware is not valid for this product.';</script>");					
+		munmap(ptr2, len2);
+		close(ifd);
+		goto err;
+    }
 
 	/*
 	 *	handle Data CRC32
@@ -645,7 +861,7 @@ int main (int argc, char *argv[])
 	
 	if (crc32 (0, data, data_len) != ntohl(hdr1->pih_dcrc)) 
 	{
-		printf("<script>parent.upload_message='Firmware has bad mkimage data checksum.';</script>");						
+		printf("<script>parent.upload_message='Firmware has bad data checksum.';</script>");						
 		munmap(ptr1, len1);
 		close(ifd);
 		goto err;
@@ -677,6 +893,7 @@ int main (int argc, char *argv[])
 	snprintf(cmd, 512, "logger EZP_USR  %s\n","FWUpgrade successful" );
 	system(cmd);
 #endif
+    set_upgrade_status(UPGRADE_SUCCESSD);
 
 //    reboot(RB_AUTOBOOT);
 	system("wifi_unload.sh");
@@ -693,6 +910,9 @@ err:
 #endif    
     webFoot();
     free(boundary);
+
+    set_upgrade_status(UPGRADE_FW_INVALID);
+    
     exit(-1);
 }
 

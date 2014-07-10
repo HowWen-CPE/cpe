@@ -17,7 +17,7 @@ CLI_CFLAGS  = $(CFLAGS)	-DDEBUG
 CLI_LDFLAGS = $(LDFLAGS)
 
 CLI_OBJ = cli.o
-LIB_OBJ = crc.o nvram.o nvram_public.o nvram_fw.o nvram_rule.o
+LIB_OBJ = crc.o crc32.o nvram.o nvram_public.o nvram_fw.o nvram_rule.o
 
 all: cli libnvram
 
@@ -30,8 +30,9 @@ cli: libnvram
 cli.o: cli.c
 	$(CC) $(CLI_CFLAGS) -c -o $@ $<
 
-libnvram:crc.c nvram.c nvram_public.c nvram_fw.c nvram_rule.c attr_2_desc.h rule_2_attr.h
+libnvram:crc.c crc32.c nvram.c nvram_public.c nvram_fw.c nvram_rule.c attr_2_desc.h rule_2_attr.h
 	$(CC) $(LIB_CFLAGS) -c -o crc.o crc.c
+	$(CC) $(LIB_CFLAGS) -c -o crc32.o crc32.c
 	$(CC) $(LIB_CFLAGS) -c -o nvram.o nvram.c
 	$(CC) $(LIB_CFLAGS) -c -o nvram_public.o nvram_public.c
 	$(CC) $(LIB_CFLAGS) -c -o nvram_fw.o nvram_fw.c
