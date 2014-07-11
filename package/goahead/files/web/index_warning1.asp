@@ -315,8 +315,8 @@ function loadfocus()
 <div class="index_bg" id="index_bg"></div>
 <div class="frame_left"></div>
 <div class="frame_right"></div>
-<div class="logo" id="logo"><ul><li class="modelname" id="modelname"><% getCfgGeneral(1, "SystemName"); %></li></ul></div>
-<div class="home_image"></div>
+<div class="logo" id="logo"><ul><li class="modelname" id="modelname">HoWen CPE&nbsp;<% getCfgGeneral(1, 'ProductName'); %><!--< getCfgGeneral(1, "SystemName"); >--></li></ul></div>
+<!--<div class="home_image"></div>-->
 <div class="home_note">
   <ul><li class="welcome_text" id="mantitle">Welcome to the device configuration interface. 
 Enter the password and click 'Login'.</li>
@@ -387,7 +387,7 @@ Enter the password and click 'Login'.</li>
 </li></ul>
 </div>
 <span class="off">
-<div class="copyright" id="copyright">(C) Copyright  by HP Communications Corp.<img src="/goahead1.gif"></div>
+<div class="copyright" id="copyright">(C) Copyright  by Howen Technologies Corp.<img src="/goahead1.gif"></div>
 <div id="set_pupup1">
 <div class="close1"><a href="#" onclick="MM_showHideLayers('set_pupup1','','hide')"></a></div>
   <ul><li style="margin-top:10px; font-weight:bold;" id="ChangeUnit">Change Unit</li><li>

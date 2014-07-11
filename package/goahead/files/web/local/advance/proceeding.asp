@@ -42,7 +42,7 @@ function initTranslation()
     <td><table width="100%" height="37" border="0" cellpadding="0" cellspacing="0">
       <tr>
         <td width="19" height="37"><img src="images//popup_top_left.gif" width="19" height="45" /></td>
-        <td background="images/popup_top_center.gif" class="table_title" id="Restart">Router Is Restart Now</td>
+        <td background="images/popup_top_center.gif" class="table_title" id="Restart">Device Is Restart Now</td>
         <td width="15" background="images/popup_top_center.gif">&nbsp;</td>
         <td width="19" height="45"><img src="images/popup_top_right.gif" width="19" height="45" /></td>
       </tr>

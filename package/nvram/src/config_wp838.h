@@ -1500,8 +1500,11 @@ nvram_tuple_t nvram_factory_default[] = {
 		NVRAM_NONE,
 		0 
 	}, 
-
-	
+    /*system status^filename^ipaddr^protocol^server username^server password*/
+    { "snmpd_upgrade_rule", "1^^^1^^", 
+        NVRAM_DEFAULT,
+        0 
+    },
 	{ "ssh_rule", "^1^8123", 
 		NVRAM_NONE,
 		0 

@@ -411,6 +411,7 @@
 <!-- proceeding.asp -->
 <message msgid="proceeding message 2" msgstr="裝置現在要重新開機。由於並無指示何時程序將完成，請稍待一分鐘後，再嘗試存取路由器。"/>
 <message msgid="proceeding Restart" msgstr="裝置現正重新啟動。"/>
+<message msgid="proceeding Upgrade" msgstr="系統正在升級。"/>
 <!-- proceeding.asp -->
 <!-- upload_process.html -->
 <message msgid="proceeding message 3" msgstr="正在進行韌體升級...請稍後..."/>

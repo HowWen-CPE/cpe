@@ -17,8 +17,8 @@ function initTranslation()
 	e.innerHTML = _("proceeding message 3");
 	e = document.getElementById("proceeding_message_5");
 	e.innerHTML = _("proceeding message 5");
-	e = document.getElementById("Restart");
-	e.innerHTML = _("proceeding Restart");
+	e = document.getElementById("Upgrade");
+	e.innerHTML = _("proceeding Upgrade");
 }
 </script>
 </head>
@@ -30,7 +30,7 @@ function initTranslation()
     <td><table width="100%" height="37" border="0" cellpadding="0" cellspacing="0">
       <tr>
         <td width="19" height="37"><img src="images//popup_top_left.gif" width="19" height="45" /></td>
-        <td background="images/popup_top_center.gif" class="table_title" id="Restart">Router Is Restart Now</td>
+        <td background="images/popup_top_center.gif" class="table_title" id="Upgrade">Device Is Upgrading Now</td>
         <td width="15" background="images/popup_top_center.gif">&nbsp;</td>
         <td width="19" height="45"><img src="images/popup_top_right.gif" width="19" height="45" /></td>
       </tr>
@@ -99,8 +99,8 @@ function initTranslation1()
 {
 	var e = document.getElementById("proceeding_message_3");
 	e.innerHTML = _("proceeding message 4");
-	e = document.getElementById("Restart");
-	e.innerHTML = _("proceeding Restart");
+	e = document.getElementById("Upgrade");
+	e.innerHTML = _("proceeding Upgrade");
 	e = document.getElementById("proceeding_message_2");
 	e.innerHTML = _("proceeding message 2");
 

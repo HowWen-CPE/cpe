@@ -1832,9 +1832,9 @@ else if("WP868" == board_model) {
                   <img src="images/i_info.jpg" width="50" height="49" />
                 </center></td>
                 <td width="73%"><span class="blod"><% getCfgGeneral(1, "SystemName"); %></span> <br />
-                  (C) Copyright by Lite-On Communications Corp.<br />
+                  (C) Copyright@2014 Howen Technologies Co.,Ltd.<br />
                   <br />
-                  <font id="dashAboutCheck1"></font> <a href="http://www.vendor.com" target="_blank">www.vendor.com</a> <font id="dashAboutCheck2"></font></td>
+                  <font id="dashAboutCheck1"></font> <a href="http://www.howentech.com" target="_blank">www.howentech.com</a> <font id="dashAboutCheck2"></font></td>
               </tr>
               <tr>
                 <td height="20" colspan="2"><center>

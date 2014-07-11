@@ -412,6 +412,7 @@
 <!-- proceeding.asp -->
 <message msgid="proceeding message 2" msgstr="设备现在要重新开机。由于并无指示何时程序将完成，请稍待一分钟後，再尝试存取设备。"/>
 <message msgid="proceeding Restart" msgstr="设备现正重新启动。"/>
+<message msgid="proceeding Upgrade" msgstr="系统正在升级。"/>
 <!-- proceeding.asp -->
 <!-- upload_process.html -->
 <message msgid="proceeding message 3" msgstr="正在进行软件升级...请稍后..."/>

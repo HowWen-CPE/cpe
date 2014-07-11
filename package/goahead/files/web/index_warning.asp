@@ -388,7 +388,7 @@ Enter the password and click 'Login'.</li>
 </li></ul>
 </div>
 <span class="off">
-<div class="copyright" id="copyright">(C) Copyright  by HP Communications Corp.<img src="/goahead1.gif"></div>
+<div class="copyright" id="copyright">(C) Copyright  by Howen Technologies Corp.<img src="/goahead1.gif"></div>
 <div id="set_pupup1">
 <div class="close1"><a href="#" onclick="MM_showHideLayers('set_pupup1','','hide')"></a></div>
   <ul><li style="margin-top:10px; font-weight:bold;" id="ChangeUnit" >Change Unit</li><li>

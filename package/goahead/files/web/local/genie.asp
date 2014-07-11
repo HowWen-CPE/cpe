@@ -178,7 +178,7 @@ function MM_showHideLayers() { //v6.0
 <div class="in_line" id="topline" ></div>
 <div class="frame_left"></div>
 <div class="frame_right"></div>
-<div class="copyright" id="copyright">(C) Copyright 2008 by HP Communications Corp.</div>
+<div class="copyright" id="copyright">(C) Copyright 2014 by Howen Technologies Corp.</div>
 </div>
 </form>
 <div id="popup3_table">

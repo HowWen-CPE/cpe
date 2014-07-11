@@ -3,9 +3,9 @@
 #include <linux/string.h>
 #include "nvram_rule.h"
 
-#define IMAGE_NAME_IN_HEADER "WP838"
-#define IMAGE_NAME2_IN_HEADER "WP838"
-#define IMAGE_NAME3_IN_HEADER "WP838"
+#define IMAGE_NAME_IN_HEADER "WCHS01"
+#define IMAGE_NAME2_IN_HEADER "wchs01"
+#define IMAGE_NAME3_IN_HEADER "WCHS"
 
 #define FW_UPLOADING_STATUS_FILE "/tmp/fw_uploading"
 
@@ -792,7 +792,7 @@ int main (int argc, char *argv[])
 #ifdef PIH_MAGIC	
 	if (ntohl(hdr1->pih_magic) != PIH_MAGIC) 
 	{
-		printf("<script>parent.upload_message='Liteon header has a error magic number.';</script>");			
+		printf("<script>parent.upload_message='Header has a error magic number.';</script>");			
 		munmap(ptr1, len1);
 		close(ifd);
 		goto err;

@@ -445,6 +445,7 @@
 <!-- proceeding.asp -->
 <message msgid="proceeding message 2" msgstr="The device will now reboot.As there will be no indication of when the process is complete, please wait for one minute before attempting to access the device again. "/>
 <message msgid="proceeding Restart" msgstr="Device Is Restart Now."/>
+<message msgid="proceeding Upgrade" msgstr="System Is Upgrading Now."/>
 <!-- proceeding.asp -->
 <!-- upload_process.html -->
 <message msgid="proceeding message 3" msgstr="Firmware Upgrade is proceeding...  Please Wait ...  "/>
