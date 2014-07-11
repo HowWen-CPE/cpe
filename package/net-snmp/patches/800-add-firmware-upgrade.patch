@@ -1537,9 +1537,9 @@ diff -Nrup net-snmp-5.7.2-old/agent/mibgroup/CPEUpFirmwareModule.h net-snmp-5.7.
 +//#define IH_MAGIC	0x27051956
 +//#define IH_MAGIC    0x4C383338
 +
-+#define IMAGE_NAME_IN_HEADER "WP838"
-+#define IMAGE_NAME2_IN_HEADER "WP838"
-+#define IMAGE_NAME3_IN_HEADER "WP838"
++#define IMAGE_NAME_IN_HEADER "WCHS01"
++#define IMAGE_NAME2_IN_HEADER "wchs01"
++#define IMAGE_NAME3_IN_HEADER "WCHS"
 +
 +
 +#define FW_UPLOADING_STATUS_FILE "/tmp/fw_uploading"
