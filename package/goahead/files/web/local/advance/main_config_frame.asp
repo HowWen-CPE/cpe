@@ -391,9 +391,9 @@ else if("WP838" == board_model) {
 			_('CONFIGURATION')+' > '+_('Management')+' > '
 			+_('System Utilities')+' > '+_('System Utilities'), 'InfoFrame');
 		/***************Rogue Ap Detection***********************/
-		d.add(48,13,_('Rogue AP Detection'),'/local/advance/rap_detection.asp', 
-			_('CONFIGURATION')+' > '+_('Management')+' > '
-			+_('Rogue AP Detection')+' > '+_('Rogue AP Detection'), 'InfoFrame');
+		//d.add(48,13,_('Rogue AP Detection'),'/local/advance/rap_detection.asp', 
+		//	_('CONFIGURATION')+' > '+_('Management')+' > '
+		//	+_('Rogue AP Detection')+' > '+_('Rogue AP Detection'), 'InfoFrame');
 
 	document.write(d);
 
