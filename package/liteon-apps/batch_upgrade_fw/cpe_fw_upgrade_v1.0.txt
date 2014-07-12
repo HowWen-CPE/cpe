@@ -1,0 +1,31 @@
+#
+# upgrade firmware file name
+#
+CPE_FIRMWARE_FILE=WCHS01-v0.1.0-uImage-squashfs-lzma-web.bin
+
+#
+# download protocol: ftp or tftp
+#
+DOWNLOAD_PROTOCOL=ftp
+
+#
+# if by ftp, specify ftp setting: server IP and account
+# Note: space and other special character aren't supported
+#
+FTP_IP=192.168.1.6
+FTP_USERNAME=cpe_fw_ftp
+FTP_PASSWORD=123456
+
+#
+# if by tftp, specify tftp setting: server IP
+#
+TFTP_IP=192.168.1.6
+
+
+#
+# CPE SNMP account
+# Note: by default read is public, wirte is private
+#
+SNMP_WRITE=private
+SNMP_READ=public
+
