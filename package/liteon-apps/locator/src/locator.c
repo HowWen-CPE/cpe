@@ -65,7 +65,7 @@ Because the ipaddress and netmask do not write into config file which are get fr
 #include <signal.h>
 
 
-#define LOCATOR_UDP_PORT            0x5168
+#define LOCATOR_UDP_PORT            0x4650
 #define LOCATOR_UDP_TYPE            0xC001
 #define UDP_CLASS                   0x00010001
 
