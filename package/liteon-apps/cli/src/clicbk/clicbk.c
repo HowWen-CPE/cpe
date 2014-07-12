@@ -192,13 +192,15 @@ void init_global_config()
 	//param1 encryption type
 	strcpy(security->params[1].param_name, SECURITY_ENC_TYPE);
 
+	//param2 psk
+	strcpy(security->params[2].param_name, SECURITY_KEY);
+
 	if (!strcmp(buf, "psk")) {
 		memset(buf, 0, sizeof(buf));
 		ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "crypto", buf, 128, EZPLIB_USE_CLI);
 		strcpy(security->params[1].value, buf);
 		//param2 psk
 		memset(buf, 0, sizeof(buf));
-		strcpy(security->params[2].param_name, SECURITY_KEY);
 		ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "key", buf, 128, EZPLIB_USE_CLI);
 		strcpy(security->params[2].value, buf);
 	} else if (!strcmp(buf, "psk2")) {
@@ -207,7 +209,6 @@ void init_global_config()
 		strcpy(security->params[1].value, buf);
 		//param2 psk
 		memset(buf, 0, sizeof(buf));
-		strcpy(security->params[2].param_name, SECURITY_KEY);
 		ezplib_get_attr_val("wl0_apcli_sec_wpa2_rule", 0, "key", buf, 128, EZPLIB_USE_CLI);
 		strcpy(security->params[2].value, buf);
 	}
