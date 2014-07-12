@@ -13,3 +13,5 @@ export PS1='\u@\h:\w\$ '
 
 [ -x /usr/bin/arp ] || arp() { cat /proc/net/arp; }
 [ -x /usr/bin/ldd ] || ldd() { LD_TRACE_LOADED_OBJECTS=1 $*; }
+
+cli

@@ -9,10 +9,10 @@ then
 	exit 0
 else
 cat << EOF
- === IMPORTANT ============================
-  Use 'passwd' to set your login password
-  this will disable telnet and enable SSH
- ------------------------------------------
+# === IMPORTANT ============================
+#  Use 'passwd' to set your login password
+#  this will disable telnet and enable SSH
+# ------------------------------------------
 EOF
 fi
 

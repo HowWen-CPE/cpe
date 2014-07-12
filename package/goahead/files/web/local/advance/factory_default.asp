@@ -80,7 +80,7 @@ function LoadDefaultFormCheck()
                   </table>
                 </li>
 
-                <li class="w_text">
+                <li class="w_text" style="display:none">
                   <table width="95%" border="0" align="center" cellpadding="0" cellspacing="0">
                     <tr>
                       <td id="introduction_6">

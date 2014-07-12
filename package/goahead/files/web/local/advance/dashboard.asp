@@ -310,7 +310,7 @@ function initTranslation()
                 <td width="27%"><center>
                   <img src="images/i_info.jpg" width="50" height="49" />
                 </center></td>
-                <td width="73%"><span class="blod"><% getCfgGeneral(1, "SystemName"); %></span> <br />
+                <td width="73%"><span class="blod"><% getCfgGeneral(1, "ProductName"); %></span> <br />
                   (C) Copyright@2014 Howen Technologies Co.,Ltd.<br />
                   <br />
                   <font id="dashAboutCheck1"></font> <a href="http://www.howentech.com" target="_blank">www.howentech.com</a> <font id="dashAboutCheck2"></font></td>
