@@ -82,7 +82,7 @@ void CDeviceInfoDlg::DoDataExchange(CDataExchange* pDX)
 	//DDX_Text(pDX, IDC_5GCHANNEL_STATIC, m_str5GChannel);
 	//DDX_Text(pDX, IDC_5GSECUTRITY_STATIC, m_str5GSecurity);
 	//DDX_Text(pDX, IDC_5GWLAN_MACADDR_STATIC, m_str5GWlanMacAddr);
-	//DDX_Text(pDX, IDC_WLANOPMODE_STATIC, m_strWlanOpMode);
+	DDX_Text(pDX, IDC_WLANOPMODE_STATIC, m_strWlanOpMode);
 	//DDX_Text(pDX, IDC_5GWLANOPMODE_STATIC, m_str5GWlanOpMode);
    
 	//}}AFX_DATA_MAP
