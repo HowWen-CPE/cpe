@@ -512,6 +512,211 @@ int ipMaskCliCmdSet(CLI * pCli, char *p, struct parse_token_s *pNxtTbl)
 	return CLI_PARSE_NO_VALUE;
 }
 #endif
+/*****************get the MAC Address using the ioctl function*************************/
+int sysAddrGet(char *dev, char *Adrs)
+{
+	int i, macsock;
+	struct ifreq ifr;
+	memset(&ifr, 0, sizeof(struct ifreq));
+
+	if ((macsock = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+		printf("get the mac socket file descriptor faild!\n");
+
+	strcpy(ifr.ifr_name, dev);
+	if (ioctl(macsock, SIOCGIFHWADDR, &ifr)<0)
+		perror("ioctl:\n");
+
+	for (i = 0; i< 6; i++)
+	{
+		Adrs[i] = ifr.ifr_hwaddr.sa_data[i];
+	}
+
+	close(macsock);
+	return 0;
+}
+
+int getAPConnectStatus(int radio, int *associated)
+{
+	int ret = 0;
+	int assotmp = 0;
+	char iOpMode[32] = {0};
+	
+	if (RADIO_2G == radio) {
+		ezplib_get_attr_val("wl_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
+	} else {
+		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
+	}	
+	if (!strcmp(iOpMode, "client")) {
+		ret = get_sta_assoc_status(radio, &assotmp);
+		if (T_FAILURE == ret) {
+			*associated = 2;
+		} else {
+			*associated = assotmp;
+		}
+	} else {
+		*associated = 3;
+	}
+
+	return 0;
+}
+
+#define BSSID_EMPTY                "00:00:00:00:00:00"
+int getAPConnectBSSID(int radio, char *buf)
+{
+	int ret = 0;
+	char macBuf[18] = {0};
+	char iOpMode[32] = {0};
+	if (RADIO_2G == radio) {
+		ezplib_get_attr_val("wl_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
+	} else {
+		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
+	}
+	if (!strcmp(iOpMode, "client")) {
+		ret = get_sta_assoc_bssid(radio, macBuf);
+		if (T_FAILURE == ret) {
+			strcpy(buf, BSSID_EMPTY);
+		} else {
+			strcpy(buf, macBuf);
+		}
+	} else {
+		strcpy(buf, "--");
+	}
+
+	return 0;
+}
+
+int getWIFIRSSI(int radio, char *buf) 
+{
+	int ret = 0;
+	char rssitmp[30] = {0};
+	char iOpMode[32] = {0};
+	if (RADIO_2G == radio) {
+		ezplib_get_attr_val("wl_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
+	} else {
+		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
+	}
+	if (!strcmp(iOpMode, "client")) {
+		ret = get_sta_assoc_rssi(radio, rssitmp);
+		if (T_FAILURE == ret) {
+			strcpy(buf, "-- dBm");
+		} else {
+			strcpy(buf, rssitmp);
+		}
+	} else {
+		strcpy(buf, "--");
+	}
+	
+	return 0; 
+}
+
+/***********************************************************************
+* Function Name : wirelessStatusGet
+* Description	 : process device name getting command
+* Input 		: @pCli, cli control structure
+*					 @pToken, token
+*					 @pNxtTbl, next token
+* Output		: 
+* Return value	: CLI_PARSE_OK, command success
+***********************************************************************/
+
+int wirelessStatusGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
+{
+	char buf[64] = {0};
+	Channel_t channel_get;
+	int wmode = 8;
+	AP_INFO ap_info_2g;
+	char MacAddrTemp[6] = {0};
+	int associated = 0;
+	char MacAddr[18] = {0};
+	char rssi[30] = {0};
+	int ret = 0;
+
+	//wireless mode
+	ezplib_get_attr_val("system_mode", 0, "name", buf, 64, EZPLIB_USE_CLI);
+	uiPrintf("Operation Mode: %s\n", buf);
+
+	//ssid
+	memset(buf, 0, sizeof(buf));
+	get_sta_assoc_ssid(RADIO_2G, buf);
+	uiPrintf("SSID: %s\n", buf);
+
+	//channel number
+	memset(&channel_get, 0, sizeof(Channel_t));
+	get_current_channel(0, &channel_get);
+	uiPrintf("Channel: %d\n", channel_get.chan_number);
+
+	// Wireless Mode
+	ret = get_wirelessmode(RADIO_2G, &wmode);
+	if (T_FAILURE == ret) {
+		if (RADIO_2G == 0) {
+			uiPrintf("Wireless Mode: 802.11 a/n\n");
+		}
+	} else {
+		if (wmode == WMODE_11AN) {
+			uiPrintf("Wireless Mode: 802.11 a/n\n");
+		}
+	}
+
+	//authentication
+	memset(&ap_info_2g, 0, sizeof(AP_INFO));
+
+	ret = get_sta_assoc_ap_info(RADIO_2G, &ap_info_2g);
+	uiPrintf("Security: ");
+	switch (ap_info_2g.auth_mode)
+	{
+		case 1:
+		case 4:
+			uiPrintf("WPA-PSK\n");
+			break;
+		case 2:
+		case 5:
+			uiPrintf("WPA2-PSK\n");
+			break;
+		case 3:
+		case 6:
+			uiPrintf("WPA2-Mixed-PSK\n");
+			break;
+		case 7:
+			uiPrintf("WEP\n");
+			break;
+		default:
+			uiPrintf("No\n");
+			break;
+	}
+
+	//wireless lan mac address
+	ezplib_get_attr_val("wl_sta_device_rule", 0, "sta_device", buf, 64, EZPLIB_USE_CLI);
+	sysAddrGet(buf, MacAddrTemp);
+	uiPrintf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+					MacAddrTemp[0], MacAddrTemp[1], MacAddrTemp[2], 
+					MacAddrTemp[3],	MacAddrTemp[4], MacAddrTemp[5]);
+
+	//associated
+	//0->Disassociated, 1->Associated, 2->Unkown, 3-> --
+	getAPConnectStatus(RADIO_2G, &associated);
+	switch(associated) {
+		case 0:
+			uiPrintf("Connect Status: Disassociated\n");
+			break;
+		case 1:
+			uiPrintf("Connect Status: Associated\n");
+			break;
+		default:
+			uiPrintf("Connect Status: Unkown\n");
+			
+	}
+
+	//bssid
+	getAPConnectBSSID(RADIO_2G, MacAddr);
+	uiPrintf("BSSID: %s\n", MacAddr);
+
+	//rssi
+	getWIFIRSSI(RADIO_2G, rssi);
+	uiPrintf("RSSI: %s\n", rssi);
+	
+	return CLI_PARSE_OK;
+}
+
  /***********************************************************************
  * Function Name : systemNameGet
  * Description    : process device name getting command

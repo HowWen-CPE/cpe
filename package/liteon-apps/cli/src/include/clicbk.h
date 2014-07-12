@@ -95,6 +95,7 @@ int antennaCliCmdGet(CLI * pCli, char *p, struct parse_token_s *pNxtTbl);
 
 int systemNameSet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int systemNameGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl);
+int wirelessStatusGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl);
 
 int txChainSet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl);
 

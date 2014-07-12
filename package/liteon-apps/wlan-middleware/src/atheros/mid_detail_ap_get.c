@@ -269,38 +269,55 @@ int get_current_channel(int radio, Channel_t *channel_get)
 
     //The command I wanna is iwlist ath0 channel | grep Current  | awk '{gsub(/)/,"");print}' | awk '{print substr($5,0)}'
     sprintf(cmd, "iwlist %s channel | grep Current  | awk '{gsub(/)/,\"\");print}' | awk '{print substr($5,0)}' > /tmp/current_channel", vap_name);
-    EXE_COMMAND(cmd);
+    //EXE_COMMAND(cmd);
+    system(cmd);
     fin = fopen("/tmp/current_channel","r");
             
-    while ((c=fgetc(fin)) != EOF){
-        ungetc(c,fin);        
-        readline(str,fin);
-        strcpy_delspace(str, channel_s);
-        channel_get->chan_number = atoi(channel_s);
-    }
+//    while ((c=fgetc(fin)) != EOF){
+  //      ungetc(c,fin);        
+    //    readline(str,fin);
+      //  strcpy_delspace(str, channel_s);
+        //channel_get->chan_number = atoi(channel_s);
+    //}
+    if (fgets(str, 256, fin) == NULL) {
+        fclose(fin);
+        return T_FAILURE;
+     }
+     strcpy_delspace(str, channel_s);
+     channel_get->chan_number = atoi(channel_s);
 
     fclose(fin);
-    EXE_COMMAND("rm -f /tmp/current_channel");    
-
+    //EXE_COMMAND("rm -f /tmp/current_channel");    
+    system("rm -f /tmp/current_channel");
     memset(cmd, 0, sizeof(cmd));
     //The command I wanna is iwlist ath0 channel | grep Current  | awk '{gsub(/\./,"");print}' | awk '{print substr($2,11)}'
     //sprintf(cmd, "iwlist %s channel | grep Current  | awk '{gsub(/\\./,\"\");print}' | awk '{print substr($2,11)}' > /tmp/current_frequency", vap_name);
     sprintf(cmd, "iwlist %s channel | grep Current | awk '{print substr($2,11)}' > /tmp/current_frequency", vap_name);
-    EXE_COMMAND(cmd);
+    //EXE_COMMAND(cmd);
+    system(cmd);
     fin = fopen("/tmp/current_frequency","r");
             
-    while ((c=fgetc(fin)) != EOF){
-        ungetc(c,fin);        
-        readline(str,fin);
-        strcpy_delspace(str, frequency_s);
+//    while ((c=fgetc(fin)) != EOF){
+  //      ungetc(c,fin);        
+   //     readline(str,fin);
+    //    strcpy_delspace(str, frequency_s);
         //channel_get->frequency = atoi(frequency_s);
-        tmp_frequency = atof(frequency_s);
-        tmp_frequency = tmp_frequency * 1000; 
-        channel_get->frequency = (int)tmp_frequency;
+    //    tmp_frequency = atof(frequency_s);
+    //    tmp_frequency = tmp_frequency * 1000; 
+    //    channel_get->frequency = (int)tmp_frequency;
+   // }
+    if (fgets(str, 256, fin) == NULL) {
+	fclose(fin);
+	return T_FAILURE;
     }
+    strcpy_delspace(str, frequency_s);
+    tmp_frequency = atof(frequency_s);
+    tmp_frequency = tmp_frequency * 1000;
+    channel_get->frequency = (int)tmp_frequency;
 
     fclose(fin);
-    EXE_COMMAND("rm -f /tmp/current_frequency");    
+    system("rm -f /tmp/current_frequency");
+    //EXE_COMMAND("rm -f /tmp/current_frequency");    
 
     return T_SUCCESS;
 }
@@ -475,18 +492,25 @@ int get_wirelessmode(int radio, int *wmode)
     }
 
     sprintf(cmd, "iwpriv %s get_mode | awk '{print substr($2,10,20)}' >> /tmp/current_wireless_mode", vap_name);
-    EXE_COMMAND(cmd);
+    //EXE_COMMAND(cmd);
+    system(cmd);
     fin = fopen("/tmp/current_wireless_mode","r");
             
     /*Parse rate from /tmp/current_wlan_rate file*/
-    while ((c=fgetc(fin)) != EOF){
-        ungetc(c,fin);        
-        readline(str,fin);
-        strcpy_delspace(str, wireless_mode);
+    //while ((c=fgetc(fin)) != EOF){
+    //    ungetc(c,fin);        
+    //    readline(str,fin);
+     //   strcpy_delspace(str, wireless_mode);
+    //}
+    if (fgets(str, 256, fin) == NULL) {
+	fclose(fin);
+	return T_FAILURE;
     }
+    strcpy_delspace(str, wireless_mode);
 
 	fclose(fin);
-    EXE_COMMAND("rm -f /tmp/current_wireless_mode");
+    //EXE_COMMAND("rm -f /tmp/current_wireless_mode");
+    system("rm -f /tmp/current_wireless_mode");
 
 	if (strstr(wireless_mode, "11NG") != NULL) {
 		*wmode = WMODE_11BGN;
@@ -495,7 +519,7 @@ int get_wirelessmode(int radio, int *wmode)
 	} else if (strstr(wireless_mode, "11ACV") != NULL) {
 		*wmode = WMODE_11AC_MIXED;
 	} else {
-        MID_ERROR("Can not get wireless mode or the wireless mode is not supported by now!");
+        //MID_ERROR("Can not get wireless mode or the wireless mode is not supported by now!");
         return T_FAILURE;
     }
 

@@ -88,6 +88,7 @@ LOCAL struct parse_token_s getCmdTbl[] = {
     {"security", "Display security", securityGet, NULL, NULL, NULL, 0},
     {"ssid", "Display ssid", ssidGet, NULL, NULL, NULL, 0},
     {"deviceid", "Display device id", systemNameGet, NULL, NULL, NULL, 0},
+    {"status", "Display wireless status", wirelessStatusGet, NULL, NULL, NULL, 0},
 
     PARSE_TOKEN_DELIMITER
 };
