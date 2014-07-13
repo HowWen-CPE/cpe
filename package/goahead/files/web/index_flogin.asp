@@ -28,7 +28,8 @@ function show_div(show,id) {
     	document.getElementById(id).className  = "off" ;
 }
 
-var modelname = "<% getCfgGeneral(1, "SystemName"); %>";
+//var modelname = "<% getCfgGeneral(1, "SystemName"); %>";
+var modelname = "HoWen CPE&nbsp;<% getCfgGeneral(1, 'ProductName'); %>";
 function initTranslation()
 {
 	var lang="<% getCfgGeneral(1, "Language"); %>";
@@ -331,7 +332,7 @@ function force_Login(n) {
 <div class="frame_left"></div>
 <div class="frame_right"></div>
 <div class="logo" id="logo"><ul><li class="modelname" id="modelname"><% getCfgGeneral(1, "SystemName"); %></li></ul></div>
-<div class="home_image"></div>
+<!--<div class="home_image"></div>-->
 <div class="home_note">
   <ul>
 <li class="welcome_text" id="flogintitle">User already logged in.</li>
