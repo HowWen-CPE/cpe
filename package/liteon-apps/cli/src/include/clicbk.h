@@ -123,6 +123,7 @@ int connectRssiThresholdSet(CLI *pCli, char *pToken, struct parse_token_s *pNxtT
 int connectRssiThresholdGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int disconnectRssiThresholdGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int disconnectRssiThresholdSet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl);
+int RssiThresholdGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int rssiGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int macGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int ssidGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl);
@@ -232,8 +233,11 @@ int portlinkstatusGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl);
 
 //security
 #define SECURITY_AUTH_MODE     "authmode"
-#define SECURITY_ENC_TYPE      "enctype"
 #define SECURITY_KEY           "key"
+#define SECURITY_8021X_AUTH_TYPE      "auth_1x" /* TTLS or PEAP*/
+#define SECURITY_8021X_AUTH_USERNAME  "auth_1x_user"
+#define SECURITY_8021X_AUTH_PASSWORD  "auth_1x_pwd"
+#define SECURITY_PARAM_NUM 5
 
 //read/write
 #define ONLYREAD              1

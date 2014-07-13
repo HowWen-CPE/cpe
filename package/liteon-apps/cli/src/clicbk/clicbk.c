@@ -185,32 +185,58 @@ void init_global_config()
 	}
 	//param0 auth mode
 	strcpy(security->name, CLI_NAME_SECURITY);
+
+	//param1 psk
+	strcpy(security->params[1].param_name, SECURITY_KEY);
+
+    //param2 ttls/peap
+	strcpy(security->params[2].param_name, SECURITY_8021X_AUTH_TYPE);
+
+    //param4 user
+    strcpy(security->params[3].param_name, SECURITY_8021X_AUTH_USERNAME);
+    
+    //param5 password
+    strcpy(security->params[4].param_name, SECURITY_8021X_AUTH_PASSWORD);
+    
 	strcpy(security->params[0].param_name, SECURITY_AUTH_MODE);
 	ezplib_get_attr_val("wl0_apcli_rule", 0, "secmode", buf, 128, EZPLIB_USE_CLI);
 	strcpy(security->params[0].value, buf);
 
-	//param1 encryption type
-	strcpy(security->params[1].param_name, SECURITY_ENC_TYPE);
-
-	//param2 psk
-	strcpy(security->params[2].param_name, SECURITY_KEY);
-
 	if (!strcmp(buf, "psk")) {
-		memset(buf, 0, sizeof(buf));
-		ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "crypto", buf, 128, EZPLIB_USE_CLI);
-		strcpy(security->params[1].value, buf);
-		//param2 psk
+        //param1 psk
 		memset(buf, 0, sizeof(buf));
 		ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "key", buf, 128, EZPLIB_USE_CLI);
-		strcpy(security->params[2].value, buf);
-	} else if (!strcmp(buf, "psk2")) {
-		memset(buf, 0, sizeof(buf));
-		ezplib_get_attr_val("wl0_apcli_sec_wpa2_rule", 0, "crypto", buf, 128, EZPLIB_USE_CLI);
 		strcpy(security->params[1].value, buf);
-		//param2 psk
+	} else if (!strcmp(buf, "psk2")) {
+	    //param2 psk
 		memset(buf, 0, sizeof(buf));
 		ezplib_get_attr_val("wl0_apcli_sec_wpa2_rule", 0, "key", buf, 128, EZPLIB_USE_CLI);
-		strcpy(security->params[2].value, buf);
+		strcpy(security->params[1].value, buf);
+	} else if (!strcmp(buf, "wpa")){
+	    //para2 wpa_auth
+        ezplib_get_attr_val("wl0_wpa_auth_rule", 0, "wpa_auth", buf, 128, EZPLIB_USE_CLI);
+        strcpy(security->params[2].value, buf);
+
+        //para3 wpa_user
+        ezplib_get_attr_val("wl0_wpa_auth_rule", 0, "wpa_user", buf, 128, EZPLIB_USE_CLI);
+        strcpy(security->params[3].value, buf);
+
+        //para4 wpa_passwd
+        ezplib_get_attr_val("wl0_wpa_auth_rule", 0, "wpa_passwd", buf, 128, EZPLIB_USE_CLI);
+        strcpy(security->params[4].value, buf);
+    } else if (!strcmp(buf, "wpa2"))
+	{
+	    //para2 wpa_auth
+        ezplib_get_attr_val("wl0_wpa_auth_rule", 0, "wpa_auth", buf, 128, EZPLIB_USE_CLI);
+        strcpy(security->params[2].value, buf);
+
+        //para3 wpa_user
+        ezplib_get_attr_val("wl0_wpa_auth_rule", 0, "wpa_user", buf, 128, EZPLIB_USE_CLI);
+        strcpy(security->params[3].value, buf);
+
+        //para4 wpa_passwd
+        ezplib_get_attr_val("wl0_wpa_auth_rule", 0, "wpa_passwd", buf, 128, EZPLIB_USE_CLI);
+        strcpy(security->params[4].value, buf);
 	}
 	
 	global_configs[CLI_INDEX_SECURITY].item = security;
@@ -259,29 +285,36 @@ void write_to_nvram()
 				
 				break;
 			case CLI_INDEX_SECURITY:
-				for (j = 0; j < 3; j++) {
+                if(cli_debug)
+                    printf("Apply security: \n");
+                
+				for (j = 0; j < SECURITY_PARAM_NUM; j++) {
 					memset(buf, 0, sizeof(buf));
 					struct param_pair *pair = NULL;
 					pair = &(item->params[j]);
 
 					if (!pair)
 						continue;
-					
+                    if(cli_debug)
+                        printf("pair->param_name=%s, pair->value=%s\n", pair->param_name, pair->value);
+                    
 					if (!strcmp(pair->param_name, SECURITY_AUTH_MODE)) {
 						ezplib_replace_attr("wl0_apcli_rule", 0, "secmode", pair->value);
 						strcpy(sec_mode, pair->value);
 					} 
-					else if (!strcmp(pair->param_name, SECURITY_ENC_TYPE)) {
-						if (!strcmp(sec_mode, "psk"))
-							ezplib_replace_attr("wl0_apcli_sec_wpa_rule", 0, "crypto", pair->value);
-						else if (!strcmp(sec_mode, "psk2"))
-							ezplib_replace_attr("wl0_apcli_sec_wpa2_rule", 0, "crypto", pair->value);
-					}
 					else if (!strcmp(pair->param_name, SECURITY_KEY)) {
 						if (!strcmp(sec_mode, "psk"))
 							ezplib_replace_attr("wl0_apcli_sec_wpa_rule", 0, "key", pair->value);
 						else if (!strcmp(sec_mode, "psk2"))
 							ezplib_replace_attr("wl0_apcli_sec_wpa2_rule", 0, "key", pair->value);
+					}else if (!strcmp(pair->param_name, SECURITY_8021X_AUTH_TYPE)) {
+                    	ezplib_replace_attr("wl0_wpa_auth_rule", 0, "wpa_auth", pair->value);
+					}else if (!strcmp(pair->param_name, SECURITY_8021X_AUTH_USERNAME))
+					{
+                        ezplib_replace_attr("wl0_wpa_auth_rule", 0, "wpa_user", pair->value);
+                    }else if (!strcmp(pair->param_name, SECURITY_8021X_AUTH_PASSWORD))
+					{
+                        ezplib_replace_attr("wl0_wpa_auth_rule", 0, "wpa_passwd", pair->value);
 					}
 				}
 				
@@ -371,7 +404,7 @@ void debug_global_config()
 
 int set_value(const char *name ,struct item_config *item)
 {
-	int i = 0, j = 0;
+	int i = 0, j = 0, len1, len2, max_len;
 	struct item_config *im = NULL;
 	struct param_pair *pair1 = NULL, *pair2 = NULL;
 
@@ -407,11 +440,20 @@ int set_value(const char *name ,struct item_config *item)
 				pair2 = &(im->params[i]);
 				if (!strlen(pair2->param_name))
 					break;
+                
 				if (cli_debug)
-					printf("pair1: %s, pair2: %s\n", pair1->param_name, pair2->param_name);
-				
-				if (!strncmp(pair1->param_name, pair2->param_name, strlen(pair2->param_name))) {
-					strcpy(pair2->value, pair1->value);
+					printf("pair1: %s:, pair2: %s\n", pair1->param_name, pair2->param_name);
+
+                len1 = strlen(pair1->param_name);
+                len2 = strlen(pair2->param_name);
+                max_len = (len1>len2)?len1:len2;
+                
+				if (!strncmp(pair1->param_name, pair2->param_name, max_len)) {
+				    if (cli_debug)
+					    printf("%s: old value=%s  new value=%s\n", pair1->param_name, pair2->value, pair1->value);
+                    
+                    strcpy(pair2->value, pair1->value);
+                    
 					break;
 				}
 			}
@@ -1078,6 +1120,31 @@ int disconnectRssiThresholdGet(CLI *pCli, char *pToken, struct parse_token_s *pN
 
 	return CLI_PARSE_OK;
 }
+
+  /***********************************************************************
+  * Function Name : RssiThresholdGet
+  * Description    :  get  RssiThreshold
+  * Input		  : @pCli, cli control structure
+  * 				   @pToken, token
+  * 				   @pNxtTbl, next token
+  * Output		  : 
+  * Return value  : CLI_PARSE_OK, command success
+  ***********************************************************************/
+int RssiThresholdGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
+{
+	//system("echo 'Disconnect Rssi Threshold:' $(iwpriv sta0 get_disconnrssi | awk '{print $2}' | cut -c 17-)");
+	char buf_1[32] = {0};
+    char buf_2[32] = {0};
+
+   	ezplib_get_attr_val("wl0_apcli_rule", 0, "connrssi", buf_1, 32, EZPLIB_USE_CLI);
+	ezplib_get_attr_val("wl0_apcli_rule", 0, "disconnrssi", buf_2, 32, EZPLIB_USE_CLI);
+
+	uiPrintf("Connect Rssi Threshold: %s\n", buf_1);
+	uiPrintf("Disconnect Rssi Threshold: %s\n", buf_2);
+
+	return CLI_PARSE_OK;
+}
+  
   /***********************************************************************
   * Function Name : disconnectRssiThresholdSet
   * Description    :  store disconnect RssiThreshold
@@ -1403,7 +1470,7 @@ int securityGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	ezplib_get_attr_val("wl0_apcli_rule", 0, "secmode", auth_mode, 32, EZPLIB_USE_CLI);
 	
 	if (!strcmp(auth_mode, "none")) {
-		uiPrintf("Security: none\n");
+		uiPrintf("Security: open\n");
 	}
 	else if (!strcmp(auth_mode, "disabled")) {
 		uiPrintf("Security: open\n");
@@ -1451,6 +1518,7 @@ int securityGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
   ***********************************************************************/
 int securitySet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 {
+#if 0 
    char *mode = NULL;     //auth mode value
    char *enc_type = NULL; //ecryption type value
    char *psk = NULL;      //psk value
@@ -1556,6 +1624,136 @@ int securitySet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	set_value(CLI_NAME_SECURITY, &item);
 
 	return CLI_PARSE_OK;
+#else
+    int argc = tokenCount(pCli);
+    int len_psk;
+    char *option_m=NULL;
+    char *option_2=NULL;
+    char *option_3=NULL;
+    char *option_4=NULL;
+    struct item_config item;
+    
+    memset(&item, 0, sizeof(struct item_config));
+
+
+	//uiPrintf("argc=%d\n", argc);
+    
+    if(argc < 1){
+	    goto security_usage;
+    }
+
+   if(option_m = tokenPop(pCli)){
+        if (strcmp(option_m, "open")==0){
+            if(argc != 1)
+            {
+                goto security_usage;
+            }
+            
+            strcpy(item.params[0].param_name, SECURITY_AUTH_MODE);
+            strcpy(item.params[0].value,  "disabled");
+        }else if(strcmp(option_m, "wpa-psk")==0 || strcmp(option_m, "wpa2-psk")==0){
+            if(argc != 2)
+            {
+                goto security_usage;
+            }
+           //pre-shared key
+            option_2 = tokenPop(pCli);
+           
+            len_psk=strlen(option_2);
+            if(len_psk < 8 || len_psk > 64){
+        		uiPrintf("The length of pre-shared key should be from 8 to 64\n");
+
+                return CLI_PARSE_NOMESSAGE;
+            }
+
+            /* should be hex digital*/
+            if(len_psk == 64 && is_hex_digital_str(option_2)!= T_TRUE){
+        		uiPrintf("The pre-shared key should be hex when length is 64 bytes\n");
+
+                return CLI_PARSE_NOMESSAGE;
+            }
+
+            strcpy(item.params[0].param_name, SECURITY_AUTH_MODE);
+            if(strcmp(option_m, "wpa-psk")==0){
+                strcpy(item.params[0].value,"psk"); /* wpa-psk*/
+            }else{
+                strcpy(item.params[0].value,"psk2"); /* wpa2-psk*/
+            }
+            
+            strcpy(item.params[1].param_name, SECURITY_KEY);
+            strcpy(item.params[1].value, option_2); /* key*/
+            
+        }else if(strcmp(option_m, "wpa")==0 || strcmp(option_m, "wpa2")==0){
+            if(argc != 4)
+            {
+                goto security_usage;
+            }
+
+            option_2 = tokenPop(pCli);
+
+            if(!(strcmp(option_2, "peap")==0 || strcmp(option_2, "ttls")==0))
+            {
+                goto security_usage;
+            }
+
+            option_3 = tokenPop(pCli);
+
+            if((strlen(option_3) > 64))
+            {
+                uiPrintf("The length user name should no more than 64\n");
+
+                return CLI_PARSE_NOMESSAGE;
+            }
+
+            option_4 = tokenPop(pCli);
+
+            if((strlen(option_4) > 64))
+            {
+                uiPrintf("The length password should no more than 64\n");
+
+                return CLI_PARSE_NOMESSAGE;
+            }
+
+            strcpy(item.params[0].param_name, SECURITY_AUTH_MODE);
+            strcpy(item.params[0].value, option_m); /* wpa/wpa2*/
+
+            strcpy(item.params[1].param_name, SECURITY_8021X_AUTH_TYPE);
+            if(strcmp(option_2, "ttls")==0)
+            {
+                strcpy(item.params[1].value, "0"); /* ttls*/
+            }else if(strcmp(option_2, "peap")==0)
+            {
+                strcpy(item.params[1].value, "1"); /* peap*/
+            }
+
+            strcpy(item.params[2].param_name, SECURITY_8021X_AUTH_USERNAME);
+            strcpy(item.params[2].value, option_3); /* user*/
+
+            strcpy(item.params[3].param_name, SECURITY_8021X_AUTH_PASSWORD);
+            strcpy(item.params[3].value, option_4); /* password*/
+            
+        }
+        else if (strcmp(option_m, "wep")==0){
+            uiPrintf("wep isn't supported at command line\n");
+            goto security_usage;
+        }else{
+            goto security_usage;
+        }
+   }
+
+	set_value(CLI_NAME_SECURITY, &item);
+
+	return CLI_PARSE_OK;
+
+security_usage:
+    uiPrintf("Usage: set security open\n"
+             "       set security wpa-psk/wpa2-psk passphrase\n"
+             "       set security wpa/wpa2 ttls/peap username password\n");
+    
+    return CLI_PARSE_NOMESSAGE;
+
+#endif
+
 }
    /***********************************************************************
   * Function Name : ipmaskGet

@@ -1,0 +1,208 @@
+#!/bin/sh
+
+# 
+# This file is used for start ART
+# usage: art<1|2> <server ip> <art client file> [ art module file ]
+#
+
+#
+# global variable
+#
+ART_V=art2
+PROMPT_TFTP=0
+
+usage()
+{
+	echo "art<1|2> [server ip] [art client file] [ art module file ]"
+}
+
+
+tftp_get_file()
+{
+	local ip=$1
+	local getfile=$2
+	local dir=$3
+	
+	cd $dir
+	
+	if [ "${PROMPT_TFTP}" = "1" ] ; then
+		# for prompt tftp
+		tftp $ip <<!TFTP
+bin
+get ${getfile}
+quit
+!TFTP
+	else
+		tftp $ip -g -r ${getfile}
+	fi
+
+	if [ ! -s "${dir}/${getfile}" ] ; then 
+		echo "Download ${getfile} fail!"
+		exit
+	else
+		echo "Download ${getfile} OK!"
+	fi
+}
+
+
+run_art2()
+{
+        
+	local SERVER_IP=$1
+	local ART_CLIENT_FILE=$2
+	local ART_MODULE_FILE=$3
+	
+	local MDK_FILE
+	local art_ko=`lsmod | grep "art"`
+
+
+	
+	#echo "ip: ${SERVER_IP}"	
+	#echo "file: ${ART_CLIENT_FILE}"	
+
+	#if [ ! -n "$SERVER_IP" ] || [ ! -n "$ART_CLIENT_FILE" ] ; then
+	#	echo "Please specify tftp serverip and art client file name"
+	#	echo "art <server ip> <art client file> [ art module file ]"
+	#	exit
+	#fi
+
+	stop_art
+	
+	stop_ap
+	
+	if [ ! -e  "/dev/caldata" ] ; then
+		mknod /dev/caldata b 31 6
+	fi
+
+	if [ ! -e "/dev/dk0" ] ; then
+		mknod /dev/dk0 c 63 0
+	fi
+
+	if [ ! -e "/dev/dk1" ] ; then
+		mknod /dev/dk1 c 63 1
+	fi
+	
+	# If tftp server ip is specified, then download mdk_client.out.
+	if [ -n "$SERVER_IP" ] ; then
+		echo "Download mdk_client.out from $SERVER_IP by TFTP ... "
+
+		cd /tmp
+
+		tftp_get_file $SERVER_IP $ART_CLIENT_FILE /tmp
+		chmod 777 /tmp/$ART_CLIENT_FILE
+		
+	
+		
+		if [ -n "$ART_MODULE_FILE" ] ; then 
+			tftp_get_file $SERVER_IP $ART_MODULE_FILE /tmp
+			
+		fi
+	fi
+	
+	echo "START ART ......"
+
+	## install art.ko if not installed yet.
+	art_ko="`lsmod | grep "art"`"
+	if [ ! -n "$art_ko" ] ; then
+		if [ -n "$ART_MODULE_FILE" ] ; then
+			/sbin/insmod /tmp/${ART_MODULE_FILE}
+		else
+			##for AR9344
+			/sbin/insmod /lib/modules/2.6.31/net/art-wasp.ko
+			
+			##for AR9344+AR9390
+			#/sbin/insmod /lib/modules/2.6.31/net/art-wasp-osprey.ko
+			
+		fi
+  fi
+	
+	if [ -n "$SERVER_IP" ] ; then
+		MDK_FILE=/tmp/${ART_CLIENT_FILE}
+	else
+		MDK_FILE=/sbin/nart.out
+	fi
+	
+
+	$MDK_FILE -instance 0 -port 2390 -console &
+
+	#$MDK_FILE -instance 1 -port 2391 -console &
+	
+}
+
+
+stop_art()
+{
+	local art_ko=`lsmod | grep "art"`
+	local pid_mdk="`pidof mdk_client.out`"
+	local pid_nart="`pidof nart.out`"
+	
+	if [ -n "$pid_mdk" ] ; then
+		kill -9 $pid_mdk
+	fi
+
+	if [ -n "$pid_nart" ] ; then
+		kill -9 $pid_nart
+	fi
+	
+	if [ -n "$art_ko" ] ; then
+		rmmod art
+	fi
+}
+
+rm_mod()
+{
+    echo "Uninstall atheros wireless driver modules"
+
+    # must do something before remove module
+    #prepare_rm_mod
+
+    # remove module
+    rmmod ath_pktlog  > /dev/null
+    rmmod umac  > /dev/null
+    rmmod ath_dev  > /dev/null
+    rmmod ath_rate_atheros  > /dev/null
+    rmmod ath_hal  > /dev/null
+    rmmod adf  > /dev/null
+    rmmod asf  > /dev/null
+}
+
+run_ap()                                  
+{                                        
+	local WLAN_FILE=/etc/wlan/wlan.sh
+	local COUN_CODE=`grep "COUNTRY_CODE=" /var/sysenv | cut -b21-24`
+
+	# art must be stop before running ap
+	stop_art
+
+	sleep 1
+  
+	if [ -f $WLAN_FILE ]; then
+		if [ -n "$COUN_CODE" ]; then
+			sh $WLAN_FILE restart $COUN_CODE
+		else
+			echo "Country is not set"
+		fi
+	fi
+}
+
+stop_ap()
+{
+    ifconfig sta0 down > /dev/null
+    ifconfig ath0 down > /dev/null
+    wlanconfig sta0 destroy > /dev/null
+    wlanconfig ath0 destroy > /dev/null
+    
+	rm_mod
+}
+
+run_art()
+{
+	if [ "${ART_V}" = "art1" ] ; then
+		run_art1 $1 $2 $3
+	elif [ "${ART_V}" = "art2" ] ; then
+		run_art2 $1 $2 $3
+	fi
+}
+
+# art <server ip> <art client file> [ art module file ]
+run_art $1 $2 $3

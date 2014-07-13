@@ -2397,4 +2397,36 @@ T_BOOL8 IsValidServerIpAddress(T_CHAR8 * IpAddr)
 	return T_TRUE;
 }
 
+/*****************************************************************************
+ Prototype    : is_hex_digital_str
+ Description  : Check if the string is hex digital format
+ Input        : T_CHAR8 *str  
+ Output       : None
+ Return Value : T_TRUE/T_FALSE
+ Calls        : 
+ Called By    : 
+ 
+  History        :
+  1.Date         : 2014/7/15
+    Author       : Peter
+    Modification : Created function
+
+*****************************************************************************/
+T_BOOL8 is_hex_digital_str(T_CHAR8 *str)
+{
+    int i;
+    
+    for(i=0; i<strlen(str); i++)
+    {
+        if((str[i] >= '0' && str[i] <='9') || (str[i] >= 'a' && str[i] <='f') || (str[i] >= 'A' && str[i] <='F'))
+        {
+            continue;
+        }else{
+            return T_FALSE;
+        }
+    }
+
+    return T_TRUE;
+}
+
 /*<-----*/
