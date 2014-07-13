@@ -2,6 +2,9 @@
 // Microsoft Visual C++ generated include file.
 // Used by upgrader.rc
 //
+#define IDOK2                           3
+#define IDCANCEL2                       3
+#define IDDOWNLOAD                      3
 #define IDD_ABOUTBOX                    100
 #define IDR_MAINFRAME                   128
 #define IDR_UPGRADTYPE                  129
@@ -29,6 +32,7 @@
 #define IDS_PROPSHT_CAPTION             143
 #define IDB_SWITCH                      144
 #define IDS_REBOOT                      144
+#define IDS_REMOTE_CONFIG               145
 #define IDB_GATEWAY                     145
 #define IDD_IP_CONFIG                   146
 #define IDD_LOGIN                       149
@@ -85,6 +89,8 @@
 #define IDD_HOST_CONFIG                 256
 #define IDB_BITMAP1                     257
 #define IDB_TOOLBAR                     257
+#define IDD_LOGIN1                      257
+#define IDD_LOGIN_RC                    257
 #define IDC_PROGRESS                    1000
 #define IDC_ADMIN_PASSWORD              1001
 #define IDC_SEARCH_ANIMATE              1002
@@ -99,6 +105,8 @@
 #define IDC_STATIC_IP                   1011
 #define IDC_WLAN_MACADDR_STATIC         1011
 #define IDC_STATIC_MASK                 1012
+#define IDC_MODEL_STATIC2               1012
+#define IDC_MODELPRODUCT_STATIC         1012
 #define IDC_STATIC_GATEWAY              1013
 #define IDC_SUB_MASK                    1018
 #define IDC_GATEWAY                     1019
@@ -258,6 +266,9 @@
 #define IDC_5GWLAN_MACADDR_STATIC       1168
 #define IDC_WLANOPMODE_STATIC           1169
 #define IDC_5GWLANOPMODE_STATIC         1170
+#define IDUPLOAD                        1171
+#define IDC_USERNAME_RC                 1172
+#define IDC_PASSWORD_RC                 1173
 #define ID_SEARCH                       32771
 #define ID_UPGRADE_AUTO                 32772
 #define ID_UPGRADE_MANUAL               32773
@@ -270,6 +281,7 @@
 #define ID_WIZARD                       32780
 #define ID_Menu                         32781
 #define ID_REBOOT                       32782
+#define ID_REMOTE_CONFIG                32784
 #define IDS_TEXT_KEY_STRING64           61204
 #define IDS_TEXT_KEY_STRING128          61205
 #define IDS_TEXT_KEY_STRING152          61206
@@ -322,9 +334,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        258
+#define _APS_NEXT_RESOURCE_VALUE        259
 #define _APS_NEXT_COMMAND_VALUE         32783
-#define _APS_NEXT_CONTROL_VALUE         1171
+#define _APS_NEXT_CONTROL_VALUE         1174
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

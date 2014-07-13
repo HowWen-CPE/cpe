@@ -192,13 +192,15 @@ void init_global_config()
 	//param1 encryption type
 	strcpy(security->params[1].param_name, SECURITY_ENC_TYPE);
 
+	//param2 psk
+	strcpy(security->params[2].param_name, SECURITY_KEY);
+
 	if (!strcmp(buf, "psk")) {
 		memset(buf, 0, sizeof(buf));
 		ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "crypto", buf, 128, EZPLIB_USE_CLI);
 		strcpy(security->params[1].value, buf);
 		//param2 psk
 		memset(buf, 0, sizeof(buf));
-		strcpy(security->params[2].param_name, SECURITY_KEY);
 		ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "key", buf, 128, EZPLIB_USE_CLI);
 		strcpy(security->params[2].value, buf);
 	} else if (!strcmp(buf, "psk2")) {
@@ -207,7 +209,6 @@ void init_global_config()
 		strcpy(security->params[1].value, buf);
 		//param2 psk
 		memset(buf, 0, sizeof(buf));
-		strcpy(security->params[2].param_name, SECURITY_KEY);
 		ezplib_get_attr_val("wl0_apcli_sec_wpa2_rule", 0, "key", buf, 128, EZPLIB_USE_CLI);
 		strcpy(security->params[2].value, buf);
 	}
@@ -1741,33 +1742,38 @@ int inet_atonmac(const char *s, char *addr, int addr_len)
  ***********************************************************************/
 int mfgCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 {
-	char *param = NULL;
+	char *param = NULL, *subcmd = NULL;
 	unsigned char m_addr[18] = {0};
     char *tmp_addr = m_addr;
+	char buf[256] = {0};
 	
-	if ( tokenCount(pCli) > 1 ) {
+	if ( tokenCount(pCli) > 2 ) {
 		uiPrintf(SETFALIED);
 		return CLI_PARSE_NOMESSAGE;
 	}
 
+	subcmd = tokenPop(pCli);
 	param = tokenPop(pCli);
 
-	if (!param)
+	if (!param || !subcmd)
 		return CLI_PARSE_INVALID_PARAMETER;
 
-	if (strlen(param) != MAC_ADDR_LEN) {
-		uiPrintf("Invalid MAC address\n");
-		return CLI_PARSE_INPUT_ERROR;
+	if (!strncmp(subcmd, "mac", strlen(subcmd))) {
+		if (strlen(param) != MAC_ADDR_LEN) {
+			uiPrintf("Invalid MAC address\n");
+			return CLI_PARSE_INPUT_ERROR;
+		}
+
+		if (inet_atonmac(param, tmp_addr, MAC_ADDR_LEN) < 0) {
+			//uiPrintf("Invalid MAC address\n");
+			return CLI_PARSE_INPUT_ERROR;
+		}
+
+		//TBD, store MAC address
+		sprintf(buf, "boarddata set mac %s", tmp_addr);
+		system(buf);
 	}
-
-	if (inet_atonmac(param, tmp_addr, MAC_ADDR_LEN) < 0) {
-		uiPrintf("Invalid MAC address\n");
-		return CLI_PARSE_INPUT_ERROR;
-	}
-
-	//TBD, store MAC address
-
-
+	
 	return CLI_PARSE_OK;
 }
  /***********************************************************************

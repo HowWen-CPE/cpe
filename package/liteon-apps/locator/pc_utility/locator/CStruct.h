@@ -79,6 +79,7 @@ public:
 	int m_nSecurity;		// 安全类型
 	int m_nEncryptionOnOff;
 	int m_nSuperG;
+	CString m_strModelProductName;
 	CString m_strDeviceName;
 	CString m_strFirmware;
 	char m_szcharWlanMACAddress[18];
@@ -137,7 +138,8 @@ public:
 	LCT_RCV_AUTH m_AuthData;			// 登录认证数据
 	
 	int ip_set_result;                  //ip信息设置结果
-	
+	int upload_result;					//upload Result
+	int download_result;				//download Result
 
 };
 

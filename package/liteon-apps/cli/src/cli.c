@@ -107,7 +107,7 @@ LOCAL struct parse_token_s setCmdTbl[] = {
     {"netmask", "Set IP subnet mask, Usage: set netmask 24", ipmaskSet, &applyActionTbl[APPLY_IFADDR],NULL, NULL, 0},
     {"security", "Set security, Usage: set security 3", securitySet, NULL, NULL, NULL, 0},
     {"ssid", "Set ssid, Usage: set ssid wlan", ssidSet, NULL, NULL, NULL, 0},
-	{"deviceid", "Set device id, Usage: set device id \"HoWen CPE\"", systemNameSet, NULL, NULL, CLI_SUPERUSER, 0},
+	{"deviceid", "Set device id, Usage: set device id HoWen CPE", systemNameSet, NULL, NULL, CLI_SUPERUSER, 0},
 
     PARSE_TOKEN_DELIMITER
 };
@@ -1353,7 +1353,7 @@ int main(int argc, char **argv)
 	init_global_config();
 
 	//print config
-	debug_global_config();
+	//debug_global_config();
 	
   login:
 

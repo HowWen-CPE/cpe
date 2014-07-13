@@ -13,7 +13,7 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// Chinese (P.R.C.) resources
+// 中文(中华人民共和国) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHS)
 #ifdef _WIN32
@@ -84,13 +84,13 @@ END
 // Bitmap
 //
 
-IDB_TOOLBAR             BITMAP                  "res\\Toolbar.bmp"
-#endif    // Chinese (P.R.C.) resources
+IDB_TOOLBAR             BITMAP                  "res\\ToolbarRC.bmp"
+#endif    // 中文(中华人民共和国) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
 /////////////////////////////////////////////////////////////////////////////
-// Chinese (Taiwan) resources
+// 中文(台湾) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHT)
 #ifdef _WIN32
@@ -119,64 +119,48 @@ BEGIN
     PUSHBUTTON      "...",IDC_BROWSE_BUTTON,150,55,18,13
 END
 
-IDD_DEVICE_INFO DIALOGEX 0, 0, 282, 420
-STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU 
+IDD_DEVICE_INFO DIALOGEX 0, 0, 282, 307
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Device Information"
 FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,102,396,50,14
-    LTEXT           "Device Name :",IDC_STATIC,24,30,60,8
-    LTEXT           "LAN IP Address :",IDC_STATIC,24,72,69,8
-    LTEXT           "Ethernet MAC Address :",IDC_STATIC,24,41,81,8
-    LTEXT           "Firmware Version :",IDC_STATIC,24,55,66,8
-    LTEXT           "Static",IDC_MODEL_STATIC,106,30,154,8
-    LTEXT           "Static",IDC_IPADDR_STATIC,106,72,154,8
-    LTEXT           "Static",IDC_MACADDR_STATIC,106,41,154,8
-    LTEXT           "Static",IDC_FWVER_STATIC,106,55,154,8
-    LTEXT           "Subnet Mask :",IDC_STATIC,24,85,45,8
-    LTEXT           "Static",IDC_MASK_STATIC,106,85,154,8
-    LTEXT           "Default Gateway :",IDC_STATIC,24,97,58,8
-    LTEXT           "Static",IDC_GATEWAY_STATIC,106,97,154,8
-    LTEXT           "DHCP Client :",IDC_STATIC,24,111,47,8
-    LTEXT           "Static",IDC_DHCP_STATIC,106,111,154,8
-    LTEXT           "Operation Mode :",IDC_STATIC,24,124,63,8
-    LTEXT           "Wireless Mode :",IDC_STATIC,24,156,53,8
-    LTEXT           "SSID :",IDC_STATIC,24,180,20,8
-    LTEXT           "Channel / Frequency :",IDC_STATIC,24,228,72,8
-    LTEXT           "Security :",IDC_STATIC,24,239,52,8
-    LTEXT           "Static",IDC_OPMODE_STATIC,106,124,154,8
-    LTEXT           "Static",IDC_WLANMODE_STATIC,106,156,154,8
-    LTEXT           "Static",IDC_SSID_STATIC,106,180,154,8,SS_NOPREFIX
-    LTEXT           "Static",IDC_CHANNEL_STATIC,106,227,154,8
-    LTEXT           "Static",IDC_SECUTRITY_STATIC,106,239,154,8
-    LTEXT           "Wireless MAC Address :",IDC_STATIC,24,168,81,8
-    LTEXT           "Static",IDC_WLAN_MACADDR_STATIC,106,168,154,8
-    LTEXT           "Connect Status:",IDC_STATIC1,24,215,66,8
-    LTEXT           "Static",IDC_CONNECTSTATUS_STATIC,106,215,154,8
-    LTEXT           "Static",IDC_BSSID_STATIC,106,204,154,8
-    LTEXT           "Static",IDC_RSSI_STATIC,106,191,154,8
-    LTEXT           "Associated BSSID:",IDC_STATIC2,24,204,66,8
-    LTEXT           "Associated RSSI:",IDC_STATIC3,24,191,66,8
-    LTEXT           "Wireless Mode :",IDC_STATIC,24,271,53,8
-    LTEXT           "SSID :",IDC_STATIC,24,294,20,8
-    LTEXT           "Channel / Frequency :",IDC_STATIC,24,342,72,8
-    LTEXT           "Connect Status:",IDC_STATIC4,24,329,66,8
-    LTEXT           "Associated BSSID:",IDC_STATIC5,24,318,66,8
-    LTEXT           "Associated RSSI:",IDC_STATIC6,24,305,66,8
-    LTEXT           "Security :",IDC_STATIC,24,353,52,8
-    LTEXT           "Static",IDC_5GWLANMODE_STATIC,106,272,154,8
-    LTEXT           "Static",IDC_5GSSID_STATIC,106,295,154,8,SS_NOPREFIX
-    LTEXT           "Static",IDC_5GRSSI_STATIC,106,306,154,8
-    LTEXT           "Static",IDC_5GBSSID_STATIC,106,319,154,8
-    LTEXT           "Static",IDC_5GCONNECTSTATUS_STATIC,106,329,154,8
-    LTEXT           "Static",IDC_5GCHANNEL_STATIC,106,342,154,8
-    LTEXT           "Static",IDC_5GSECUTRITY_STATIC,106,354,154,8
-    LTEXT           "WLAN2.4G OP Mode :",IDC_2GWLANINFO_STATIC,24,144,81,8
-    LTEXT           "WLAN5G OP Mode :",IDC_5GWLANINFO_STATIC,24,258,65,8
-    LTEXT           "Wireless MAC Address :",IDC_STATIC,24,282,81,8
-    LTEXT           "Static",IDC_5GWLAN_MACADDR_STATIC,106,282,154,8
-    LTEXT           "Static",IDC_WLANOPMODE_STATIC,106,144,154,8
-    LTEXT           "Static",IDC_5GWLANOPMODE_STATIC,106,258,154,8
+    DEFPUSHBUTTON   "OK",IDOK,100,281,50,14
+    LTEXT           "Device Name :",IDC_STATIC,24,41,60,8
+    LTEXT           "LAN IP Address :",IDC_STATIC,24,83,69,8
+    LTEXT           "Ethernet MAC Address :",IDC_STATIC,24,52,81,8
+    LTEXT           "Firmware Version :",IDC_STATIC,24,66,66,8
+    LTEXT           "Static",IDC_MODEL_STATIC,106,41,154,8
+    LTEXT           "Static",IDC_IPADDR_STATIC,106,83,154,8
+    LTEXT           "Static",IDC_MACADDR_STATIC,106,52,154,8
+    LTEXT           "Static",IDC_FWVER_STATIC,106,66,154,8
+    LTEXT           "Subnet Mask :",IDC_STATIC,24,96,45,8
+    LTEXT           "Static",IDC_MASK_STATIC,106,96,154,8
+    LTEXT           "Default Gateway :",IDC_STATIC,24,108,58,8
+    LTEXT           "Static",IDC_GATEWAY_STATIC,106,108,154,8
+    LTEXT           "DHCP Client :",IDC_STATIC,24,122,47,8
+    LTEXT           "Static",IDC_DHCP_STATIC,106,122,154,8
+    LTEXT           "Operation Mode :",IDC_STATIC,24,135,63,8
+    LTEXT           "Wireless Mode :",IDC_STATIC,24,167,53,8
+    LTEXT           "SSID :",IDC_STATIC,24,191,20,8
+    LTEXT           "Channel / Frequency :",IDC_STATIC,24,239,72,8
+    LTEXT           "Security :",IDC_STATIC,24,250,52,8
+    LTEXT           "Static",IDC_OPMODE_STATIC,106,135,154,8
+    LTEXT           "Static",IDC_WLANMODE_STATIC,106,167,154,8
+    LTEXT           "Static",IDC_SSID_STATIC,106,191,154,8,SS_NOPREFIX
+    LTEXT           "Static",IDC_CHANNEL_STATIC,106,238,154,8
+    LTEXT           "Static",IDC_SECUTRITY_STATIC,106,250,154,8
+    LTEXT           "Wireless MAC Address :",IDC_STATIC,24,179,81,8
+    LTEXT           "Static",IDC_WLAN_MACADDR_STATIC,106,179,154,8
+    LTEXT           "Connect Status:",IDC_STATIC1,24,226,66,8
+    LTEXT           "Static",IDC_CONNECTSTATUS_STATIC,106,226,154,8
+    LTEXT           "Static",IDC_BSSID_STATIC,106,215,154,8
+    LTEXT           "Static",IDC_RSSI_STATIC,106,202,154,8
+    LTEXT           "Associated BSSID:",IDC_STATIC2,24,215,66,8
+    LTEXT           "Associated RSSI:",IDC_STATIC3,24,202,66,8
+    LTEXT           "WLAN5G OP Mode :",IDC_2GWLANINFO_STATIC,24,155,81,8
+    LTEXT           "Static",IDC_WLANOPMODE_STATIC,106,155,154,8
+    LTEXT           "Model Name :",IDC_STATIC,24,28,60,8
+    LTEXT           "Static",IDC_MODELPRODUCT_STATIC,106,28,154,8
 END
 
 IDD_IP_CONFIG DIALOGEX 0, 0, 222, 147
@@ -559,6 +543,21 @@ BEGIN
     CONTROL         221,IDC_STATIC,"Static",SS_BITMAP,39,55,3,3
 END
 
+IDD_LOGIN_RC DIALOGEX 0, 0, 195, 87
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Login"
+FONT 10, "Arial", 0, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_USERNAME_RC,57,10,127,14,ES_MULTILINE | ES_AUTOHSCROLL,WS_EX_TRANSPARENT
+    EDITTEXT        IDC_PASSWORD_RC,57,31,127,14,ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "&UPLOAD",IDUPLOAD,12,70,50,14
+    PUSHBUTTON      "&Cancel",IDCANCEL,129,70,50,14
+    LTEXT           "User Name:",IDC_STATIC,13,12,40,8
+    LTEXT           "Password:",IDC_STATIC,13,32,35,8
+    LTEXT           "Default User Name: admin Password:1234",IDC_STATIC_DEFAULT_USER,7,53,180,10,SS_NOTIFY | WS_BORDER
+    PUSHBUTTON      "&DOWNLOAD",IDDOWNLOAD,70,70,50,14
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -578,7 +577,7 @@ BEGIN
 
     IDD_DEVICE_INFO, DIALOG
     BEGIN
-        BOTTOMMARGIN, 419
+        BOTTOMMARGIN, 306
     END
 
     IDD_LOGIN, DIALOG
@@ -713,6 +712,12 @@ BEGIN
         RIGHTMARGIN, 332
         TOPMARGIN, 7
         BOTTOMMARGIN, 217
+    END
+
+    IDD_LOGIN_RC, DIALOG
+    BEGIN
+        RIGHTMARGIN, 187
+        BOTTOMMARGIN, 84
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -1065,12 +1070,12 @@ BEGIN
     0
 END
 
-#endif    // Chinese (Taiwan) resources
+#endif    // 中文(台湾) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
 /////////////////////////////////////////////////////////////////////////////
-// English (U.S.) resources
+// 英语(美国) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
 #ifdef _WIN32
@@ -1085,12 +1090,12 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 
 IDD_ABOUTBOX DIALOGEX 0, 0, 203, 91
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "About Locator"
+CAPTION "About Discover"
 FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
     LTEXT           "Copyright (C) 2013-2015",IDC_STATIC,62,63,75,8
     DEFPUSHBUTTON   "OK",IDOK,143,70,40,14,WS_GROUP
-    LTEXT           "Version 1.4.0",IDC_STATIC,69,50,53,8
+    LTEXT           "Version 1.5.0",IDC_STATIC,69,50,53,8
 END
 
 IDD_TFTP_PROGESS DIALOG  0, 0, 187, 63
@@ -1098,7 +1103,7 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CAPTIO
 CAPTION "Firmware upgrade progress"
 FONT 8, "MS Sans Serif"
 BEGIN
-    CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",WS_BORDER | 0x1,17,21,148,16
+    CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",PBS_SMOOTH | WS_BORDER,17,21,148,16
     CTEXT           "0%",IDC_STATIC,17,41,10,8
     CTEXT           "50%",IDC_STATIC,84,41,14,8
     CTEXT           "100%",IDC_STATIC,157,41,17,8
@@ -1196,6 +1201,7 @@ BEGIN
         MENUITEM "Reboot device(&R)",           ID_REBOOT
         MENUITEM SEPARATOR
         MENUITEM "Select Adapter(&A)",          ID_TOOLS_SELECTCONNECTION
+        MENUITEM "Remote Config",               ID_REMOTE_CONFIG
     END
     POPUP "&View"
     BEGIN
@@ -1208,7 +1214,7 @@ BEGIN
     END
     POPUP "&Help"
     BEGIN
-        MENUITEM "&About Locator...",           ID_APP_ABOUT
+        MENUITEM "&About Discover...",          ID_APP_ABOUT
     END
 END
 
@@ -1242,8 +1248,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,4,0,0
- PRODUCTVERSION 4,1,0,0
+ FILEVERSION 1,5,0,0
+ PRODUCTVERSION 5,1,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -1258,13 +1264,13 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "FileDescription", "Locator MFC Application"
-            VALUE "FileVersion", "1, 4, 0, 0"
-            VALUE "InternalName", "Locator"
+            VALUE "FileDescription", "Discovery MFC Application"
+            VALUE "FileVersion", "1, 5, 0, 0"
+            VALUE "InternalName", "Discovery"
             VALUE "LegalCopyright", "Copyright (C) 2013"
-            VALUE "OriginalFilename", "locator.EXE"
-            VALUE "ProductName", "Locator Application"
-            VALUE "ProductVersion", "1, 4, 0, 0"
+            VALUE "OriginalFilename", "discovery.EXE"
+            VALUE "ProductName", "discovery Application"
+            VALUE "ProductVersion", "1, 5, 0, 0"
         END
     END
     BLOCK "VarFileInfo"
@@ -1302,7 +1308,13 @@ END
 
 STRINGTABLE 
 BEGIN
-    AFX_IDS_APP_TITLE       "Locator"
+    IDS_REBOOT              "Reboot Device"
+    IDS_REMOTE_CONFIG       "Remote Config"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "Discovery"
     AFX_IDS_IDLEMESSAGE     "Ready"
 END
 
@@ -1442,6 +1454,12 @@ BEGIN
     ID_WEB                  "Web Management"
     ID_WIRELESS             "Wireless Setting"
     ID_WIZARD               "Setup Wizard"
+    ID_REBOOT               "Reboot Device"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_REMOTE_CONFIG        "Remote Configuration"
 END
 
 STRINGTABLE 
@@ -1469,12 +1487,7 @@ BEGIN
     IDS_WMODE_STATICG       "2.4GHz Super G static"
 END
 
-STRINGTABLE 
-BEGIN
-    IDS_REBOOT              "Reboot Device"
-END
-
-#endif    // English (U.S.) resources
+#endif    // 英语(美国) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

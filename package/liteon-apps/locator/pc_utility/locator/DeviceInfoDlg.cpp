@@ -20,6 +20,7 @@ CDeviceInfoDlg::CDeviceInfoDlg(CWnd* pParent /*=NULL*/)
 	: CBitmapDialog(CDeviceInfoDlg::IDD, pParent)
 {
 	//{{AFX_DATA_INIT(CDeviceInfoDlg)
+	m_strMPname = _T("");
 	m_strFwVer = _T("");
 	m_strIpAddr = _T("");
 	m_strMacAddr = _T("");
@@ -56,6 +57,7 @@ void CDeviceInfoDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CBitmapDialog::DoDataExchange(pDX);
 	//{{AFX_DATA_MAP(CDeviceInfoDlg)
+	DDX_Text(pDX, IDC_MODELPRODUCT_STATIC, m_strMPname);
 	DDX_Text(pDX, IDC_FWVER_STATIC, m_strFwVer);
 	DDX_Text(pDX, IDC_IPADDR_STATIC, m_strIpAddr);
 	DDX_Text(pDX, IDC_MACADDR_STATIC, m_strMacAddr);
@@ -72,16 +74,16 @@ void CDeviceInfoDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_BSSID_STATIC, m_strBssid);
 	DDX_Text(pDX, IDC_RSSI_STATIC, m_strRssi);
 	DDX_Text(pDX, IDC_CONNECTSTATUS_STATIC, m_strAssociated);
-	DDX_Text(pDX, IDC_5GWLANMODE_STATIC, m_str5GWlanMode);
-	DDX_Text(pDX, IDC_5GSSID_STATIC, m_str5GSsid);
-	DDX_Text(pDX, IDC_5GRSSI_STATIC, m_str5GRssi);
-	DDX_Text(pDX, IDC_5GBSSID_STATIC, m_str5GBssid);
-	DDX_Text(pDX, IDC_5GCONNECTSTATUS_STATIC, m_str5GAssociated);
-	DDX_Text(pDX, IDC_5GCHANNEL_STATIC, m_str5GChannel);
-	DDX_Text(pDX, IDC_5GSECUTRITY_STATIC, m_str5GSecurity);
-	DDX_Text(pDX, IDC_5GWLAN_MACADDR_STATIC, m_str5GWlanMacAddr);
-	DDX_Text(pDX, IDC_WLANOPMODE_STATIC, m_strWlanOpMode);
-	DDX_Text(pDX, IDC_5GWLANOPMODE_STATIC, m_str5GWlanOpMode);
+	//DDX_Text(pDX, IDC_5GWLANMODE_STATIC, m_str5GWlanMode);
+	//DDX_Text(pDX, IDC_5GSSID_STATIC, m_str5GSsid);
+	//DDX_Text(pDX, IDC_5GRSSI_STATIC, m_str5GRssi);
+	//DDX_Text(pDX, IDC_5GBSSID_STATIC, m_str5GBssid);
+	//DDX_Text(pDX, IDC_5GCONNECTSTATUS_STATIC, m_str5GAssociated);
+	//DDX_Text(pDX, IDC_5GCHANNEL_STATIC, m_str5GChannel);
+	//DDX_Text(pDX, IDC_5GSECUTRITY_STATIC, m_str5GSecurity);
+	//DDX_Text(pDX, IDC_5GWLAN_MACADDR_STATIC, m_str5GWlanMacAddr);
+	//DDX_Text(pDX, IDC_WLANOPMODE_STATIC, m_strWlanOpMode);
+	//DDX_Text(pDX, IDC_5GWLANOPMODE_STATIC, m_str5GWlanOpMode);
    
 	//}}AFX_DATA_MAP
 }

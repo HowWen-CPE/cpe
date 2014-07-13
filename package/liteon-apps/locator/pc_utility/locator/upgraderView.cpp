@@ -20,6 +20,7 @@
 #include "NGWizard.h"
 #include "SelectConectionDlg.h"
 #include "HostSetting.h"
+#include "LoginRC.h"
 
 #include <winsock.h>
 //#include "ListVwEx.h"	// base class for CRowListView
@@ -80,6 +81,8 @@ BEGIN_MESSAGE_MAP(CUpgraderView, CListViewEx)
 	ON_MESSAGE(WM_CHANGE_SOCKET, &CUpgraderView::OnChangeSocket)
 	ON_COMMAND(ID_REBOOT, &CUpgraderView::OnReboot)
 	ON_UPDATE_COMMAND_UI(ID_REBOOT, &CUpgraderView::OnUpdateReboot)
+	ON_COMMAND(ID_REMOTE_CONFIG, &CUpgraderView::OnRemoteConfig)
+	ON_UPDATE_COMMAND_UI(ID_REMOTE_CONFIG, &CUpgraderView::OnUpdateRemoteConfig)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1922,6 +1925,143 @@ void CUpgraderView::SendReboot()
 	
 }
 
+void CUpgraderView::OnRemoteConfig()
+{
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.GetSelectionMark();
+	if (index != -1)
+	{
+		
+		CLoginRC	dlg;
+		if (dlg.DoModal() == IDOK)
+		{
+			m_strUserName = dlg.m_sUserName;
+			m_strPassword = dlg.m_sPassword;
+			m_RCBtFlag = dlg.bt_flag;
+			if (0 == m_RCBtFlag)
+			{
+				SendAuthentication(UCP_METHOD_UPLOAD);
+			}
+			else if (1 == m_RCBtFlag)
+			{
+				SendAuthentication(UCP_METHOD_DOWNLOAD);
+			}
+		}
+	}
+	
+}
+
+void CUpgraderView::OnUpdateRemoteConfig(CCmdUI *pCmdUI)
+{
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	if (ctlList.GetNextItem(-1, LVNI_SELECTED) != -1)
+		pCmdUI->Enable(TRUE);
+	else
+		pCmdUI->Enable(FALSE);
+}
+
+// Send UPLoad or DownLoad CMD
+void CUpgraderView::SendRemoteConfig()
+{
+	char	chrSendBuffer[128];
+	int		nResult;
+	int		i = 0;
+
+	memset(chrSendBuffer, 0, sizeof(chrSendBuffer));
+
+	// 设置包
+	m_szRequest[i++] = (UCP_METHOD_DISCOVER >> 8 ) & 0xff;
+	m_szRequest[i++] = (UCP_METHOD_DISCOVER >> 0 ) & 0xff;
+
+	//	CMyListCtrl& ctlList = (CMyListCtrl&) GetListCtrl();
+	CListCtrl& ctlList = (CListCtrl&) GetListCtrl();
+	int index = ctlList.GetSelectionMark();//.GetSelectedCount();//.HitTest(point);
+	if (index != -1)
+	{
+		LCT_DEVICE* pDevice = (LCT_DEVICE*)ctlList.GetItemData(index);
+		for ( int j = 0; j < 6; j++ )	
+			//m_szRequest[i++] = (char)iMACAddr[index][j];
+			m_szRequest[i++] = (char)pDevice->m_arrMac[j];
+	}
+	setLocalMacAddress(i);
+
+	//UCP_METHOD_GET_IP
+	m_szRequest[i++] = (UCP_METHOD_GET_IP >> 8 ) & 0xff;
+	m_szRequest[i++] = (UCP_METHOD_GET_IP >> 0 ) & 0xff;
+
+	CString HostIP = m_szLocalHostIP;
+	for (i; i < 14; i++)
+	{
+		CString StrTemp;
+
+		int pos = HostIP.Find('.',0);
+		if ( pos != -1 )
+			StrTemp = HostIP.Left(pos);
+		else
+			StrTemp = HostIP;
+
+		int tt;
+		tt = atoi(StrTemp);
+		m_szRequest[i] = (char)tt;
+		HostIP.Delete(0,pos+1);
+	}
+
+	//UDP Port Number
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 8)&0xff;
+	m_szRequest[i++] = (UDP_UDAP_PORT >> 0)&0xff;
+
+	//SequenceNum
+	m_szRequest[i++] = 0x01;
+	m_szRequest[i++] = 0x00;
+
+	//UDAP_TYPE_IPCONFIGURE
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 8)&0xff);
+	m_szRequest[i++] = (char)((UDAP_TYPE_IPCONFIGURE >> 0)&0xff);
+
+	//UAP_FLAG_REQUEST
+	m_szRequest[i++] = UAP_FLAG_REQUEST;
+
+	//UAP_CLASS_UCP
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 24)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 16)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 8)&0xff;
+	m_szRequest[i++] = (UAP_CLASS_UCP >> 0)&0xff;
+
+	// Method Remote Config
+	if (0 == m_RCBtFlag)
+	{
+		m_szRequest[i++] = (UCP_METHOD_UPLOAD >> 8 ) & 0xff;
+		m_szRequest[i++] = (UCP_METHOD_UPLOAD >> 0 ) & 0xff;
+
+		//UPLoad File Name
+		m_szRequest[i++] = UCP_CODE_UPLOAD_FNAME;
+		m_szRequest[i++] = (char)m_strFileName.GetLength();
+		sprintf(&m_szRequest[i++],(LPCTSTR) m_strFileName);
+		i = i + m_strFileName.GetLength() - 1;
+	}
+	else if (1 == m_RCBtFlag)
+	{
+		m_szRequest[i++] = (UCP_METHOD_DOWNLOAD >> 8 ) & 0xff;
+		m_szRequest[i++] = (UCP_METHOD_DOWNLOAD >> 0 ) & 0xff;
+
+		m_szRequest[i++] = UCP_CODE_DOWNLOAD_FNAME;
+		m_szRequest[i++] = (char)m_strDLFileName.GetLength();
+		sprintf(&m_szRequest[i++],(LPCTSTR) m_strDLFileName);
+		i = i + m_strDLFileName.GetLength() - 1;
+	}
+
+	nResult = sendto(m_Socket, m_szRequest, i, 0, (SOCKADDR *) &m_saUdpServ,sizeof (SOCKADDR_IN));
+
+	if( nResult == SOCKET_ERROR ) 
+	{
+		//sprintf( chrSendBuffer, "sendto() fail! Error Code: %05d", nResult );
+		sprintf( chrSendBuffer, "UDP packet sendto error, please check network connection, and click again");
+		AfxMessageBox( chrSendBuffer );
+		return;
+	}
+	
+}
+
 // 显示IP配置的界面 David 2010.6.12 Add
 void CUpgraderView::ShowIPConfigDlg()
 {
@@ -1970,6 +2110,9 @@ void CUpgraderView::ShowDeviceInfoDlg()
 	char charTemp[33];
 	CUpgraderDoc* pDoc = GetDocument();
 	ASSERT(NULL != pDoc);
+	// Model Product name
+	dlgInfo.m_strMPname = pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_strModelProductName;
+
 	// Device Name
 	dlgInfo.m_strModelName = pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_strDeviceName;
 
@@ -2173,8 +2316,89 @@ void CUpgraderView::ShowDeviceInfoDlg()
 	}
 	else
 	{
-		sprintf(charTemp, "Channel %d/ %dMHz",pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nChannel, 
-		2407+(pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nChannel*5));
+		//sprintf(charTemp, "Channel %d/ %dMHz",pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nChannel, 
+		//2407+(pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nChannel*5));
+		switch (pDoc->m_RecieveData.m_SendData.m_GetinfoData.m_nChannel)
+		{
+			case 0:
+				sprintf(charTemp, "Unkown");
+				break;
+			case 36:
+				sprintf(charTemp, "Channel 36/ 5180MHz");
+				break;
+			case 40:
+				sprintf(charTemp, "Channel 40/ 5200MHz");
+				break;
+			case 44:
+				sprintf(charTemp, "Channel 44/ 5220MHz");
+				break;
+			case 48:
+				sprintf(charTemp, "Channel 48/ 5240MHz");
+				break;
+			case 52:
+				sprintf(charTemp, "Channel 52/ 5260MHz");
+				break;
+			case 56:
+				sprintf(charTemp, "Channel 56/ 5280MHz");
+				break;
+			case 60:
+				sprintf(charTemp, "Channel 60/ 5300MHz");
+				break;
+			case 64:
+				sprintf(charTemp, "Channel 64/ 5320MHz");
+				break;
+			case 100:
+				sprintf(charTemp, "Channel 100/ 5500MHz");
+				break;
+			case 104:
+				sprintf(charTemp, "Channel 104/ 5520MHz");
+				break;
+			case 108:
+				sprintf(charTemp, "Channel 108/ 5540MHz");
+				break;
+			case 112:
+				sprintf(charTemp, "Channel 112/ 5560MHz");
+				break;
+			case 116:
+				sprintf(charTemp, "Channel 116/ 5580MHz");
+				break;
+			case 120:
+				sprintf(charTemp, "Channel 120/ 5600MHz");
+				break;
+			case 124:
+				sprintf(charTemp, "Channel 124/ 5620MHz");
+				break;
+			case 128:
+				sprintf(charTemp, "Channel 128/ 5640MHz");
+				break;
+			case 132:
+				sprintf(charTemp, "Channel 132/ 5660MHz");
+				break;
+			case 136:
+				sprintf(charTemp, "Channel 136/ 5680MHz");
+				break;
+			case 140:
+				sprintf(charTemp, "Channel 140/ 5700MHz");
+				break;
+			case 149:
+				sprintf(charTemp, "Channel 149/ 5745MHz");
+				break;
+			case 153:
+				sprintf(charTemp, "Channel 153/ 5765MHz");
+				break;
+			case 157:
+				sprintf(charTemp, "Channel 157/ 5785MHz");
+				break;
+			case 161:
+				sprintf(charTemp, "Channel 161/ 5805MHz");
+				break;
+			case 165:
+				sprintf(charTemp, "Channel 165/ 5825MHz");
+				break;
+			default:
+				sprintf(charTemp, "--");
+				break;
+		}
 	}
 	dlgInfo.m_strChannel = charTemp;
 
@@ -2682,6 +2906,33 @@ void CUpgraderView::LaterAction()
 		}
 		break;
 		}
+	case UCP_METHOD_UPLOAD:{
+		KillTimer(TIMER_OVERTIME);
+		int result = pDoc->m_RecieveData.m_SendData.upload_result;
+		if(result == 1){
+			BeginWaitCursor();	// Display the hourglass cursor.
+			CWaitReset	dlgw(50000);
+			dlgw.DoModal();
+			EndWaitCursor();	// Remove the hourglass cursor.
+			StartDiscovery();
+		}else if(result == 2){
+			MessageBox("File Error, Please Try", "Error", MB_OK);
+		}
+		else{
+			MessageBox("UPLoad Failure, Please Try", "Error", MB_OK);
+		}
+		break;
+		}
+	case UCP_METHOD_DOWNLOAD:{
+		KillTimer(TIMER_OVERTIME);
+		int result = pDoc->m_RecieveData.m_SendData.download_result;
+		if(result == 1){
+			MessageBox("DownLoad Successfully", MB_OK);
+		}else{
+			MessageBox("DownLoad Failure, Please Try", "Error", MB_OK);
+		}
+		break;
+		}
 	case UCP_METHOD_AUTH:		//登录认证回应包
 		{
 			KillTimer(TIMER_OVERTIME);
@@ -2706,6 +2957,62 @@ void CUpgraderView::LaterAction()
 			case UCP_METHOD_GET_HOST:
 				SendHost();
 				break;
+			case UCP_METHOD_DOWNLOAD:
+			case UCP_METHOD_UPLOAD:{
+				if (0 == m_RCBtFlag)
+				{
+					CFileDialog dlg_file(true);
+					if(dlg_file.DoModal()==IDOK)
+					{
+						CString tmp=dlg_file.GetFileName();
+
+						for(int i=0;i<tmp.GetLength();i++)
+						{
+							if(((tmp[i]>64) && (tmp[i]<91)) || ((tmp[i]>96) && (tmp[i]<127)) || ((tmp[i]>47) && (tmp[i]<58)) || (45 ==tmp[i]) || (95 ==tmp[i]) || (46 ==tmp[i]))
+							{
+							}
+							else
+							{
+								MessageBox("FileName only support . _ - Number and Alphabet.", "Error", MB_OK);
+								return;
+							}
+						}
+
+						m_strFileName=dlg_file.GetFileName();
+						UpdateData(FALSE);
+					}
+					else
+						return;
+				}
+				else if(1 == m_RCBtFlag)
+				{
+					CFileDialog dlg_file(false);
+					if(dlg_file.DoModal()==IDOK)
+					{
+						CString tmp=dlg_file.GetFileName();
+
+						for(int i=0;i<tmp.GetLength();i++)
+						{
+							if(((tmp[i]>64) && (tmp[i]<91)) || ((tmp[i]>96) && (tmp[i]<127)) || ((tmp[i]>47) && (tmp[i]<58)) || (45 ==tmp[i]) || (95 ==tmp[i]) || (46 ==tmp[i]))
+							{
+							}
+							else
+							{
+								MessageBox("FileName only support . _ - Number and Alphabet.", "Error", MB_OK);
+								return;
+							}
+						}
+
+						m_strDLFileName=dlg_file.GetFileName();
+						UpdateData(FALSE);
+					}
+					else
+						return;
+				}
+				SendRemoteConfig();
+				SetTimer(TIMER_OVERTIME, 120000, NULL);
+				break;
+				}
 			default:
 				//ASSERT(FALSE);
 				break;

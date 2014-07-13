@@ -35,7 +35,8 @@ static UINT ToolIndicators[] =
 	ID_DEVICE_INFO,
 //	ID_SEPARATOR,
 	ID_WEB,
-	ID_REBOOT
+	ID_REBOOT,
+	ID_REMOTE_CONFIG
 };
 
 static UINT indicators[] =
@@ -146,6 +147,9 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	
 	str.LoadString(IDS_REBOOT);
 	m_wndToolBar.SetButtonText(4, str);
+
+	str.LoadString(IDS_REMOTE_CONFIG);
+	m_wndToolBar.SetButtonText(5, str);
 	
 	CRect rectToolBar;
 

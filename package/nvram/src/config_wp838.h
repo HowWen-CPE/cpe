@@ -858,13 +858,13 @@ nvram_tuple_t nvram_factory_default[] = {
 	{ "hostname", "HoWen",
 		NVRAM_NONE,
 		0 
-	},           
+	},
 
-	{ "connectrssithr", "0",
+	{ "connectrssithr", "-55",
 		NVRAM_NONE,
 		0 
 	}, 
-	{ "disconnectrssithr", "0",
+	{ "disconnectrssithr", "-65",
 		NVRAM_NONE,
 		0 
 	}, 

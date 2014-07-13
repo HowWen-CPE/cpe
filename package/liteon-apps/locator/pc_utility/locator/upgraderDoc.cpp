@@ -21,6 +21,7 @@
 #include "NGWizard.h"
 #include "SelectConectionDlg.h"
 #include "HostSetting.h"
+#include "LoginRC.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -330,6 +331,10 @@ int CUpgraderDoc::GetDataFromSocket(char* buffer, //[in] ½ÓÊÕsocketÊý¾ÝµÄ»º³åµÄÖ
 					HexToint(buffer, GetLen , npBufferIndex , &m_RecieveData.bridge);
 					
 					break;
+				case UCP_CODE_PRODUCTNAME:
+					HexToChar(buffer, GetLen , npBufferIndex , szDeviceTemp);
+					m_RecieveData.m_SendData.m_GetinfoData.m_strModelProductName = szDeviceTemp;
+					break;
 				case UCP_CODE_DEVICE_NAME:
 					HexToChar(buffer, GetLen , npBufferIndex , szDeviceTemp);
 					m_RecieveData.m_SendData.m_DiscoverData.m_strDeviceName = szDeviceTemp;
@@ -524,7 +529,15 @@ int CUpgraderDoc::GetDataFromSocket(char* buffer, //[in] ½ÓÊÕsocketÊý¾ÝµÄ»º³åµÄÖ
 		{
 			HexToULONG(buffer, 2 , npBufferIndex , &m_RecieveData.m_SendData.m_AuthData.m_uRequestMethod);
 		}
-		break;	
+		break;
+	case UCP_METHOD_UPLOAD:{
+		HexToint(buffer, 1 , npBufferIndex , &m_RecieveData.m_SendData.upload_result);
+		break;
+		}
+	case UCP_METHOD_DOWNLOAD:{
+		HexToint(buffer, 1 , npBufferIndex , &m_RecieveData.m_SendData.download_result);
+		break;
+		}
 	default:
 		//ASSERT(FALSE);
 		break;

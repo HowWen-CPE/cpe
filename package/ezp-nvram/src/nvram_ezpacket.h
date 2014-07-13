@@ -2790,7 +2790,7 @@ static struct nvram_tuple nvram_ezpacket_default[] = {
         NVRAM_NONE,
         0 
     },              /* Product model */
-    { "license_key", "HoWen-000001", 
+    { "license_key", "HW-WCHS01", 
         NVRAM_PROTECTED | NVRAM_CUSTOMIZED,
         0 
     },              /* Product model */
