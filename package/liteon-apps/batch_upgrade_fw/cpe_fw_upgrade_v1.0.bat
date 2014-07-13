@@ -8,15 +8,18 @@ rem   2) Start ftp (recommended) or tftp server
 rem   3) Run this script in cmd.exe, instead of double click the script 
 rem -------------------------------------------------------------------------------
 
+
 set debug=0
 
+set UPGRADE_LOG_FILE=cpe_firmware_upgrade.log
 set DOWNLOAD_TEST_LIST_FILE=tmp\DOWNLOAD_TEST_LIST_FILE.log
 set DOWNLOAD_DONE_LIST_FILE=tmp\DOWNLOAD_DONE_LIST_FILE.log
 set DOWNLOAD_FAIL_LIST_FILE=tmp\DOWNLOAD_FAIL_LIST_FILE.log
 set INVALID_FW_LIST_FILE=tmp\INVALID_FW_LIST_FILE.log
 
-echo.>> %UPGRADE_LOG_FILE%
-echo.>> %UPGRADE_LOG_FILE%
+echo. >> %UPGRADE_LOG_FILE%
+echo. >> %UPGRADE_LOG_FILE%
+
 echo %date:~0,10% %time:~0,8%
 echo %date:~0,10% %time:~0,8% >> %UPGRADE_LOG_FILE%
 echo *******************************************************
