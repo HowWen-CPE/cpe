@@ -638,7 +638,13 @@ int wirelessStatusGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	//ssid
 	memset(buf, 0, sizeof(buf));
 	get_sta_assoc_ssid(RADIO_2G, buf);
-	uiPrintf("SSID: %s\n", buf);
+	if (strlen(buf) > 0) {
+		uiPrintf("SSID: %s\n", buf);
+	} else {
+		memset(buf, 0, sizeof(buf));
+		ezplib_get_attr_val("wl0_apcli_rule", 0, "ssid", buf, 33, EZPLIB_USE_CLI);
+		uiPrintf("SSID: %s\n", buf);
+	}
 
 	//channel number
 	memset(&channel_get, 0, sizeof(Channel_t));
@@ -695,14 +701,11 @@ int wirelessStatusGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	//0->Disassociated, 1->Associated, 2->Unkown, 3-> --
 	getAPConnectStatus(RADIO_2G, &associated);
 	switch(associated) {
-		case 0:
-			uiPrintf("Connect Status: Disassociated\n");
-			break;
 		case 1:
 			uiPrintf("Connect Status: Associated\n");
 			break;
 		default:
-			uiPrintf("Connect Status: Unkown\n");
+			uiPrintf("Connect Status: Disassociated\n");
 			
 	}
 
@@ -712,7 +715,10 @@ int wirelessStatusGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 
 	//rssi
 	getWIFIRSSI(RADIO_2G, rssi);
-	uiPrintf("RSSI: %s\n", rssi);
+	if (strlen(rssi) > 0)
+		uiPrintf("RSSI: %s\n", rssi);
+	else
+		uiPrintf("RSSI: --/--\n");
 	
 	return CLI_PARSE_OK;
 }
@@ -1392,9 +1398,8 @@ int securityGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	}
 	#else
 	char auth_mode[32] = {0};
-#if 0
 	char enc_type[32] = {0};
-#endif
+
 	ezplib_get_attr_val("wl0_apcli_rule", 0, "secmode", auth_mode, 32, EZPLIB_USE_CLI);
 	
 	if (!strcmp(auth_mode, "none")) {
@@ -1404,9 +1409,6 @@ int securityGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 		uiPrintf("Security: open\n");
 	}
 	else if (!strcmp(auth_mode, "psk")) {
-#if 1
-        uiPrintf("Security: WPA-PSK\n");
-#else
 		ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "crypto", enc_type, 32, EZPLIB_USE_CLI);
 		if (!strcmp(enc_type, "aes")) {
 			uiPrintf("Security: WPA-psk/AES\n");
@@ -1417,12 +1419,8 @@ int securityGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 		else if (!strcmp(enc_type, "aestkip") || !strcmp(enc_type, "tkipaes")) {
 			uiPrintf("Security: WPA-psk/AESTKIP\n");
 		} 
-#endif
 	} 
 	else if (!strcmp(auth_mode, "psk2")) {
-#if 1
-        uiPrintf("Security: WPA2-PSK\n");
-#else
 		ezplib_get_attr_val("wl0_apcli_sec_wpa2_rule", 0, "crypto", enc_type, 32, EZPLIB_USE_CLI);
 		if (!strcmp(enc_type, "aes")) {
 			uiPrintf("Security: WPA2-psk/AES\n");	
@@ -1433,14 +1431,7 @@ int securityGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 		else if (!strcmp(enc_type, "aestkip") || !strcmp(enc_type, "tkipaes")) {
 			uiPrintf("Security: WPA2-psk/AESTKIP\n");
 		} 
-#endif
-	}else if (!strcmp(auth_mode, "wep")) {
-        uiPrintf("Security: WEP\n");
-    }else if (!strcmp(auth_mode, "wpa2")) {
-        uiPrintf("Security: WPA2\n");
-    }else if (!strcmp(auth_mode, "wpa")) {
-        uiPrintf("Security: WPA\n");
-    }
+	}
 	else {
 		uiPrintf("Invalid encryption type\n");
 	}

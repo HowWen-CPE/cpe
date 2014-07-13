@@ -255,37 +255,6 @@ int get_sysname_from_nvram(char *sysname)
 	return T_SUCCESS;
 }
 
-
-   /***********************************************************************
- * Function Name : get_product_name_from_nvram
- * Description    : get product name (model name) from nvram
- * Input         :
- * Output        : product_name
- * Return value  : T_SUCCESS, get success
- *                       T_FAILURE, get failure
- ***********************************************************************/
-int get_product_name_from_nvram(char *product_name)
-{
-	char *name_get=NULL;
-	char *str=NULL;
-	name_get = nvram_safe_get("license_key");
-	
-	if(strlen(name_get) <= 0)
-	{
-		uiPrintf("Get product name from nvram error!\n");
-		return T_FAILURE;
-	}
-	
-	strcpy(product_name, name_get);
-	if(strstr(product_name,"\"")){
-		str = sub_replace(product_name,"\"","&#34;");
-		strcpy(product_name,str);
-		free(str);
-	}
-	
-	return T_SUCCESS;
-}
-
   /***********************************************************************
  * Function Name : del_space
  * Description    : delete space of one string and copy it to another string

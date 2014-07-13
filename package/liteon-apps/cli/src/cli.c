@@ -945,11 +945,8 @@ LOCAL A_BOOL cliLoginRead(CLI * pCli, int telnet)
     //int name_len = 0;
     //FILE *fp;
     char prompt[100];
-#if 0
+
     if(T_FAILURE == get_sysname_from_nvram(dev_name))
-#else
-    if(T_FAILURE == get_product_name_from_nvram(dev_name))
-#endif
     {
     	strcpy(dev_name, SYS_NAME);
 	}
@@ -1125,13 +1122,10 @@ parser(CLI * pCli, int fd, struct parse_token_s *pTbl)
 
     /*
      * Notice that country code has not been set.
+     * modify by Tony 2008.4.16.
      */
-#if 0
-    if(T_FAILURE == get_sysname_from_nvram(dev_name))
-#else
-    if(T_FAILURE == get_product_name_from_nvram(dev_name))
-#endif
-    {
+     if(T_FAILURE == get_sysname_from_nvram(dev_name))
+    	{
           return FALSE;
 	}
 	 

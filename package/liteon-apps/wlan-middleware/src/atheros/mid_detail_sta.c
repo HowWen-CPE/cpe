@@ -609,7 +609,7 @@ int get_sta_assoc_rssi(int radio, char *rssi)
 	char rssiStr[8] = {0};
 	char cmd[256] = {0};
 	//Chged by Andy Yu in 20140224: Assocapinfo Information Format Chged
-	sprintf(cmd, "wlanconfig %s list assocapinfo "
+	sprintf(cmd, "wlanconfig %s list assocapinfo 2>/dev/null"
 		"| awk '/Chain/{gsub(\"dBm\",\"\"); print substr($0,13)}' > /tmp/rssi.dat", ifacename);
 	//EXE_COMMAND(cmd);
 	system(cmd);
