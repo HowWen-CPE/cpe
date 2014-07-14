@@ -2254,14 +2254,14 @@ int debugCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 
 	memset(cmd, 0, sizeof(cmd));
 	sprintf(cmd, "iwpriv sta0 connrssi %d", (atoi(buf) + 95));
-	printf("%s\n", cmd);
+	//printf("%s\n", cmd);
 	system(cmd);
 
 	memset(buf, 0, sizeof(buf));
 	ezplib_get_attr_val("wl0_apcli_rule", 0, "disconnrssi", buf, 32, EZPLIB_USE_CLI);
 	memset(cmd, 0, sizeof(cmd));
 	sprintf(cmd, "iwpriv sta0 disconnrssi %d", (atoi(buf) + 95));
-	printf("%s\n", cmd);
+	//printf("%s\n", cmd);
 	system(cmd);
 	
 	return CLI_PARSE_OK;

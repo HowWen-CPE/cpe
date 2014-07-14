@@ -258,11 +258,19 @@ int create_wpa_supplicant_conf(int radio, int authmode)
 	}
 
 	sprintf(cmd, "rm -rf %s/%s.conf", WPA_SUPPLICANT_CFG_PATH, ifacename);
+	#ifdef MID_DEBUG
 	EXE_COMMAND(cmd);
+	#else
+	system(cmd);
+	#endif
 	memset(cmd, 0, sizeof(cmd));
 
 	sprintf(cmd, "touch %s/%s.conf", WPA_SUPPLICANT_CFG_PATH, ifacename);
+	#ifdef MID_DEBUG
 	EXE_COMMAND(cmd);
+	#else
+	system(cmd);
+	#endif
 	memset(cmd, 0, sizeof(cmd));
 
 	sprintf(cmd, "%s/%s.conf", WPA_SUPPLICANT_CFG_PATH, ifacename);
@@ -426,7 +434,9 @@ int create_wpa_supplicant_conf(int radio, int authmode)
 		else {
 			break;
 		}
+		#ifdef MID_DEBUG
 		printf("buffer_write:%s\n",buffer_write);
+		#endif
 		size = fwrite(buffer_write, strlen(buffer_write), 1, fp);
 		if (size < 1) 
 		{
@@ -482,17 +492,27 @@ int start_apcli_apd_daemon(int radio)
 		case AUTHMODE_WPA:
 		case AUTHMODE_WPA2:
 			//wpa_supplicant -i sta0 -b br-lan0 -c /tmp/sta0.conf -dd -K &
+			#ifdef MID_DEBUG
 			sprintf(cmd, "/usr/sbin/wpa_supplicant -i %s -b %s -c %s/%s.conf -P %s/wpa_supplicant_%s.pid -B", 
 				ifacename, apcli_br, 
 				WPA_SUPPLICANT_CFG_PATH, ifacename, 
 				WPA_SUPPLICANT_PID_PATH, ifacename);
+			#else
+			sprintf(cmd, "/usr/sbin/wpa_supplicant -i %s -b %s -c %s/%s.conf -P %s/wpa_supplicant_%s.pid -B 2>/dev/null 1>/dev/null", 
+				ifacename, apcli_br, 
+				WPA_SUPPLICANT_CFG_PATH, ifacename, 
+				WPA_SUPPLICANT_PID_PATH, ifacename);
+			#endif
 			break;
 		default:
 			fprintf(stderr, "ERROR:wpa_supplicant is only used for PSK & 802.1x\n");
 			return T_FAILURE;
 	}
-
+	#ifdef MID_DEBUG
 	EXE_COMMAND(cmd);
+	#else
+	system(cmd);
+	#endif
 	return T_SUCCESS;
 }
 
@@ -1055,13 +1075,19 @@ int set_sta_assoc_wirelessmode(int radio)
 				fprintf(stderr, "__%d@%s error\r\n", __LINE__, __FUNCTION__);
 				return T_FAILURE;
 		}
+		#ifdef MID_DEBUG
 		EXE_COMMAND(cmd);
+		#else
+		system(cmd);
+		#endif
 	}
 	else if (RADIO_5G == radio) {
 		ezplib_get_attr_val("wl1_advanced_rule", 0, "htbw", htbwBuf, 2, EZPLIB_USE_CLI);
 		ezplib_get_attr_val("wl5g_basic_rule", 0, "net_mode", ModeTmpBuf, 4, EZPLIB_USE_CLI);
 		netmode = atoi(ModeTmpBuf);	
-		printf("__%d@%s netmode = %d\r\n", __LINE__, __FUNCTION__, netmode);	
+		#ifdef MID_DEBUG
+		printf("__%d@%s netmode = %d\r\n", __LINE__, __FUNCTION__, netmode);
+		#endif
 		/* 11a/n mode */
 		if (8 == netmode) {
 			switch(atoi(htbwBuf)) {
@@ -1097,8 +1123,11 @@ int set_sta_assoc_wirelessmode(int radio)
 			fprintf(stderr, "__%d@%s error\r\n", __LINE__, __FUNCTION__);
 			return T_FAILURE;
 		}
-
+		#ifdef MID_DEBUG
 		EXE_COMMAND(cmd);
+		#else
+		system(cmd);
+		#endif
 	}
 	else {
 		fprintf(stderr, "__%d@%s error\r\n", __LINE__, __FUNCTION__);
@@ -1159,11 +1188,19 @@ int set_sta_rssi_threshold(int radio)
 
     /* set connrssi threshold*/
 	sprintf(cmd, "iwpriv %s connrssi %d", ifacename, delta_connrssi); 
+	#ifdef MID_DEBUG
 	EXE_COMMAND(cmd);
+	#else
+	system(cmd);
+	#endif
 
     /* set disconnrssi threshold*/
 	sprintf(cmd, "iwpriv %s disconnrssi %d", ifacename, delta_disconnrssi); 
+	#ifdef MID_DEBUG
 	EXE_COMMAND(cmd);
+	#else
+	system(cmd);
+	#endif
 
 	return T_SUCCESS;
 }
@@ -1206,7 +1243,6 @@ int set_config_sta(int radio)
 {
 	char cmd[128] = {0};
 	char ifacename[16] = {0};
-
 	if(T_FAILURE == construct_vap(ifacename, radio, 0, WLAN_MODE_STA)) {
 		fprintf(stderr, "__%d@%s error\r\n", __LINE__, __FUNCTION__);
 		return T_FAILURE;
@@ -1216,14 +1252,19 @@ int set_config_sta(int radio)
         //Modified by Mario Huang,down first and terminate later
         vap_up_down(radio, 0, WLAN_MODE_STA, VAP_DOWN);
 	/* use wpa_cli terminate to stop wpa_supplicant */
+	
+#ifdef MID_DEBUG
 	sprintf(cmd, "/usr/sbin/wpa_cli -p /var/run/wpa_supplicant -i %s terminate", ifacename);
 	EXE_COMMAND(cmd);
+#else
+	sprintf(cmd, "/usr/sbin/wpa_cli -p /var/run/wpa_supplicant -i %s terminate 2>/dev/null 1>/dev/null", ifacename);
+	system(cmd);
+#endif
 #else
 	/* use kill `cat pidfile` to stop wpa_supplicant */
     vap_up_down(radio, 0, WLAN_MODE_STA, VAP_DOWN);
 	kill_apcli_apd_daemon(radio);
 #endif
-
 	/* Power & Wireless Mode */
 	//set_power(radio);
 	set_sta_assoc_wirelessmode(radio);
@@ -1560,12 +1601,20 @@ int set_sta_addr_mode(int radio)
     {
         /* disable sta-wds, enable sta-ext*/
         sprintf(cmd, "iwpriv %s wds 0 && iwpriv %s extap 1", ifacename, ifacename);
+		#ifdef MID_DEBUG
         EXE_COMMAND(cmd);
+		#else
+		system(cmd);
+		#endif
     }else if(*addrmode == '1')
     {
         /* enable sta-wds, disable sta-ext*/
         sprintf(cmd, "iwpriv %s wds 1 && iwpriv %s extap 0", ifacename, ifacename);
+		#ifdef MID_DEBUG
         EXE_COMMAND(cmd);
+		#else
+		system(cmd);
+		#endif
     }else
     {
         printf("ERROR address mode %s, ignored!!!\n", addrmode);

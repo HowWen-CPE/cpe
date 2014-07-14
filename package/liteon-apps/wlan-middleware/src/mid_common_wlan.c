@@ -824,12 +824,20 @@ int vap_up_down(int radio, int vapid, int mode, int up)
     if(up)
         {
             sprintf(cmd, "ifconfig %s up", vap_name);
+			#ifdef MID_DEBUG
             EXE_COMMAND(cmd);
+			#else
+			system(cmd);
+			#endif
         }
     else
         {
             sprintf(cmd, "ifconfig %s down", vap_name);
+			#ifdef MID_DEBUG
             EXE_COMMAND(cmd);
+			#else
+			system(cmd);
+			#endif
         }
     return T_SUCCESS;
 }
@@ -849,13 +857,25 @@ int vap_up_down(int radio, int vapid, int mode, int up)
 
     if(up)
         {
-            sprintf(cmd, "ifconfig %s up", vap_name);
+			#ifdef MID_DEBUG
+			sprintf(cmd, "ifconfig %s up", vap_name);
             EXE_COMMAND(cmd);
+			#else
+			system("echo \"0 0 0 0\" > /proc/sys/kernel/printk");
+			sprintf(cmd, "ifconfig %s up 1>/dev/null 2>/dev/null", vap_name);
+			system(cmd);
+			#endif
         }
     else
         {
-            sprintf(cmd, "ifconfig %s down", vap_name);
+			#ifdef MID_DEBUG
+			sprintf(cmd, "ifconfig %s down", vap_name);
             EXE_COMMAND(cmd);
+			#else
+			system("echo \"0 0 0 0\" > /proc/sys/kernel/printk");
+			sprintf(cmd, "ifconfig %s down 1>/dev/null 2>/dev/null", vap_name);
+			system(cmd);
+			#endif
         }
 
     if(up)

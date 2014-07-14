@@ -376,7 +376,11 @@ int set_power(int radio)
 	if ((WLAN_MODE_STA == wlan_mode) && (RADIO_5G == radio))
 	{
 		sprintf(cmd, "sleep 10 && /etc/wl/sta-txpower &");
+		#ifdef MID_DEBUG
 		EXE_COMMAND(cmd);
+		#else
+		system(cmd);
+		#endif
 	}
 	else
 	{
@@ -445,7 +449,11 @@ int set_power(int radio)
 
 		/*Set Power*/
 		sprintf(cmd, "iwconfig %s txpower %d", vap_name, txpower);
+		#ifdef MID_DEBUG
 		EXE_COMMAND(cmd);
+		#else
+		system(cmd);
+		#endif
 	}
 	
     return T_SUCCESS;

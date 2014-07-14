@@ -886,8 +886,11 @@ int get_max_txpower(int radio, int *max_txpower)
 			sprintf(cmd, "iwpriv wifi0 getTxMaxPower2G | awk '{gsub(/getTxMaxPower2G:/,\"\");print $2}' > /tmp/max_txpower");
 		}
 	}
-	
+	#ifdef MID_DEBUG
     EXE_COMMAND(cmd);
+	#else
+	system(cmd);
+	#endif
     fin = fopen("/tmp/max_txpower","r");
             
     //while ((c=fgetc(fin)) != EOF){
@@ -906,7 +909,11 @@ int get_max_txpower(int radio, int *max_txpower)
 	*max_txpower = atoi(cmd);
 
     fclose(fin);
-    EXE_COMMAND("rm -f /tmp/max_txpower");    
+	#ifdef MID_DEBUG
+    EXE_COMMAND("rm -f /tmp/max_txpower");
+	#else
+	system("rm -f /tmp/max_txpower");
+	#endif
 
     return T_SUCCESS;
 }
@@ -938,7 +945,11 @@ int get_chainmask_num(int radio, int *chain_num)
     }
     //iwpriv wifiN get_txchainmask | awk '{gsub(/get_txchainmask:/,"");print}' | awk '{print $2}'
     sprintf(cmd, "iwpriv %s get_txchainmask | awk '{gsub(/get_txchainmask:/,\"\");print}' | awk '{print $2}' > /tmp/chainmask_num", wifi_name);
-    EXE_COMMAND(cmd);
+	#ifdef MID_DEBUG
+	EXE_COMMAND(cmd);
+	#else
+	system(cmd);
+	#endif
     fin = fopen("/tmp/chainmask_num","r");
             
     //while ((c=fgetc(fin)) != EOF){
@@ -954,7 +965,11 @@ int get_chainmask_num(int radio, int *chain_num)
 	}
 
     fclose(fin);
-    EXE_COMMAND("rm -f /tmp/chainmask_num");    
+	#ifdef MID_DEBUG
+    EXE_COMMAND("rm -f /tmp/chainmask_num");
+	#else
+	system("rm -f /tmp/chainmask_num");
+	#endif
 
 	//while (chain_tmp){
 	//	chain_count++;

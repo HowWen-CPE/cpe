@@ -21,6 +21,8 @@
 #include <string.h>
 
 #include "mid_detail.h"
+
+//#define MID_DEBUG 1
 /*>>>>>>>>>>Common used Macros Start>>>>>>>>>>*/
 int find_pattern_from_str(char str[], char pattern[]);
 int wait_for_bridge_setup(int radio, int mode);
