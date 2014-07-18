@@ -78,8 +78,9 @@ typedef enum
 
 LOCAL struct parse_token_s getCmdTbl[] = {
     {"account", "Display Account", accountGet, NULL, NULL, NULL, 0},
-	{"connrssithr", "Display connect rssi threshold", connectRssiThresholdGet, NULL, NULL, NULL, 0},
-    {"disrssithr", "Display disconnect rssi threshold", disconnectRssiThresholdGet, NULL, NULL, NULL, 0},
+	//{"connrssithr", "Display connect rssi threshold", connectRssiThresholdGet, NULL, NULL, NULL, 0},
+    //{"disrssithr", "Display disconnect rssi threshold", disconnectRssiThresholdGet, NULL, NULL, NULL, 0},
+    {"rssithr", "Display connect and disconnect rssi threshold", RssiThresholdGet, NULL, NULL, NULL, 0},
     {"dhcp", "Display dhcp status", dhcpGet, NULL, NULL, NULL, 0},
     {"ipaddr", "Display IP address", ipaddrGet, NULL, NULL, NULL, 0},
 	{"mac", "Display mac", macGet, NULL, NULL, NULL, 0},
@@ -97,7 +98,7 @@ LOCAL struct parse_token_s getCmdTbl[] = {
  * NOTICE: This table is arranged in alphabetical order
  */
 LOCAL struct parse_token_s setCmdTbl[] = {
-    {"account", "Set Account, Usage: set account -u admin -o admin -n 1234",
+    {"account", "Set Account, Usage: set account password",
 		accountSet, NULL, NULL, NULL, 0},
     {"rssithr", "Set disconnect or connect rssi thresshold, Usage: set rssithr conn_value1 disconn_value2",
      rssithrSet, NULL, NULL, NULL, 0},
