@@ -113,7 +113,6 @@ local_config () {
   	touch $CHAP_RFILE
 
 	#echo "#USERNAME  PROVIDER  PASSWORD  IPADDRESS" >> $CHAP_RFILE
-    #echo "\"LITEON\" \"LITEON\" \"LITEON\" *" >> $CHAP_RFILE
 
     # For sharing with L2TP, provider should be *.
 	# provider=$(nvram show pptpd_rule 0 name)

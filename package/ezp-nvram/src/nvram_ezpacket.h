@@ -2759,15 +2759,15 @@ static struct nvram_tuple nvram_ezpacket_default[] = {
 		NVRAM_DEFAULT,
 		0 
 	},  /* Web language support */
-	{ "brand", "LITEON", 
+	{ "brand", "HOWEN", 
 		NVRAM_NONE,
 		0 
 	},  /* Brand name - CSS style and SSID. */
-#define UPNP_FRIENDLYNAME   "LITEON CPE Internet Sharing Gateway"
-#define MANUFACTURER        "LITEON Communications Corp."
+#define UPNP_FRIENDLYNAME   "HOWEN CPE Internet Sharing Gateway"
+#define MANUFACTURER        "HOWEN Communications Corp."
 #define MANUFACTURERURL     "http://www.liteon.com"
-#define MODELDESCRIPTION    "LITEON CPE Internet Sharing Gateway"
-#define MODELNAME           "LITEON Internet Sharing Gateway"
+#define MODELDESCRIPTION    "HOWEN CPE Internet Sharing Gateway"
+#define MODELNAME           "HOWEN Internet Sharing Gateway"
 #define MODELNUMBER         "CPE"
 #define MODELURL            ""
 #define SERIALNUMBER        "A19003848"

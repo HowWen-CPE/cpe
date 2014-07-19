@@ -449,11 +449,11 @@
 					BT_APP"|"\
 					EMAIL_APP
 
-#define UPNP_FRIENDLYNAME   "LITEON Internet Sharing Gateway"
-#define MANUFACTURER        "LITEON Communications Corp."
+#define UPNP_FRIENDLYNAME   "HOWEN Internet Sharing Gateway"
+#define MANUFACTURER        "HOWEN Communications Corp."
 #define MANUFACTURERURL     "http://www.howen.com"
-#define MODELDESCRIPTION    "LITEON Internet Sharing Gateway"
-#define MODELNAME           "LITEON Internet Sharing Gateway"
+#define MODELDESCRIPTION    "HOWEN Internet Sharing Gateway"
+#define MODELNAME           "HOWEN Internet Sharing Gateway"
 #define MODELNUMBER         ""
 #define MODELURL            ""
 #define SERIALNUMBER        "A19003848"
@@ -520,7 +520,7 @@ nvram_tuple_t nvram_factory_default[] = {
 		0 
 	},        
 
-	{ "brand", "LITEON", 
+	{ "brand", "HOWEN", 
 		NVRAM_NONE,
 		0 
 	},
