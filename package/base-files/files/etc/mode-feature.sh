@@ -1,5 +1,5 @@
 #!/bin/sh /etc/rc.common 
-set -x
+#set -x
 router_mode_features="pppoe pptp dhcpc dhcps dns nat firewall trigger ipsec pptps l2tps vpn ftp h323 upnp snmp"
 ap_mode_features="dhcpc"
 wisp_mode_features="pppoe pptp dhcpc dhcps dns nat firewall trigger ipsec pptps l2tps vpn ftp h323 upnp snmp"

@@ -1,6 +1,6 @@
 #!/bin/sh /etc/rc.common
 # hotplug event: $NUM and $TYPE are required.
-set -x
+#set -x
 BIN=/usr/bin/miniupnpd
 PID_FILE=/var/run/miniupnpd.pid
 . /etc/network.sh
@@ -15,8 +15,8 @@ stop () {
 	[ "$TYPE" = "wan" -a "$PROTO" = "dhcp" ] && exit 1
     /sbin/ezp-iptables upnp stop
     ip route del 239.0.0.0/8 dev $(nvram get lan0_ifname)
-    iptables -t nat -F MINIUPNPD 2> /dev/null > /dev/null || err=1
-    iptables -t filter -F MINIUPNPD 2> /dev/null > /dev/null || err=1
+    iptables -t nat -F MINIUPNPD 2> /dev/null 1> /dev/null || err=1
+    iptables -t filter -F MINIUPNPD 2> /dev/null 1> /dev/null || err=1
     [ -n `pidof miniupnpd` ] && {
     	kill `pidof miniupnpd`		
     }

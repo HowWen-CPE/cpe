@@ -355,9 +355,15 @@ void write_to_nvram()
 						nvram_set("lan0_ipaddr", "");
 						nvram_set("lan0_mask", "");
 					} else {
+						memset(buf, 0, sizeof(buf));
+						ezplib_get_attr_val("lan_static_rule", 0, "ipaddr", buf, 128, EZPLIB_USE_CLI);
 						ezplib_replace_attr("lan0_proto", 0, "curr", "static");
-						nvram_set("lan0_ipaddr", "192.168.1.2");
-						nvram_set("lan0_mask", "24");	
+						if (strlen(buf) <= 0) {
+							nvram_set("lan0_ipaddr", "192.168.1.2");
+							nvram_set("lan0_mask", "24");
+							ezplib_replace_attr("lan_static_rule", 0, "ipaddr", "192.168.1.2");
+    						ezplib_replace_attr("lan_static_rule", 0, "mask", "24");
+						}
 					}
 				}
 				
@@ -1905,15 +1911,9 @@ int dhcpSet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	strcpy(item.params[0].param_name, "dhcp");
 
 	if (!strcmp(dhcp, "enable")) {
-		//ezplib_replace_attr("lan0_proto", 0, "curr", "dhcp");
-		//nvram_set("lan0_ipaddr", "");
-		//nvram_set("lan0_mask", "");
 		strcpy(item.params[0].value, "dhcp");
 		set_value("dhcp", &item);
 	} else if (!strcmp(dhcp, "disable")){
-		//ezplib_replace_attr("lan0_proto", 0, "curr", "static");
-		//nvram_set("lan0_ipaddr", "192.168.1.2");
-		//nvram_set("lan0_mask", "24");
 		strcpy(item.params[0].value, "static");
 		set_value("dhcp",&item);
 	} else {
@@ -2232,6 +2232,8 @@ int debugCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	char *connrssi = NULL;
 	char *disconnrssi = NULL;
 	char buf[32] = {0};
+	char br_name[32]={0}, *br_get = NULL;
+	char buf_proto[32] = {0};
 
 	//write to nvram
 	write_to_nvram();
@@ -2263,6 +2265,9 @@ int debugCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	sprintf(cmd, "iwpriv sta0 disconnrssi %d", (atoi(buf) + 95));
 	//printf("%s\n", cmd);
 	system(cmd);
+
+	//set ipaddr
+	system("/etc/init.d/network-lan restart 2>/dev/null 1>/dev/null &");
 	
 	return CLI_PARSE_OK;
  }

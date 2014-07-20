@@ -1248,9 +1248,11 @@ int nvram_get_sta_psk(int radio, char *key)
 					"key", buf, NVRAM_PSK_LEN, EZPLIB_USE_CLI);
 				break;
 			default:
+				#ifdef MID_DEBUG
 				fprintf(stderr, "%d@%s"
 					" psk is unnecessary for current secmode!\r\n"
 					, __LINE__, __FUNCTION__);
+				#endif
 				return T_FAILURE;
 		}
 	}

@@ -93,7 +93,7 @@ $EXTRA_HELP
 EOF
 }
 
-${INIT_TRACE:+set -x}
+#${INIT_TRACE:+set -x}
 
 . "$initscript"
 

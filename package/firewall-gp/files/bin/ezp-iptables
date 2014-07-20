@@ -241,7 +241,7 @@ wf_start ()
 }
 
 fr_stop () {
-    echo "@@@fr stop @@@@" > /dev/console
+    #echo "@@@fr stop @@@@" > /dev/console
     $BIN_IPT -t nat -F EZP_DNAT
     $BIN_IPT -t nat -F EZP_DMZ
     $BIN_IPT -t filter -F EZP_FR_ACTION
@@ -982,7 +982,7 @@ ezp_stop()
     $BIN_IPT -t mangle -P PREROUTING ACCEPT
     $BIN_IPT -t mangle -P OUTPUT ACCEPT
 
-    echo "!!!ezp stop!!!" > /dev/console
+    #echo "!!!ezp stop!!!" > /dev/console
 # flush all the rules in the filter and nat tables.
 	$BIN_IPT -F
 	$BIN_IPT -t nat -F
