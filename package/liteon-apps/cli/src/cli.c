@@ -1352,10 +1352,10 @@ int main(int argc, char **argv)
 	}
 
 	//load config to ram
-	init_global_config();
+	//init_global_config();
 
 	//print config
-	//debug_global_config();
+	debug_global_config();
 	
   login:
 

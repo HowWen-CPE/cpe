@@ -82,15 +82,15 @@ void init_global_config()
 	strcpy(ipaddr->params[0].param_name, CLI_NAME_IPADDR);
 	memset(buf, 0, sizeof(buf));
 	ezplib_get_attr_val("lan0_proto", 0, "curr", buf, 32, EZPLIB_USE_CLI);
-	if (!strcmp(buf, "static")){
-		memset(buf, 0, sizeof(buf));
-		ezplib_get_attr_val("lan_static_rule", 0, "ipaddr", buf, 128, EZPLIB_USE_CLI);
-		strcpy(ipaddr->params[0].value, buf);
-	} else {
-		value = nvram_safe_get("lan0_ipaddr");
-		if (value && (strlen(value) > 0) )
-			strcpy(ipaddr->params[0].value, value);
-	}
+	//if (!strcmp(buf, "static")){
+	memset(buf, 0, sizeof(buf));
+	ezplib_get_attr_val("lan_static_rule", 0, "ipaddr", buf, 128, EZPLIB_USE_CLI);
+	strcpy(ipaddr->params[0].value, buf);
+	//} else {
+	//	value = nvram_safe_get("lan0_ipaddr");
+	//	if (value && (strlen(value) > 0) )
+	//		strcpy(ipaddr->params[0].value, value);
+	//}
 	global_configs[CLI_INDEX_IPADDR].item = ipaddr;
 	global_configs[CLI_INDEX_IPADDR].item_index = CLI_INDEX_IPADDR;
 
@@ -104,16 +104,15 @@ void init_global_config()
 	strcpy(netmask->params[0].param_name, CLI_NAME_NETMASK);
 	memset(buf, 0, sizeof(buf));
 	ezplib_get_attr_val("lan0_proto", 0, "curr", buf, 32, EZPLIB_USE_CLI);
-	if (!strcmp(buf, "static")){
-		memset(buf, 0, sizeof(buf));
-		ezplib_get_attr_val("lan_static_rule", 0, "mask", buf, 128, EZPLIB_USE_CLI);
-		if (strcmp(buf, ""))
-			strcpy(netmask->params[0].value, buf);
-	}else{
-		value = nvram_safe_get("lan0_mask");
-		if (value)
-			strcpy(netmask->params[0].value, value);
-	}
+	//if (!strcmp(buf, "static")){
+	memset(buf, 0, sizeof(buf));
+	ezplib_get_attr_val("lan_static_rule", 0, "mask", buf, 128, EZPLIB_USE_CLI);
+	strcpy(netmask->params[0].value, buf);
+	//}else{
+	//	value = nvram_safe_get("lan0_mask");
+	//	if (value)
+	//		strcpy(netmask->params[0].value, value);
+	//}
 	global_configs[CLI_INDEX_NETMASK].item = netmask;
 	global_configs[CLI_INDEX_NETMASK].item_index = CLI_INDEX_NETMASK;
 
@@ -321,6 +320,7 @@ void write_to_nvram()
 				break;
 			case CLI_INDEX_NETMASK:
 				if (!strcmp(item->params[0].param_name, CLI_NAME_NETMASK)) {
+					printf("lan0_mask: %s\n", item->params[0].value);
 					nvram_set("lan0_mask", item->params[0].value);
 					ezplib_replace_attr("lan_static_rule", 0, "mask", item->params[0].value);
 				}
@@ -328,6 +328,7 @@ void write_to_nvram()
 				break;
 			case CLI_INDEX_IPADDR:
 				if (!strcmp(item->params[0].param_name, CLI_NAME_IPADDR)) {
+					printf("lan0_ipaddr: %s\n", item->params[0].value);
 					nvram_set("lan0_ipaddr", item->params[0].value);
 					ezplib_replace_attr("lan_static_rule", 0, "ipaddr", item->params[0].value);
 				}
@@ -352,18 +353,18 @@ void write_to_nvram()
 				if (!strcmp(item->params[0].param_name, CLI_NAME_DHCP)) {
 					if (!strcmp(item->params[0].value, "dhcp")) {
 						ezplib_replace_attr("lan0_proto", 0, "curr", "dhcp");
-						nvram_set("lan0_ipaddr", "");
-						nvram_set("lan0_mask", "");
+						//nvram_set("lan0_ipaddr", "");
+						//nvram_set("lan0_mask", "");
 					} else {
-						memset(buf, 0, sizeof(buf));
-						ezplib_get_attr_val("lan_static_rule", 0, "ipaddr", buf, 128, EZPLIB_USE_CLI);
+						//memset(buf, 0, sizeof(buf));
+						//ezplib_get_attr_val("lan_static_rule", 0, "ipaddr", buf, 128, EZPLIB_USE_CLI);
 						ezplib_replace_attr("lan0_proto", 0, "curr", "static");
-						if (strlen(buf) <= 0) {
-							nvram_set("lan0_ipaddr", "192.168.1.2");
-							nvram_set("lan0_mask", "24");
-							ezplib_replace_attr("lan_static_rule", 0, "ipaddr", "192.168.1.2");
-    						ezplib_replace_attr("lan_static_rule", 0, "mask", "24");
-						}
+						//if (strlen(buf) <= 0) {
+						//	nvram_set("lan0_ipaddr", "192.168.1.2");
+						//	nvram_set("lan0_mask", "24");
+						//	ezplib_replace_attr("lan_static_rule", 0, "ipaddr", "192.168.1.2");
+    					//	ezplib_replace_attr("lan_static_rule", 0, "mask", "24");
+						//}
 					}
 				}
 				
@@ -391,8 +392,8 @@ void debug_global_config()
 {
 	int i = 0, j = 0;
 
-	//if (1) {
-	if (cli_debug) {
+	if (1) {
+	//if (cli_debug) {
 		for (i = 0; i < GLOBAL_CONFIGS_COUNT; i++) {
 			struct item_config *item = global_configs[i].item;
 			if (item) {
@@ -401,9 +402,7 @@ void debug_global_config()
 					struct param_pair pair = item->params[j];
 					printf("param: %s, value: %s\n", pair.param_name, pair.value);
 				}
-			} else
-				printf("item is null\n");
-
+			} 
 		}
 	}
 }
@@ -1774,16 +1773,19 @@ int ipmaskGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 {
 	char *value;
 	char value2[32] = {0};
-	char buf[TMP_LEN];
+	char buf[32];
+	struct item_config item;
 
-	ezplib_get_attr_val("lan0_proto", 0, "curr", value2, 32, EZPLIB_USE_CLI);
-	if (!strcmp(value2, "static")){
-		ezplib_get_attr_val("lan_static_rule", 0, "mask", buf, TMP_LEN, EZPLIB_USE_CLI);
+	//ezplib_get_attr_val("lan0_proto", 0, "curr", value2, 32, EZPLIB_USE_CLI);
+	memset(&item, 0, sizeof(struct item_config));
+	get_value(CLI_NAME_DHCP, &item);
+	if (!strcmp(item.params[0].value, "static")){
+		ezplib_get_attr_val("lan_static_rule", 0, "mask", buf, 32, EZPLIB_USE_CLI);
 		if (buf == NULL)
-			uiPrintf("NetMask: 0.0.0.0\n");
+			uiPrintf("NetMask: --\n");
 		else{
 			if(!strcmp(buf, ""))
-				uiPrintf("NetMask: 0.0.0.0\n");
+				uiPrintf("NetMask: --\n");
 			else
 				uiPrintf("NetMask: %s\n", buf);
 		}
@@ -1830,16 +1832,11 @@ int ipmaskSet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 		return CLI_PARSE_NO_VALUE;
 
 	if ( is_integer(net_mask) && atoi(net_mask) > 0 && atoi(net_mask) <= 32) {
-		ezplib_get_attr_val("lan0_proto", 0, "curr", value, 32, EZPLIB_USE_CLI);			
+		//ezplib_get_attr_val("lan0_proto", 0, "curr", value, 32, EZPLIB_USE_CLI);
+		memset(&item, 0, sizeof(struct item_config));
+		get_value(CLI_NAME_DHCP, &item);
 
-		if (!strcmp(value, "static")) {
-			br_get = nvram_safe_get("lan0_ifname");
-			if((!br_get) || (strlen(br_get) == 0))
-			{
-				uiPrintf("can not get bridge name\n");
-				return T_FALSE;
-			}
-			strcpy(br_name, br_get);
+		if (!strcmp(item.params[0].value, "static")) {
 			strcpy(item.name, CLI_NAME_NETMASK);
 			strcpy(item.params[0].param_name, CLI_NAME_NETMASK);
 			strcpy(item.params[0].value, net_mask);
@@ -1937,12 +1934,14 @@ int ipaddrGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 {
 	char *value;
 	char value2[32] = {0};
-	char buf[TMP_LEN];
+	char buf[32];
 	struct item_config item;
-
-	ezplib_get_attr_val("lan0_proto", 0, "curr", value2, 32, EZPLIB_USE_CLI);
-	if (!strcmp(value2, "static")){
-		ezplib_get_attr_val("lan_static_rule", 0, "ipaddr", buf, TMP_LEN, EZPLIB_USE_CLI);
+	
+	memset(&item, 0, sizeof(struct item_config));
+	get_value(CLI_NAME_DHCP, &item);
+	//ezplib_get_attr_val("lan0_proto", 0, "curr", value2, 32, EZPLIB_USE_CLI);
+	if (!strcmp(item.params[0].value, "static")){
+		ezplib_get_attr_val("lan_static_rule", 0, "ipaddr", buf, 32, EZPLIB_USE_CLI);
 		if (buf == NULL)
 			uiPrintf("IP Address: 0.0.0.0\n");
 		else{
@@ -2003,18 +2002,11 @@ int ipAddrSet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	}
 
 	if ( IsValidIpAddress(pIP) ) {
-		ezplib_get_attr_val("lan0_proto", 0, "curr", value, 32, EZPLIB_USE_CLI);			
+		//ezplib_get_attr_val("lan0_proto", 0, "curr", value, 32, EZPLIB_USE_CLI);
+		memset(&item, 0, sizeof(struct item_config));
+		get_value(CLI_NAME_DHCP, &item);
 
-		if (!strcmp(value, "static")) {
-			br_get = nvram_safe_get("lan0_ifname");
-			if((!br_get) || (strlen(br_get) == 0))
-			{
-				uiPrintf("can not get bridge name\n");
-				return T_FALSE;
-			}
-			strcpy(br_name, br_get);
-			//nvram_set("lan0_ipaddr", pIP);
-			//ezplib_replace_attr("lan_static_rule", lan_num, "ipaddr", pIP);
+		if (!strcmp(item.params[0].value, "static")) {
 			memset(&item, 0, sizeof(struct item_config));
 			strcpy(item.name, CLI_NAME_IPADDR);
 			strcpy(item.params[0].param_name, CLI_NAME_IPADDR);
