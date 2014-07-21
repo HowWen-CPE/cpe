@@ -320,7 +320,7 @@ void write_to_nvram()
 				break;
 			case CLI_INDEX_NETMASK:
 				if (!strcmp(item->params[0].param_name, CLI_NAME_NETMASK)) {
-					printf("lan0_mask: %s\n", item->params[0].value);
+					//printf("lan0_mask: %s\n", item->params[0].value);
 					nvram_set("lan0_mask", item->params[0].value);
 					ezplib_replace_attr("lan_static_rule", 0, "mask", item->params[0].value);
 				}
@@ -328,7 +328,7 @@ void write_to_nvram()
 				break;
 			case CLI_INDEX_IPADDR:
 				if (!strcmp(item->params[0].param_name, CLI_NAME_IPADDR)) {
-					printf("lan0_ipaddr: %s\n", item->params[0].value);
+					//printf("lan0_ipaddr: %s\n", item->params[0].value);
 					nvram_set("lan0_ipaddr", item->params[0].value);
 					ezplib_replace_attr("lan_static_rule", 0, "ipaddr", item->params[0].value);
 				}
