@@ -15,7 +15,7 @@ var prev_submenu_index=1;
 var polling_interval=0;
 var wlan_polling_interval=0;
 var cur_user = "<% getCfgGeneral(1, "AdminCurUser"); %>";
-var modelname = "<% getCfgGeneral(1, "SystemName"); %>";
+var modelname = "CPE&nbsp;<% getCfgGeneral(1, "ProductName"); %>";
 var mac_repeater = "<% getCfgGeneral(1, "ApCliMacRepeater"); %>";
 var board_model = "<% getCfgZero(1, "board_model"); %>";
 
@@ -91,7 +91,7 @@ function MM_showHideLayers() { //v6.0
 <body onresize="onResizeWindow()"; scroll="no" onLoad="initTranslation()">
 <div id="wrapper">
   <div id="top"><div class="top_position"><div class="logo"></div>
-  <div class="modelname" id="modelname"><% getCfgGeneral(1, "SystemName"); %></div>
+  <div class="modelname" id="modelname">CPE&nbsp;<% getCfgGeneral(1, "ProductName"); %></div>
   <div class="quick_link">
     <ul>
       <li class="about" onclick="MM_showHideLayers('popup','','show','popup4_table','','show')"><a href="#" title="About" id=id_About></a></li>

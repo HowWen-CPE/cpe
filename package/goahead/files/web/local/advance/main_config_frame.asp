@@ -23,7 +23,7 @@ var site_survey_channel = 0;
 var site_survey_setting = 0;
 var opmode  = "<% getCfgZero(1, "OP_Mode"); %>";
 var wisp_mode = "<% getCfgZero(1, "wisp_mode"); %>";
-var modelname = "<% getCfgGeneral(1, "SystemName"); %>";
+var modelname = "CPE&nbsp;<% getCfgGeneral(1, "ProductName"); %>";
 var bridge_mode = "<% getCfgZero(1, "brg_mode"); %>";
 var board_model = "<% getCfgZero(1, "board_model"); %>";
 
@@ -92,7 +92,7 @@ function MM_showHideLayers() { //v6.0
 
 <div id="wrapper">
   <div id="top"><div class="top_position"><div class="logo"></div>
-  <div class="modelname" id="modelname"><% getCfgGeneral(1, "SystemName"); %></div>
+  <div class="modelname" id="modelname">CPE&nbsp;<% getCfgGeneral(1, "ProductName"); %></div>
   <div class="quick_link">
     <ul>
       <li class="about" onclick="MM_showHideLayers('popup','','show','popup4_table','','show')"><a href="#" title="About" id=id_About></a></li>

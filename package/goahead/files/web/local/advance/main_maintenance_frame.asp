@@ -92,7 +92,7 @@ function MM_showHideLayers() { //v6.0
 <body onresize="onResizeWindow()"; scroll="no" onLoad="initTranslation()">
 <div id="wrapper">
   <div id="top"><div class="top_position"><div class="logo"></div>
-  <div class="modelname"><% getCfgGeneral(1, "SystemName"); %></div>
+  <div class="modelname">CPE&nbsp;<% getCfgGeneral(1, "ProductName"); %></div>
   <div class="quick_link">
     <ul>
 	<!--

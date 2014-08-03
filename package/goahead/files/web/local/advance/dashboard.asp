@@ -48,7 +48,7 @@ function MM_showHideLayers() { //v6.0
 var refresh_interval_select=0;
 var	time_id=0;
 var cur_user = "<% getCfgGeneral(1, "AdminCurUser"); %>";
-var modelname = "<% getCfgGeneral(1, "ProductName"); %>";
+var modelname = "CPE&nbsp;<% getCfgGeneral(1, "ProductName"); %>";
 
 function refresh_info(){
 InfoFrame.location.href = '/local/advance/dashboard_info.asp';
@@ -175,7 +175,7 @@ function initTranslation()
 <div id="popup"></div>
 <div id="wrapper">
   <div id="top"><div class="logo"></div>
-    <div class="modelname" id="modelname"></div>
+    <div class="modelname" id="modelname">CPE&nbsp;<% getCfgGeneral(1, "ProductName"); %></div>
     <div class="quick_link">
       <ul>
 	  <!--
