@@ -676,11 +676,30 @@ int wirelessStatusGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	int associated = 0;
 	char MacAddr[18] = {0};
 	char rssi[30] = {0};
+    char addrmode[32]={0};
 	int ret = 0;
 
 	//wireless mode
 	ezplib_get_attr_val("system_mode", 0, "name", buf, 64, EZPLIB_USE_CLI);
-	uiPrintf("Operation Mode: %s\n", buf);
+
+    if(strstr(buf, "sta"))
+    {
+        ezplib_get_attr_val("wl0_apcli_rule", 0, "addrmode", addrmode, 32, EZPLIB_USE_CLI);
+
+        if(*addrmode == '1')
+        {
+            uiPrintf("Operation Mode: WDS Station Mode\n", buf);
+        }else if(*addrmode == '0')
+        {
+            uiPrintf("Operation Mode: Station Mode\n", buf);
+        }else
+        {
+            uiPrintf("Operation Mode: Station Mode\n", buf);
+        }
+    }else
+    {
+        uiPrintf("Operation Mode: %s\n", buf);
+    }
 
 	//ssid
 	memset(buf, 0, sizeof(buf));
@@ -702,11 +721,11 @@ int wirelessStatusGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	ret = get_wirelessmode(RADIO_2G, &wmode);
 	if (T_FAILURE == ret) {
 		if (RADIO_2G == 0) {
-			uiPrintf("Wireless Mode: 802.11 a/n\n");
+			uiPrintf("Wireless Mode: 802.11a/n\n");
 		}
 	} else {
 		if (wmode == WMODE_11AN) {
-			uiPrintf("Wireless Mode: 802.11 a/n\n");
+			uiPrintf("Wireless Mode: 802.11a/n\n");
 		}
 	}
 

@@ -224,6 +224,40 @@ int check_systemname(char *str)
 	}
 	return T_TRUE;
 }
+
+
+ /***********************************************************************
+ * Function Name : get_productname_from_nvram
+ * Description    : get product name from nvram
+ * Input         :
+ * Output        : product name
+ * Return value  : T_SUCCESS, get success
+ *                       T_FAILURE, get failure
+ ***********************************************************************/
+int get_productname_from_nvram(char *productname)
+{
+	char *name_get=NULL;
+	char *str=NULL;
+    
+    name_get = nvram_safe_get("license_key");
+
+
+	if(strlen(name_get) <= 0)
+	{
+		uiPrintf("Get product name from nvram error!\n");
+		return T_FAILURE;
+	}
+	
+	strcpy(productname, name_get);
+	if(strstr(productname,"\"")){
+		str = sub_replace(productname,"\"","&#34;");
+		strcpy(productname,str);
+		free(str);
+	}
+	
+	return T_SUCCESS;
+}
+
   
    /***********************************************************************
  * Function Name : get_sysname_from_nvram
@@ -237,8 +271,9 @@ int get_sysname_from_nvram(char *sysname)
 {
 	char *name_get=NULL;
 	char *str=NULL;
+    
 	name_get = nvram_safe_get("hostname");
-	
+
 	if(strlen(name_get) <= 0)
 	{
 		uiPrintf("Get system name from nvram error!\n");
