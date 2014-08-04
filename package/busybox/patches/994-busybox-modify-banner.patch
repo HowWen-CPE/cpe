@@ -1,0 +1,30 @@
+--- busybox-1.19.4-old/shell/ash.c	2014-08-03 05:49:38.765095450 -0700
++++ busybox-1.19.4/shell/ash.c	2014-08-04 08:11:27.092460734 -0700
+@@ -8760,7 +8760,7 @@ setinteractive(int on)
+ 	if (is_interactive > 1) {
+ 		/* Looks like they want an interactive shell */
+ 		static smallint did_banner;
+-
++#if 0
+ 		if (!did_banner) {
+ 			/* note: ash and hush share this string */
+ 			out1fmt("\n\n%s %s\n"
+@@ -8771,7 +8771,18 @@ setinteractive(int on)
+ 			);
+ 			did_banner = 1;
+ 		}
++#else
++		/* show Liteon verison info*/
++		if(!did_banner) {
++			//system("if [ -f /etc/banner ]; then  cat /etc/banner | xargs echo; fi");
++			//system("if [ -f /version ]; then  cat /version | xargs echo Firmware version: ; fi");
++			//out1fmt("\n");
++			did_banner++;
++		}
++
++#endif
+ 	}
++
+ #endif
+ }
+ 
