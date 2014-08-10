@@ -109,26 +109,26 @@ LOCAL struct parse_token_s setCmdTbl[] = {
     {"netmask", "Set IP subnet mask, Usage: set netmask 24", ipmaskSet, &applyActionTbl[APPLY_IFADDR],NULL, NULL, 0},
     {"security", "Set security, Usage: set security 3", securitySet, NULL, NULL, NULL, 0},
     {"ssid", "Set ssid, Usage: set ssid wlan", ssidSet, NULL, NULL, NULL, 0},
-	{"deviceid", "Set device id, Usage: set device id HoWen CPE", systemNameSet, NULL, NULL, CLI_SUPERUSER, 0},
+	{"deviceid", "Set device id, Usage: set deviceid xxxx", systemNameSet, NULL, NULL, CLI_SUPERUSER, 0},
 
     PARSE_TOKEN_DELIMITER
 };
 
 struct parse_token_s cmdTbl[] = {
     {"?", "Display CLI command list", helpCmdHandler, NULL, NULL, CLI_HIDDENCMD,0},
-    {"applycfg", "Apply configuration changes", applycfgCmdHandler, NULL, NULL, NULL, 0},
+    {"apply", "Apply configuration changes", applycfgCmdHandler, NULL, NULL, NULL, 0},
 	{"cancelcfg", "cancel configuration", cancelcfgCmdHandler, NULL, NULL, CLI_HIDDENCMD,0},
 	{"forcequit", "access linux system", accessCmdHandler, NULL, NULL, CLI_HIDDENCMD,0},
     {"get", NULL, genericCmdHandler, NULL, getCmdTbl, NULL, 0},
     {"help", "Display CLI command list", helpCmdHandler, NULL, NULL, NULL, 0},
-    {"quit", "Logoff", quitCmdHandler, NULL, NULL, NULL, 0},
+    {"quit", "Logoff", quitCmdHandler, NULL, NULL, CLI_HIDDENCMD, 0},
 
     {"reboot", "Reboot access point", rebootCmdHandler, NULL, NULL, NULL, 0},
     {"factory", "Factory default", factorydefaultSet, NULL, NULL, NULL, 0},
     {"set", NULL, genericCmdHandler, NULL, setCmdTbl, NULL, 0},
     {"debug", "enable debug", debugCmdHandler, NULL, NULL, CLI_HIDDENCMD, 0},
     {"mfg", "mfg", mfgCmdHandler, NULL, NULL, CLI_HIDDENCMD, 0},
-    //{"version", "Software version", versionHandler, NULL, NULL, NULL, 0},
+    {"version", "Software version", versionHandler, NULL, NULL, NULL, 0},
 
     PARSE_TOKEN_DELIMITER
 };

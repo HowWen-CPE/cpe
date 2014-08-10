@@ -656,6 +656,75 @@ int getWIFIRSSI(int radio, char *buf)
 	return 0; 
 }
 
+/*****************************************************************************
+ Prototype    : get_eth_status
+ Description  : get ethernet port status: speed and duplex
+ Input        : char *status
+ Output       : char *status
+ Return Value : int: 0 success; -1: fail
+ Calls        : 
+ Called By    : 
+ 
+  History        :
+  1.Date         : 2014/8/10
+    Author       : Peter
+    Modification : Created function
+
+*****************************************************************************/
+int get_eth_status(char *status)
+{
+    unsigned int linkStatus;
+	FILE *fd;
+    int link, speed, duplex;
+
+	system("ethreg -i eth0 -p 0 0x11 | awk -F '0x' '{print $3}' > /tmp/port_ethreg");
+	
+	if (NULL == (fd = fopen("/tmp/port_ethreg", "r"))) {	
+		fclose(fd);
+		return -1;
+	} else {
+		fscanf(fd, "%08x", &linkStatus);
+
+		if ((linkStatus >> 10)& 0x01) {					//get Link Status
+		    /* link up*/
+			switch ((linkStatus >> 14) & 0x03) {				//get speed
+			case 0:
+                strcpy(status, "10M");
+				break;
+			case 1:
+                strcpy(status, "100M");
+				break;
+			case 2:
+                strcpy(status, "1000M");
+				break;
+			default:
+                strcpy(status, "Unknown Speed");
+				break;
+			}
+			switch ((linkStatus >> 13)& 0x01) {			//get Duplex Mode
+			case 0:
+                strcat(status, " Half Duplex");
+				break;
+			case 1:
+                strcat(status, " Full Duplex");
+				break;
+			default:
+                strcat(status, ", unknown Duplex");
+				break;
+			}
+			
+		} else {
+			strcpy(status, "Link down");
+		}
+
+		fclose(fd);
+	}
+
+	system("rm -rf /tmp/port_ethreg");
+
+    return 0; 
+}
+
 /***********************************************************************
 * Function Name : wirelessStatusGet
 * Description	 : process device name getting command
@@ -672,7 +741,7 @@ int wirelessStatusGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	Channel_t channel_get;
 	int wmode = 8;
 	AP_INFO ap_info_2g;
-	char MacAddrTemp[6] = {0};
+	unsigned char MacAddrTemp[6] = {0};
 	int associated = 0;
 	char MacAddr[18] = {0};
 	char rssi[30] = {0};
@@ -785,7 +854,14 @@ int wirelessStatusGet(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 		uiPrintf("RSSI: %s\n", rssi);
 	else
 		uiPrintf("RSSI: --/--\n");
-	
+
+
+    /* add ethernet status*/
+    if(get_eth_status(buf)==0)
+    {
+        uiPrintf("Ethernet: %s\n", buf); 
+    }
+    
 	return CLI_PARSE_OK;
 }
 
@@ -969,7 +1045,7 @@ int rssithrSet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 
 	if ( tokenCount(pCli) != total_params ) {
 		  //uiPrintf(SETFALIED);
-		  uiPrintf("Usage: set connrssithr disconn_value conn_value\n");
+		  uiPrintf("Usage: set rssithr disconn_value conn_value\n");
 		  uiPrintf("       disconn_value -- value is integer, range from -55 to -95\n");
 		  uiPrintf("       conn_value -- value is integer, range from -45 to -85\n");
 		  return CLI_PARSE_NOMESSAGE;
@@ -1274,6 +1350,7 @@ int rssiGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
   ***********************************************************************/
 int macGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 {
+#if 0
     //char modeBuf[SHORT_BUF_LEN] = {0};
 	//char deviceBuf[SHORT_BUF_LEN] = {0};
 	char hwaddr[SHORT_BUF_LEN] = {0};
@@ -1314,7 +1391,35 @@ int macGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
     } else {
         uiPrintf("mac: --:--:--:--:--:--\n");
 	}
-	
+#else
+    FILE *fp;
+    unsigned char buf[64];
+
+    /* get ethernet MAC*/
+    uiPrintf("Ethernet MAC: ");
+    system("boarddata get mac");
+
+    /* get Wireless MAC*/
+	if(!(fp=fopen("/dev/mtdblock6","r"))){
+		uiPrintf("cant open file!\n");
+		return T_FAILURE;
+	}
+
+    fseek(fp,4098, SEEK_SET);
+
+    if(fread (buf, 6, 1, fp) != 1)
+    {
+        printf("Read Wireless MAC error\n");
+
+        fclose(fp);
+
+        return CLI_PARSE_INPUT_ERROR;
+    }
+    fclose(fp);
+
+    uiPrintf("Wireless MAC: %2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X\n",
+        buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
+#endif
 	return CLI_PARSE_OK;
 }
   /***********************************************************************
@@ -2151,6 +2256,8 @@ int inet_atonmac(const char *s, char *addr, int addr_len)
 
 	return 0;
 }
+
+
  /***********************************************************************
  * Function Name : mfgCmdHandler
  * Description    : mfg
@@ -2165,37 +2272,203 @@ int mfgCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	char *param = NULL, *subcmd = NULL;
 	unsigned char m_addr[18] = {0};
     char *tmp_addr = m_addr;
-	char buf[256] = {0};
-	
-	if ( tokenCount(pCli) > 2 ) {
+	unsigned char buf[256] = {0};
+
+	if ( tokenCount(pCli) > 2 || tokenCount(pCli) == 0) {
 		uiPrintf(SETFALIED);
 		return CLI_PARSE_NOMESSAGE;
 	}
 
 	subcmd = tokenPop(pCli);
-	param = tokenPop(pCli);
 
-	if (!param || !subcmd)
-		return CLI_PARSE_INVALID_PARAMETER;
+    if(subcmd)
+	    param = tokenPop(pCli);
 
-	if (!strncmp(subcmd, "mac", strlen(subcmd))) {
+	if (!strcmp(subcmd, "setmac")) {
+        FILE *fp;
+        unsigned char mac_addr[6], cmd[100];
+        int i;
+
+    	if (!param)
+    		return CLI_PARSE_INVALID_PARAMETER;
+        
 		if (strlen(param) != MAC_ADDR_LEN) {
 			uiPrintf("Invalid MAC address\n");
 			return CLI_PARSE_INPUT_ERROR;
 		}
 
+        /* check if valid mac*/
 		if (inet_atonmac(param, tmp_addr, MAC_ADDR_LEN) < 0) {
-			//uiPrintf("Invalid MAC address\n");
+			uiPrintf("Invalid MAC address\n");
 			return CLI_PARSE_INPUT_ERROR;
 		}
 
-		//TBD, store MAC address
+        /* if orignal mac is invalid, format board data*/
+        system("boarddata get mac > /tmp/bd_getmac.log");
+
+    	if(!(fp=fopen("/tmp/bd_getmac.log","r"))){
+    		uiPrintf("cant open file!\n");
+    		return T_FAILURE;
+    	}
+
+        fgets(buf, 32, fp);
+
+        fclose(fp);
+
+        if(strlen(buf)!= (MAC_ADDR_LEN+1))
+        {
+            uiPrintf("Orignal mac is invalid, boarddata init...\n");
+            system("boarddata init");
+        }
+
+		/* save to boarddata*/
 		sprintf(buf, "boarddata set mac %s", tmp_addr);
 		system(buf);
+
+        /* 
+         * set wireless mac
+         *     1st wifi mac = base mac + 1;
+         */
+        /* convert to ascii*/
+        for ( i = 0; i < 6; i++ )
+        {
+            param[i*3+2] = '\0';
+            mac_addr[i] = strtol(&param[i*3], NULL, 16);
+        }
+
+        /* base mac + 1 */
+        mac_addr[5] += 1;
+
+        /* write to 1st calibration data area*/
+        sprintf((char *)cmd, "echo -n -e \"\\x%02x\\x%02x\\x%02x\\x%02x\\x%02x\\x%02x\" | dd bs=1 of=/dev/mtdblock6 %s >/dev/null 2>&1",
+                mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5],
+                "seek=4098 conv=notrunc");
+        
+        system((char *)cmd);
+
+
+        /* get ethernet MAC*/
+	    uiPrintf("Ethernet MAC: ");
+        system("boarddata get mac");
+
+        /* get Wireless MAC*/
+    	if(!(fp=fopen("/dev/mtdblock6","r"))){
+    		uiPrintf("cant open file!\n");
+    		return T_FAILURE;
+    	}
+
+        memset(buf, 0, 7);
+
+        fseek(fp,4098, SEEK_SET);
+
+        if(fread (buf, 6, 1, fp) != 1)
+        {
+            printf("Read Wireless MAC error\n");
+
+            fclose(fp);
+
+            return CLI_PARSE_INPUT_ERROR;
+        }
+        fclose(fp);
+
+        uiPrintf("Wireless MAC: %2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X\n",
+            buf[0], buf[1], buf[2],buf[3], buf[4], buf[5]);
+
+        
 	}
-	
+    else  if(!strcmp(subcmd, "getmac"))
+	{
+	    FILE *fp;
+
+        /* get ethernet MAC*/
+	    uiPrintf("Ethernet MAC: ");
+        system("boarddata get mac");
+
+        /* get Wireless MAC*/
+    	if(!(fp=fopen("/dev/mtdblock6","r"))){
+    		uiPrintf("cant open file!\n");
+    		return T_FAILURE;
+    	}
+
+        memset(buf, 0, 7);
+
+        fseek(fp,4098, SEEK_SET);
+
+        if(fread (buf, 6, 1, fp) != 1)
+        {
+            printf("Read Wireless MAC error\n");
+
+            fclose(fp);
+
+            return CLI_PARSE_INPUT_ERROR;
+        }
+        fclose(fp);
+
+        uiPrintf("Wireless MAC: %2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X\n",
+            buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
+
+    }
+    else  if(!strcmp(subcmd, "getsn")){
+    
+        /* show sn*/
+        system("boarddata get sn");
+	}else  if(!strcmp(subcmd, "setsn")){
+    	if (!param)
+    		return CLI_PARSE_INVALID_PARAMETER;
+
+        if(strlen(param) > 32)
+        {
+            printf("Error: SN length should be less than 33!\n");
+            return CLI_PARSE_INVALID_PARAMETER;
+        }
+
+        sprintf(buf, "boarddata set sn %s", param);
+    
+        /* set sn*/
+        system(buf);
+	}
+    else  if(!strcmp(subcmd, "art"))
+	{
+        /* mfg art IP*/
+
+    	if (!param || !subcmd)
+    		return CLI_PARSE_INVALID_PARAMETER;
+        
+        if(IsValidIpAddress(param))
+        {
+            /* 
+             * call script to download art and start it
+             *     art2 IP nart.out art-wasp.ko
+             */
+            sprintf(buf, "art2 %s nart.out art-wasp.ko", param);
+
+            system(buf);
+
+        }else
+        {
+            printf("Please specify correct TFTP server IP address!\n"
+                "Usage:\n"
+                "    mfg art tftp_server_ip\n");
+        }
+    }
+    else  if(!strcmp(subcmd, "eth"))
+    {
+        char status[100]={0};
+
+        if(get_eth_status(status)==0)
+        {
+            uiPrintf("%s\n", status); 
+        }
+    }
+    else
+    {
+
+        return CLI_PARSE_INPUT_ERROR;
+    }
+
 	return CLI_PARSE_OK;
 }
+
  /***********************************************************************
  * Function Name : debugCmdHandler
  * Description    : print debug information
@@ -2348,7 +2621,7 @@ int versionHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	i--;
 	fclose(fp);
 	buffer[i] = '\0';
-	uiPrintf("\nFirmware Version %s\n",buffer);
+	uiPrintf("Firmware Version %s\n",buffer);
 	free(buffer);
 	return CLI_PARSE_OK;
 }

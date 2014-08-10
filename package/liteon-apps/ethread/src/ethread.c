@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
 #if defined(GP_WP688)
         printf("*******Product: GP_WP688***********\n");
 #endif
-	ethport.port = 4;
+	ethport.port = 0;
 	if (ethread(&ethport) < 0) {
 		printf("read error\n");
 		return -1;

@@ -90,6 +90,9 @@ int ethread(struct eth_port_status *ethport)
 	case 3:
 		offset = 0x11;	      
 		break;
+	case 4:
+		offset = 0x11;	      
+		break;
 	default:
 		return -1;
 	}

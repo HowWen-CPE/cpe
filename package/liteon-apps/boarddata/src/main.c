@@ -53,7 +53,7 @@ int main(int argc, char **argv)
 				{
 					if (!get_mac((unsigned char *)buf))
 						//printf("MAC Address: ");
-						printf("%02x:%02x:%02x:%02x:%02x:%02x\n", (unsigned char)buf[0], (unsigned char)buf[1], (unsigned char)buf[2], (unsigned char)buf[3], (unsigned char)buf[4], (unsigned char)buf[5]);
+						printf("%02X:%02X:%02X:%02X:%02X:%02X\n", (unsigned char)buf[0], (unsigned char)buf[1], (unsigned char)buf[2], (unsigned char)buf[3], (unsigned char)buf[4], (unsigned char)buf[5]);
 					else
 						return -1;
 				}
