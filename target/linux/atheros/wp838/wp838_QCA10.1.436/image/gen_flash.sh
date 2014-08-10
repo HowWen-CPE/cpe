@@ -7,7 +7,7 @@
 	cat ${BIN_DIR}/uboot_file.tmp > ${FLASHNAME}
 	rm -f ${BIN_DIR}/uboot_file.tmp
 	cat $(pwd)/${PRODUCT_NAME}_uboot_config.bin >> ${FLASHNAME}
-	$(pwd)/imagealign ${IMGNAME}-uImage-squashfs-lzma.bix ${BIN_DIR}/img.tmp 0xf80000
+	$(pwd)/imagealign ${IMGNAME}-uImage-squashfs-lzma.bix ${BIN_DIR}/img.tmp 0x780000
 	chmod 755 ${BIN_DIR}/img.tmp
 	cat ${BIN_DIR}/img.tmp >> ${FLASHNAME}
 	rm -f ${BIN_DIR}/img.tmp

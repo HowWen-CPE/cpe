@@ -58,7 +58,7 @@ define Image/Build
 		$(shell readelf -h $(LINUX_DIR)/vmlinux 2>/dev/null | grep "Entry" | awk '{print $$4}') \
 		-n '$(IMGNAME_INFO)-uImage-$(1)-lzma.bix' \
 		-d $(VMLINUX).lzma \
-		-o 0x180000 -f $(KDIR)/root.squashfs $(IMGNAME)-uImage-$(1)-lzma.bix
+		-o 0x140000 -f $(KDIR)/root.squashfs $(IMGNAME)-uImage-$(1)-lzma.bix
 	mv $(IMGNAME)-uImage-$(1)-lzma.bix $(IMGNAME)-uImage-$(1)-lzma-deadc0de.bix
 	dd if=$(IMGNAME)-uImage-$(1)-lzma-deadc0de.bix of=$(IMGNAME)-uImage-$(1)-lzma.bix bs=64k conv=sync
 	rm -rf $(IMGNAME)-uImage-$(1)-lzma-deadc0de.bix
