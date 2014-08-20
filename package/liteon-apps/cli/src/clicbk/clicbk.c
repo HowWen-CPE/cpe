@@ -1594,6 +1594,7 @@ int securityGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	}
 	#else
 	char auth_mode[32] = {0};
+    char wpa_auth_type[32]={0};
 	char enc_type[32] = {0};
 
 	ezplib_get_attr_val("wl0_apcli_rule", 0, "secmode", auth_mode, 32, EZPLIB_USE_CLI);
@@ -1605,31 +1606,43 @@ int securityGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 		uiPrintf("Security: open\n");
 	}
 	else if (!strcmp(auth_mode, "psk")) {
-		ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "crypto", enc_type, 32, EZPLIB_USE_CLI);
-		if (!strcmp(enc_type, "aes")) {
-			uiPrintf("Security: WPA-psk/AES\n");
-		}
-		else if (!strcmp(enc_type, "tkip")) {
-			uiPrintf("Security: WPA-psk/TKIP\n");
-		} 
-		else if (!strcmp(enc_type, "aestkip") || !strcmp(enc_type, "tkipaes")) {
-			uiPrintf("Security: WPA-psk/AESTKIP\n");
-		} 
+		//ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "crypto", enc_type, 32, EZPLIB_USE_CLI);
+
+        uiPrintf("Security: wpa-psk\n");
 	} 
 	else if (!strcmp(auth_mode, "psk2")) {
-		ezplib_get_attr_val("wl0_apcli_sec_wpa2_rule", 0, "crypto", enc_type, 32, EZPLIB_USE_CLI);
-		if (!strcmp(enc_type, "aes")) {
-			uiPrintf("Security: WPA2-psk/AES\n");	
-		}
-		else if (!strcmp(enc_type, "tkip")) {
-			uiPrintf("Security: WPA2-psk/TKIP\n");
-		} 
-		else if (!strcmp(enc_type, "aestkip") || !strcmp(enc_type, "tkipaes")) {
-			uiPrintf("Security: WPA2-psk/AESTKIP\n");
-		} 
+		//ezplib_get_attr_val("wl0_apcli_sec_wpa2_rule", 0, "crypto", enc_type, 32, EZPLIB_USE_CLI);
+
+        uiPrintf("Security: wpa2-psk\n");
+	}
+    else if (!strcmp(auth_mode, "wpa")) {
+        ezplib_get_attr_val("wl0_wpa_auth_rule", 0, "wpa_auth", wpa_auth_type, 32, EZPLIB_USE_CLI);
+
+        if(*wpa_auth_type == '0')
+        {
+            uiPrintf("Security: wpa ttls\n");
+        }else
+        {
+            uiPrintf("Security: wpa peap\n");
+        }
+	}
+    else if (!strcmp(auth_mode, "wpa2")) {
+        ezplib_get_attr_val("wl0_wpa_auth_rule", 0, "wpa_auth", wpa_auth_type, 32, EZPLIB_USE_CLI);
+
+        if(*wpa_auth_type == '0')
+        {
+            uiPrintf("Security: wpa2 ttls\n");
+        }else
+        {
+            uiPrintf("Security: wpa2 peap\n");
+        }
+	}
+    else if (!strcmp(auth_mode, "wep")) {
+		uiPrintf("Security: wep\n");
 	}
 	else {
-		uiPrintf("Invalid encryption type\n");
+        
+		uiPrintf("Invalid security type!\n");
 	}
 	
 	#endif
