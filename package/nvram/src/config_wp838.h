@@ -106,7 +106,7 @@
 #define BW_UPLOAD_MIN "64"
 /* Board dependent definition. */
 
-#define LAN_DHCPSV6_RULE "default^1^2001:db8:feed:b00::^2001:db8:feed:b00::^2001:db8:feed:b00::^howen.com^custom^^^0^100^200^30|default^0^2001:db8:feed:b10::^2001:db8:feed:b10::^2001:db8:feed:b10::^howen.com^custom^^^0^100^200^30"
+#define LAN_DHCPSV6_RULE "default^1^2001:db8:feed:b00::^2001:db8:feed:b00::^2001:db8:feed:b00::^howentech.com^custom^^^0^100^200^30|default^0^2001:db8:feed:b10::^2001:db8:feed:b10::^2001:db8:feed:b10::^howentech.com^custom^^^0^100^200^30"
 #define LAN_STATICV6_RULE_DEFAULT "2001:db8:feed:b00::^1^2001:db8:feed:b00::^1^2001:db8:feed:b00::^1^64^^^^^^^^^^|2001:db8:feed:b10::^1^2001:db8:feed:b10::^1^2001:db8:feed:b10::^1^64^^^^^^^^^^"
 
 
@@ -140,7 +140,7 @@
 #define BW_ENABLE "1"
 #define BW_SBM_RULE_NUM "0"
 #define BW_SBM_RULE ""
-#define LAN_DHCPS_RULE "default^DHCPS^1^254^86400^howen.com^^dnsrelay^^^^^dnsrelay^opendns^opendns^192.168.1.2^24^60^"
+#define LAN_DHCPS_RULE "default^DHCPS^1^254^86400^howentech.com^^dnsrelay^^^^^dnsrelay^opendns^opendns^192.168.1.2^24^60^"
 #define VNC_SESSION_MAX "16"
 
 #define BT_TORRENT_MAX "10"
@@ -454,7 +454,7 @@
 
 //#define UPNP_FRIENDLYNAME   "HOWEN Internet Sharing Gateway"
 //#define MANUFACTURER        "HOWEN Communications Corp."
-//#define MANUFACTURERURL     "http://www.howen.com"
+//#define MANUFACTURERURL     "http://www.howentech.com"
 //#define MODELDESCRIPTION    "HOWEN Internet Sharing Gateway"
 //#define MODELNAME           "HOWEN Internet Sharing Gateway"
 
