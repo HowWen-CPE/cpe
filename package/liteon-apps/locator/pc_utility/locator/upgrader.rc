@@ -1201,7 +1201,6 @@ BEGIN
         MENUITEM "Reboot device(&R)",           ID_REBOOT
         MENUITEM SEPARATOR
         MENUITEM "Select Adapter(&A)",          ID_TOOLS_SELECTCONNECTION
-        MENUITEM "Remote Config",               ID_REMOTE_CONFIG
     END
     POPUP "&View"
     BEGIN
