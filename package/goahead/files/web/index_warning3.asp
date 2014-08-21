@@ -313,9 +313,9 @@ function loadfocus()
 <form method="post" name="web_login" action="/goform/web_login">
 <div id="wrapper">
 <div class="index_bg" id="index_bg"></div>
-<div class="frame_left"></div>
-<div class="frame_right"></div>
-<div class="logo" id="logo"><ul><li class="modelname">HoWen CPE&nbsp;<% getCfgGeneral(1, 'ProductName'); %><!--< getCfgGeneral(1, "SystemName"); >--></li></ul></div>
+<!--<div class="frame_left"></div>
+<div class="frame_right"></div>-->
+<div class="logo" id="logo"><ul><li class="modelname">HoWen CPE&nbsp;<% getCfgGeneral(1, 'ProductName'); %></li></ul></div>
 <!--<div class="home_image"></div>-->
 <div class="home_note">
   <ul><li class="welcome_text" id="mantitle">Welcome to the device configuration interface. 
