@@ -166,7 +166,7 @@
 <message msgid="g Language" msgstr="Language" />
 <!-- maintainance.asp-->
 <message msgid="maintain title" msgstr="System Setup" />
-<message msgid="maintain sys name" msgstr="System Name" />
+<message msgid="maintain sys name" msgstr="Device ID" />
 <message msgid="maintain dom name" msgstr="Domain Name" />
 <message msgid="maintain adm in timer" msgstr="Administrator Inactivity Timer" />
 <message msgid="maintain minutes" msgstr="minutes, 0 means no timeout" />
@@ -433,7 +433,7 @@
 <message msgid="Unconfigured" msgstr="Unconfigured" />
 <message msgid="Configured" msgstr="Configured" />
 <!-- alert message -->
-<message msgid="System Name cannot be empty." msgstr="System Name cannot be empty." />
+<message msgid="System Name cannot be empty." msgstr="Device ID cannot be empty." />
 <message msgid="Domain Name cannot be empty." msgstr="Domain Name cannot be empty." />
 <message msgid="Please specify Administrator Inactivity Timer." msgstr="Please specify Administrator Inactivity Timer." />
 <message msgid="Invalid Administrator Inactivity Timer" msgstr="Invalid Administrator Inactivity Timer" />

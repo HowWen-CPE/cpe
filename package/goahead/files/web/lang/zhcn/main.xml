@@ -144,7 +144,7 @@
 	<message msgid="g Connect" msgstr="连接至网络"/>
 	<message msgid="g Language" msgstr="语言"/>
 	<message msgid="maintain title" msgstr="系统设置"/>
-	<message msgid="maintain sys name" msgstr="系统名称"/>
+	<message msgid="maintain sys name" msgstr="设备名称"/>
 	<message msgid="maintain dom name" msgstr="网域名称"/>
 	<message msgid="maintain adm in timer" msgstr="管理超时时间(超时将会自动退出)"/>
 	<message msgid="maintain minutes" msgstr="分钟，0 代表不会超时"/>
@@ -401,7 +401,7 @@
 	<message msgid="message_header" msgstr="信息"/>
 	<message msgid="Unconfigured" msgstr="未设置"/>
 	<message msgid="Configured" msgstr="已设置"/>
-	<message msgid="System Name cannot be empty." msgstr="系统名称不可空白。"/>
+	<message msgid="System Name cannot be empty." msgstr="设备名称不可空白。"/>
 	<message msgid="Domain Name cannot be empty." msgstr="网域名称不可空白。"/>
 	<message msgid="Please specify Administrator Inactivity Timer." msgstr="请设置管理员超时时间。"/>
 	<message msgid="Invalid Administrator Inactivity Timer" msgstr="无效的管理员超时时间"/>

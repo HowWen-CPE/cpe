@@ -59,7 +59,7 @@ function check_confirm()
 
 	if (document.forms[0].system_name.value=="")
 	{
-		alert("System Name cannot be empty.");
+		alert("Device ID cannot be empty.");
 		document.forms[0].system_name.focus();
 		document.forms[0].system_name.select();
 		return false;

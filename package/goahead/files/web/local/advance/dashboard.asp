@@ -182,7 +182,7 @@ function initTranslation()
         <li class="easy" title="Easy Mode"><a href="../networkmap.asp" target="_parent"><font id="dashEzMode"></font></a></li>
 	  -->
         <li class="about" onclick="MM_showHideLayers('popup','','show','popup4_table','','show')"><a href="#" title="About"><font id="dashAbout"></font></a></li>
-        <li class="home"><a href="../index_login.asp" title="Home" target="_parent"><font id="dashHome"></font></a></li>
+        <li class="home" style="display:none"><a href="../index_login.asp" title="Home" target="_parent"><font id="dashHome"></font></a></li>
         <li onclick="MM_showHideLayers('popup','','show','popup3_table','','show')"><a href="#" title="Logout"><font id="dashLogout"></font></a></li>
         <li class="line"></li>
         <li><font id="dashWelcome"></font></li>

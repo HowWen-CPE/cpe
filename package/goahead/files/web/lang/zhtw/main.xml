@@ -144,7 +144,7 @@
 	<message msgid="g Connect" msgstr="連接至網際網路"/>
 	<message msgid="g Language" msgstr="語言"/>
 	<message msgid="maintain title" msgstr="系統設定"/>
-	<message msgid="maintain sys name" msgstr="系統名稱"/>
+	<message msgid="maintain sys name" msgstr="裝置名稱"/>
 	<message msgid="maintain dom name" msgstr="網域名稱"/>
 	<message msgid="maintain adm in timer" msgstr="管理閒置時間(逾時將會自動登出)"/>
 	<message msgid="maintain minutes" msgstr="分鐘，0 代表不會逾時"/>
@@ -400,7 +400,7 @@
 	<message msgid="message_header" msgstr="訊息"/>
 	<message msgid="Unconfigured" msgstr="未設定"/>
 	<message msgid="Configured" msgstr="已設定"/>
-	<message msgid="System Name cannot be empty." msgstr="系統名稱不可空白。"/>
+	<message msgid="System Name cannot be empty." msgstr="裝置名稱不可空白。"/>
 	<message msgid="Domain Name cannot be empty." msgstr="網域名稱不可空白。"/>
 	<message msgid="Please specify Administrator Inactivity Timer." msgstr="請設定管理員閒置計時器。"/>
 	<message msgid="Invalid Administrator Inactivity Timer" msgstr="無效的管理員閒置計時器"/>

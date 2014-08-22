@@ -99,7 +99,7 @@ function MM_showHideLayers() { //v6.0
       <li class="easy" title="Easy Mode"><a href="../networkmap.asp" id=id_EasyMode></a></li>
 	-->
       <li class="about" onclick="MM_showHideLayers('popup','','show','popup4_table','','show')"><a href="#" title="About" id=id_About></a></li>
-        <li class="home"><a href="../index_login.asp" title="Home" target="_parent" id=id_Home></a></li>
+        <li class="home" style="display:none"><a href="../index_login.asp" title="Home" target="_parent" id=id_Home></a></li>
       <li onclick="MM_showHideLayers('popup3_table','','show','popup','','show')"><a href="#" title="Logout" id=id_Logout></a></li>
       <li class="line"></li>
       <li><font id=id_WelcomeAdmin></font></li>
