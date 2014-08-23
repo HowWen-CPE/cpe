@@ -1,0 +1,51 @@
+--- wifi_QCA_10.1.436/drivers/wlan_modules/lmac/ath_dev/ath_led.c	2014-08-23 01:27:15.793492206 -0700
++++ wifi_QCA_10.1.436-new/drivers/wlan_modules/lmac/ath_dev/ath_led.c	2014-08-22 20:36:21.312693607 -0700
+@@ -174,7 +174,7 @@ static void ath_led_channel_poll(struct
+             pLedControl->gpioFunc[0].pin = ATH_GPIO_PIN_5G;
+             pLedControl->gpioFunc[1].pin = ATH_GPIO_PIN_5G;
+             pLedControl->gpioFunc[2].pin = ATH_GPIO_PIN_5G;
+-            ath_led_gpio_set(ATH_GPIO_PIN_2G, pLedControl->gpioFunc[0].value[LED_OFF]);
++            //ath_led_gpio_set(ATH_GPIO_PIN_2G, pLedControl->gpioFunc[0].value[LED_OFF]);
+         }
+         pLedControl->channelFlags = new_channel_flags;
+     }
+@@ -582,7 +582,7 @@ ath_set_connection_led (struct ath_led_c
+ **
+ ** GENERIC
+ */
+-
++#if 0
+ static const
+ LED_BLINK_RATES genBlinkRateTable[] = {
+     { 108,  40,  10 },
+@@ -603,7 +603,29 @@ LED_BLINK_RATES genBlinkRateTable[] = {
+     {   1, 400, 100 },
+     {   0, 500, 130 }
+ };
+-
++#else 
++/* slow down the blink speed*/
++static const
++LED_BLINK_RATES genBlinkRateTable[] = {
++    { 108*3,  40,  10 },
++    {  96*3,  40,  10 },
++    {  72*3,  40,  10 },
++    {  54*3,  40,  10 },
++    {  48*3,  44,  11 },
++    {  36*3,  50,  13 },
++    {  24*3,  57,  14 },
++    {  18*3,  67,  16 },
++    {  12*3,  80,  20 },
++    {  11*3, 100,  25 },
++    {   9*3, 133,  34 },
++    {   6*3, 160,  40 },
++    {   5*3, 200,  50 },
++    {   3*3, 240,  58 },
++    {   2*3, 267,  66 },
++    {   1*3, 400, 100 },
++    {   0, 500, 130 }
++};
++#endif
+ /*
+ ** LENOVO
+ */
