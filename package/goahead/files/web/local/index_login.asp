@@ -297,8 +297,8 @@ function MM_showHideLayers() { //v6.0
 <form method="post" name="web_login" action="/goform/web_login">
 <div id="wrapper">
 <div class="index_bg" id="index_bg"></div>
-<div class="frame_left"></div>
-<div class="frame_right"></div>
+<!--<div class="frame_left"></div>
+<div class="frame_right"></div>-->
 <div class="logo" id="logo"><ul><li class="modelname" id="modelname">HoWen CPE&nbsp;<% getCfgGeneral(1, 'ProductName'); %><!--< getCfgGeneral(1, "SystemName"); >--></li></ul></div>
 <!--<div class="home_image"></div>-->
 <div class="home_note">
