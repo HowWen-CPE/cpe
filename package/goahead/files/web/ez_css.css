@@ -1,10 +1,10 @@
 @charset "utf-8";
 @import url("reset.css");
-body{ background-color:#000000; height:100%;}
+body{ background-color:#62B9DC; height:100%;}
 html{overflow-x: hidden;}
 /**Basic frame for genie**/
 #wrapper{position:relative; width:740px;height:501px;left:0;top:20px; margin:0 auto;}
-#wrapper .index_bg{position:absolute;width:733px;height:501px;left:3px;background-image:url(index_bg.jpg);z-index: 0;top: 0px;}
+#wrapper .index_bg{position:absolute;width:733px;height:501px;left:3px;background-image:url(index_bg.png);z-index: 0;top: 0px;}
 #wrapper .logo{position:absolute;height:41px;left:20px;top:48px;background-repeat:no-repeat;z-index: 3;TEXT-ALIGN:center;}#center{ MARGIN-RIGHT: auto;
 MARGIN-LEFT: auto; }
 #wrapper .logo ul li.modelname{display:block;width:350px;font-family:Arial, Helvetica, sans-serif;color:#c6c6c6;font-weight:bold;font-size:25px;}
