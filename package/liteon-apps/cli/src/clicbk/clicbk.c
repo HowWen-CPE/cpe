@@ -1044,19 +1044,24 @@ int rssithrSet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	struct item_config item;
 
 	if ( tokenCount(pCli) != total_params ) {
-		  //uiPrintf(SETFALIED);
-		  uiPrintf("Usage: set rssithr disconn_value conn_value\n");
-		  uiPrintf("       disconn_value -- value is integer, range from -55 to -95\n");
-		  uiPrintf("       conn_value -- value is integer, range from -45 to -85\n");
-		  return CLI_PARSE_NOMESSAGE;
+        //uiPrintf(SETFALIED);
+        uiPrintf("Usage: set rssithr conn_value disconn_value\n"); 
+        uiPrintf("       conn_value -- value is integer, range from -45 to -85\n");
+        uiPrintf("       disconn_value -- value is integer, range from -55 to -95\n");
+        
+        if(tokenCount(pCli) > total_params)
+		  return CLI_PARSE_TOO_MANY;
+        else
+          return CLI_PARSE_TOO_FEW;
 	}
 
+    conn_rssi_str = tokenPop(pCli);
 	disconn_rssi_str = tokenPop(pCli);
-	conn_rssi_str = tokenPop(pCli);
+
 
 	if (!disconn_rssi_str || !strlen(disconn_rssi_str) ||
 		!conn_rssi_str || !strlen(conn_rssi_str))
-		return CLI_PARSE_NO_VALUE;
+		return CLI_PARSE_TOO_FEW;
 
 	disconn_rssi = atoi(disconn_rssi_str);
 	conn_rssi = atoi(conn_rssi_str);
@@ -1064,8 +1069,8 @@ int rssithrSet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	#define CONN_RSSI_MAX -45
 	#define CONN_RSSI_MIN -85
 	if (conn_rssi > CONN_RSSI_MAX || conn_rssi < CONN_RSSI_MIN) {
-		uiPrintf("connrssithr from %d to %d\n", CONN_RSSI_MAX, CONN_RSSI_MIN);
-		return CLI_PARSE_OK;
+		uiPrintf("Connrssithr must be from %d to %d\n", CONN_RSSI_MAX, CONN_RSSI_MIN);
+		return CLI_PARSE_ERROR;
 	}
 	#undef CONN_RSSI_MAX
 	#undef CONN_RSSI_MIN
@@ -1073,7 +1078,7 @@ int rssithrSet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	#define DISCONN_RSSI_MAX -55
 	#define DiSCONN_RSSI_MIN -95
 	if (disconn_rssi > DISCONN_RSSI_MAX || disconn_rssi < DiSCONN_RSSI_MIN) {
-		uiPrintf("disconnrssi from %d to %d\n", DISCONN_RSSI_MAX, DiSCONN_RSSI_MIN);
+		uiPrintf("Disconnrssi must be from %d to %d\n", DISCONN_RSSI_MAX, DiSCONN_RSSI_MIN);
 		return CLI_PARSE_OK;
 	}
 
@@ -1081,7 +1086,7 @@ int rssithrSet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	#undef DiSCONN_RSSI_MIN
 
 	if ((conn_rssi - disconn_rssi) < 10) {
-		uiPrintf("Connrssithr must be greater than disconnrssithr 10\n");
+		uiPrintf("Connrssithr must be greater than disconn_value 10\n");
 		return CLI_PARSE_OK;
 	}
 
@@ -1113,6 +1118,12 @@ int rssithrSet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	set_value(CLI_NAME_DISCONNRSSITHR, &item);
 
 	return CLI_PARSE_OK;
+
+usage:
+        uiPrintf("Usage: set rssithr conn_value disconn_value\n"); 
+        uiPrintf("       conn_value -- value is integer, range from -45 to -85\n");
+        uiPrintf("       disconn_value -- value is integer, range from -55 to -95\n");
+        return CLI_PARSE_ERROR;
 }
    /***********************************************************************
   * Function Name : connectRssiThresholdSet
