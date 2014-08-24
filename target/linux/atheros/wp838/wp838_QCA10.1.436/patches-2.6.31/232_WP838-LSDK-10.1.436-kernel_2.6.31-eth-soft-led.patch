@@ -1,0 +1,108 @@
+diff -uNrp linux-2.6.31-old/drivers/net/ethernet/athrs_mac.c linux-2.6.31/drivers/net/ethernet/athrs_mac.c
+--- linux-2.6.31-old/drivers/net/ethernet/athrs_mac.c	2014-08-24 04:31:07.221048598 -0700
++++ linux-2.6.31/drivers/net/ethernet/athrs_mac.c	2014-08-24 04:36:24.665063194 -0700
+@@ -2696,6 +2696,40 @@ athr_gmac_init(void)
+                                          (void *)&mac->push_dur);
+     }
+ 
++#ifdef ETH_SOFT_LED_GPIO
++    /* disable gpio mux*/
++    if(ETH_SOFT_LED_GPIO < 12 && ETH_SOFT_LED_GPIO >= 8)
++    {
++        athr_reg_wr(ATHR_GPIO_OUT_FUNCTION2,
++            (athr_reg_rd(ATHR_GPIO_OUT_FUNCTION2)& (~((unsigned int)0xff << ((ETH_SOFT_LED_GPIO%4)*8)))));
++    }else if(ETH_SOFT_LED_GPIO < 16 && ETH_SOFT_LED_GPIO >= 12)
++    {
++        athr_reg_wr(ATHR_GPIO_OUT_FUNCTION3,
++            (athr_reg_rd(ATHR_GPIO_OUT_FUNCTION3)& (~((unsigned int)0xff << ((ETH_SOFT_LED_GPIO%4)*8)))));
++    }else if(ETH_SOFT_LED_GPIO < 20 && ETH_SOFT_LED_GPIO >= 16)
++    {
++        athr_reg_wr(ATHR_GPIO_OUT_FUNCTION4,
++            (athr_reg_rd(ATHR_GPIO_OUT_FUNCTION4)& (~((unsigned int)0xff << ((ETH_SOFT_LED_GPIO%4)*8)))));
++    }else if(ETH_SOFT_LED_GPIO < 23 && ETH_SOFT_LED_GPIO >= 20)
++    {
++        athr_reg_wr(ATHR_GPIO_OUT_FUNCTION5,
++            (athr_reg_rd(ATHR_GPIO_OUT_FUNCTION5)& (~((unsigned int)0xff << ((ETH_SOFT_LED_GPIO%4)*8)))));
++    }
++    else
++    {
++        printk(KERN_ERR "%s,%d: Please specify eth GPIO!!\n", __func__, __LINE__);
++    }
++
++    /* set output enable*/
++    athr_reg_wr(ATHR_GPIO_OE,
++        (athr_reg_rd(ATHR_GPIO_OE)& (~((unsigned int)0x1 << ETH_SOFT_LED_GPIO))));
++
++    //printk(KERN_ERR "athr_reg_rd(ATHR_GPIO_OUT_FUNCTION2)=%x\n", athr_reg_rd(ATHR_GPIO_OUT_FUNCTION2));
++    //printk(KERN_ERR "athr_reg_rd(ATHR_GPIO_OE)=%x\n", athr_reg_rd(ATHR_GPIO_OE));
++    //printk(KERN_ERR "athr_reg_rd(ATHR_GPIO_OUT)=%x\n", athr_reg_rd(ATHR_GPIO_OUT));
++
++#endif
++
+    return 0;
+ 
+ failed:
+diff -uNrp linux-2.6.31-old/drivers/net/ethernet/athrs_mac_timer.c linux-2.6.31/drivers/net/ethernet/athrs_mac_timer.c
+--- linux-2.6.31-old/drivers/net/ethernet/athrs_mac_timer.c	2014-08-24 04:31:07.221048598 -0700
++++ linux-2.6.31/drivers/net/ethernet/athrs_mac_timer.c	2014-08-24 04:32:06.833764397 -0700
+@@ -137,6 +137,14 @@ athr_gmac_poll_link(athr_gmac_t *mac)
+                 athr_gmac_reg_rmw_clear(mac, ATHR_GMAC_CFG1, (ATHR_GMAC_CFG1_RX_EN | ATHR_GMAC_CFG1_TX_EN));
+ 
+ 
++#ifdef ETH_SOFT_LED_GPIO
++            /* turn off LED*/
++            athr_reg_wr(ATHR_GPIO_SET, 1 << ETH_SOFT_LED_GPIO);
++
++            //printk(MODULE_NAM "athr_reg_rd(ATHR_GPIO_OUT)=%x\n", athr_reg_rd(ATHR_GPIO_OUT));
++#endif
++
++
+        }
+        goto done;
+     }
+@@ -212,6 +220,13 @@ athr_gmac_poll_link(athr_gmac_t *mac)
+     netif_start_queue(dev);
+     mac->link_up = 1;
+ 
++#ifdef ETH_SOFT_LED_GPIO
++    /* turn-on LED*/
++    athr_reg_wr(ATHR_GPIO_CLEAR, 1 << ETH_SOFT_LED_GPIO);
++
++    //printk(MODULE_NAM "athr_reg_rd(ATHR_GPIO_OUT)=%x\n", athr_reg_rd(ATHR_GPIO_OUT));
++#endif
++
+ done:
+     
+     return 0;
+diff -uNrp linux-2.6.31-old/drivers/net/ethernet/include/athrs_mac.h linux-2.6.31/drivers/net/ethernet/include/athrs_mac.h
+--- linux-2.6.31-old/drivers/net/ethernet/include/athrs_mac.h	2014-08-24 04:31:07.313048717 -0700
++++ linux-2.6.31/drivers/net/ethernet/include/athrs_mac.h	2014-08-24 04:32:00.099572766 -0700
+@@ -65,6 +65,11 @@ extern int athrs_config_qos(struct eth_c
+ 
+ #define pl() printk("%s:%d\n",__func__,__LINE__)
+ 
++
++/* GPIO for LED*/
++#define ETH_SOFT_LED_GPIO 11  /* CPE 5G Ethernet LED GPIO*/
++
++
+ /* MAC QOS defines */
+ 
+ #ifndef ETHERTYPE_IP
+--- linux-2.6.31-old/drivers/net/ethernet/include/ag934x.h	2014-08-24 04:31:07.277048724 -0700
++++ linux-2.6.31/drivers/net/ethernet/include/ag934x.h	2014-08-24 04:46:07.936408197 -0700
+@@ -319,11 +319,14 @@
+ #define ATHR_GPIO_FUNCTIONS                  ATH_GPIO_FUNCTIONS
+ #define ATHR_GPIO_OUT_FUNCTION0              ATH_GPIO_OUT_FUNCTION0
+ #define ATHR_GPIO_OUT_FUNCTION1              ATH_GPIO_OUT_FUNCTION1
++#define ATHR_GPIO_OUT_FUNCTION2              ATH_GPIO_OUT_FUNCTION2
+ #define ATHR_GPIO_OUT_FUNCTION3              ATH_GPIO_OUT_FUNCTION3
+ #define ATHR_GPIO_OUT_FUNCTION4              ATH_GPIO_OUT_FUNCTION4
+ #define ATHR_GPIO_OUT_FUNCTION5              ATH_GPIO_OUT_FUNCTION5
+ #define ATHR_GPIO_OE			     ATH_GPIO_OE
+ #define ATHR_GPIO_OUT			     ATH_GPIO_OUT
++#define ATHR_GPIO_SET                        ATH_GPIO_SET
++#define ATHR_GPIO_CLEAR                      ATH_GPIO_CLEAR
+ #define ATHR_GPIO_IRQn(n)                    ATH_GPIO_IRQn(n)
+ #define ATHR_GPIO_INT_ENABLE                 ATH_GPIO_INT_ENABLE
+ #define ATHR_GPIO_INT_TYPE                   ATH_GPIO_INT_TYPE
