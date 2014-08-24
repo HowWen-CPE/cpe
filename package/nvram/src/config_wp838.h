@@ -413,8 +413,8 @@
 
 /* unsort */
 #define WAN_TUNNEL6_RULE "72.52.104.74^2001:470:1f04:d1c::2/64^2001:470:1f04:d1c::1"
-#define GUEST_LAN_RULE "0^rai3^br2^1^192.168.2.1^24^0^0^1^liteon_guest.com^33^32"
-#define GUEST_5G_LAN_RULE "0^ra3^br2^1^192.168.2.1^24^0^0^1^liteon_5g_guest.com^33^32"
+#define GUEST_LAN_RULE "0^rai3^br2^1^192.168.2.1^24^0^0^1^howentech.com^33^32"
+#define GUEST_5G_LAN_RULE "0^ra3^br2^1^192.168.2.1^24^0^0^1^howentech.com^33^32"
 
 
 #define GROUP1 "group^RWGROUP^v1^rw"
@@ -480,7 +480,7 @@
 							UDN"^"\
 							PRESENTATIONURL
 
-#define HTTP_RULE_DEFAULT	"^1^0^admin^admin^guest^admin^admin^80^^5"
+#define HTTP_RULE_DEFAULT	"^1^0^admin^admin^guest^guest^admin^80^^5"
 #define SNMPD_COM2SEC_RULE_DEFAULT	"com2sec^ro^default""|""com2sec^rw^default"
 #define BW_EZMODESORT_RULE	"Game Console|VoIP|Instant Messenger|Web Surfing|P2P/FTP|E-Mail"
 
@@ -855,16 +855,16 @@ nvram_tuple_t nvram_factory_default[] = {
 		0 
 	},
 
-	{ "hostname", "HoWen",
+	{ "hostname", "HW-WCHS01",
 		NVRAM_NONE,
 		0 
 	},
 
-	{ "connectrssithr", "-55",
+	{ "connectrssithr", "-85",
 		NVRAM_NONE,
 		0 
 	}, 
-	{ "disconnectrssithr", "-65",
+	{ "disconnectrssithr", "-95",
 		NVRAM_NONE,
 		0 
 	}, 
