@@ -16,7 +16,7 @@
 	<message msgid="Firmware download has stopped. Please check your Internet connection or try again later." msgstr="软件下载停止。请检查网络连线或稍后再试。"/>
 	
 	<message msgid="reset title" msgstr="系统重新启动"/>
-	<message msgid="reset introduction" msgstr="请点选重新启动让设备重新开机。装置重新启动时SYS (或 PWR) LED 指示灯会闪烁，重新启动成功后灯号就会持续亮着。 请稍待约一分钟再重新登录设备。"/>
+	<message msgid="reset introduction" msgstr="请点选重新启动让设备重新开机。请稍待约一分钟再重新登录设备。"/>
 	<message msgid="reset Restart" msgstr="重新启动"/>
 	<message msgid="logsystem title" msgstr="日志"/>
 	<message msgid="logsystem display" msgstr="显示："/>

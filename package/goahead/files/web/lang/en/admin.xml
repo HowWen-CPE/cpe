@@ -18,7 +18,7 @@
 
 <!-- reset -->
 <message msgid="reset title" msgstr="System Restart" />
-<message msgid="reset introduction" msgstr="Click Restart to have the device perform a software restart. The SYS(or PWR) LED blinks as the device restarts and then stays steady on if the restart is successful. Wait a minute before logging into the device again." />
+<message msgid="reset introduction" msgstr="Click Restart to have the device perform a software restart. Wait one minute before logging into the device again." />
 <message msgid="reset Restart" msgstr="Restart" />
 <!-- system log -->
 <message msgid="logsystem title" msgstr="Logs" />
