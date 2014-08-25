@@ -1,0 +1,22 @@
+--- wifi_QCA_10.1.436-old/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c	2014-08-24 05:36:41.929228724 -0700
++++ wifi_QCA_10.1.436/drivers/wlan_modules/os/linux/src/ieee80211_wireless.c	2014-08-24 17:15:58.842817813 -0700
+@@ -2131,6 +2131,19 @@ ieee80211_ioctl_siwscan(struct net_devic
+         } else {
+             scan_params->type = IEEE80211_SCAN_FOREGROUND;
+         }
++
++        /* BEGIN: Added by Peter, 2014/8/25   PN:98 */
++        /* foregound scan if request by "iwlist sta0 scanning fore"*/
++#define IW_SCAN_FOREGROUND 0x4000
++        if(data && (data->flags & IW_SCAN_FOREGROUND))
++        {
++            scan_params->type = IEEE80211_SCAN_FOREGROUND;
++            
++            IEEE80211_DPRINTF(vap, IEEE80211_MSG_SCAN, "IEEE80211_SCAN_FOREGROUND!!\n");
++        }
++#undef IW_SCAN_FOREGROUND
++        /* END:   Added by Peter, 2014/8/25   PN:98 */
++
+         scan_params->flags = IEEE80211_SCAN_ALLBANDS | IEEE80211_SCAN_ACTIVE;
+         if (!wlan_mlme_get_optie(vap, opt_ie, &length, IEEE80211_MAX_OPT_IE)) {
+             scan_params->ie_data = opt_ie;

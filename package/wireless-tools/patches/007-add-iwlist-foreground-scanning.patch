@@ -1,0 +1,33 @@
+--- wireless_tools.29-old/iwlist.c	2014-08-24 05:21:26.189186838 -0700
++++ wireless_tools.29/iwlist.c	2014-08-24 23:19:42.268160398 -0700
+@@ -49,6 +49,7 @@ typedef struct iw_auth_descr
+ /**************************** CONSTANTS ****************************/
+ 
+ #define IW_SCAN_HACK		0x8000
++#define IW_SCAN_FOREGROUND	0x4000	/* Scan be foreground  */
+ 
+ #define IW_EXTKEY_SIZE	(sizeof(struct iw_encode_ext) + IW_ENCODING_TOKEN_MAX)
+ 
+@@ -691,7 +692,12 @@ print_scanning_info(int		skfd,
+ 	    /* Hack */
+ 	    scanflags |= IW_SCAN_HACK;
+ 	  }
+-	else
++	/* foreground scan*/
++	else if(!strncmp(args[0], "fore", 4))
++	{
++	    scanflags |= IW_SCAN_FOREGROUND;
++
++	}else
+ 	  {
+ 	    fprintf(stderr, "Invalid scanning option [%s]\n", args[0]);
+ 	    return(-1);
+@@ -2051,7 +2057,7 @@ typedef struct iwlist_entry {
+ } iwlist_cmd;
+ 
+ static const struct iwlist_entry iwlist_cmds[] = {
+-  { "scanning",		print_scanning_info,	-1, "[essid NNN] [last]" },
++  { "scanning",		print_scanning_info,	-1, "[essid NNN] [last] [fore]" },
+   { "frequency",	print_freq_info,	0, NULL },
+   { "channel",		print_freq_info,	0, NULL },
+   { "bitrate",		print_bitrate_info,	0, NULL },

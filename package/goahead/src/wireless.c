@@ -100,6 +100,8 @@ static void wifiAdvanced(webs_t wp, char_t * path, char_t * query);
 static void wifiGeneral(webs_t wp, char_t * path, char_t * query);
 static void wifiWDS(webs_t wp, char_t * path, char_t * query);
 static int getwifiBSSIDList(int eid, webs_t wp, int argc, char_t ** argv);
+static int getwifiBSSIDListStep1(int eid, webs_t wp, int argc, char_t ** argv);
+static int getwifiBSSIDListStep2(int eid, webs_t wp, int argc, char_t ** argv);
 static int getRogueAPList(webs_t wp, char_t *path, char_t *query);
 static int getLegalAPList(int eid, webs_t wp, int argc, char_t ** argv);
 static int getwifiRSSI(int eid, webs_t wp, int argc, char_t ** argv);
@@ -3907,6 +3909,426 @@ int ap_list_cmp(const void*a, const void*b)
 {
         return ((SCAN_AP_STATE*)a)[0].rssi < ((SCAN_AP_STATE*)b)[0].rssi;
 }
+
+static int start_scan_ap(int radio, char *result_file, char *done_flag_file)
+{
+
+	int rMode = 0;
+	char cmd[128] = {0};
+	char vap_name[8] = {0};
+	char ModeTmpBuf[32] = {0};
+	
+	if (RADIO_2G == radio) {
+		ezplib_get_attr_val("wl_mode_rule", 0, "mode", ModeTmpBuf, 32, EZPLIB_USE_CLI);
+		
+		if (!strcmp(ModeTmpBuf, "ap")) {
+			rMode = WLAN_MODE_AP;
+		}
+		else if (!strcmp(ModeTmpBuf, "client")) {
+			rMode = WLAN_MODE_STA;
+		}
+	}
+	else if (RADIO_5G == radio) {
+		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", ModeTmpBuf, 32, EZPLIB_USE_CLI);
+		
+		if (!strcmp(ModeTmpBuf, "ap")) {
+			rMode = WLAN_MODE_AP;
+		}
+		else if (!strcmp(ModeTmpBuf, "client")) {
+			rMode = WLAN_MODE_STA;
+		}
+	}
+	else {
+		fprintf(stderr, "ERROR:Radio error!\n");
+        return T_FAILURE;
+	}
+	
+	construct_vap(vap_name, radio, 0, rMode);
+	
+    /*iwlist staN scanning | awk -f /etc/wl/rogueap.awk*/    
+#if 0
+    sprintf(cmd, "iwlist %s scanning | awk -f /etc/wl/rogueap.awk > %s && echo done >%s &", 
+    vap_name, result_file, done_flag_file);
+#else
+    /* foreground scan to speedup get scan result*/
+    sprintf(cmd, "iwlist %s scanning fore | awk -f /etc/wl/rogueap.awk > %s && echo done >%s &", 
+    vap_name, result_file, done_flag_file);
+#endif    
+    EXE_COMMAND(cmd);
+
+    return 0;
+}
+
+static int parse_scan_ap_list(SCAN_AP_LIST *ap_list, char *result_file)
+{
+	FILE *fp;
+	int ret = 0;
+	int apNum = 0;
+	int apNTWType = 0;
+	int apChannel = 0;
+	int apSignal = 0;
+	int apEncryption = 0;
+	int apAuthmode = 0;
+	char cmd[128] = {0};
+	char apSsid[64] = {0};
+	char apWMode[8] = {0};
+	char apBssid[32] = {0};
+
+    
+    /*Set ap_num as 0 first*/
+    ap_list->ap_num = 0;
+    if (NULL == (fp = fopen(result_file,"r")))
+    {
+        fprintf(stderr, "Ap list is NONE\n");
+
+        return T_FAILURE;        
+    }
+    else
+    {
+        while(!feof(fp)){
+			memset(apBssid, 0x00, sizeof(apBssid));
+			memset(apSsid, 0x00, sizeof(apSsid));
+			memset(apWMode, 0x00, sizeof(apWMode));
+
+			ret = fscanf(fp, "%d%s%d%d%d%s%d%d%[^\n]", &apNum, apBssid, 
+				&apNTWType, &apChannel, &apSignal, apWMode, &apEncryption, &apAuthmode, apSsid);
+			if ( 9 != ret) {
+				printf("fscanf Number:%d\n", ret);
+				printf("fsacnf End\n");
+				break;
+			}
+
+			memset(ap_list->ap[apNum - 1].ssid, 0x00, sizeof(ap_list->ap[apNum - 1].ssid));
+            memset(ap_list->ap[apNum - 1].bssid, 0x00, sizeof(ap_list->ap[apNum - 1].bssid));
+			memset(ap_list->ap[apNum - 1].rssi_str, 0x00, sizeof(ap_list->ap[apNum - 1].rssi_str));
+			memset(ap_list->ap[apNum - 1].wmode, 0x00, sizeof(ap_list->ap[apNum - 1].wmode));
+
+			/* AP BSSID */
+			strcpy(ap_list->ap[apNum - 1].bssid, apBssid);
+
+			/* AP Network Type: 0->Auto; 1->Ad-hoc; 2->Managed; 3->Repeater; 4->Master; 5->Secondary; 6->Monitor; 7->Unknow*/
+			if (4 == apNTWType) {
+				ap_list->ap[apNum - 1].network_type = 1;
+			}
+			else {
+				ap_list->ap[apNum - 1].network_type = 0;
+			}
+
+			/* AP Channel*/
+			ap_list->ap[apNum - 1].channel = apChannel;
+
+			/* AP Signal*/
+			ap_list->ap[apNum - 1].rssi = - apSignal;
+			sprintf(ap_list->ap[apNum - 1].rssi_str, "%d dBm", ap_list->ap[apNum - 1].rssi);
+			
+			/* AP Wireless Mode*/
+			strcpy(ap_list->ap[apNum - 1].wmode, apWMode);
+
+			/* AP Encryption*/
+			ap_list->ap[apNum -1].encry = apEncryption;
+
+			/* AP Auth_mode*/
+			ap_list->ap[apNum -1].auth_mode = apAuthmode;
+
+			/* AP SSID*/
+			strncpy(ap_list->ap[apNum -1].ssid, &apSsid[2], (strlen(apSsid) - 3));
+
+			/* AP Number */
+			ap_list->ap_num = apNum;
+			if(ap_list->ap_num == 128)
+            {
+                break;
+            }
+        }
+    }
+
+    fclose(fp);
+#if 1
+    sprintf(cmd, "rm -rf %s", result_file);
+	EXE_COMMAND(cmd);
+#else
+
+#endif
+    return T_SUCCESS; 
+}
+
+#define SCAN_AP_DONE_FILE "/tmp/scandone.log"
+#define SCAN_AP_RESULT_FILE "/tmp/scanrlt.log"
+static int scan_step=0;
+
+static int getwifiBSSIDListStep1(int eid, webs_t wp, int argc, char_t ** argv)
+{
+    char cmd[128]={0};
+
+    /* indicate scan is called*/
+    scan_step = 1;
+
+    /* scan ap and write the result to /tmp/scandone*/
+    start_scan_ap(0, SCAN_AP_RESULT_FILE, SCAN_AP_DONE_FILE);
+
+    websWrite(wp, "\n");
+
+	return 0;
+}
+
+static int getwifiBSSIDListStep2(int eid, webs_t wp, int argc, char_t ** argv)
+{
+	int num = 0, i, j = 0;
+	int NetworkType;
+	char TMPssid[256], SSID[256];
+	unsigned char tmpRadio[188], tmp_SSID[256], *p_ssid, *p_SSID, *tmpAuth, tmpEncry[16], tmpImg[40];
+	unsigned char radiocheck[8];
+	char *ssid_value;
+    int max_wait = 0;
+    FILE *fp=NULL;
+    char cmd[128]={0};
+
+	//Added By Andy Yu in 2013/10/17: Association Info
+	int ret =0;
+	int assoc = 0;
+	char assoc_ssid[256] = {0};
+	char assoc_bssid[32] = {0};
+
+    printf("getwifiBSSIDListStep2\n");
+
+	ret = get_sta_assoc_status(RADIO_2G, &assoc);
+	if (assoc == 1) {
+		ret = get_sta_assoc_ssid(RADIO_2G, assoc_ssid);
+		ret = get_sta_assoc_bssid(RADIO_2G, assoc_bssid);
+	}
+	
+	SCAN_AP_LIST *ap_list = (SCAN_AP_LIST *)malloc(sizeof(SCAN_AP_LIST));
+	memset(ap_list, 0x00, sizeof(SCAN_AP_LIST));
+
+    /* if scan step1 isn't called (refresh apcli_site_survey.ask directory)*/
+    if(scan_step != 1){
+        /* scan ap and write the result to /tmp/scandone*/
+        start_scan_ap(0, SCAN_AP_RESULT_FILE, SCAN_AP_DONE_FILE);
+    }
+    
+    /* wait for scan finished*/
+    while(NULL == (fp = fopen(SCAN_AP_DONE_FILE,"r")))
+    {
+        usleep(500000);
+
+        max_wait++;
+
+        if(max_wait == 14)
+        {
+            printf("%s: scan isn't finised!\n", __func__);
+            break;
+        }
+    }
+
+    /* delete scan done file*/
+    if(fp)
+    {
+        fclose(fp);
+
+        sprintf(cmd, "rm -fr %s", SCAN_AP_DONE_FILE);
+        EXE_COMMAND(cmd);  
+    }
+
+    /* indicate scan is finished*/
+    scan_step = 0;
+
+    printf("parse_scan_ap_list\n");
+
+    /* parse scan result*/
+	if (parse_scan_ap_list(ap_list, SCAN_AP_RESULT_FILE) < 0) {
+		free(ap_list);
+		printf("get ap_list error");
+		return 0;
+	}
+        qsort(&ap_list->ap, ap_list->ap_num,sizeof(ap_list->ap[0]), ap_list_cmp);
+
+        if(ap_list->ap_num > 128) {
+                ap_list->ap_num = 128;
+        }
+	{
+		int i = 0;
+		int iarray[130] = { 0 };
+		while (i < ap_list->ap_num) {
+#if 0
+			printf("SSID: %s  BSSID=%s, auth_mode=%d, encry=%d\n", 
+                               ap_list.ap[i].ssid, 
+                               ap_list.ap[i].bssid,
+                               ap_list.ap[i].auth_mode,
+                               ap_list.ap[i].encry);
+#endif
+			memset(radiocheck, 0x00, sizeof(radiocheck));
+			memset(tmpRadio, 0x00, sizeof(tmpRadio));
+			memset(tmpImg, 0x00, sizeof(tmpImg));
+			memset(TMPssid, 0x00, sizeof(TMPssid));
+
+#if 1
+			int j;
+			for (j = 0; j < sizeof(ap_list->ap[i].bssid); j++)
+				ap_list->ap[i].bssid[j] = toupper(ap_list->ap[i].bssid[j]);
+#endif
+			strcpy(TMPssid, ap_list->ap[i].ssid);
+			if (strcmp((char *)TMPssid, "") == 0) {
+				memset(SSID, 0, sizeof(SSID));
+				/* Hide SSID */
+				sprintf((char *)SSID, "");
+			} else {
+				int j = 0;
+				int flag = 0;
+				do {
+					if (TMPssid[j] < 32 || TMPssid[j] > 126 || TMPssid[j] == 13)	// 13 is string end of Dos
+					{
+						strcpy((char *)TMPssid, "&nbsp;");
+						flag = 1;
+						break;
+					}
+					j++;
+				} while (j < strlen(TMPssid) - 1);
+
+				ssid_value = get_translate_char(flag, TMPssid);
+				memset(SSID, 0, sizeof(SSID));
+				sprintf((char *)SSID, "%s", ssid_value);
+			}
+			
+			memset(tmp_SSID, 0, sizeof(tmp_SSID));
+			p_ssid = tmp_SSID;
+			p_SSID = SSID;
+			j = 0;
+			while ((j < 256) && (SSID[j] != NULL) && (p_ssid != NULL) && ((p_ssid + 5) != NULL)) {
+				if (SSID[j] == 92) {
+					memcpy(p_ssid, "\\\\", 4);
+					p_ssid += 2;
+				} else if (SSID[j] == 39) {
+					memcpy(p_ssid, "\\\'", 4);
+					p_ssid += 2;
+				} else {
+					memcpy(p_ssid, p_SSID, 1);
+					p_ssid = p_ssid + 1;
+				}
+				p_SSID++;
+				j++;
+			}
+			
+			if (ap_list->ap[i].auth_mode > 7) {
+				printf("auth mode error %d\n", ap_list->ap[i].auth_mode);
+			}
+			tmpAuth = gauth[ap_list->ap[i].auth_mode];
+			
+			memset(tmpEncry, 0x00, sizeof(tmpEncry));
+			if (ap_list->ap[i].encry > 4) {
+				if ((ap_list->ap[i].encry > 33) || (ap_list->ap[i].encry < 10)) {
+					sprintf(tmpEncry, "----");
+					printf("encry error %d\n", ap_list->ap[i].encry);
+				} else {
+					sprintf(tmpEncry, "%s/%s", gencry[(ap_list->ap[i].encry / 10)], gencry[(ap_list->ap[i].encry % 10)]);
+				}
+			}
+			else {
+				sprintf(tmpEncry, gencry[ap_list->ap[i].encry]);
+			}
+			
+#if 1
+			/*-----Chged By Andy Yu in 2013/10/17: Bug 4948-------*/
+			/*system("/sbin/ezp-wps-set 1 00 4 0");
+			if (NULL == (tmp = fopen("/tmp/wisp_essid_mac", "r"))) {
+				websWrite(wp, T("None"));
+				return 0;
+			} else {
+				fgets(set_bssid, 28, tmp);
+				set_bssid[strlen(set_bssid) - 4] = '\0';
+				delspace(set_bssid, &TMPset_bssid[0]);
+				if (!strcmp(ap_list.ap[i].bssid, set_bssid)) {
+					sprintf((char *)tmpImg, "<img src=\"images/checkmrk.gif\"> ");
+				} else {
+					sprintf((char *)tmpImg, " ");
+				}
+                                fclose(tmp);
+			}*/
+			if (assoc == 1) {
+				printf("tmp_SSID = %s\n assoc_ssid = %s\n",tmp_SSID, assoc_ssid);
+				if ((!strcmp(ap_list->ap[i].bssid, assoc_bssid)) && (!strcmp(ap_list->ap[i].ssid, assoc_ssid))) {
+					sprintf((char *)tmpImg, "<img src=\"images/checkmrk.gif\"> ");
+				} else {
+					sprintf((char *)tmpImg, " ");
+				}				
+			} else {
+				sprintf((char *)tmpImg, " ");
+			}
+#else
+			sprintf((char *)tmpImg, " ");
+#endif
+			sprintf((char *)tmpRadio,
+				"<input type=radio name=selectedSSID %s onClick=\"selectedSSIDChange('%s','%s',%d,%d,'%s','%s')\">",
+				radiocheck, tmp_SSID, ap_list->ap[i].bssid, ap_list->ap[i].network_type,
+				ap_list->ap[i].channel, tmpEncry, tmpAuth);
+
+			websWrite(wp, "<td width=\"5%%\"><center>\n");
+			websWrite(wp, "<span class=\"table_left\">\n");
+			websWrite(wp, "%s\n", tmpRadio);
+			websWrite(wp, "</span></center></td>\n");
+
+			/*add by frank*/
+			websWrite(wp, "<td width=\"5%%\"><center>\n");
+			websWrite(wp, "<span class=\"table_font\">\n");
+			websWrite(wp, "<img src=\"images/%s\"/>\n",
+			ap_list->ap[i].network_type == 1 ? "ap.png" : "adhoc.png");
+			websWrite(wp, "</span></center></td>\n");
+
+			websWrite(wp, "<td width=\"30%%\">\n");
+			websWrite(wp, "<span class=\"table_font\">\n");
+			websWrite(wp, "<script>ssid(\"%s\") </script>\n", tmp_SSID);
+			websWrite(wp, "%s", tmpImg);
+			websWrite(wp, "</span></td>\n");
+
+			websWrite(wp, "<td width=\"17%%\"><center>\n");
+			websWrite(wp, "<span class=\"table_font\">\n");
+			websWrite(wp, "%s\n", ap_list->ap[i].bssid);
+			websWrite(wp, "</span></center></td>\n");
+
+			websWrite(wp, "<td width=\"7%%\"><center>\n");
+			websWrite(wp, "<span class=\"table_font\">\n");
+			websWrite(wp, "%s\n", ap_list->ap[i].rssi_str);
+			websWrite(wp, "</span></center></td>\n");
+
+			websWrite(wp, "<td width=\"5%%\"><center>\n");
+			websWrite(wp, "<span class=\"table_font\">\n");
+			websWrite(wp, "%d\n", ap_list->ap[i].channel);
+			websWrite(wp, "</span></center></td>\n");
+
+			websWrite(wp, "<td width=\"10%%\"><center>\n");
+			websWrite(wp, "<span class=\"table_font\">\n");
+			websWrite(wp, "%s\n", tmpEncry);
+			websWrite(wp, "</span></center></td>\n");
+
+			websWrite(wp, "<td width=\"21%%\"><center>\n");
+			websWrite(wp, "<span class=\"table_right\">\n");
+			websWrite(wp, "%s\n", tmpAuth);
+			websWrite(wp, "</span></center></td>\n");
+
+			websWrite(wp, T("</tr>\n"));
+
+			i++;
+		}
+
+	}
+	
+	free(ap_list);
+
+    /* 
+     * Workaround:
+     *   restart sta to fix connect is lost after scanning sometimes
+     *   let child process to restart station
+     */
+    if(fork() == 0){
+        set_config_sta(RADIO_2G);
+        exit(0);
+    }else
+    {
+        /* parent: do nothing*/
+    }
+
+	return 0;
+}
+
 static int getwifiBSSIDList(int eid, webs_t wp, int argc, char_t ** argv)
 {
 	int num = 0, i, j = 0;
@@ -12418,7 +12840,11 @@ void formDefineWireless(void)
 	websFormDefine(T("wifi5GWDS"), wifi5GWDS);
 	websAspDefine(T("getwifiRSSI"), getwifiRSSI);
 	websAspDefine(T("getwifi5GRSSI"), getwifi5GRSSI);
+    websAspDefine(T("getwifiBSSIDListStep1"), getwifiBSSIDListStep1);
+    websAspDefine(T("getwifiBSSIDListStep2"), getwifiBSSIDListStep2);
 	websAspDefine(T("getwifiBSSIDList"), getwifiBSSIDList);
+    
+    
 	websAspDefine(T("getLegalAPList"), getLegalAPList);
 	websAspDefine(T("getwifi5GBSSIDList"), getwifi5GBSSIDList);
 	websFormDefine(T("getRogueAPList"), getRogueAPList);

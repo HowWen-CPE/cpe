@@ -23,7 +23,7 @@ function initTranslation()
 function updateState()
 {
 	  initTranslation();
-	  setTimeout("window.location.href= '/local/advance/apcli_site_survey.asp'",2000); 
+	  setTimeout("window.location.href= '/local/advance/apcli_site_survey.asp'",3000); 
 }
 </script>
 </head>
@@ -55,6 +55,7 @@ function updateState()
 </div>
 </form>
 </body>
+<% getwifiBSSIDListStep1(); %>
 <script>
 function alert(str)
 {

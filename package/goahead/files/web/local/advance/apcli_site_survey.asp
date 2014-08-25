@@ -31,7 +31,7 @@ function countTime()
 	//var connectstatus = '<!--#include ssi=getStaConnectionStatus() -->';
 
 	//if (connectstatus == 1)  // 0 is NdisMediaStateConnected, 1 is NdisMediaStateDisconnected
-		setTimeout("window.location.reload();", 1000*4);
+		//setTimeout("window.location.reload();", 1000*4);
 }
 
 function ssid(ssid)
@@ -320,7 +320,7 @@ function PageInit()
 </center>
 </td>
 </tr>
-<% getwifiBSSIDList(); %>
+<% getwifiBSSIDListStep2(); %>
 
 <tr>
 <td height="5" colspan="8"><table width="100%" height="5" border="0" cellpadding="0" cellspacing="0">
@@ -345,7 +345,8 @@ function PageInit()
 
 <center>
 <li class="table_button">
-<input type=button value="Rescan" id="scanRescan" onClick="showWebMessage(2, ''); location.href=location.href">&nbsp;
+<input type=button value="Rescan" id="scanRescan" onClick="showWebMessage(2, ''); window.location.href= '/local/advance/apcli_site_waiting.asp'">&nbsp;
+<!--<input type=button value="Rescan" id="scanRescan" onClick="parent.location.href">&nbsp;-->
 <input type=button name="addProfileButton" value="Add Profile" id="scanAddProfile" disabled onClick="open_profile_page(false)">
 <input type=button name="addProfileButtonLockAP" value="Lock AP" id="scanlockap" disabled onClick="open_profile_page(true)">
 </li>
