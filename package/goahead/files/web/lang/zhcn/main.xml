@@ -210,8 +210,8 @@
 	<message msgid="dash_info lan dhcp ena" msgstr="启用" />
 	<message msgid="dash_info lan dhcp server"	msgstr="DHCP 服务器" />
 	<message msgid="dash_info lan dhcp relay"	msgstr="DHCP 中继" />
-	<message msgid="dash_info wlan info" msgstr="无线2.4G局域网络信息"/>
-	<message msgid="dash_info wlan opmode" msgstr="无线2.4G局域网络操作模式"/>
+	<message msgid="dash_info wlan info" msgstr="无线局域网络信息"/>
+	<message msgid="dash_info wlan opmode" msgstr="无线局域网络操作模式"/>
     <message msgid="dash_info wlan-1 info" msgstr="无线2.4G-1局域网络信息" />
     <message msgid="dash_info wlan-1 opmode" msgstr="无线2.4G-1局域网络操作模式" />
     <message msgid="dash_info wlan-2 info" msgstr="无线2.4G-2局域网络信息" />

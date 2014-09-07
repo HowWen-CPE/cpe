@@ -909,6 +909,24 @@ int set_language(int eid, webs_t wp, int argc, char_t **argv)
 	nvram_commit();
 	return 1;
 }
+
+int get_language(int eid, webs_t wp, int argc, char_t **argv)
+{
+	char lang[32];
+    char *p_lang=NULL;
+
+	p_lang = nvram_safe_get("lang");
+
+    if(p_lang)
+    {
+        strncpy(lang, p_lang, 30);
+
+        websWrite(wp, T("%s"), p_lang);
+    }
+
+	return 0;
+}	
+
 #endif
 
 
@@ -4702,6 +4720,7 @@ void formDefineManagement(void)
 	websAspDefine(T("detectEthernetWanType"), detectEthernetWanType);
 	websAspDefine(T("checkEthernetWanType"), checkEthernetWanType);
 	websAspDefine(T("set_language"), set_language);
+    websAspDefine(T("get_language"), get_language);
 #endif	
 #if 1//Arthur Chow 2009-02-09: For get Yahoo Weather
 	websAspDefine(T("detectWeather"), detectWeather);

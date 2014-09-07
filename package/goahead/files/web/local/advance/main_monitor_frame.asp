@@ -106,14 +106,50 @@ function MM_showHideLayers() { //v6.0
 </div>
 <div id="contentframe">
 <div class="contentframe"><ul>
-<li><div class="submenu"><ul> <li class="i_dashboard" title="Dashboard"><a href="dashboard.asp" title="Dashboard"></a></li> 
-<li class="i_monitor" title="Monitor"></li>
+<li><div class='submenu'><ul> 
 
 <script>
-if(cur_user == "admin")
+var lang = "<% get_language(); %>";
+
+if(lang=="zhcn")
 {
-	document.write("<li class='i_config'><a href='main_config_frame.asp' title='Configuration'></a></li>");
-	document.write("<li class='i_maintenance'><a href='main_maintenance_frame.asp' title='Maintenance'></a></li>");
+	//??
+	document.write("<li class='i_dashboard' title='&#x72B6;&#x6001;'><a href='dashboard.asp' title='&#x72B6;&#x6001;'></a></li>");
+	//???
+	document.write("<li class='i_monitor' title='&#x76D1;&#x89C6;&#x5668;'></li>");
+
+	if(cur_user == "admin")
+	{
+		//??
+		document.write("<li class='i_config'><a href='main_config_frame.asp' title='&#x914D;&#x7F6E;'></a></li>");
+		//??
+		document.write("<li class='i_maintenance'><a href='main_maintenance_frame.asp' title='&#x7EF4;&#x62A4;'></a></li>");
+	}
+}else if(lang=="zhtw")
+{
+	//??
+	document.write("<li class='i_dashboard' title='&#x72C0;&#x614B;'><a href='dashboard.asp' title='&#x72C0;&#x614B;'></a></li>");
+	//???
+	document.write("<li class='i_monitor' title='&#x76E3;&#x8996;&#x5668;'></li>");
+
+	if(cur_user == "admin")
+	{
+		//??
+		document.write("<li class='i_config'><a href='main_config_frame.asp' title='&#x914D;&#x7F6E;'></a></li>");
+		//??
+		document.write("<li class='i_maintenance'><a href='main_maintenance_frame.asp' title='&#x7DAD;&#x8B77;'></a></li>");
+	}
+}else
+{
+
+	document.write("<li class='i_dashboard' title='Dashboard'><a href='dashboard.asp' title='Dashboard'></a></li>");
+	document.write("<li class='i_monitor' title='Monitor'></li>");
+	
+	if(cur_user == "admin")
+	{
+		document.write("<li class='i_config'><a href='main_config_frame.asp' title='Configuration'></a></li>");
+		document.write("<li class='i_maintenance'><a href='main_maintenance_frame.asp' title='Maintenance'></a></li>");
+	}
 }
 </script>
 

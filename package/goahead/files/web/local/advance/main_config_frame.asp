@@ -107,8 +107,49 @@ function MM_showHideLayers() { //v6.0
 
 <div id="contentframe">
 <div class="contentframe"><ul>
-<li><div class="submenu"><ul> <li class="i_dashboard" title="Dashboard"><a href="dashboard.asp" title="Dashboard"></a></li> 
-<li class="i_monitor"><a href="main_monitor_frame.asp" title="Monitor"></a></li><li class="i_config" title="Configuration"></li> <li class="i_maintenance"><a href="main_maintenance_frame.asp" title="Maintenance"></a></li></ul>  <br class="clearfloat" /></div></li>
+<li><div class="submenu"><ul> 
+
+
+<script>
+var lang = "<% get_language(); %>";
+
+if(lang=="zhcn")
+{
+	//??
+	document.write("<li class='i_dashboard' title='&#x72B6;&#x6001;'><a href='dashboard.asp' title='&#x72B6;&#x6001;'></a></li>");
+	//???
+	document.write("<li class='i_monitor'><a href='main_monitor_frame.asp' title='&#x76D1;&#x89C6;&#x5668;'></a></li>");
+
+	//??
+	document.write("<li class='i_config' title='&#x914D;&#x7F6E;'></li> ");
+	
+	//??
+	document.write("<li class='i_maintenance'><a href='main_maintenance_frame.asp' title='&#x7EF4;&#x62A4;'></a></li>");
+}else if(lang=="zhtw")
+{
+	//??
+	document.write("<li class='i_dashboard' title='&#x72B6;&#x6001;'><a href='dashboard.asp' title='&#x72C0;&#x614B;'></a></li>");
+	//???
+	document.write("<li class='i_monitor'><a href='main_monitor_frame.asp' title='&#x76E3;&#x8996;&#x5668;'></a></li>");
+
+	//??
+	document.write("<li class='i_config' title='&#x914D;&#x7F6E;'></li> ");
+	//??
+	document.write("<li class='i_maintenance'><a href='main_maintenance_frame.asp' title='&#x7DAD;&#x8B77;'></a></li>");
+}else
+{
+	document.write("<li class='i_dashboard' title='Dashboard'><a href='dashboard.asp' title='Dashboard'></a></li>");
+	document.write("<li class='i_monitor'><a href='main_monitor_frame.asp' title='Monitor'></a></li>");
+	
+	document.write("<li class='i_config' title='Configuration'></li>");
+	document.write("<li class='i_maintenance'><a href='main_maintenance_frame.asp' title='Maintenance'></a></li>");
+}
+</script>
+
+</ul>  <br class='clearfloat' /></div></li>
+
+
+
 <li><div class="menu"> <br class="clearfloat" />
   <ul>
 <li class="menuline" id=menuline_height><div><ul><li class="space4"><script>document.write(_("CONFIGURATION_TITLE"))</script></li><li class="space"><p><a href="javascript: d.openAll();" class="fastbutton" id=id_openall></a><a>&nbsp; | &nbsp;</a><a href="javascript: d.closeAll();" id=id_closeall></a></p></li><li>
