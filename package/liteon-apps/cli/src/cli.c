@@ -80,17 +80,18 @@ LOCAL struct parse_token_s getCmdTbl[] = {
     {"account", "Display Account", accountGet, NULL, NULL, NULL, 0},
 	//{"connrssithr", "Display connect rssi threshold", connectRssiThresholdGet, NULL, NULL, NULL, 0},
     //{"disrssithr", "Display disconnect rssi threshold", disconnectRssiThresholdGet, NULL, NULL, NULL, 0},
-    {"rssithr", "Display connect and disconnect rssi threshold", RssiThresholdGet, NULL, NULL, NULL, 0},
-    {"dhcp", "Display dhcp status", dhcpGet, NULL, NULL, NULL, 0},
-    {"ipaddr", "Display IP address", ipaddrGet, NULL, NULL, NULL, 0},
-	{"mac", "Display mac", macGet, NULL, NULL, NULL, 0},
-    {"rssi", "Display rssi", rssiGet, NULL, NULL, NULL, 0},
-    {"netmask", "Display IP subnet mask", ipmaskGet, NULL, NULL, NULL, 0},
-    {"security", "Display security", securityGet, NULL, NULL, NULL, 0},
-    {"ssid", "Display ssid", ssidGet, NULL, NULL, NULL, 0},
-    {"deviceid", "Display device id", systemNameGet, NULL, NULL, NULL, 0},
-    {"status", "Display wireless status", wirelessStatusGet, NULL, NULL, NULL, 0},
-
+    {"deviceid", "Display Device ID", systemNameGet, NULL, NULL, NULL, 0},
+    {"dhcp", "Display DHCP Status", dhcpGet, NULL, NULL, NULL, 0},
+    {"ipaddr", "Display IP Address", ipaddrGet, NULL, NULL, NULL, 0},
+	{"mac", "Display MAC Address", macGet, NULL, NULL, NULL, 0},
+    {"netmask", "Display IP Subnet Mask", ipmaskGet, NULL, NULL, NULL, 0},
+    {"rssi", "Display RSSI", rssiGet, NULL, NULL, NULL, 0},
+    {"rssithr", "Display Connect and Disconnect RSSI Threshold", RssiThresholdGet, NULL, NULL, NULL, 0},
+    {"security", "Display Security", securityGet, NULL, NULL, NULL, 0},
+	{"sn", "Display Serial Number", snGet, NULL, NULL, NULL, 0},
+    {"ssid", "Display SSID", ssidGet, NULL, NULL, NULL, 0},
+    {"status", "Display System Status", wirelessStatusGet, NULL, NULL, NULL, 0},
+    {"version", "Show Software Version", versionHandler, NULL, NULL, NULL, 0},
     PARSE_TOKEN_DELIMITER
 };
 
@@ -98,37 +99,34 @@ LOCAL struct parse_token_s getCmdTbl[] = {
  * NOTICE: This table is arranged in alphabetical order
  */
 LOCAL struct parse_token_s setCmdTbl[] = {
-    {"account", "Set Account, Usage: set account password",
-		accountSet, NULL, NULL, NULL, 0},
-    {"rssithr", "Set disconnect or connect rssi thresshold, Usage: set rssithr conn_value1 disconn_value2",
+    {"account", "Set Account, Usage: set account password",accountSet, NULL, NULL, NULL, 0},
+	{"deviceid", "Set device id, Usage: set deviceid xxxx", systemNameSet, NULL, NULL, CLI_SUPERUSER, 0},
+	{"dhcp", "Set DHCP status, Usage: set dhcp enable|disable", dhcpSet, NULL, NULL, NULL, 0},
+	{"ipaddr", "Set IP address, Usage: set ipaddr 192.168.1.2", ipAddrSet, &applyActionTbl[APPLY_IFADDR], NULL,CLI_SUPERUSER, 0},
+    {"netmask", "Set IP Subnet Mask, Usage: set netmask 24", ipmaskSet, &applyActionTbl[APPLY_IFADDR],NULL, NULL, 0},
+    {"rssithr", "Set Disconnect or Connect RSSI Thresshold, Usage: set rssithr conn_value1 disconn_value2",
      rssithrSet, NULL, NULL, NULL, 0},
 	//{"connrssithr", "Set connect rssi threshold, Usage: set connrssithr -10", connectRssiThresholdSet, NULL, NULL, NULL, 0},
 	//{"disrssithr", "Set disnnect rssi threshold, Usage: set disrssithr -20", disconnectRssiThresholdSet, NULL, NULL, NULL, 0},
-	{"dhcp", "Set dhcp status, Usage: set security enable|disable", dhcpSet, NULL, NULL, NULL, 0},
-	{"ipaddr", "Set IP address, Usage: Usage: set ipaddr 192.168.1.2", ipAddrSet, &applyActionTbl[APPLY_IFADDR], NULL,CLI_SUPERUSER, 0},
-    {"netmask", "Set IP subnet mask, Usage: set netmask 24", ipmaskSet, &applyActionTbl[APPLY_IFADDR],NULL, NULL, 0},
-    {"security", "Set security, Usage: set security 3", securitySet, NULL, NULL, NULL, 0},
-    {"ssid", "Set ssid, Usage: set ssid wlan", ssidSet, NULL, NULL, NULL, 0},
-	{"deviceid", "Set device id, Usage: set deviceid xxxx", systemNameSet, NULL, NULL, CLI_SUPERUSER, 0},
+    {"security", "Set Security, Usage: set security ? for detail help", securitySet, NULL, NULL, NULL, 0},
+    {"ssid", "Set Desired SSID, Usage: set ssid xxxx", ssidSet, NULL, NULL, NULL, 0},
 
     PARSE_TOKEN_DELIMITER
 };
 
 struct parse_token_s cmdTbl[] = {
-    {"?", "Display CLI command list", helpCmdHandler, NULL, NULL, CLI_HIDDENCMD,0},
-    {"apply", "Apply configuration changes", applycfgCmdHandler, NULL, NULL, NULL, 0},
-	{"cancelcfg", "cancel configuration", cancelcfgCmdHandler, NULL, NULL, CLI_HIDDENCMD,0},
-	{"forcequit", "access linux system", accessCmdHandler, NULL, NULL, CLI_HIDDENCMD,0},
+    {"?", "Display Command List", helpCmdHandler, NULL, NULL, CLI_HIDDENCMD,0},
+    {"apply", "Apply Configuration Changes", applycfgCmdHandler, NULL, NULL, NULL, 0},
+	{"cancel", "Cancel Configuration", cancelcfgCmdHandler, NULL, NULL, CLI_HIDDENCMD,0},
+    {"debug", "Enable Debug", debugCmdHandler, NULL, NULL, CLI_HIDDENCMD, 0},
+    {"factory", "Factory Default", factorydefaultSet, NULL, NULL, NULL, 0},
+	{"forcequit", "Access to Linux System", accessCmdHandler, NULL, NULL, CLI_HIDDENCMD,0},
     {"get", NULL, genericCmdHandler, NULL, getCmdTbl, NULL, 0},
-    {"help", "Display CLI command list", helpCmdHandler, NULL, NULL, NULL, 0},
-    {"quit", "Logoff", quitCmdHandler, NULL, NULL, CLI_HIDDENCMD, 0},
-
-    {"reboot", "Reboot access point", rebootCmdHandler, NULL, NULL, NULL, 0},
-    {"factory", "Factory default", factorydefaultSet, NULL, NULL, NULL, 0},
+    {"help", "Display command List", helpCmdHandler, NULL, NULL, NULL, 0},
+    //{"quit", "Logoff", quitCmdHandler, NULL, NULL, CLI_HIDDENCMD, 0},
+    {"mfg", "mfg test command", mfgCmdHandler, NULL, NULL, CLI_HIDDENCMD, 0},
+    {"reboot", "Reboot Device", rebootCmdHandler, NULL, NULL, NULL, 0},
     {"set", NULL, genericCmdHandler, NULL, setCmdTbl, NULL, 0},
-    {"debug", "enable debug", debugCmdHandler, NULL, NULL, CLI_HIDDENCMD, 0},
-    {"mfg", "mfg", mfgCmdHandler, NULL, NULL, CLI_HIDDENCMD, 0},
-    {"version", "Software version", versionHandler, NULL, NULL, NULL, 0},
 
     PARSE_TOKEN_DELIMITER
 };

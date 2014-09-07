@@ -134,6 +134,22 @@ void sig_act_release(int sig)
 	printf("release_time = %3.3f ms\r\n",release_time);
 	period = release_time - press_time;
 	gPressTime = 0 ;
+
+    /* if during mfg reset button test, just create flag and return*/
+    if(period <= 20000)
+    {
+        struct stat bt_flag_stat;
+        
+        if(stat("/tmp/button_test",&bt_flag_stat)==0)
+        {
+            /* button pressed detect*/
+            system("echo detected > /tmp/button_detected");
+            printf("%s,%d: Press button detected!\n", __func__, __LINE__);
+
+            return;
+        }
+    }
+
 	
 	if(period <=500 || period >= 60000)
 	{

@@ -126,6 +126,7 @@ int disconnectRssiThresholdSet(CLI *pCli, char *pToken, struct parse_token_s *pN
 int RssiThresholdGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int rssiGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int macGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl);
+int snGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int ssidGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int dhcpGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl);
 int dhcpSet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl);

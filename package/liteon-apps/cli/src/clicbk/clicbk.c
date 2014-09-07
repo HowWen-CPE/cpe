@@ -22,7 +22,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <sys/time.h>
-
+#include <sys/stat.h>
 #include "cli.h"
 #include "clicbk.h"
 #include "clicbklib.h"
@@ -1433,6 +1433,24 @@ int macGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
 #endif
 	return CLI_PARSE_OK;
 }
+
+  /***********************************************************************
+  * Function Name : snGet
+  * Description    :  get sn
+  * Input		  : @pCli, cli control structure
+  * 				   @pToken, token
+  * 				   @pNxtTbl, next token
+  * Output		  : 
+  * Return value  : CLI_PARSE_OK, command success
+  ***********************************************************************/
+int snGet(CLI *pCli, char *pToken, struct parse_token_s *pNxtTbl)
+{
+    /* show sn*/
+    system("boarddata get sn");
+
+    return CLI_PARSE_OK;
+}
+
   /***********************************************************************
   * Function Name : ssidGet
   * Description    :  get ssid
@@ -2483,6 +2501,37 @@ int mfgCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
         {
             uiPrintf("%s\n", status); 
         }
+    }
+    else  if(!strcmp(subcmd, "buttontest") || !strcmp(subcmd, "button"))
+    {
+        struct stat bt_flag_stat;
+        int wait_secs=20;
+
+
+        uiPrintf("Please press button in 20 seconds!\n");
+
+        system("[ -f /tmp/button_detected ] && rm /tmp/button_detected -fr");
+        system("echo test>  /tmp/button_test");
+
+        while(wait_secs--)
+        {
+            if(stat("/tmp/button_detected",&bt_flag_stat)==0)
+            {
+                /* button pressed detect*/
+                uiPrintf("Press button detected!\n");
+                return CLI_PARSE_OK;
+            }else
+            {
+                /* button isn't pressed*/
+            }
+
+            usleep(500000);
+        }
+
+        uiPrintf("Press button isn't detected in 20 seconds!\n");
+
+        system("[ -f /tmp/button_test ] && rm /tmp/button_test -fr");
+        system("[ -f /tmp/button_detected ] && rm /tmp/button_detected -fr");
     }
     else
     {
