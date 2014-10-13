@@ -1,0 +1,12 @@
+--- busybox-1.19.4-old/networking/telnetd.c	2014-08-03 05:49:35.989095499 -0700
++++ busybox-1.19.4/networking/telnetd.c	2014-10-13 13:17:29.104179380 -0700
+@@ -501,6 +501,9 @@ int telnetd_main(int argc UNUSED_PARAM,
+ #endif
+ 	INIT_G();
+ 
++ 	/* set access mode to telnet, used for telnet session limit*/
++	putenv("ACCESS_MODE=telnet");
++
+ 	/* -w NUM, and implies -F. -w and -i don't mix */
+ 	IF_FEATURE_TELNETD_INETD_WAIT(opt_complementary = "wF:w+:i--w:w--i";)
+ 	/* Even if !STANDALONE, we accept (and ignore) -i, thus people

@@ -12,4 +12,17 @@ cat << EOF
 EOF
 fi
 
+#
+# only allow total 5 session for telnet and serial console
+#
+if [ "${ACCESS_MODE}" = "telnet" ]; then
+    cur_session=`ps | grep "/bin/ash --login" | wc -l`
+    
+    if [ $cur_session -gt 5 ]; then
+        echo "Login failed: too much session!"
+        exit 0
+    fi
+
+fi 
+
 exec /bin/ash --login
