@@ -159,6 +159,6 @@
 		crypto=0;
 	}
 	if(NR!=2) {
-		print Cell "\t" Address "\t" Mode "\t" Channel "\t" Level "\t" WMode "\t" crypto "\t" AuthMode "\t" ESSID 
+		print Cell "," Address "," Mode "," Channel "," Level "," WMode "," crypto "," AuthMode "," ESSID 
 	}
 }

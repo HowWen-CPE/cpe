@@ -3973,8 +3973,11 @@ static int parse_scan_ap_list(SCAN_AP_LIST *ap_list, char *result_file)
 	char apSsid[64] = {0};
 	char apWMode[8] = {0};
 	char apBssid[32] = {0};
+	char buffer[128] = {0}, *p_token = buffer, *token;
 
-    
+    //debug
+	system("cat /tmp/scanrlt.log");
+	
     /*Set ap_num as 0 first*/
     ap_list->ap_num = 0;
     if (NULL == (fp = fopen(result_file,"r")))
@@ -3985,11 +3988,12 @@ static int parse_scan_ap_list(SCAN_AP_LIST *ap_list, char *result_file)
     }
     else
     {
-        while(!feof(fp)){
+        while(fgets(buffer, sizeof(buffer), fp)){
 			memset(apBssid, 0x00, sizeof(apBssid));
 			memset(apSsid, 0x00, sizeof(apSsid));
 			memset(apWMode, 0x00, sizeof(apWMode));
 
+			#if 0
 			ret = fscanf(fp, "%d%s%d%d%d%s%d%d%[^\n]", &apNum, apBssid, 
 				&apNTWType, &apChannel, &apSignal, apWMode, &apEncryption, &apAuthmode, apSsid);
 			if ( 9 != ret) {
@@ -3997,6 +4001,56 @@ static int parse_scan_ap_list(SCAN_AP_LIST *ap_list, char *result_file)
 				printf("fsacnf End\n");
 				break;
 			}
+			#endif
+			/* apnum | address | mode | channel | signal | athwmode | encryption | authMode | essid
+			  * 03      26:FB:8D:00:67:BD       4       149     46      A/N     3       3       "wlan_1"
+			  */
+			//apnum
+			token = strtok(buffer, ",");
+			printf("token = %s\n", token);
+			if(NULL != token)
+				apNum = atoi(token);
+			//address
+			token = strtok(NULL, ",");
+			printf("token = %s\n", token);
+			if(NULL != token)
+				strncpy(apBssid, token, 31);
+			//mode
+			token = strtok(NULL, ",");
+			printf("token = %s\n", token);
+			if(NULL != token)
+				apNTWType = atoi(token);
+			//channel
+			token = strtok(NULL, ",");
+			printf("token = %s\n", token);
+			if(NULL != token)
+				apChannel = atoi(token);
+			//signal strength
+			token = strtok(NULL, ",");
+			printf("token = %s\n", token);
+			if(NULL != token)
+				apSignal = atoi(token);
+			//apWMode
+			token = strtok(NULL, ",");
+			printf("token = %s\n", token);
+			if(NULL != token)
+				strncpy(apWMode, token, 7);
+			//apEncryption
+			token = strtok(NULL, ",");
+			printf("token = %s\n", token);
+			if(NULL != token)
+				apEncryption = atoi(token);
+			//apAuthmode
+			token = strtok(NULL, ",");
+			if(NULL != token)
+				apAuthmode = atoi(token);
+			//essid
+			token = strtok(NULL, ",");
+			printf("token = %s\n", token);
+			if(NULL != token)
+				strncpy(apSsid, token, 63);
+			printf("num: %d, bssid: %s, type: %d, channel: %d, signal: %d, mode: %s, encryption: %d, authmode: %d, ssid: %s\n",
+				apNum, apBssid, apNTWType, apChannel, apSignal, apWMode, apEncryption, apAuthmode, apSsid);
 
 			memset(ap_list->ap[apNum - 1].ssid, 0x00, sizeof(ap_list->ap[apNum - 1].ssid));
             memset(ap_list->ap[apNum - 1].bssid, 0x00, sizeof(ap_list->ap[apNum - 1].bssid));
@@ -4031,7 +4085,7 @@ static int parse_scan_ap_list(SCAN_AP_LIST *ap_list, char *result_file)
 			ap_list->ap[apNum -1].auth_mode = apAuthmode;
 
 			/* AP SSID*/
-			strncpy(ap_list->ap[apNum -1].ssid, &apSsid[2], (strlen(apSsid) - 3));
+			strncpy(ap_list->ap[apNum -1].ssid, &apSsid[1], (strlen(apSsid) - 3));
 
 			/* AP Number */
 			ap_list->ap_num = apNum;

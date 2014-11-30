@@ -2628,6 +2628,412 @@ int debugCmdHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
 	
 	return CLI_PARSE_OK;
  }
+
+#define SINGLE_RADIO
+#define RADIO_2G        0
+#define RADIO_5G        1
+#define WLAN_MODE_AP    0
+#define WLAN_MODE_STA   1
+#define T_SUCCESS  0
+#define T_FAILURE  -1
+
+int convert_vap_id(int radio, unsigned char vap_id)
+{
+	 int actual_id = 0;
+	 
+#ifdef SINGLE_RADIO
+	 actual_id = vap_id*2;
+#else
+ 
+	 if(RADIO_2G == radio)
+		 {
+			 actual_id = vap_id*2;
+		 }
+	 else if(RADIO_5G == radio)
+		 {
+			 actual_id = vap_id*2 + 1;
+		 }
+#endif
+	 return actual_id;
+}
+
+ /**
+  * \brief	Construct VAP Interface Name according to radio(2.4G/5G), 
+  * 		vapi_id(0~7) and mode(WLAN_MODE_AP|WLAN_MODE_STA)
+  * \return T_SUCCESS on Success, T_FAILURE on Failure
+  * \param[out] name the generated interface name
+  * \param[in] radio RADIO_2G or RADIO_5G
+  * \param[in] vap_id 0~7
+  * \param[in] mode WLAN_MODE_AP or WLAN_MODE_STA
+  */
+ int construct_vap(char* name, unsigned int radio, unsigned char vap_id, unsigned char mode)
+ {
+	 int actual_id;
+ 
+	 actual_id = convert_vap_id(radio, vap_id); 
+	 if(RADIO_2G == radio)
+		 {
+			 if(WLAN_MODE_AP == mode)
+				 {
+				   sprintf(name, "%s%d", AP_NAME_2G, actual_id);
+				 }
+			 else if(WLAN_MODE_STA == mode)
+				 {
+				   sprintf(name, "%s%d", STA_NAME_2G, actual_id);
+				 }
+			 else
+				 {
+				   printf("ERROR:Construct vap error!\n");
+					return T_FAILURE;
+				 }
+		 }
+	 else if(RADIO_5G == radio)
+	   {
+			 if(WLAN_MODE_AP == mode)
+				 {
+				   sprintf(name, "%s%d", AP_NAME_5G, actual_id);
+				 }
+			 else if(WLAN_MODE_STA == mode)
+				 {
+				   sprintf(name, "%s%d", STA_NAME_5G, actual_id);
+				 }
+			 else
+				 {
+				   printf("ERROR:Construct vap error!\n");
+					return T_FAILURE;
+				 }
+	   }
+	 else
+		 {
+			 printf("ERROR:Construct vap error!\n");
+			 return T_FAILURE;
+		 }
+ 
+	 return T_SUCCESS;
+ }
+
+ /***********************************************************************
+* Function Name : scanDeviceApHandler
+* Description	 : restore config to factory
+* Input 		: @pCli, cli control structure
+*					 @pToken, token
+*					 @pNxtTbl, next token
+* Output		: 
+* Return value	: CLI_PARSE_OK, command success
+***********************************************************************/
+#define SCAN_AP_DONE_FILE "/tmp/cli_scandone.log"
+#define SCAN_AP_RESULT_FILE "/tmp/cli_scanrlt.log"
+
+static int start_scan_ap(int radio, char *result_file, char *done_flag_file)
+{
+
+	int rMode = 0;
+	char cmd[128] = {0};
+	char vap_name[8] = {0};
+	char ModeTmpBuf[32] = {0};
+	
+	if (RADIO_2G == radio) {
+		ezplib_get_attr_val("wl_mode_rule", 0, "mode", ModeTmpBuf, 32, EZPLIB_USE_CLI);
+		
+		if (!strcmp(ModeTmpBuf, "ap")) {
+			rMode = WLAN_MODE_AP;
+		}
+		else if (!strcmp(ModeTmpBuf, "client")) {
+			rMode = WLAN_MODE_STA;
+		}
+	}
+	else if (RADIO_5G == radio) {
+		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", ModeTmpBuf, 32, EZPLIB_USE_CLI);
+		
+		if (!strcmp(ModeTmpBuf, "ap")) {
+			rMode = WLAN_MODE_AP;
+		}
+		else if (!strcmp(ModeTmpBuf, "client")) {
+			rMode = WLAN_MODE_STA;
+		}
+	}
+	else {
+		fprintf(stderr, "ERROR:Radio error!\n");
+        return T_FAILURE;
+	}
+	
+	construct_vap(vap_name, radio, 0, rMode);
+	
+    /* foreground scan to speedup get scan result*/
+    sprintf(cmd, "iwlist %s scanning fore | awk -f /etc/wl/rogueap.awk > %s && echo done >%s &", 
+    vap_name, result_file, done_flag_file);
+	//printf("%s\n", cmd);
+    system(cmd);
+
+    return 0;
+}
+
+static int parse_scan_ap_list(SCAN_AP_LIST *ap_list, char *result_file)
+{
+	FILE *fp;
+	int ret = 0;
+	int apNum = 0;
+	int apNTWType = 0;
+	int apChannel = 0;
+	int apSignal = 0;
+	int apEncryption = 0;
+	int apAuthmode = 0;
+	char cmd[128] = {0};
+	char apSsid[64] = {0};
+	char apWMode[8] = {0};
+	char apBssid[32] = {0};
+	char buffer[128] = {0}, *p_token = buffer, *token;
+
+	//system("cat /tmp/cli_scanrlt.log");
+    
+    /*Set ap_num as 0 first*/
+    ap_list->ap_num = 0;
+    if (NULL == (fp = fopen(result_file,"r")))
+    {
+        fprintf(stderr, "Ap list is NONE\n");
+
+        return T_FAILURE;        
+    }
+    else
+    {	
+    	lseek(fp,0,SEEK_SET);
+        while(fgets(buffer, sizeof(buffer), fp)){
+			memset(apBssid, 0x00, sizeof(apBssid));
+			memset(apSsid, 0x00, sizeof(apSsid));
+			memset(apWMode, 0x00, sizeof(apWMode));
+
+			/* apnum | address | mode | channel | signal | athwmode | encryption | authMode | essid
+			  * 03      26:FB:8D:00:67:BD       4       149     46      A/N     3       3       "wlan_1"
+			  */
+			//apnum
+			token = strtok(buffer, ",");
+			if(NULL != token)
+				apNum = atoi(token);
+			//address
+			token = strtok(NULL, ",");
+			if(NULL != token)
+				strncpy(apBssid, token, 31);
+			//mode
+			token = strtok(NULL, ",");
+			if(NULL != token)
+				apNTWType = atoi(token);
+			//channel
+			token = strtok(NULL, ",");
+			if(NULL != token)
+				apChannel = atoi(token);
+			//signal strength
+			token = strtok(NULL, ",");
+			if(NULL != token)
+				apSignal = atoi(token);
+			//apWMode
+			token = strtok(NULL, ",");
+			if(NULL != token)
+				strncpy(apWMode, token, 7);
+			//apEncryption
+			token = strtok(NULL, ",");
+			if(NULL != token)
+				apEncryption = atoi(token);
+			//apAuthmode
+			token = strtok(NULL, ",");
+			if(NULL != token)
+				apAuthmode = atoi(token);
+			//essid
+			token = strtok(NULL, ",");
+			if(NULL != token)
+				strncpy(apSsid, token, 63);
+			//printf("num: %d, bssid: %s, type: %d, channel: %d, signal: %d, mode: %s, encryption: %d, authmode: %d, ssid: %s\n",
+				//apNum, apBssid, apNTWType, apChannel, apSignal, apWMode, apEncryption, apAuthmode, apSsid);
+
+			memset(ap_list->ap[apNum - 1].ssid, 0x00, sizeof(ap_list->ap[apNum - 1].ssid));
+            memset(ap_list->ap[apNum - 1].bssid, 0x00, sizeof(ap_list->ap[apNum - 1].bssid));
+			memset(ap_list->ap[apNum - 1].rssi_str, 0x00, sizeof(ap_list->ap[apNum - 1].rssi_str));
+			memset(ap_list->ap[apNum - 1].wmode, 0x00, sizeof(ap_list->ap[apNum - 1].wmode));
+
+			/* AP BSSID */
+			strcpy(ap_list->ap[apNum - 1].bssid, apBssid);
+
+			/* AP Network Type: 0->Auto; 1->Ad-hoc; 2->Managed; 3->Repeater; 4->Master; 5->Secondary; 6->Monitor; 7->Unknow*/
+			if (4 == apNTWType) {
+				ap_list->ap[apNum - 1].network_type = 1;
+			}
+			else {
+				ap_list->ap[apNum - 1].network_type = 0;
+			}
+
+			/* AP Channel*/
+			ap_list->ap[apNum - 1].channel = apChannel;
+
+			/* AP Signal*/
+			ap_list->ap[apNum - 1].rssi = - apSignal;
+			sprintf(ap_list->ap[apNum - 1].rssi_str, "%ddBm", ap_list->ap[apNum - 1].rssi);
+			
+			/* AP Wireless Mode*/
+			strcpy(ap_list->ap[apNum - 1].wmode, apWMode);
+
+			/* AP Encryption*/
+			ap_list->ap[apNum -1].encry = apEncryption;
+
+			/* AP Auth_mode*/
+			ap_list->ap[apNum -1].auth_mode = apAuthmode;
+
+			/* AP SSID*/
+			strncpy(ap_list->ap[apNum -1].ssid, &apSsid[1], (strlen(apSsid) - 3));
+
+			/* AP Number */
+			ap_list->ap_num = apNum;
+			if(ap_list->ap_num == 128)
+            {
+                break;
+            }
+        }
+    }
+
+    fclose(fp);
+
+    sprintf(cmd, "rm -rf %s", result_file);
+	system(cmd);
+
+    return T_SUCCESS; 
+}
+
+int ap_list_cmp(const void*a, const void*b)
+{
+	return ((SCAN_AP_STATE*)a)[0].rssi < ((SCAN_AP_STATE*)b)[0].rssi;
+}
+
+char *gauth[] = {
+	"None",
+	"WPAPSK",
+	"WPA2PSK",
+	"WPA2-Mixed-PSK",
+	"WPA",
+	"WPA2",
+	"WPA2-Mixed",
+	"WEP"
+};
+
+char *gencry[] = {
+	"None",
+	"AES",
+	"TKIP",
+	//"IKIPAES",
+	"AES/TKIP",
+	"WEP"
+};
+
+int scanDeviceApHandler(CLI * pCli, char *pToken, struct parse_token_s *pNxtTbl)
+{
+	int num = 0, i, j = 0;
+	int NetworkType;
+	char TMPssid[256], SSID[256];
+	unsigned char tmpRadio[188], tmp_SSID[256], *p_ssid, *p_SSID, *tmpAuth, tmpEncry[16], tmpImg[40];
+	unsigned char radiocheck[8];
+	char *ssid_value;
+	int max_wait = 0;
+	FILE *fp=NULL;
+	char cmd[128]={0};
+	int ret =0;
+	int assoc = 0;
+	char assoc_ssid[256] = {0};
+	char assoc_bssid[32] = {0};
+
+	SCAN_AP_LIST *ap_list = (SCAN_AP_LIST *)malloc(sizeof(SCAN_AP_LIST));
+	memset(ap_list, 0x00, sizeof(SCAN_AP_LIST));
+
+    /* scan ap and write the result to /tmp/scandone*/
+    start_scan_ap(0, SCAN_AP_RESULT_FILE, SCAN_AP_DONE_FILE);
+
+	 /* wait for scan finished*/
+    while(NULL == (fp = fopen(SCAN_AP_DONE_FILE,"r")))
+    {
+        sleep(2);
+
+        max_wait++;
+
+        if(max_wait == 30)
+        {
+            printf("%s: scan isn't finised!\n", __func__);
+            break;
+        }
+    }
+
+    /* delete scan done file*/
+    if(fp)
+    {
+        fclose(fp);
+
+        sprintf(cmd, "rm -fr %s", SCAN_AP_DONE_FILE);
+        system(cmd);  
+    }
+
+	/* parse scan result*/
+	if (parse_scan_ap_list(ap_list, SCAN_AP_RESULT_FILE) < 0) {
+		free(ap_list);
+		printf("get ap_list error\n");
+		return 0;
+	}
+
+	qsort(&ap_list->ap, ap_list->ap_num,sizeof(ap_list->ap[0]), ap_list_cmp);
+
+	if(ap_list->ap_num > 128)
+	   ap_list->ap_num = 128;
+
+	{
+		int i = 0;
+		int iarray[130] = { 0 };
+		printf("Ssid\t\t\tBssid\t\t\tRssi\t\tChannel\tEncryption\tAuth\n");
+		while (i < ap_list->ap_num) {
+			memset(radiocheck, 0x00, sizeof(radiocheck));
+			memset(tmpRadio, 0x00, sizeof(tmpRadio));
+			memset(tmpImg, 0x00, sizeof(tmpImg));
+			memset(TMPssid, 0x00, sizeof(TMPssid));
+
+			int j;
+			for (j = 0; j < sizeof(ap_list->ap[i].bssid); j++)
+				ap_list->ap[i].bssid[j] = toupper(ap_list->ap[i].bssid[j]);
+
+			if (ap_list->ap[i].auth_mode > 7) {
+				printf("auth mode error %d\n", ap_list->ap[i].auth_mode);
+			}
+			tmpAuth = gauth[ap_list->ap[i].auth_mode];
+			memset(tmpEncry, 0x00, sizeof(tmpEncry));
+			if (ap_list->ap[i].encry > 4) {
+				if ((ap_list->ap[i].encry > 33) || (ap_list->ap[i].encry < 10)) {
+					sprintf(tmpEncry, "----");
+					printf("encry error %d\n", ap_list->ap[i].encry);
+				} else {
+					sprintf(tmpEncry, "%s/%s", gencry[(ap_list->ap[i].encry / 10)], gencry[(ap_list->ap[i].encry % 10)]);
+				}
+			}
+			else {
+				sprintf(tmpEncry, gencry[ap_list->ap[i].encry]);
+			}
+
+			printf("%s\t\t\t%s\t%s\t\t%d\t%s\t%s\n", ap_list->ap[i].ssid, 
+				ap_list->ap[i].bssid, ap_list->ap[i].rssi_str, 
+				ap_list->ap[i].channel, tmpEncry, tmpAuth);
+
+			i++;
+		}
+	}
+
+	free(ap_list);
+
+   /* 
+     * Workaround:
+     *   restart sta to fix connect is lost after scanning sometimes
+     *   let child process to restart station
+     */
+    if(fork() == 0){
+        set_config_sta(RADIO_2G);
+        exit(0);
+    }else
+    {
+        /* parent: do nothing*/
+    }
+
+	return T_SUCCESS; 
+}
   /***********************************************************************
  * Function Name : factorydefaultSet
  * Description    : restore config to factory

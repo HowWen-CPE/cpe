@@ -120,6 +120,7 @@ struct parse_token_s cmdTbl[] = {
 	{"cancel", "Cancel Configuration", cancelcfgCmdHandler, NULL, NULL, CLI_HIDDENCMD,0},
     {"debug", "Enable Debug", debugCmdHandler, NULL, NULL, CLI_HIDDENCMD, 0},
     {"factory", "Factory Default", factorydefaultSet, NULL, NULL, NULL, 0},
+    {"scanning", "Scanning around ap", scanDeviceApHandler, NULL, NULL, NULL, 0},
 	{"forcequit", "Access to Linux System", accessCmdHandler, NULL, NULL, CLI_HIDDENCMD,0},
     {"get", NULL, genericCmdHandler, NULL, getCmdTbl, NULL, 0},
     {"help", "Display command List", helpCmdHandler, NULL, NULL, NULL, 0},
