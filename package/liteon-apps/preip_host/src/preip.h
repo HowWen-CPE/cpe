@@ -182,6 +182,13 @@ struct nl_preip_info {
 #define ESSID_OCTETS 256
 #define HTTPS_OCTETS 128
 
+/* RSSI threshold limit*/
+#define CONN_RSSI_MAX -45
+#define CONN_RSSI_MIN -85
+#define DISCONN_RSSI_MAX -55
+#define DiSCONN_RSSI_MIN -95
+#define CONN_DISCONN_RSSI_MIN_DELTA 10
+
 /* for parameter get */
 #define PREIP_PASSWORD 1
 #define PREIP_LOCALMAC 2

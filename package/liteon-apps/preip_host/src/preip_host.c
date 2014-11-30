@@ -19,6 +19,9 @@ typedef unsigned int u32;
 
 #include "preip.h"
 
+pid_t getpid();
+
+
 typedef int T_INT32;
 
 #ifdef PRE_IP_DEBUG
@@ -50,11 +53,8 @@ T_INT32 preip_send(int skfd,int type,char *buf, int len)
     
     struct sockaddr_nl src_local;
     struct sockaddr_nl dest_kernel;
-    socklen_t dest_kernel_len;
     struct nlmsghdr *nlh = NULL;
-    struct nlmsghdr rcvNlh;
-    fd_set rfds;
-    struct timeval tv;
+
     int errorNo = 0;
 	
     printf("preipSend: type=%d, len=%d\n", type, len);
@@ -102,7 +102,7 @@ T_INT32 preip_send(int skfd,int type,char *buf, int len)
         memcpy(((struct  nl_preip_info*)NLMSG_DATA(nlh))->nli_buf,buf,len);
 
     sendto(skfd,(char*)nlh,nlh->nlmsg_len,0,(struct sockaddr*)&dest_kernel,sizeof(dest_kernel));
-normal_return:
+
     printf("%s return ok\n",__func__);
     free(nlh);
     return 0;
@@ -116,16 +116,17 @@ malloc_error:
 
 T_INT32 preip_waiting(int skfd,char *buf, int len)
 {
-    
     struct sockaddr_nl dest_kernel;
     socklen_t dest_kernel_len;
     struct nlmsghdr* rcvNlh;
     fd_set rfds;
     int errorNo = 0;
     int ret = 0;
-
+    
+#ifdef PRE_IP_DEBUG
     printf("preipWaiting: entry\n");
-  
+#endif
+
     FD_ZERO(&rfds);
     FD_SET(skfd, &rfds);
 	
@@ -137,13 +138,20 @@ T_INT32 preip_waiting(int skfd,char *buf, int len)
 
     dest_kernel_len = sizeof(dest_kernel);
     if (select(skfd+1, &rfds, NULL, NULL, NULL) > 0){
-        //printf("%s,%d: select\n", __func__, __LINE__);
         if ((ret=recvfrom(skfd, rcvNlh,NLMSG_LENGTH(sizeof(struct nl_preip_info)),0,(struct sockaddr*)&dest_kernel,&dest_kernel_len)) > 0){
+
+#ifdef PRE_IP_DEBUG
             printf("%s,%d: recvfrom ret=%d\n", __func__, __LINE__, ret);
-             if(((struct  nl_preip_info*)NLMSG_DATA(rcvNlh))->nli_type == NLI_TYPE_RUN){
-                 printf("%s,%d: len=%d\n", __func__, __LINE__, len);
-                 memcpy(buf,((struct  nl_preip_info*)NLMSG_DATA(rcvNlh))->nli_buf,len);
-        	  goto normal_return;/*have ack response*/
+#endif
+            if(len > ret)
+            {
+                printf("%s,%d: recvfrom length error %d < %d\n", __func__, __LINE__, len, ret);
+            }
+
+            if(((struct  nl_preip_info*)NLMSG_DATA(rcvNlh))->nli_type == NLI_TYPE_RUN)
+            {
+                memcpy(buf,((struct  nl_preip_info*)NLMSG_DATA(rcvNlh))->nli_buf,len);
+                goto normal_return; /*have ack response*/
     	    }else{
     	        errorNo = 1;
     	    }
@@ -152,9 +160,12 @@ T_INT32 preip_waiting(int skfd,char *buf, int len)
         }
     }else
         errorNo = 3;
-            	
+    
+  	
     printf("%s return error, error no:%d\n",__func__,errorNo);
+
     free(rcvNlh);
+    
     return -1;
 normal_return:
     printf("%s return ok\n",__func__);
@@ -207,7 +218,7 @@ int preip_discovery_func(u8 *dst_mac)
     memcpy(preip_buf.preip_data_buf.req_data.mac, dst_mac, 6);
 
     /* copy anything to reserved data, just for test*/
-    strcpy(&preip_buf.preip_data_buf.req_data.reserved_data, "!@#$%^&*");
+    strcpy((char *)&preip_buf.preip_data_buf.req_data.reserved_data, "!@#$%^&*");
 
     /* send it to driver module*/
     preip_send(skfd, NLI_TYPE_RUN, (char *)&preip_buf, sizeof(preip_buf));
@@ -331,22 +342,18 @@ int preip_discovery_func(u8 *dst_mac)
         break;
     }
 #endif
+    return 0;
 
 }
 
 int preip_set_func(u8 *dst_mac, u8 id, u8 *val_buf)
 {
     char readBuf[PREIP_MSG_SIZE];
-    char ifname[16];
-    char cmd[150];
-    pid_t pid;
+
     FramePreIpAll_t preip_all;
     Preip_set_item_t *p_set_item;
     
     int skfd, ret, readlen=0;
-
-
-        printf("--id=%d\n", id);
 
     memset((char *)&preip_all, 0x0, sizeof(preip_all));
 
@@ -358,12 +365,11 @@ int preip_set_func(u8 *dst_mac, u8 id, u8 *val_buf)
     /* set dst_mac */
     memcpy(p_set_item->mac, dst_mac, 6);
 
-
     
     switch(id)
     {
     case PREIP_ID_SET_DEVID:
-        strncpy(p_set_item->item.deviceid, val_buf, 32);
+        strncpy((char *)p_set_item->item.deviceid, (char *)val_buf, 32);
         break;
     case PREIP_ID_SET_DHCP:
         p_set_item->item.dhcp = *val_buf;
@@ -377,7 +383,7 @@ int preip_set_func(u8 *dst_mac, u8 id, u8 *val_buf)
         printf("*val_buf=%d\n", *val_buf);
         break;
     case PREIP_ID_SET_ESSID:
-        strncpy(p_set_item->item.essid, val_buf, 32);
+        strncpy((char *)p_set_item->item.essid, (char *)val_buf, 32);
         break;
     case PREIP_ID_SET_RSSITHR:
         p_set_item->item.rssi_threshold[0] = val_buf[0];
@@ -408,8 +414,6 @@ int preip_set_func(u8 *dst_mac, u8 id, u8 *val_buf)
     }    
     preip_send(skfd, NLI_TYPE_HELLO, NULL, 0);
 
-
-    
     preip_send(skfd, NLI_TYPE_RUN, (char *)&preip_all, sizeof(preip_all));
 
     sleep(1);
@@ -452,13 +456,13 @@ int inet_atonmac(const char *s, char *addr, int addr_len)
 
     char Tmac[] = "HH:HH:HH:HH:HH:HH";
     unsigned char mac_addr[18];
-    char *tmp = mac_addr;
+    //char *tmp = mac_addr;
     char c;
     char *ptr = (char *)s;
     int val = 0;
     int i, j;
     int allzero = 1;
-    int all0xff = 1;
+    //int all0xff = 1;
 
     memset(mac_addr,0,sizeof(mac_addr));
 
@@ -528,7 +532,7 @@ int inet_atonmac(const char *s, char *addr, int addr_len)
  * Return value  : T_TRUE, valid ip address
  *                       T_FALSE, illegal ip address
  ***********************************************************************/
-int IsValidIpAddress(u8 *IpAddr)
+int IsValidIpAddress(char *IpAddr)
 {
 	T_INT32 ii,kk;
 
@@ -574,7 +578,12 @@ int main(int argc, char *argv[])
     {
         printf("argv[1]=%s\n", argv[1]);
 
-        if(!strcmp(argv[1], "get") || !strcmp(argv[1], "g"))
+        if(!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))
+        {
+            usage();
+            return 0;
+        }
+        else if(!strcmp(argv[1], "get") || !strcmp(argv[1], "g"))
         {
             /* get*/
 
@@ -591,7 +600,7 @@ int main(int argc, char *argv[])
                 }
 
                 /* check if valid mac*/
-                if (inet_atonmac(argv[2], dst_addr, MAC_ADDR_LEN) < 0) {
+                if (inet_atonmac(argv[2], (char *)dst_addr, MAC_ADDR_LEN) < 0) {
                     printf("Invalid MAC address. Should be as xx:xx:xx:xx:xx:xx\n");
                     return -1;
                 }
@@ -627,7 +636,7 @@ int main(int argc, char *argv[])
             }
 
             /* check if valid mac*/
-            if (inet_atonmac(argv[2], dst_addr, MAC_ADDR_LEN) < 0) {
+            if (inet_atonmac(argv[2], (char *)dst_addr, MAC_ADDR_LEN) < 0) {
                 printf("Invalid MAC address. Should be as xx:xx:xx:xx:xx:xx\n");
                 usage();
                 return -1;
@@ -638,7 +647,7 @@ int main(int argc, char *argv[])
                 if(!strcmp(argv[3], "apply") || !strcmp(argv[3], "app"))
                 {
                     /* apply and save*/
-
+                    preip_set_func(dst_addr, PREIP_ID_SET_APPLY_SAVE, NULL);
                 }else
                 {
                     printf("Invalid input!\n");
@@ -655,10 +664,10 @@ int main(int argc, char *argv[])
 
                     if(strlen(argv[4]) > 1 && strlen(argv[4]) < 33 )
                     {
-                        preip_set_func(dst_addr, PREIP_ID_SET_DEVID, argv[4]);
+                        preip_set_func(dst_addr, PREIP_ID_SET_DEVID, (u8 *)argv[4]);
                     }else
                     {
-                        printf("Invalid input. SSID lenght is from 1 to 32\n");
+                        printf("Invalid input. SSID length is from 1 to 32\n");
 
                         return -1;
                     }
@@ -737,7 +746,7 @@ int main(int argc, char *argv[])
                 {
                     if(strlen(argv[4]) > 1 && strlen(argv[4]) < 33 )
                     {
-                        preip_set_func(dst_addr, PREIP_ID_SET_ESSID, argv[4]);
+                        preip_set_func(dst_addr, PREIP_ID_SET_ESSID, (u8 *)argv[4]);
                     }else
                     {
                         printf("Invalid input. SSID lenght is from 1 to 32\n");
@@ -747,31 +756,55 @@ int main(int argc, char *argv[])
                 }
                 else if(!strcmp(argv[3], "rssithr") || !strcmp(argv[3], "rssi"))
                 {
-                    u8 rssithr[2];
+                    char rssithr[2], conn_rssi, disconn_rssi;
                         
                     if(argc == 6)
                     {
-                        rssithr[0] = atoi(argv[4]);
-                        rssithr[1] = atoi(argv[5]);
+                        conn_rssi = atoi(argv[4]);
+                    	disconn_rssi = atoi(argv[5]);
+              
+                        /* check value*/  
+                    	if (conn_rssi > CONN_RSSI_MAX || conn_rssi < CONN_RSSI_MIN) {
+                    		printf("Connrssithr must be from %d to %d\n", CONN_RSSI_MAX, CONN_RSSI_MIN);
+                    		return -1;
+                    	}
 
-                        /* TODO: check value here*/
-                        
-                    }else
+                    	if (disconn_rssi > DISCONN_RSSI_MAX || disconn_rssi < DiSCONN_RSSI_MIN) {
+                    		printf("Disconnrssi must be from %d to %d\n", DISCONN_RSSI_MAX, DiSCONN_RSSI_MIN);
+                    		return -1;
+                    	}
+
+                    	if ((conn_rssi - disconn_rssi) < CONN_DISCONN_RSSI_MIN_DELTA) {
+                    		printf("Connrssithr must be greater than Disonnrssithr %d\n", CONN_DISCONN_RSSI_MIN_DELTA);
+                    		return -1;
+                    	}
+                    }
+                    else
                     {
                         printf("Invalid input. Usage: \n"
-                               "    cpe_ctrl set xx:xx:xx:xx:xx:xx rssithr xxx yyy\n"
-                               "    e.g. cpe_ctrl set 00:03:74:00:00:10 rssithr -85 -95\n");
+                               "    cpe_ctrl set xx:xx:xx:xx:xx:xx rssithr connrssi disconnrssi\n"
+                               "    e.g. cpe_ctrl set 00:03:74:00:00:10 rssithr -85 -95\n"
+                               "    range of connrssi: -45 to -85\n"
+                               "    range of disconnrssi: -55 to -95\n"
+                               "    connrssi - disconnrssi >= 10\n");
                         return -1;
                     }
-
-                    preip_set_func(dst_addr, PREIP_ID_SET_RSSITHR, rssithr);
+                    
+                    rssithr[0] = conn_rssi;
+                    rssithr[1] = disconn_rssi;
+                    
+                    preip_set_func(dst_addr, PREIP_ID_SET_RSSITHR, (u8 *)rssithr);
                 }
                 else if(!strcmp(argv[3], "security") || !strcmp(argv[3], "sec"))
                 {
                     /* TODO: check value */
                     
                 
-                    preip_set_func(dst_addr, PREIP_ID_SET_SECURITY, "");
+                    preip_set_func(dst_addr, PREIP_ID_SET_SECURITY, (u8 *)"");
+                }else
+                {
+                    printf("Invalid input.\n");
+                    usage();
                 }
             }
 
@@ -792,6 +825,7 @@ int main(int argc, char *argv[])
         /* discovery process*/
         preip_discovery_func(dst_addr);
     }
-    
+
+    return 0;
 }
 

@@ -177,6 +177,12 @@ struct nl_preip_info {
     char nli_buf[512];			/*message buffer*/
 };
 
+/* RSSI threshold limit*/
+#define CONN_RSSI_MAX -45
+#define CONN_RSSI_MIN -85
+#define DISCONN_RSSI_MAX -55
+#define DiSCONN_RSSI_MIN -95
+#define CONN_DISCONN_RSSI_MIN_DELTA 10
 
 #define NAME_OCTETS 256
 #define ESSID_OCTETS 256
