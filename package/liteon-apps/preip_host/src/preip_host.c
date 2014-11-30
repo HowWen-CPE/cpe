@@ -345,6 +345,9 @@ int preip_set_func(u8 *dst_mac, u8 id, u8 *val_buf)
     
     int skfd, ret, readlen=0;
 
+
+        printf("--id=%d\n", id);
+
     memset((char *)&preip_all, 0x0, sizeof(preip_all));
 
     p_set_item = &preip_all.preip_data_buf.set_item_data;
@@ -354,6 +357,8 @@ int preip_set_func(u8 *dst_mac, u8 id, u8 *val_buf)
 
     /* set dst_mac */
     memcpy(p_set_item->mac, dst_mac, 6);
+
+
     
     switch(id)
     {
@@ -367,7 +372,9 @@ int preip_set_func(u8 *dst_mac, u8 id, u8 *val_buf)
         memcpy(p_set_item->item.ip, val_buf, 4);
         break;
     case PREIP_ID_SET_MASK:
+
         p_set_item->item.mask = *val_buf;
+        printf("*val_buf=%d\n", *val_buf);
         break;
     case PREIP_ID_SET_ESSID:
         strncpy(p_set_item->item.essid, val_buf, 32);
@@ -405,7 +412,11 @@ int preip_set_func(u8 *dst_mac, u8 id, u8 *val_buf)
     
     preip_send(skfd, NLI_TYPE_RUN, (char *)&preip_all, sizeof(preip_all));
 
-#if 1
+    sleep(1);
+
+    return 0;
+
+#if 0
     /* wait for response*/
     memset(readBuf, 0x0, sizeof(readBuf));
     while(1){
@@ -509,6 +520,32 @@ int inet_atonmac(const char *s, char *addr, int addr_len)
 	return 0;
 }
 
+/***********************************************************************
+ * Function Name : IsValidIpAddress
+ * Description    : check if the ip address is legal
+ * Input         : IpAddr, ip address
+ * Output        :
+ * Return value  : T_TRUE, valid ip address
+ *                       T_FALSE, illegal ip address
+ ***********************************************************************/
+int IsValidIpAddress(u8 *IpAddr)
+{
+	T_INT32 ii,kk;
+
+	for (ii = 24; ii >= 0; ii -= 8)
+	{
+		/* Skip any leading stuff (e.g., spaces, '[') */
+		while (IpAddr != '\0' && !isdigit(*IpAddr))
+			IpAddr++;
+		kk =(T_INT32)atoi(IpAddr);
+		if (kk < 0 || 255 < kk)
+			return FALSE;
+		if ( ((IpAddr = strchr(IpAddr, '.')) == NULL) && (ii > 0) )
+			return FALSE;
+		IpAddr++;
+	}
+	return TRUE;
+}
 
 void usage(void)
 {
@@ -615,23 +652,98 @@ int main(int argc, char *argv[])
 
                 if(!strcmp(argv[3], "deviceid") || !strcmp(argv[3], "dev"))
                 {
-                    preip_set_func(dst_addr, PREIP_ID_SET_DEVID, argv[4]);
+
+                    if(strlen(argv[4]) > 1 && strlen(argv[4]) < 33 )
+                    {
+                        preip_set_func(dst_addr, PREIP_ID_SET_DEVID, argv[4]);
+                    }else
+                    {
+                        printf("Invalid input. SSID lenght is from 1 to 32\n");
+
+                        return -1;
+                    }
                 }
                 else if(!strcmp(argv[3], "dhcp"))
                 {
-                    preip_set_func(dst_addr, PREIP_ID_SET_DHCP, argv[4]);
+                    u8 dhcp;
+                    
+                    if(!strcmp(argv[4], "enabled") || !strcmp(argv[4], "en") || !strcmp(argv[4], "enable"))
+                    {
+                        dhcp = 1;
+                    }
+                    else if(!strcmp(argv[4], "disabled") || !strcmp(argv[4], "dis") || !strcmp(argv[4], "disable"))
+                    {
+                        dhcp = 0;
+                    }
+                    else
+                    {
+                        printf("Invalid input. Usage: \n"
+                               "    cpe_ctrl set xx:xx:xx:xx:xx:xx dhcp enable/disable\n"
+                               "    e.g. cpe_ctrl set 00:03:74:00:00:10 dhcp disable\n");
+
+                        return -1;
+                    }
+
+                    preip_set_func(dst_addr, PREIP_ID_SET_DHCP, &dhcp);
+                    
                 }
                 else if(!strcmp(argv[3], "ip"))
                 {
-                    preip_set_func(dst_addr, PREIP_ID_SET_IP, argv[4]);
+                    int ip[4];
+                    u8 u8_ip[4];
+                    
+                    if(IsValidIpAddress(argv[4]))
+                    {
+                        sscanf(argv[4], "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
+                        
+                        u8_ip[0]=(u8)ip[0];
+                        u8_ip[1]=(u8)ip[1];
+                        u8_ip[2]=(u8)ip[2];
+                        u8_ip[3]=(u8)ip[3];
+                        
+                        preip_set_func(dst_addr, PREIP_ID_SET_IP, u8_ip);
+                        
+                    }else
+                    {
+                        printf("Invalid input. Usage: \n"
+                               "    cpe_ctrl set xx:xx:xx:xx:xx:xx ip yy.yy.yy.yy\n"
+                               "    e.g. cpe_ctrl set 00:03:74:00:00:10 ip 192.168.1.2\n");
+
+                        return -1;
+                    }
                 }
                 else if(!strcmp(argv[3], "netmask"))
                 {
-                    preip_set_func(dst_addr, PREIP_ID_SET_MASK, argv[4]);
+                    u8 netmask;
+
+                    netmask = atoi(argv[4]);
+
+                    printf("netmask=%d\n", netmask);
+                    if(strlen(argv[4])>=1 && strlen(argv[4])<=2 && netmask > 1 && netmask < 31)
+                    {
+                        printf("call preip_set_func\n");
+                        preip_set_func(dst_addr, PREIP_ID_SET_MASK, &netmask);
+
+                    }else
+                    {
+                        printf("Invalid input. Usage: \n"
+                               "    cpe_ctrl set xx:xx:xx:xx:xx:xx netmask yy.yy.yy.yy\n"
+                               "    e.g. cpe_ctrl set 00:03:74:00:00:10 netmask 24\n");
+
+                        return -1;
+                    }
                 }
                 else if(!strcmp(argv[3], "ssid"))
                 {
-                    preip_set_func(dst_addr, PREIP_ID_SET_ESSID, argv[4]);
+                    if(strlen(argv[4]) > 1 && strlen(argv[4]) < 33 )
+                    {
+                        preip_set_func(dst_addr, PREIP_ID_SET_ESSID, argv[4]);
+                    }else
+                    {
+                        printf("Invalid input. SSID lenght is from 1 to 32\n");
+
+                        return -1;
+                    }
                 }
                 else if(!strcmp(argv[3], "rssithr") || !strcmp(argv[3], "rssi"))
                 {
@@ -651,7 +763,6 @@ int main(int argc, char *argv[])
                                "    e.g. cpe_ctrl set 00:03:74:00:00:10 rssithr -85 -95\n");
                         return -1;
                     }
-
 
                     preip_set_func(dst_addr, PREIP_ID_SET_RSSITHR, rssithr);
                 }

@@ -156,8 +156,8 @@ typedef struct PreipFramInfo
 
 #define IFACE_NAME_LAN			"br0"
 
-#define PREIP_MSG_SIZE (512)
-#define PREIP_PARAM_MSG_SIZE (512)	
+#define PREIP_MSG_SIZE (600)
+#define PREIP_PARAM_MSG_SIZE (600)	
 
 #define PREIP_MAX_UNITS	1
 #define PREIP_PKTQ_MAX_COUNT 4

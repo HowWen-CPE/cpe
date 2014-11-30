@@ -149,7 +149,7 @@ A_BOOL preip_response(PreipFramInfo_t *frame_info)
 #endif
     dev_queue_xmit(skb);
 
-    return 0
+    return 0;
 }
 
 
@@ -213,105 +213,6 @@ A_BOOL PreIP_FrameValid(u8* pbuf, int len)
     return TRUE;
 }
 
-
-/* get the preip type from packet */
-u8 PreIP_FrameType(u8* frame, int len)
-{
-    u8 cmd = 0;
-    FramePreIpHead_t* pPreIP;
-
-#ifdef PRE_IP_DEBUG
-    printk("PreIP_FrameType: in\n");
-#endif
-
-    if ((NULL == frame)||(PREIP_PKT_MAX_LEN < len)||
-        (FALSE == PreIP_FrameValid(frame, len)))
-    {
-#ifdef PRE_IP_DEBUG
-        printk("PreIP_FrameType: Invalid Frame\n");
-#endif
-        return PRE_IP_ERROR;
-    }
-
-    FRAME_PREIP_GET(frame, pPreIP);
-    PREIP_CMD_GET(pPreIP, cmd);
-
-    if (cmd <= PRE_IP_RESET)
-        return cmd;
-    else
-        return PRE_IP_ERROR;
-}
-
-
-static int unhandledPkt = 0;
-#define MAXUNHANDLEDPKT 100
-/* Process the Rx PreIP Procotol Frame */
-/* Frame start from mac layer */
-
-A_BOOL PreIP_Receive(struct sk_buff *skb)
-{
-    u8* frame = skb->data;
-    u8* srcmac[MACADDR_OCTETS];
-    int len = skb->len;
-    struct net_device *dev = skb->dev;
-    PreipFramInfo_t frame_info;
-    int ret = TRUE;
-    
-#ifdef PRE_IP_DEBUG
-    printk("PreIP_Receive: in\n");
-#endif
-
-    
-    if(!preip_pid){
-        printk("preip deamon do not run\n");
-        kfree_skb(skb);
-        return FALSE;
-    }
-    if ((NULL == skb)||(PREIP_PKT_MAX_LEN < len)||
-        (FALSE == PreIP_FrameValid(frame, len)))
-    {
-#ifdef PRE_IP_DEBUG
-        printk("PreIP_Receive: Invalid Frame\n");
-#endif
-        kfree_skb(skb);
-        return FALSE;
-    }
-
-#if 0
-    if(!strcmp(dev->name,"br0") && wrongInterface())
-#endif
-    if(!strcmp(dev->name,"br0"))
-     {
-        kfree_skb(skb);
-        return FALSE;
-    }
-
-    printk("Recv dev->name=%s\n", dev->name);
-    
-
-    if(unhandledPkt > MAXUNHANDLEDPKT){
-        printk("PreIP_Receive: too much packets \n");
-        if(unhandledPkt > 3*MAXUNHANDLEDPKT){
-            kfree_skb(skb);
-            return FALSE;
-        }
-    }
-
-    FRAME_SRCMAC_GET(skb->mac_header, frame_info.from_mac);
-    
-    strcpy(frame_info.from_dev_name, dev->name);
-
-    skb_pull(skb, FRAME_SAP_OCTETS);
-
-    memcpy((u8 *)&frame_info.preip_all, skb->data, sizeof(frame_info.preip_all));
-    
-    /* send packet to user space*/
-    if(nl_preip_transmit((u8 *)&frame_info, sizeof(frame_info)) == -1)
-        kfree_skb(skb);
-    else
-        unhandledPkt ++; 
-    return ret;
-}
 
 
 int nl_preip_transmit(char*buf, int len)
@@ -401,6 +302,97 @@ void nl_preip_receive(struct sk_buff *skb)
     mutex_unlock(&preip_mutex);
 }
 
+static int unhandledPkt = 0;
+#define MAXUNHANDLEDPKT 100
+/* Process the Rx PreIP Procotol Frame */
+/* Frame start from mac layer */
+
+A_BOOL PreIP_Receive(struct sk_buff *skb)
+{
+    u8* frame = skb->data;
+    u8* srcmac[MACADDR_OCTETS];
+    int len = skb->len;
+    struct net_device *dev = skb->dev;
+    PreipFramInfo_t frame_info;
+    int ret = TRUE;
+    
+#ifdef PRE_IP_DEBUG
+    printk("PreIP_Receive: in\n");
+#endif
+
+    
+    if(!preip_pid){
+        printk("preip deamon do not run\n");
+        kfree_skb(skb);
+        return FALSE;
+    }
+    if ((NULL == skb)||(PREIP_PKT_MAX_LEN < len)||
+        (FALSE == PreIP_FrameValid(frame, len)))
+    {
+#ifdef PRE_IP_DEBUG
+        printk("PreIP_Receive: Invalid Frame\n");
+#endif
+        kfree_skb(skb);
+        return FALSE;
+    }
+
+#if 0
+    if(!strcmp(dev->name,"br0") && wrongInterface())
+#endif
+    if(!strcmp(dev->name,"br0"))
+     {
+        kfree_skb(skb);
+        return FALSE;
+    }
+
+    printk("Recv dev->name=%s\n", dev->name);
+    
+
+    if(unhandledPkt > MAXUNHANDLEDPKT){
+        printk("PreIP_Receive: too much packets \n");
+        if(unhandledPkt > 3*MAXUNHANDLEDPKT){
+            kfree_skb(skb);
+            return FALSE;
+        }
+    }
+
+    FRAME_SRCMAC_GET(skb->mac_header, frame_info.from_mac);
+    
+    strcpy(frame_info.from_dev_name, dev->name);
+
+    skb_pull(skb, FRAME_SAP_OCTETS);
+
+    memcpy((u8 *)&frame_info.preip_all, skb->data, sizeof(frame_info.preip_all));
+    
+    /* send packet to user space*/
+    if(nl_preip_transmit((u8 *)&frame_info, sizeof(frame_info)) == -1)
+        kfree_skb(skb);
+    else
+        unhandledPkt ++; 
+    return ret;
+}
+
+
+A_BOOL preIP_rcv(struct sk_buff *skb, struct net_device *dev,
+		   struct packet_type *pt, struct net_device *orig_dev)
+{
+
+#ifdef PRE_IP_DEBUG
+    printk("preIP_rcv:come in\n");
+#endif
+
+    if ((skb = skb_share_check(skb, GFP_ATOMIC)) == NULL)
+        goto out_of_mem;
+#ifdef PRE_IP_DEBUG
+    printk("PreIP_Receive: above\n");
+#endif
+
+    /*return NF_HOOK(NF_ARP, NF_ARP_IN, skb, dev, NULL, );*/
+    return PreIP_Receive(skb);
+
+out_of_mem:
+	return 0;
+}
 
 /*
  *	Called once on startup.
@@ -435,27 +427,6 @@ static void __exit preIP_Exit(void)
     dev_remove_pack(&preIP_packet_type);
 }
 
-
-A_BOOL preIP_rcv(struct sk_buff *skb, struct net_device *dev,
-		   struct packet_type *pt, struct net_device *orig_dev)
-{
-
-#ifdef PRE_IP_DEBUG
-    printk("preIP_rcv:come in\n");
-#endif
-
-    if ((skb = skb_share_check(skb, GFP_ATOMIC)) == NULL)
-        goto out_of_mem;
-#ifdef PRE_IP_DEBUG
-    printk("PreIP_Receive: above\n");
-#endif
-
-    /*return NF_HOOK(NF_ARP, NF_ARP_IN, skb, dev, NULL, );*/
-    return PreIP_Receive(skb);
-
-out_of_mem:
-	return 0;
-}
 
 module_init(preIP_Init);
 module_exit(preIP_Exit);

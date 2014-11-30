@@ -267,14 +267,14 @@ int preip_get_security(u8 *security)
 
 int preip_set_deviceid(u8 *deviceid)
 {
-    printf("preip_set_deviceid\n");
+    printf("preip_set_deviceid: %s\n", deviceid);
 
     return 0;
 }
 
 int preip_set_dhcp(u8 dhcp)
 {
-    printf("preip_set_dhcp\n");
+    printf("preip_set_dhcp: %s\n", dhcp ? "enabled" : "disabled");
 
     return 0;
 }
@@ -282,7 +282,7 @@ int preip_set_dhcp(u8 dhcp)
 int preip_set_ip(u8 *ip)
 {
     
-    printf("preip_set_ip\n");
+    printf("preip_set_ip: %d.%d.%d.%d\n", ip[0], ip[1], ip[2], ip[3]);
     
     return 0;
 }
@@ -290,21 +290,21 @@ int preip_set_ip(u8 *ip)
 int preip_set_netmask(u8 netmask)
 {
 
-    printf("preip_set_netmask\n");
+    printf("preip_set_netmask: %d\n", netmask);
     
     return 0;
 }
 
 int preip_set_essid(u8 *essid)
 {
-    printf("preip_set_essid\n");
+    printf("preip_set_essid: %s\n", essid);
 
     return 0;
 }
 
 int preip_set_rssithr(u8 rssithr_conn, u8 rssithr_disconn)
 {
-    printf("preip_set_rssithr\n");
+    printf("preip_set_rssithr: %d %d\n", (char)rssithr_conn, (char)rssithr_disconn);
     
     return 0;
 }
@@ -546,13 +546,13 @@ int preip_process_set(PreipFramInfo_t *frame_info)
     switch(p_item->item_id)
     {
     case PREIP_ID_SET_DHCP:
-        preip_set_essid(p_item->item.dhcp);
+        preip_set_dhcp(p_item->item.dhcp);
         break;
     case PREIP_ID_SET_IP:
-        preip_set_essid(p_item->item.ip);
+        preip_set_ip(p_item->item.ip);
         break;
     case PREIP_ID_SET_MASK:
-        preip_set_essid(p_item->item.mask);
+        preip_set_netmask(p_item->item.mask);
         break;
     case PREIP_ID_SET_ESSID:
         preip_set_essid(p_item->item.essid);
