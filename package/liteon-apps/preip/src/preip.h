@@ -10,6 +10,80 @@
 typedef	int		A_BOOL;
 #define TRUE 1
 #define FALSE 0
+#define T_SUCCESS  0
+#define T_FAILURE  -1
+#define T_TRUE            1
+#define T_FALSE           0
+
+/* ************************************************************** */
+//for debug cli
+static A_BOOL cli_debug = 0;
+
+#define GLOBAL_CONFIGS_COUNT 20
+#define GLOBAL_ITEM_NAME_LENGTH 32
+#define GLOBAL_ITEM_TATAL_PARAMS 8
+#define GLOBAL_PARAM_NAME_LENGTH 32
+#define GLOBAL_VALUE_LENGTH 128
+
+struct param_pair {
+	char param_name[GLOBAL_PARAM_NAME_LENGTH]; // param name
+	char value[GLOBAL_PARAM_NAME_LENGTH];     //param value
+};
+
+struct item_config {
+	char name[GLOBAL_ITEM_NAME_LENGTH];       //name of config item
+	struct param_pair params[GLOBAL_ITEM_TATAL_PARAMS]; //numbers of param
+};
+
+typedef struct global_config {
+	struct item_config *item;  //config item
+	int flag;                  //0: initial value, 1: modified
+	int readonly;              //0: no, 1: yes
+	int item_index;            //item index
+} global_config_t;
+
+static global_config_t global_configs[GLOBAL_CONFIGS_COUNT];
+void init_global_config();
+void free_global_config();
+void debug_global_config();
+
+#define CLI_INDEX_NONE         -1
+#define CLI_INDEX_SSID         0
+#define CLI_INDEX_DEVICEID     1
+#define CLI_INDEX_SECURITY     2
+#define CLI_INDEX_NETMASK      3
+#define CLI_INDEX_IPADDR       4
+#define CLI_INDEX_DISCONNRSSITHR   5
+#define CLI_INDEX_CONNRSSITHR  6
+#define CLI_INDEX_ACCOUNT      7
+#define CLI_INDEX_DHCP         8
+
+#define CLI_NAME_SSID          "ssid"
+#define CLI_NAME_DEVICEID      "deviceid"
+#define CLI_NAME_SECURITY      "security"
+#define CLI_NAME_NETMASK       "netmask"
+#define CLI_NAME_IPADDR        "ipaddr"
+#define CLI_NAME_DISCONNRSSITHR    "disconnrssithr"
+#define CLI_NAME_CONNRSSIHR    "connrssithr"
+#define CLI_NAME_ACCOUNT       "account"
+#define CLI_NAME_DHCP		   "dhcp"
+
+//security
+#define SECURITY_AUTH_MODE     "authmode"
+#define SECURITY_KEY           "key"
+#define SECURITY_8021X_AUTH_TYPE      "auth_1x" /* TTLS or PEAP*/
+#define SECURITY_8021X_AUTH_USERNAME  "auth_1x_user"
+#define SECURITY_8021X_AUTH_PASSWORD  "auth_1x_pwd"
+#define SECURITY_PARAM_NUM 5
+
+//read/write
+#define ONLYREAD              1
+#define READWRITE             0
+
+#define NONE                  0
+#define IS_CHANGED            1
+
+/* ********************************************************** */
 
 /* use this device to send frame*/
 #define PREIP_NET_DEVICE_NAME "eth0"

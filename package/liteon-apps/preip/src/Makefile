@@ -38,7 +38,7 @@ APP_INSTALL_ROOT=$(ROOTFS_PATH)/sbin/
 
 #all:
 preip:
-	$(CC) $(CFLAGS) -o preipd preipd.c
+	$(CC) $(CFLAGS) -o preipd preipd.c $(NVRAM_LIB) $(WLANMW_LIB)
 	$(CC) $(CFLAGS) -o testapi testapi.c
 	$(MAKE)	-C ${KERNELPATH} SUBDIRS=$(shell pwd) modules
 
