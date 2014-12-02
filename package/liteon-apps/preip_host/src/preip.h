@@ -66,11 +66,14 @@ enum preip_id
     PREIP_ID_SET_ITEM_RESP = 0x4,
 };
 
+#define PREIP_WIFI_SEC_LEN  130
+
 /* discovery response packet*/
 typedef struct Preip_dscv_resp
 {
     u8 mac[6];             /* device mac*/
     u8 deviceid[33];       /* device id*/
+    u8 version[8];         /* firmware version*/
     u8 dhcp;               /* 0: disabled; 1: enabled. */
     u8 ip[4];              /* static ip address or dynamic ip from server*/
     u8 netmask;            /* netmask, bit number*/
@@ -81,7 +84,7 @@ typedef struct Preip_dscv_resp
     u8 rssithr_conn;       /* connect rssi threshold */
     u8 rssithr_disconn;    /* disconnect rssi threshold */
     u8 tx_power;           /* 0: full; -1: -1dB; ...; -9: -9dB; -10: min */
-    u8 security[128];      /* security */
+    u8 security[PREIP_WIFI_SEC_LEN];      /* security */
     u8 asso_status;        /* 0: Disassociated; 1: Associated*/
     u8 bssid[6];           /* associated bssid */
     u8 channel;            /* 36, 40, ..., 165*/
@@ -90,6 +93,45 @@ typedef struct Preip_dscv_resp
     u8 rssi;               /* rssi */
     u8 rssi_per_chain[3];  /* rssi for ch0, ch1, ch2 (0 for 2x2 device)*/
 } Preip_dscv_resp_t;
+
+
+//security
+#define PREIP_WIFI_SEC_AUTH_MODE_OPEN     0
+#define PREIP_WIFI_SEC_AUTH_MODE_WEP      1
+#define PREIP_WIFI_SEC_AUTH_MODE_WPAPSK   2
+#define PREIP_WIFI_SEC_AUTH_MODE_WPA2PSK  3
+#define PREIP_WIFI_SEC_AUTH_MODE_WPA      4
+#define PREIP_WIFI_SEC_AUTH_MODE_WPA2     5
+#define PREIP_WIFI_SEC_AUTH_MODE_PEAP     0
+#define PREIP_WIFI_SEC_AUTH_MODE_TTLS     1
+
+/* security format in packet*/
+typedef struct preip_wifi_security
+{
+    u8 authmode;           /* 0~5: open, wep, wpa-psk, wpa2-psk, wpa, wpa2*/
+
+    union wifi_sec
+    {
+        struct wep
+        {
+            u8 key_type;       /* 0: 64bit; 1: 128bit*/
+            u8 key_idx;        /* 0 to 3*/
+            u8 key[64];        /* key*/
+        }sec_wep;
+
+        struct psk
+        {
+            u8 key[64];        /* passphrase*/
+        }sec_psk;
+        
+        struct wpa              
+        {
+            u8 authtype;      /* 0: peap; 1: ttls*/
+            u8 user[64];      /* user name*/
+            u8 password[64];  /* password*/
+        }sec_wpa;
+    }wifi_sec;
+}preip_wifi_security_t;
 
 
 /* sub IDs of set item*/
@@ -118,7 +160,7 @@ typedef struct Preip_set_item
         u8 mask;
         u8 essid[33];
         u8 rssi_threshold[2];
-        u8 security[128];
+        u8 security[PREIP_WIFI_SEC_LEN];
     }item;
 } Preip_set_item_t;
 
@@ -178,10 +220,6 @@ struct nl_preip_info {
 };
 
 
-#define NAME_OCTETS 256
-#define ESSID_OCTETS 256
-#define HTTPS_OCTETS 128
-
 /* RSSI threshold limit*/
 #define CONN_RSSI_MAX -45
 #define CONN_RSSI_MIN -85
@@ -235,5 +273,4 @@ struct nl_preip_info {
 //#endif
 
 #endif	// __PREIP_H__
-
 

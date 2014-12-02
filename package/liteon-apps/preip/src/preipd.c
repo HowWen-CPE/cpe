@@ -312,6 +312,43 @@ int preip_set_rssithr(u8 rssithr_conn, u8 rssithr_disconn)
 int preip_set_security(u8 *security)
 {
     printf("preip_set_security\n");
+    
+    preip_wifi_security_t *preip_sec = (preip_wifi_security_t *)security;
+
+    switch(preip_sec->authmode)
+    {
+    case PREIP_WIFI_SEC_AUTH_MODE_OPEN:
+        printf("open\n");
+        break;
+    case PREIP_WIFI_SEC_AUTH_MODE_WPAPSK:
+#ifdef PRE_IP_DEBUG
+        printf("wpa-psk: %s\n",preip_sec->wifi_sec.sec_psk.key);
+#endif
+        break;
+    case PREIP_WIFI_SEC_AUTH_MODE_WPA2PSK:
+#ifdef PRE_IP_DEBUG
+        printf("wpa2-psk: %s\n",preip_sec->wifi_sec.sec_psk.key);
+#endif
+        break;
+    case PREIP_WIFI_SEC_AUTH_MODE_WPA:
+#ifdef PRE_IP_DEBUG
+        printf("wpa:\n    authtype:%s\n", (preip_sec->wifi_sec.sec_wpa.authtype==PREIP_WIFI_SEC_AUTH_MODE_PEAP)?"peap":"ttls");
+        printf("    user:%s\n", (char *)preip_sec->wifi_sec.sec_wpa.user);
+        printf("    password:%s\n", (char *)preip_sec->wifi_sec.sec_wpa.password);
+#endif
+        break;   
+    case PREIP_WIFI_SEC_AUTH_MODE_WPA2:
+#ifdef PRE_IP_DEBUG
+        printf("wpa2:\n    authtype:%s\n", (preip_sec->wifi_sec.sec_wpa.authtype==PREIP_WIFI_SEC_AUTH_MODE_PEAP)?"peap":"ttls");
+        printf("    user:%s\n", (char *)preip_sec->wifi_sec.sec_wpa.user);
+        printf("    password:%s\n", (char *)preip_sec->wifi_sec.sec_wpa.password);
+#endif
+        break;
+    case PREIP_WIFI_SEC_AUTH_MODE_WEP:
+    default:
+        printf("Unsupported security authmode %d\n", preip_sec->authmode);
+        break;
+    }
 
     return 0;
 }

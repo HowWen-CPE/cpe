@@ -1,3 +1,8 @@
+/*****************************************************************************
+  File Name     : preip_host.c
+  Description   : preip layer 2 control process at user space.
+******************************************************************************/
+
 
 #include <sys/types.h>		
 #include <sys/socket.h>	
@@ -10,9 +15,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define PRE_IP_DEBUG
+//#define PRE_IP_DEBUG
+//#define DUMP_PACKET_CONTENT
 
-//#define PREIP_DAEMON_INCLUDE
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
@@ -56,9 +61,11 @@ T_INT32 preip_send(int skfd,int type,char *buf, int len)
     struct nlmsghdr *nlh = NULL;
 
     int errorNo = 0;
-	
+
+#ifdef PRE_IP_DEBUG	
     printf("preipSend: type=%d, len=%d\n", type, len);
-    
+#endif
+
     nlh = (struct nlmsghdr *)malloc(NLMSG_SPACE(sizeof(struct nl_preip_info)));
 	
     if(nlh == NULL)
@@ -103,7 +110,6 @@ T_INT32 preip_send(int skfd,int type,char *buf, int len)
 
     sendto(skfd,(char*)nlh,nlh->nlmsg_len,0,(struct sockaddr*)&dest_kernel,sizeof(dest_kernel));
 
-    printf("%s return ok\n",__func__);
     free(nlh);
     return 0;
 error_return:
@@ -168,7 +174,11 @@ T_INT32 preip_waiting(int skfd,char *buf, int len)
     
     return -1;
 normal_return:
+    
+#ifdef PRE_IP_DEBUG
     printf("%s return ok\n",__func__);
+#endif
+
     free(rcvNlh);
     return ret;
 }
@@ -260,8 +270,10 @@ int preip_discovery_func(u8 *dst_mac)
 #endif
         if(preip_recv_buf.preip_hdr.id == PREIP_ID_DISCOVERY_RESP)
         {
+            preip_wifi_security_t *preip_sec = (preip_wifi_security_t *)p_resp->security;
+            
             printf("Discovery Reponse\n");
-
+            printf("============================\n");
             /* bellow is the setting*/
             printf("MAC: %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x\n", 
                 p_resp->mac[0], p_resp->mac[1],p_resp->mac[2],
@@ -274,10 +286,34 @@ int preip_discovery_func(u8 *dst_mac)
             printf("Connect Rssi Threshold: %d\n", (char)p_resp->rssithr_conn);
             printf("Disconnect Rssi Threshold: %d\n", (char)p_resp->rssithr_disconn);    
 
-            /* TODO: show security*/
-            printf("Security: %s\n", "XXX TODO XXXX"); 
-            
-            
+            /* show security*/
+            switch(preip_sec->authmode)
+            {
+            case PREIP_WIFI_SEC_AUTH_MODE_OPEN:
+                printf("Security: open\n");
+                break;
+            case PREIP_WIFI_SEC_AUTH_MODE_WPAPSK:
+                printf("Security: wpa-psk %s\n",preip_sec->wifi_sec.sec_psk.key);
+                break;
+            case PREIP_WIFI_SEC_AUTH_MODE_WPA2PSK:
+                printf("Security: wpa2-psk %s\n",preip_sec->wifi_sec.sec_psk.key);
+                break;
+            case PREIP_WIFI_SEC_AUTH_MODE_WPA:
+            case PREIP_WIFI_SEC_AUTH_MODE_WPA2:
+                printf("Security: %s %s %s %s\n",
+                    preip_sec->authmode == PREIP_WIFI_SEC_AUTH_MODE_WPA?"wpa":"wpa2", 
+                    (preip_sec->wifi_sec.sec_wpa.authtype==PREIP_WIFI_SEC_AUTH_MODE_PEAP)?"peap":"ttls",
+                    (char *)preip_sec->wifi_sec.sec_wpa.user,
+                    (char *)preip_sec->wifi_sec.sec_wpa.password);
+                break;
+            case PREIP_WIFI_SEC_AUTH_MODE_WEP:
+                printf("Security: wep\n");
+                break;
+            default:
+                printf("Unsupported security authmode %d\n", preip_sec->authmode);
+                break;
+            }
+
             /* bellow is status*/
             printf("Connect Status: %s\n", p_resp->asso_status ? "Associated":"Disassociated");
 
@@ -333,12 +369,11 @@ int preip_discovery_func(u8 *dst_mac)
             continue;
         }
         
-
-#ifdef PRE_IP_DEBUG
+        printf("\n");
+        
+#ifdef DUMP_PACKET_CONTENT
         hex_dump((u8 *)&preip_recv_buf, 100);
-        printf("get done\n");
 #endif
-
         break;
     }
 #endif
@@ -378,9 +413,7 @@ int preip_set_func(u8 *dst_mac, u8 id, u8 *val_buf)
         memcpy(p_set_item->item.ip, val_buf, 4);
         break;
     case PREIP_ID_SET_MASK:
-
         p_set_item->item.mask = *val_buf;
-        printf("*val_buf=%d\n", *val_buf);
         break;
     case PREIP_ID_SET_ESSID:
         strncpy((char *)p_set_item->item.essid, (char *)val_buf, 32);
@@ -390,8 +423,7 @@ int preip_set_func(u8 *dst_mac, u8 id, u8 *val_buf)
         p_set_item->item.rssi_threshold[1] = val_buf[1];
         break;
     case PREIP_ID_SET_SECURITY:
-        /* TODO: set p_set_item->item.security */
-        
+        memcpy(p_set_item->item.security, val_buf, PREIP_WIFI_SEC_LEN);
         break;
     case PREIP_ID_SET_APPLY_SAVE:
         break;
@@ -403,8 +435,7 @@ int preip_set_func(u8 *dst_mac, u8 id, u8 *val_buf)
     p_set_item->item_id = id;
 
 #ifdef PRE_IP_DEBUG
-    printf("preip_set_func\n");
-
+    printf("preip_set_func, id=%d\n", id);
 #endif
 	
     skfd = socket(PF_NETLINK, SOCK_RAW, NETLINK_PREIP);
@@ -524,13 +555,37 @@ int inet_atonmac(const char *s, char *addr, int addr_len)
 	return 0;
 }
 
+/*****************************************************************************
+ Prototype    : is_hex_digital_str
+ Description  : Check if the string is hex digital format
+ Input        : T_CHAR8 *str  
+ Output       : None
+ Return Value : TRUE/FALSE
+*****************************************************************************/
+int is_hex_digital_str(char *str)
+{
+    int i;
+    
+    for(i=0; i<strlen(str); i++)
+    {
+        if((str[i] >= '0' && str[i] <='9') || (str[i] >= 'a' && str[i] <='f') || (str[i] >= 'A' && str[i] <='F'))
+        {
+            continue;
+        }else{
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
 /***********************************************************************
  * Function Name : IsValidIpAddress
  * Description    : check if the ip address is legal
  * Input         : IpAddr, ip address
  * Output        :
- * Return value  : T_TRUE, valid ip address
- *                       T_FALSE, illegal ip address
+ * Return value  : TRUE, valid ip address
+ *                 FALSE, illegal ip address
  ***********************************************************************/
 int IsValidIpAddress(char *IpAddr)
 {
@@ -550,6 +605,136 @@ int IsValidIpAddress(char *IpAddr)
 	}
 	return TRUE;
 }
+
+
+/*****************************************************************************
+ Prototype    : preip_cli_parse_security
+ Description  : Parse security option from command line to preip control
+                packet
+ Input        : int argc                          
+                char *argv[]                      
+                preip_wifi_security_t *preip_sec  
+ Output       : None
+ Return Value : 0: OK; -1: fail.
+*****************************************************************************/
+int preip_cli_parse_security(int argc, char *argv[], preip_wifi_security_t *preip_sec)
+{
+    memset((char *)preip_sec, 0, sizeof(preip_wifi_security_t));
+
+    if (strcmp(argv[4], "open")==0)
+    {
+        if(argc != 5)
+        {
+            printf("Invalid input. Too many args for security open\n");
+            goto security_usage;
+        }
+
+        preip_sec->authmode = PREIP_WIFI_SEC_AUTH_MODE_OPEN;
+    }
+    else if(strcmp(argv[4], "wpa-psk")==0 || strcmp(argv[4], "wpa2-psk")==0)
+    {
+        int len_psk;
+        
+        if(argc > 6)
+        {
+            printf("Invalid input. Too many args for security %s\n", argv[4]);
+            goto security_usage;
+        }else if (argc < 6)
+        {
+            printf("Invalid input. Too less args for security %s\n", argv[4]);
+            goto security_usage;
+        }
+        
+        /* pre-shared key*/
+        len_psk=strlen(argv[5]);
+        if(len_psk < 8 || len_psk > 64){
+    		printf("Invalid input. The length of pre-shared key should be from 8 to 64\n");
+
+            return -1;
+        }
+
+        /* should be hex digital*/
+        if(len_psk == 64 && is_hex_digital_str(argv[5])!= TRUE){
+    		printf("Invalid input. The pre-shared key should be hex when length is 64 bytes\n");
+
+            return -1;
+        }
+
+        if(strcmp(argv[4], "wpa-psk")==0)
+        {
+            preip_sec->authmode = PREIP_WIFI_SEC_AUTH_MODE_WPAPSK; /* wpa-psk*/
+        }else
+        {
+            preip_sec->authmode = PREIP_WIFI_SEC_AUTH_MODE_WPA2PSK; /* wpa2-psk*/
+        }
+
+        strcpy((char *)preip_sec->wifi_sec.sec_psk.key, argv[5]); /* passphrase*/
+
+    }
+    else if(strcmp(argv[4], "wpa")==0 || strcmp(argv[4], "wpa2")==0)
+    {
+        if(argc != 8)
+        {
+            printf("Invalid input.\n");
+            goto security_usage;
+        }
+
+        if(!(strcmp(argv[5], "peap")==0 || strcmp(argv[5], "ttls")==0))
+        {
+            printf("Invalid input.\n");
+            
+            goto security_usage;
+        }
+
+        if((strlen(argv[6]) > 64)) /* username*/
+        {
+            printf("Invalid input. The length user name should no more than 64\n");
+
+            return -1;
+        }
+
+        if((strlen(argv[7]) > 64)) /* password*/
+        {
+            printf("Invalid input. The length password should no more than 64\n");
+
+            return -1;
+        }
+
+        if(strcmp(argv[4], "wpa")==0) /* wpa or wpa2*/
+        {
+            preip_sec->authmode = PREIP_WIFI_SEC_AUTH_MODE_WPA;
+        }else
+        {
+            preip_sec->authmode = PREIP_WIFI_SEC_AUTH_MODE_WPA2;
+        }
+
+        if(strcmp(argv[5], "peap")==0) /* peap or ttls*/
+        {
+            preip_sec->wifi_sec.sec_wpa.authtype = PREIP_WIFI_SEC_AUTH_MODE_PEAP;
+
+        }else
+        {
+            preip_sec->wifi_sec.sec_wpa.authtype = PREIP_WIFI_SEC_AUTH_MODE_TTLS;
+        }
+
+        strcpy((char *)(&preip_sec->wifi_sec.sec_wpa.user), argv[6]);      /* user name*/
+        strcpy((char *)(&preip_sec->wifi_sec.sec_wpa.password), argv[7]);  /* password*/
+    }
+    else if (strcmp(argv[4], "wep") == 0){
+        printf("WEP isn't supported at command line\n");
+        goto security_usage;
+    }else{
+        goto security_usage;
+    }
+
+    return 0;
+security_usage:
+    printf("    cpe_ctrl set xx:xx:xx:xx:xx:xx security open\n");
+    printf("    cpe_ctrl set xx:xx:xx:xx:xx:xx security wpa-psk/wpa2-psk passphrase\n");
+    printf("    cpe_ctrl set xx:xx:xx:xx:xx:xx security wpa/wpa2 ttls/peap username password\n");
+    return -1;
+}
+
 
 void usage(void)
 {
@@ -576,8 +761,6 @@ int main(int argc, char *argv[])
 
     if(argc > 1)
     {
-        printf("argv[1]=%s\n", argv[1]);
-
         if(!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))
         {
             usage();
@@ -727,10 +910,8 @@ int main(int argc, char *argv[])
 
                     netmask = atoi(argv[4]);
 
-                    printf("netmask=%d\n", netmask);
                     if(strlen(argv[4])>=1 && strlen(argv[4])<=2 && netmask > 1 && netmask < 31)
                     {
-                        printf("call preip_set_func\n");
                         preip_set_func(dst_addr, PREIP_ID_SET_MASK, &netmask);
 
                     }else
@@ -797,10 +978,14 @@ int main(int argc, char *argv[])
                 }
                 else if(!strcmp(argv[3], "security") || !strcmp(argv[3], "sec"))
                 {
-                    /* TODO: check value */
+                    preip_wifi_security_t preip_sec;
+
+                    if(preip_cli_parse_security(argc, argv, &preip_sec) < 0)
+                    {
+                        return -1;
+                    }
                     
-                
-                    preip_set_func(dst_addr, PREIP_ID_SET_SECURITY, (u8 *)"");
+                    preip_set_func(dst_addr, PREIP_ID_SET_SECURITY, (u8 *)&preip_sec);
                 }else
                 {
                     printf("Invalid input.\n");
@@ -816,7 +1001,6 @@ int main(int argc, char *argv[])
             usage();
             return -1;
         }
-
     }
     else
     {
