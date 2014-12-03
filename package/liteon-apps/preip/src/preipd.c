@@ -490,6 +490,30 @@ int get_value(const char *name, struct item_config *item)
 	return T_TRUE;
 }
 
+/*****************************************************************************
+ Prototype    : is_hex_digital_str
+ Description  : Check if the string is hex digital format
+ Input        : T_CHAR8 *str  
+ Output       : None
+ Return Value : TRUE/FALSE
+*****************************************************************************/
+int is_hex_digital_str(char *str)
+{
+    int i;
+    
+    for(i=0; i<strlen(str); i++)
+    {
+        if((str[i] >= '0' && str[i] <='9') || (str[i] >= 'a' && str[i] <='f') || (str[i] >= 'A' && str[i] <='F'))
+        {
+            continue;
+        }else{
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
 /*
  * get device name from config for dual radio or single radio device.
  * add by Tony 2008.2.29 -->
@@ -1397,115 +1421,106 @@ int preip_set_security(u8 *security)
 	char *option_3=NULL;
 	char *option_4=NULL;
 	struct item_config item;
-	
+    preip_wifi_security_t *preip_sec;
+    
 	memset(&item, 0, sizeof(struct item_config));
 	printf("preip_set_security\n");
 
-	#if 0
-	if(NULL == security)
-		return T_FAILURE;
+    preip_sec = (preip_wifi_security_t *)security;
 
-   if(option_m = tokenPop(pCli)){
-		if (strcmp(option_m, "open")==0){
-			if(argc != 1)
-			{
-				goto security_usage;
-			}
-			
-			strcpy(item.params[0].param_name, SECURITY_AUTH_MODE);
-			strcpy(item.params[0].value,  "disabled");
-		}else if(strcmp(option_m, "wpa-psk")==0 || strcmp(option_m, "wpa2-psk")==0){
-			if(argc != 2)
-			{
-				goto security_usage;
-			}9P}
-		   //pre-shared key
-			option_2 = tokenPop(pCli);
-		   
-			len_psk=strlen(option_2);
-			if(len_psk < 8 || len_psk > 64){
-				printf("The length of pre-shared key should be from 8 to 64\n");
+    /* security*/
+    switch(preip_sec->authmode)
+    {
+    case PREIP_WIFI_SEC_AUTH_MODE_OPEN:
+        printf("Security: open\n");
+		strcpy(item.params[0].param_name, SECURITY_AUTH_MODE);
+		strcpy(item.params[0].value,  "disabled");        
+        break;
+    case PREIP_WIFI_SEC_AUTH_MODE_WPAPSK:
+    case PREIP_WIFI_SEC_AUTH_MODE_WPA2PSK:
+        printf("Security: %s %s\n",
+            preip_sec->authmode==PREIP_WIFI_SEC_AUTH_MODE_WPAPSK?"wpa-psk":"wpa2-psk",
+            preip_sec->wifi_sec.sec_psk.key);
 
-				return T_FAILURE;
-			}
+		len_psk=strlen(preip_sec->wifi_sec.sec_psk.key);
+		if(len_psk < 8 || len_psk > 64){
+			printf("The length of pre-shared key should be from 8 to 64\n");
 
-			/* should be hex digital*/
-			if(len_psk == 64 && is_hex_digital_str(option_2)!= T_TRUE){
-				printf("The pre-shared key should be hex when length is 64 bytes\n");
+			return T_FAILURE;
+		}
 
-				return T_FAILURE;
-			}
+		/* should be hex digital*/
+		if(len_psk == 64 && is_hex_digital_str(preip_sec->wifi_sec.sec_psk.key)!= T_TRUE){
+			printf("The pre-shared key should be hex when length is 64 bytes\n");
 
-			strcpy(item.params[0].param_name, SECURITY_AUTH_MODE);
-			if(strcmp(option_m, "wpa-psk")==0){
-				strcpy(item.params[0].value,"psk"); /* wpa-psk*/
-			}else{
-				strcpy(item.params[0].value,"psk2"); /* wpa2-psk*/
-			}
-			
-			strcpy(item.params[1].param_name, SECURITY_KEY);
-			strcpy(item.params[1].value, option_2); /* key*/
-			
-		}else if(strcmp(option_m, "wpa")==0 || strcmp(option_m, "wpa2")==0){
-			if(argc != 4)
-			{
-				goto security_usage;
-			}
+			return T_FAILURE;
+		}
 
-			option_2 = tokenPop(pCli);
+		strcpy(item.params[0].param_name, SECURITY_AUTH_MODE);
+		if(preip_sec->authmode == PREIP_WIFI_SEC_AUTH_MODE_WPAPSK){
+			strcpy(item.params[0].value,"psk"); /* wpa-psk*/
+		}else{
+			strcpy(item.params[0].value,"psk2"); /* wpa2-psk*/
+		}
+		
+		strcpy(item.params[1].param_name, SECURITY_KEY);
+		strcpy(item.params[1].value, preip_sec->wifi_sec.sec_psk.key); /* key*/
 
-			if(!(strcmp(option_2, "peap")==0 || strcmp(option_2, "ttls")==0))
-			{
-				goto security_usage;
-			}
+        break;
+    case PREIP_WIFI_SEC_AUTH_MODE_WPA:
+    case PREIP_WIFI_SEC_AUTH_MODE_WPA2:
+        printf("Security: %s %s %s %s\n",
+            preip_sec->authmode == PREIP_WIFI_SEC_AUTH_MODE_WPA?"wpa":"wpa2", 
+            (preip_sec->wifi_sec.sec_wpa.authtype==PREIP_WIFI_SEC_AUTH_MODE_PEAP)?"peap":"ttls",
+            (char *)preip_sec->wifi_sec.sec_wpa.user,
+            (char *)preip_sec->wifi_sec.sec_wpa.password);
 
-			option_3 = tokenPop(pCli);
-
-			if((strlen(option_3) > 64))
+			if(strlen(preip_sec->wifi_sec.sec_wpa.user) > 64)
 			{
 				printf("The length user name should no more than 64\n");
 
-				return CLI_PARSE_NOMESSAGE;
+				return T_FAILURE;
 			}
 
-			option_4 = tokenPop(pCli);
-
-			if((strlen(option_4) > 64))
+			if(strlen(preip_sec->wifi_sec.sec_wpa.password) > 64)
 			{
 				printf("The length password should no more than 64\n");
 
-				return CLI_PARSE_NOMESSAGE;
+				return T_FAILURE;
 			}
 
 			strcpy(item.params[0].param_name, SECURITY_AUTH_MODE);
-			strcpy(item.params[0].value, option_m); /* wpa/wpa2*/
+            
+			strcpy(item.params[0].value, 
+                preip_sec->authmode==PREIP_WIFI_SEC_AUTH_MODE_WPA?"wpa":"wpa2"); /* wpa/wpa2*/
 
 			strcpy(item.params[1].param_name, SECURITY_8021X_AUTH_TYPE);
-			if(strcmp(option_2, "ttls")==0)
+			if(preip_sec->wifi_sec.sec_wpa.authtype==PREIP_WIFI_SEC_AUTH_MODE_TTLS)
 			{
 				strcpy(item.params[1].value, "0"); /* ttls*/
-			}else if(strcmp(option_2, "peap")==0)
+			}else if(preip_sec->wifi_sec.sec_wpa.authtype==PREIP_WIFI_SEC_AUTH_MODE_PEAP)
 			{
 				strcpy(item.params[1].value, "1"); /* peap*/
-			}
+			}else
+			{
+                printf("%s,%d: error type\n", __func__, __LINE__);
+            }
 
 			strcpy(item.params[2].param_name, SECURITY_8021X_AUTH_USERNAME);
-			strcpy(item.params[2].value, option_3); /* user*/
+			strcpy(item.params[2].value, preip_sec->wifi_sec.sec_wpa.user); /* user*/
 
 			strcpy(item.params[3].param_name, SECURITY_8021X_AUTH_PASSWORD);
-			strcpy(item.params[3].value, option_4); /* password*/
-			
-		}
-		else if (strcmp(option_m, "wep")==0){
-			printf("wep isn't supported at command line\n");
-		}else{
-			printf("Invalid command\n");
-		}
-   }
+			strcpy(item.params[3].value, preip_sec->wifi_sec.sec_wpa.password); /* password*/
+        break;
+    case PREIP_WIFI_SEC_AUTH_MODE_WEP:
+        printf("WEP isn't supported at command line\n");
+        break;
+    default:
+        printf("Unsupported security authmode %d\n", preip_sec->authmode);
+        break;
+    }
 
-	set_value(CLI_NAME_SECURITY, &item);
-
-	#endif
+    set_value(CLI_NAME_SECURITY, &item);
 
 	return T_SUCCESS;
 }
