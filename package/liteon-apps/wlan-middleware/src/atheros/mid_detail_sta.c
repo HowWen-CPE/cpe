@@ -564,13 +564,14 @@ int get_sta_assoc_bssid(int radio, char *bssid)
 	if(T_FAILURE == ret) {
 		return ret;
 	}
-
+	printf("%s:%d, ifacename: %s\n", __FUNCTION__, __LINE__, ifacename);
     char cmd[128] = {0};
     FILE *fin = NULL;
     char c;
     //Get the last field on line containing 'Access Point' but doesn't contains Not-Associated
     sprintf(cmd, "iwconfig %s | awk '/Access Point/{if(0==match($0, \"Not-Associated\")){print $NF}}'> /tmp/sta_bssid", ifacename);
 	system(cmd);
+	printf("%s:%d cmd=%s\n", __FUNCTION__, __LINE__, cmd);
 	//EXE_COMMAND(cmd);
 
     fin = fopen("/tmp/sta_bssid","r");
@@ -593,7 +594,7 @@ int get_sta_assoc_bssid(int radio, char *bssid)
 	}
 	
     fclose(fin);
-	//printf("bssid = %s\n", bssid);
+	printf("bssid = %s\n", bssid);
     //EXE_COMMAND("rm -f /tmp/sta_bssid");    
     system("rm -f /tmp/sta_bssid");
     /*Get STA BSSID From NVRAM*/
@@ -667,6 +668,68 @@ int get_sta_assoc_rssi(int radio, char *rssi)
 	system("rm -fr /tmp/rssi.dat");
     return T_SUCCESS;
 }
+
+int get_sta_assoc_rssi_for_preip(int radio, int *rssi1, int *rssi2)
+{
+	char TempBuf_opmode[8] = {0};
+	char ifacename[16] = {0};
+
+	ezplib_get_attr_val("system_mode", 0, "name", TempBuf_opmode, 32, EZPLIB_USE_CLI);
+	if(!strstr(TempBuf_opmode, "sta") && !strstr(TempBuf_opmode, "wisp")) {
+		fprintf(stderr, "%d@%s unsupported mode error!\r\n", __LINE__, __FUNCTION__);
+		return T_FAILURE;
+	}  
+
+	int ret = construct_vap(ifacename, radio, 0, WLAN_MODE_STA);
+	if(T_FAILURE == ret) {
+		return ret;
+	}
+
+	int num = 0;
+	int rssiV = 0;
+	char rssiStr[8] = {0};
+	char cmd[256] = {0};
+	//Chged by Andy Yu in 20140224: Assocapinfo Information Format Chged
+	sprintf(cmd, "wlanconfig %s list assocapinfo 2>/dev/null"
+		"| awk '/Chain/{gsub(\"dBm\",\"\"); print substr($0,13)}' > /tmp/rssi_preip.dat", ifacename);
+	//EXE_COMMAND(cmd);
+	system(cmd);
+
+    FILE *fp;
+    if (NULL == (fp = fopen("/tmp/rssi_preip.dat", "r"))) {
+        return T_FAILURE;
+    } 
+    else {
+		assert(NULL!=rssi1);
+		assert(NULL!=rssi2);
+		while(!feof(fp))
+		{
+			if(EOF == fscanf(fp, "%d", &rssiV))
+			{
+				//printf("Get RSSI End\n");
+				break;
+			}
+
+			sprintf(rssiStr, "%d", rssiV);
+
+			if(num == 0)
+			{
+				*rssi1 = rssiV;
+			} else if(num == 1)
+			{
+				*rssi2 = rssiV;
+			}
+			
+			num++;
+		}
+    }
+	
+    fclose(fp);
+	//EXE_COMMAND("rm -fr /tmp/rssi.dat");
+	system("rm -fr /tmp/rssi_preip.dat");
+    return T_SUCCESS;
+}
+
 
 //Added By Andy Yu in 2014/01/23: Get Ethernet Client List
 int get_ethernet_client_list(int radio, ETHERNET_CLIENT_LIST *client_list)

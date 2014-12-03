@@ -921,7 +921,9 @@ int getAPConnectStatus(int radio, int *associated)
 		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
 	}	
 	if (!strcmp(iOpMode, "client")) {
+		printf("%s:%d, iOpMode = %s\n", __FUNCTION__, __LINE__, iOpMode);
 		ret = get_sta_assoc_status(radio, &assotmp);
+		printf("%s:%d, assotmp = %d\n", __FUNCTION__, __LINE__, assotmp);
 		if (T_FAILURE == ret) {
 			*associated = 2;
 		} else {
@@ -943,7 +945,7 @@ int preip_get_asso_status(u8 *asso_status)
 	
 	//0->Disassociated, 1->Associated, 2->Unkown, 3-> --
 	getAPConnectStatus(RADIO_2G, &associated);
-	printf("%s:%d associated: %d\n", associated);
+	printf("%s:%d associated: %d\n", __FUNCTION__, __LINE__, associated);
 	switch(associated) {
 		case 1:
 			*asso_status = 1;
@@ -952,7 +954,7 @@ int preip_get_asso_status(u8 *asso_status)
 			*asso_status = 0;
 			break;
 		default:
-			*asso_status = 2;
+			*asso_status = 0;
 			
 	}
     
@@ -961,7 +963,7 @@ int preip_get_asso_status(u8 *asso_status)
 
 int preip_get_rssi(u8 *rssi)
 {
-	char rssi_arr[32] = {0};
+	int rssi1 = 0, rssi2 = 0;
 	char TempBuf[32] = {0};
 	int ret = 0;
 
@@ -972,28 +974,52 @@ int preip_get_rssi(u8 *rssi)
 
 	if (!strcmp(TempBuf, "client")) {
 		//param: 0, means first radio
-		//ret = get_sta_assoc_rssi(0, rssi_arr);
+		ret = get_sta_assoc_rssi_for_preip(RADIO_2G, &rssi1, &rssi2);
 		if (ret != 0) {
-			*rssi = 999;
+			*rssi = -200; // error rssi for
 		} else {
 			//strcpy(rssi, (u8 *)rssi_arr);
-			*rssi = -50;
+			*rssi = rssi1 > rssi2 ? rssi1:rssi2;
 		}
 	}
 
-	printf("%s:%d rssi\n");
+	printf("%s:%d rssi:%d, rssi1: %d, rssi2: %d\n", __FUNCTION__, __LINE__, (char)*rssi, rssi1, rssi2);
 
     return T_SUCCESS;
 }
 
 int preip_get_rssi_per_chain(u8 *rssi_per_chain)
 {
-    rssi_per_chain[0]=(u8)-60;
-    rssi_per_chain[1]=(u8)-61;
+	int rssi1 = 0, rssi2 = 0;
+	char TempBuf[32] = {0};
+	int ret = 0;
+
+	if(!rssi_per_chain)
+		return T_FAILURE;
+
+	rssi_per_chain[0]=(u8)-200;
+    rssi_per_chain[1]=(u8)-200;
     rssi_per_chain[2]=0;
-	printf("%s:%d \n", __FUNCTION__, __LINE__);
-	
-    return 0;
+
+	ezplib_get_attr_val("wl_mode_rule", 0, "mode", TempBuf, 32, EZPLIB_USE_CLI);
+
+	if (!strcmp(TempBuf, "client")) {
+		//param: 0, means first radio
+		ret = get_sta_assoc_rssi_for_preip(RADIO_2G, &rssi1, &rssi2);
+		if (ret != 0) {
+			rssi_per_chain[0] = (u8)-200; // chain0 error rssi
+			rssi_per_chain[1] = (u8)-200; // chain1 error rssi for
+			rssi_per_chain[2]=0;
+		} else {
+			rssi_per_chain[0]=(u8)rssi1;
+    		rssi_per_chain[1]=(u8)rssi2;
+    		rssi_per_chain[2]=0;
+		}
+	}	
+
+	printf("%s:%d rssi1: %d, rssi2: %d\n", __FUNCTION__, __LINE__, rssi1, rssi2);
+
+    return T_SUCCESS;
 }
 
 int preip_get_security(u8 *security)
@@ -1756,7 +1782,7 @@ int preip_process_discovery(int skfd, PreipFramInfo_t *frame_info)
     preip_get_netmask(&p_resp->netmask);
     preip_get_essid(p_resp->essid);
     preip_get_rssithr(&p_resp->rssithr_conn, &p_resp->rssithr_disconn);
-    //preip_get_asso_status(&p_resp->asso_status);
+    preip_get_asso_status(&p_resp->asso_status);
     preip_get_rssi(&p_resp->rssi);
     preip_get_rssi_per_chain(p_resp->rssi_per_chain);
     preip_get_security(p_resp->security);
