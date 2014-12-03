@@ -269,18 +269,22 @@ void write_to_nvram()
 
 		switch(global_configs[i].item_index) {
 			case CLI_INDEX_SSID:
+				if(cli_debug)
+					printf("%s:%d CLI_INDEX_SSID\n", __FUNCTION__, __LINE__);
 				if (!strcmp(item->params[0].param_name, CLI_NAME_SSID))
 					ezplib_replace_attr("wl0_apcli_rule", 0, "ssid", item->params[0].value);
 				
 				break;
 			case CLI_INDEX_DEVICEID:
+				if(cli_debug)
+					printf("%s:%d CLI_INDEX_DEVICEID\n", __FUNCTION__, __LINE__);
 				if (!strcmp(item->params[0].param_name, CLI_NAME_DEVICEID))
 					nvram_set("hostname", item->params[0].value);
 				
 				break;
 			case CLI_INDEX_SECURITY:
 				if(cli_debug)
-					printf("Apply security: \n");
+					printf("%s:%d Apply security\n", __FUNCTION__, __LINE__);
 				
 				for (j = 0; j < SECURITY_PARAM_NUM; j++) {
 					memset(buf, 0, sizeof(buf));
@@ -315,7 +319,9 @@ void write_to_nvram()
 				break;
 			case CLI_INDEX_NETMASK:
 				if (!strcmp(item->params[0].param_name, CLI_NAME_NETMASK)) {
-					//printf("lan0_mask: %s\n", item->params[0].value);
+					if(cli_debug)
+						printf("lan0_mask: %s\n", item->params[0].value);
+					
 					nvram_set("lan0_mask", item->params[0].value);
 					ezplib_replace_attr("lan_static_rule", 0, "mask", item->params[0].value);
 				}
@@ -323,7 +329,8 @@ void write_to_nvram()
 				break;
 			case CLI_INDEX_IPADDR:
 				if (!strcmp(item->params[0].param_name, CLI_NAME_IPADDR)) {
-					//printf("lan0_ipaddr: %s\n", item->params[0].value);
+					if(cli_debug)
+						printf("lan0_ipaddr: %s\n", item->params[0].value);
 					nvram_set("lan0_ipaddr", item->params[0].value);
 					ezplib_replace_attr("lan_static_rule", 0, "ipaddr", item->params[0].value);
 				}
@@ -348,18 +355,8 @@ void write_to_nvram()
 				if (!strcmp(item->params[0].param_name, CLI_NAME_DHCP)) {
 					if (!strcmp(item->params[0].value, "dhcp")) {
 						ezplib_replace_attr("lan0_proto", 0, "curr", "dhcp");
-						//nvram_set("lan0_ipaddr", "");
-						//nvram_set("lan0_mask", "");
 					} else {
-						//memset(buf, 0, sizeof(buf));
-						//ezplib_get_attr_val("lan_static_rule", 0, "ipaddr", buf, 128, EZPLIB_USE_CLI);
 						ezplib_replace_attr("lan0_proto", 0, "curr", "static");
-						//if (strlen(buf) <= 0) {
-						//	nvram_set("lan0_ipaddr", "192.168.1.2");
-						//	nvram_set("lan0_mask", "24");
-						//	ezplib_replace_attr("lan_static_rule", 0, "ipaddr", "192.168.1.2");
-						//	ezplib_replace_attr("lan_static_rule", 0, "mask", "24");
-						//}
 					}
 				}
 				
@@ -945,7 +942,9 @@ int getAPConnectStatus(int radio, int *associated)
 		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
 	}	
 	if (!strcmp(iOpMode, "client")) {
+		printf("%s:%d, iOpMode = %s\n", __FUNCTION__, __LINE__, iOpMode);
 		ret = get_sta_assoc_status(radio, &assotmp);
+		printf("%s:%d, assotmp = %d\n", __FUNCTION__, __LINE__, assotmp);
 		if (T_FAILURE == ret) {
 			*associated = 2;
 		} else {
@@ -967,7 +966,7 @@ int preip_get_asso_status(u8 *asso_status)
 	
 	//0->Disassociated, 1->Associated, 2->Unkown, 3-> --
 	getAPConnectStatus(RADIO_2G, &associated);
-	printf("%s:%d associated: %d\n", associated);
+	printf("%s:%d associated: %d\n", __FUNCTION__, __LINE__, associated);
 	switch(associated) {
 		case 1:
 			*asso_status = 1;
@@ -976,7 +975,7 @@ int preip_get_asso_status(u8 *asso_status)
 			*asso_status = 0;
 			break;
 		default:
-			*asso_status = 2;
+			*asso_status = 0;
 			
 	}
     
@@ -985,7 +984,7 @@ int preip_get_asso_status(u8 *asso_status)
 
 int preip_get_rssi(u8 *rssi)
 {
-	char rssi_arr[32] = {0};
+	int rssi1 = 0, rssi2 = 0;
 	char TempBuf[32] = {0};
 	int ret = 0;
 
@@ -996,28 +995,52 @@ int preip_get_rssi(u8 *rssi)
 
 	if (!strcmp(TempBuf, "client")) {
 		//param: 0, means first radio
-		//ret = get_sta_assoc_rssi(0, rssi_arr);
+		ret = get_sta_assoc_rssi_for_preip(RADIO_2G, &rssi1, &rssi2);
 		if (ret != 0) {
-			*rssi = 999;
+			*rssi = -200; // error rssi for
 		} else {
 			//strcpy(rssi, (u8 *)rssi_arr);
-			*rssi = -50;
+			*rssi = rssi1 > rssi2 ? rssi1:rssi2;
 		}
 	}
 
-	printf("%s:%d rssi\n");
+	printf("%s:%d rssi:%d, rssi1: %d, rssi2: %d\n", __FUNCTION__, __LINE__, (char)*rssi, rssi1, rssi2);
 
     return T_SUCCESS;
 }
 
 int preip_get_rssi_per_chain(u8 *rssi_per_chain)
 {
-    rssi_per_chain[0]=(u8)-60;
-    rssi_per_chain[1]=(u8)-61;
+	int rssi1 = 0, rssi2 = 0;
+	char TempBuf[32] = {0};
+	int ret = 0;
+
+	if(!rssi_per_chain)
+		return T_FAILURE;
+
+	rssi_per_chain[0]=(u8)-200;
+    rssi_per_chain[1]=(u8)-200;
     rssi_per_chain[2]=0;
-	printf("%s:%d \n", __FUNCTION__, __LINE__);
-	
-    return 0;
+
+	ezplib_get_attr_val("wl_mode_rule", 0, "mode", TempBuf, 32, EZPLIB_USE_CLI);
+
+	if (!strcmp(TempBuf, "client")) {
+		//param: 0, means first radio
+		ret = get_sta_assoc_rssi_for_preip(RADIO_2G, &rssi1, &rssi2);
+		if (ret != 0) {
+			rssi_per_chain[0] = (u8)-200; // chain0 error rssi
+			rssi_per_chain[1] = (u8)-200; // chain1 error rssi for
+			rssi_per_chain[2]=0;
+		} else {
+			rssi_per_chain[0]=(u8)rssi1;
+    		rssi_per_chain[1]=(u8)rssi2;
+    		rssi_per_chain[2]=0;
+		}
+	}	
+
+	printf("%s:%d rssi1: %d, rssi2: %d\n", __FUNCTION__, __LINE__, rssi1, rssi2);
+
+    return T_SUCCESS;
 }
 
 int preip_get_security(u8 *security)
@@ -1124,7 +1147,7 @@ int preip_set_deviceid(u8 *deviceid)
 	char sys_name[33]={0} ;
 	char *token_get = NULL;
 	int token_len = 0;
-	struct item_config item;
+	struct item_config item = {0};
 
     printf("preip_set_deviceid: %s\n", deviceid);
 	memset(&item, 0, sizeof(struct item_config));
@@ -1143,7 +1166,7 @@ int preip_set_deviceid(u8 *deviceid)
 		printf("Device name can not be empty\n");
 		return T_FAILURE;
 	}
-	strcpy(sys_name, token_get);
+	strcpy(sys_name, deviceid);
 	if(T_FALSE == check_systemname(sys_name))
 	{
 		printf("The only valid characters for a system name are letters numbers and a hyphen -_\n");
@@ -1235,10 +1258,12 @@ int preip_set_ip(u8 *ip)
 	char value[32] = {0};
 	char *br_get=NULL;
 	char br_name[32]={0};
-	struct item_config item;
+	struct item_config item = {0};
 
 	printf("preip_set_ip: %d.%d.%d.%d\n", ip[0], ip[1], ip[2], ip[3]);
-	pIP = ip;
+	pIP = value;
+	sprintf(pIP, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+	printf("ip: %s\n", pIP);
 
 	if ( verifyIP(pIP) == 0 ) {
 		printf("Invalid IP Address\n");
@@ -1294,24 +1319,28 @@ int is_integer(char *str)
 
 int preip_set_netmask(u8 netmask)
 {
- 	char *net_mask;
+ 	char *net_mask = NULL;
 	char value[32] = {0};
 	char *br_get=NULL;
-	char br_name[32]={0};
+	char buf[16]={0};
 	struct item_config item = {0};
 
 	printf("preip_set_netmask: %d\n", netmask);
 	memset(&item, 0, sizeof(struct item_config));
 
-	if ( is_integer(net_mask) && atoi(net_mask) > 0 && atoi(net_mask) <= 32) {
+	if ( netmask > 0 && netmask <= 32) {
 		//ezplib_get_attr_val("lan0_proto", 0, "curr", value, 32, EZPLIB_USE_CLI);
 		memset(&item, 0, sizeof(struct item_config));
 		get_value(CLI_NAME_DHCP, &item);
 
+		if(cli_debug)
+			printf("%s:%d dhcp:%s\n", __FUNCTION__, __LINE__, item.params[0].value);
+
 		if (!strcmp(item.params[0].value, "static")) {
 			strcpy(item.name, CLI_NAME_NETMASK);
 			strcpy(item.params[0].param_name, CLI_NAME_NETMASK);
-			strcpy(item.params[0].value, net_mask);
+			sprintf(buf, "%d", netmask);
+			memcpy(item.params[0].value, buf, sizeof(buf));
 			set_value(CLI_NAME_NETMASK, &item);
 		}
 		else{
@@ -1363,18 +1392,16 @@ int preip_set_essid(u8 *essid)
 
 int preip_set_rssithr(u8 rssithr_conn, u8 rssithr_disconn)
 {
-	int disconn_rssi = 9999, conn_rssi = 9999;
 	char buf[32] = {0};
-	struct item_config item;
+	struct item_config item = {0};
+	char conn_rssithr = rssithr_conn;
+	char disconn_rssithr = rssithr_disconn;
 
-	printf("preip_set_rssithr: %d %d\n", (char)rssithr_conn, (char)rssithr_disconn);
-
-	disconn_rssi = atoi(rssithr_disconn);
-	conn_rssi = atoi(rssithr_conn);
+	printf("preip_set_rssithr: %d %d\n", conn_rssithr, disconn_rssithr);
 
 	#define CONN_RSSI_MAX -45
 	#define CONN_RSSI_MIN -85
-	if (conn_rssi > CONN_RSSI_MAX || conn_rssi < CONN_RSSI_MIN) {
+	if (conn_rssithr > CONN_RSSI_MAX || conn_rssithr < CONN_RSSI_MIN) {
 		printf("Connrssithr must be from %d to %d\n", CONN_RSSI_MAX, CONN_RSSI_MIN);
 		return T_FAILURE;
 	}
@@ -1383,7 +1410,7 @@ int preip_set_rssithr(u8 rssithr_conn, u8 rssithr_disconn)
 
 	#define DISCONN_RSSI_MAX -55
 	#define DiSCONN_RSSI_MIN -95
-	if (disconn_rssi > DISCONN_RSSI_MAX || disconn_rssi < DiSCONN_RSSI_MIN) {
+	if (disconn_rssithr > DISCONN_RSSI_MAX || disconn_rssithr < DiSCONN_RSSI_MIN) {
 		printf("Disconnrssi must be from %d to %d\n", DISCONN_RSSI_MAX, DiSCONN_RSSI_MIN);
 		return T_FAILURE;
 	}
@@ -1391,7 +1418,7 @@ int preip_set_rssithr(u8 rssithr_conn, u8 rssithr_disconn)
 	#undef DISCONN_RSSI_MAX
 	#undef DiSCONN_RSSI_MIN
 
-	if ((conn_rssi - disconn_rssi) < 10) {
+	if (((char)conn_rssithr - (char)disconn_rssithr) < 10) {
 		printf("Connrssithr must be greater than disconn_value 10\n");
 		return T_FAILURE;
 	}
@@ -1400,14 +1427,18 @@ int preip_set_rssithr(u8 rssithr_conn, u8 rssithr_disconn)
 	memset(&item, 0, sizeof(struct item_config));
 	strcpy(item.name, CLI_NAME_CONNRSSIHR);
 	strcpy(item.params[0].param_name, CLI_NAME_CONNRSSIHR);
-	strcpy(item.params[0].value, rssithr_conn);
+	memset(buf, 0, sizeof(buf));
+	sprintf(buf, "%d", (char)conn_rssithr);
+	strcpy(item.params[0].value, buf);
 	set_value(CLI_NAME_CONNRSSIHR, &item);
 
 	//disconnect rssi thr
 	memset(&item, 0, sizeof(struct item_config));
 	strcpy(item.name, CLI_NAME_DISCONNRSSITHR);
 	strcpy(item.params[0].param_name, CLI_NAME_DISCONNRSSITHR);
-	strcpy(item.params[0].value, rssithr_disconn);
+	memset(buf, 0, sizeof(buf));
+	sprintf(buf, "%d", (char)disconn_rssithr);
+	strcpy(item.params[0].value, buf);
 	set_value(CLI_NAME_DISCONNRSSITHR, &item);
 
 	return T_SUCCESS;
@@ -1771,7 +1802,7 @@ int preip_process_discovery(int skfd, PreipFramInfo_t *frame_info)
     preip_get_netmask(&p_resp->netmask);
     preip_get_essid(p_resp->essid);
     preip_get_rssithr(&p_resp->rssithr_conn, &p_resp->rssithr_disconn);
-    //preip_get_asso_status(&p_resp->asso_status);
+    preip_get_asso_status(&p_resp->asso_status);
     preip_get_rssi(&p_resp->rssi);
     preip_get_rssi_per_chain(p_resp->rssi_per_chain);
     preip_get_security(p_resp->security);
@@ -1861,7 +1892,8 @@ int main(int argc, char *argv[])
 	init_global_config();
 
 	//print config
-	debug_global_config();
+	if(cli_debug)
+		debug_global_config();
 	
     while(1)
     {
