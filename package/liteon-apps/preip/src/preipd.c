@@ -902,7 +902,7 @@ int preip_get_rssithr(u8 *rssithr_conn, u8 *rssithr_disconn)
     *rssithr_conn = -(atoi(&buf_1[1]));
     *rssithr_disconn = -(atoi(&buf_2[1]));
 
-	printf("%s:%d rssithr_conn: %d, rssithr_disconn: %d\n", __FUNCTION__, __LINE__, *rssithr_conn, *rssithr_disconn);
+	printf("%s:%d rssithr_conn: %d, rssithr_disconn: %d\n", __FUNCTION__, __LINE__, (char)*rssithr_conn, (char)*rssithr_disconn);
     
     return T_SUCCESS;
 }
@@ -972,7 +972,7 @@ int preip_get_rssi(u8 *rssi)
 
 	if (!strcmp(TempBuf, "client")) {
 		//param: 0, means first radio
-		ret = get_sta_assoc_rssi(0, rssi_arr);
+		//ret = get_sta_assoc_rssi(0, rssi_arr);
 		if (ret != 0) {
 			*rssi = 999;
 		} else {
@@ -981,7 +981,7 @@ int preip_get_rssi(u8 *rssi)
 		}
 	}
 
-	printf("%s:%d rssi: %d\n", rssi);
+	printf("%s:%d rssi\n");
 
     return T_SUCCESS;
 }
@@ -991,6 +991,8 @@ int preip_get_rssi_per_chain(u8 *rssi_per_chain)
     rssi_per_chain[0]=(u8)-60;
     rssi_per_chain[1]=(u8)-61;
     rssi_per_chain[2]=0;
+	printf("%s:%d \n", __FUNCTION__, __LINE__);
+	
     return 0;
 }
 
@@ -999,59 +1001,71 @@ int preip_get_security(u8 *security)
 	char auth_mode[32] = {0};
     char wpa_auth_type[32]={0};
 	char enc_type[32] = {0};
+	preip_wifi_security_t *preip_sec = NULL;
 
 	if(!security)
 		return T_FAILURE;
+	
+	preip_sec = (preip_wifi_security_t *)security;
 
 	ezplib_get_attr_val("wl0_apcli_rule", 0, "secmode", auth_mode, 32, EZPLIB_USE_CLI);
 	
 	if (!strcmp(auth_mode, "none")) {
-		strcpy(security, "open");
+		//strcpy(security, "open");
+		preip_sec->authmode = PREIP_WIFI_SEC_AUTH_MODE_OPEN; //open
 	}
 	else if (!strcmp(auth_mode, "disabled")) {
-		strcpy(security, "open");
+		//strcpy(security, "open");
+		preip_sec->authmode = PREIP_WIFI_SEC_AUTH_MODE_OPEN; //open
 	}
 	else if (!strcmp(auth_mode, "psk")) {
 		//ezplib_get_attr_val("wl0_apcli_sec_wpa_rule", 0, "crypto", enc_type, 32, EZPLIB_USE_CLI);
-
-        strcpy(security, "wpa-psk");
+		//strcpy(security, "wpa-psk");
+		preip_sec->authmode = PREIP_WIFI_SEC_AUTH_MODE_WPAPSK; //wpa-psk
 	} 
 	else if (!strcmp(auth_mode, "psk2")) {
 		//ezplib_get_attr_val("wl0_apcli_sec_wpa2_rule", 0, "crypto", enc_type, 32, EZPLIB_USE_CLI);
-
-        strcpy(security, "wpa2-psk");
+        //strcpy(security, "wpa2-psk");
+        preip_sec->authmode = PREIP_WIFI_SEC_AUTH_MODE_WPA2PSK; //wpa2-psk
 	}
     else if (!strcmp(auth_mode, "wpa")) {
         ezplib_get_attr_val("wl0_wpa_auth_rule", 0, "wpa_auth", wpa_auth_type, 32, EZPLIB_USE_CLI);
-
+		preip_sec->authmode = PREIP_WIFI_SEC_AUTH_MODE_WPA; //WPA
+		
         if(*wpa_auth_type == '0')
         {
-            strcpy(security, "wpa ttls");
+            //strcpy(security, "wpa ttls");
+            preip_sec->wifi_sec.sec_wpa.authtype = PREIP_WIFI_SEC_AUTH_MODE_TTLS; //wpa ttls
         }else
         {
-            strcpy(security, "wpa peap");
+            //strcpy(security, "wpa peap");
+			preip_sec->wifi_sec.sec_wpa.authtype = PREIP_WIFI_SEC_AUTH_MODE_PEAP; //wpa peap
         }
 	}
     else if (!strcmp(auth_mode, "wpa2")) {
         ezplib_get_attr_val("wl0_wpa_auth_rule", 0, "wpa_auth", wpa_auth_type, 32, EZPLIB_USE_CLI);
+		preip_sec->authmode = PREIP_WIFI_SEC_AUTH_MODE_WPA2; //WPA2
 
         if(*wpa_auth_type == '0')
         {
-            strcpy(security, "wpa2 ttls");
+            //strcpy(security, "wpa2 ttls");
+            preip_sec->wifi_sec.sec_wpa.authtype = PREIP_WIFI_SEC_AUTH_MODE_TTLS; //wpa ttls
         }else
         {
-            strcpy(security, "wpa2 peap");
+            //strcpy(security, "wpa2 peap");
+            preip_sec->wifi_sec.sec_wpa.authtype = PREIP_WIFI_SEC_AUTH_MODE_PEAP; //wpa peap
         }
 	}
     else if (!strcmp(auth_mode, "wep")) {
-		strcpy(security, "wep");
+		//strcpy(security, "wep");
+		preip_sec->authmode = PREIP_WIFI_SEC_AUTH_MODE_WEP;
 	}
 	else {
-        
-		strcpy(security, "Invalid security type!");
+		//strcpy(security, "Invalid security type!");
+		preip_sec->authmode = 99;
 	}
 
-	printf("%s:%d security: %s\n", __FUNCTION__, __LINE__, security);
+	printf("%s:%d security: %d\n", __FUNCTION__, __LINE__, (char)preip_sec->authmode);
 
     return T_SUCCESS;
 }
@@ -1260,7 +1274,7 @@ int preip_set_netmask(u8 netmask)
 	char value[32] = {0};
 	char *br_get=NULL;
 	char br_name[32]={0};
-	struct item_config item;
+	struct item_config item = {0};
 
 	printf("preip_set_netmask: %d\n", netmask);
 	memset(&item, 0, sizeof(struct item_config));
@@ -1404,8 +1418,7 @@ int preip_set_security(u8 *security)
 			if(argc != 2)
 			{
 				goto security_usage;
-			}9
-P}
+			}9P}
 		   //pre-shared key
 			option_2 = tokenPop(pCli);
 		   
@@ -1747,6 +1760,11 @@ int preip_process_discovery(int skfd, PreipFramInfo_t *frame_info)
     preip_get_rssi(&p_resp->rssi);
     preip_get_rssi_per_chain(p_resp->rssi_per_chain);
     preip_get_security(p_resp->security);
+
+	printf("%s:%d mac:%s, deviceid:%s, dhcp:%d, ip:%s, netmask:%d, essid:%s, \
+		connRssi:%d, disconnRssi:%d, rssi:%d \n", __FUNCTION__, __LINE__,p_resp->mac, 
+		p_resp->deviceid, p_resp->dhcp, p_resp->ip, p_resp->netmask, p_resp->essid,
+		p_resp->rssithr_conn, p_resp->rssithr_disconn, p_resp->rssi);
 
     ret = preipSend(skfd, NLI_TYPE_RUN, (char *)frame_info, sizeof(PreipFramInfo_t));
 
