@@ -38,7 +38,7 @@ define Package/preip_host/install
 	$(INSTALL_DIR) $(1)/usr/sbin $(1)/etc/init.d
 	$(CP) $(PKG_BUILD_DIR)/preip_host $(1)/usr/sbin/
 	$(CP) $(PKG_BUILD_DIR)/preip_host_module.ko $(1)/usr/sbin/
-	$(INSTALL_BIN) ./files/preipd.init $(1)/etc/init.d/preipd
+	$(INSTALL_BIN) ./files/preip_host_prepare $(1)/usr/sbin/
 endef
 
 $(eval $(call BuildPackage,preip_host))

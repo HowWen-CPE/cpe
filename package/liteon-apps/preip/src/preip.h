@@ -108,7 +108,7 @@ typedef struct
     u8 cmd;
 #define VENDORID_OCTETS 3
 #define PREIP_PRIV_ID1 0x08
-#define PREIP_PRIV_ID2 0x00
+#define PREIP_PRIV_ID2 0x66
 #define PREIP_PRIV_ID3 0x4E
 
     u8 vendorid[VENDORID_OCTETS];

@@ -45,10 +45,12 @@
 #include <asm/uaccess.h>
 #include "preip.h"
 
-#define PRE_IP_DEBUG
+//#define PRE_IP_DEBUG
 
 
 int preip_pid = 0;
+
+extern struct net init_net;
 
 
 DEFINE_MUTEX(preip_mutex);
@@ -205,7 +207,7 @@ A_BOOL PreIP_FrameValid(u8* pbuf, int len)
 		||(psap->vendorid[2] != PREIP_PRIV_ID3))
     {
 #ifdef PRE_IP_DEBUG
-        printk("PreIP_FrameValid: vendor id not 3COM,vendor ID :%x-%x-%x\n",psap->vendorid[0] ,psap->vendorid[1] ,psap->vendorid[2] );
+        printk("PreIP_FrameValid: vendor ID :%x-%x-%x\n",psap->vendorid[0] ,psap->vendorid[1] ,psap->vendorid[2] );
 #endif
         return FALSE;
     }    
@@ -315,6 +317,15 @@ A_BOOL PreIP_Receive(struct sk_buff *skb)
     struct net_device *dev = skb->dev;
     PreipFramInfo_t frame_info;
     int ret = TRUE;
+    struct net_device *eth0_dev;
+    preip_dscv_req_t  *p_req;
+        
+    eth0_dev = dev_get_by_name(&init_net, PREIP_NET_DEVICE_NAME);
+
+    if(eth0_dev==NULL)
+    {
+        eth0_dev = dev;
+    }
     
 #ifdef PRE_IP_DEBUG
     printk("PreIP_Receive: in\n");
@@ -363,6 +374,51 @@ A_BOOL PreIP_Receive(struct sk_buff *skb)
     skb_pull(skb, FRAME_SAP_OCTETS);
 
     memcpy((u8 *)&frame_info.preip_all, skb->data, sizeof(frame_info.preip_all));
+
+    p_req = &frame_info.preip_all.preip_data_buf.req_data;
+
+#ifdef PRE_IP_DEBUG
+    printk("from_mac: %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x\n", 
+        frame_info.from_mac[0], frame_info.from_mac[1],frame_info.from_mac[2],
+        frame_info.from_mac[3],frame_info.from_mac[4],frame_info.from_mac[5]);
+
+    printk("to_mac: %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x\n", 
+        p_req->mac[0], p_req->mac[1],p_req->mac[2],
+        p_req->mac[3],p_req->mac[4],p_req->mac[5]);
+
+    printk("eth0 mac: %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x\n", 
+        eth0_dev->dev_addr[0],eth0_dev->dev_addr[1],eth0_dev->dev_addr[2],
+        eth0_dev->dev_addr[3],eth0_dev->dev_addr[4],eth0_dev->dev_addr[5]);
+#endif
+
+    /* check if the dst mac address to us, if unicast, and not to us, then drop it*/
+    if(p_req->mac[0] == 0xff)
+    {
+        /* multicast, only discovery request is allowed*/
+        printk(" multicast\n");
+
+        if(frame_info.preip_all.preip_hdr.id != PREIP_ID_DISCOVERY)
+        {
+            printk("    action (%d) not allowed\n", frame_info.preip_all.preip_hdr.id);
+
+            kfree_skb(skb);
+
+            return TRUE;
+        }
+    }
+    else if(memcmp(p_req->mac, eth0_dev->dev_addr, 6) == 0)
+    {
+        /* unicast to us*/
+        printk("unicast to us\n");
+    }else
+    {
+        /* unicast not to us*/
+        printk("unicast not to us\n");
+
+        kfree_skb(skb);
+
+        return TRUE;
+    }
     
     /* send packet to user space*/
     if(nl_preip_transmit((u8 *)&frame_info, sizeof(frame_info)) == -1)
@@ -402,7 +458,6 @@ struct packet_type preIP_packet_type = {
 	.func =	preIP_rcv,
 };
 
-extern struct net init_net;
 
 /* Pre IP Protocol Init */
 int __init preIP_Init(void)

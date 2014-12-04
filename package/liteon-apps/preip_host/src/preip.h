@@ -5,6 +5,8 @@
 #include <linux/netfilter.h>
 #include <linux/netlink.h>
 
+#define PREIP_WAIT_MAX_TIME_SEC   5    /* 5s*/
+
 #define MACADDR_OCTETS  6
 #define A_STATUS int
 typedef	int		A_BOOL;
@@ -34,7 +36,7 @@ typedef struct
     u8 cmd;
 #define VENDORID_OCTETS 3
 #define PREIP_PRIV_ID1 0x08
-#define PREIP_PRIV_ID2 0x00
+#define PREIP_PRIV_ID2 0x66
 #define PREIP_PRIV_ID3 0x4E
 
     u8 vendorid[VENDORID_OCTETS];
@@ -124,7 +126,7 @@ typedef struct preip_wifi_security
             u8 key[64];        /* passphrase*/
         }sec_psk;
         
-        struct wpa              
+        struct wpa         
         {
             u8 authtype;      /* 0: peap; 1: ttls*/
             u8 user[64];      /* user name*/
@@ -227,16 +229,6 @@ struct nl_preip_info {
 #define DiSCONN_RSSI_MIN -95
 #define CONN_DISCONN_RSSI_MIN_DELTA 10
 
-/* for parameter get */
-#define PREIP_PASSWORD 1
-#define PREIP_LOCALMAC 2
-#define PREIP_NAME 3
-#define PREIP_ESSID 4
-#define PREIP_IP 5
-#define PREIP_MASK 6
-#define PREIP_TYPE 7
-#define PREIP_HTTPS 8
-#define PREIP_PRODUCTNAME 9
 
 /* for Pre-IP Data */
 #define PREIP_RESET ('r')
@@ -256,21 +248,7 @@ struct nl_preip_info {
 #define TYPE_PTR long
 
 #define FRAME_SRCMAC_GET(f, m) (memcpy((m), ((u8*)(f)+MACADDR_OCTETS), MACADDR_OCTETS))
-
-
 #define FRAME_PREIP_GET(f, p) ((p)=(FramePreIpHead_t*)((TYPE_PTR)(f)+FRAME_SAP_OCTETS))
-#define PREIP_DATA_GET(f, p) ((p)=(u8*)((TYPE_PTR)(f)+FRAME_PREIP_OCTETS))
-#define PREIP_PORT_GET(f, p) (memcpy((u8*)(&p),((FramePreIpHead_t*)(f))->port, 4))
-#define PREIP_CMD_GET(f, c) ((c)=((FramePreIpHead_t*)(f))->id)
-
-#define PREIP_SERVICE_SET(f, p) (memcpy(((FramePreIpHead_t*)(f))->service, (u8*)(&p), 2))
-#define PREIP_PORT_SET(f, p) (memcpy(((FramePreIpHead_t*)(f))->port, (u8*)(&p), 4))
-#define PREIP_LEN_SET(f, p) (memcpy(((FramePreIpHead_t*)(f))->len, (u8*)(&p), 2))
-
-#define RESP_TYPE_SET(f, p) (memcpy(((FrameDiscoveryResp*)(f))->type, (u8*)(&p), 2))
-#define RESP_IP_SET(f, p) (memcpy(((FrameDiscoveryResp*)(f))->ip, (u8*)(&p), 4))
-#define RESP_MASK_SET(f, p) (memcpy(((FrameDiscoveryResp*)(f))->mask, (u8*)(&p), 4))
-//#endif
 
 #endif	// __PREIP_H__
 

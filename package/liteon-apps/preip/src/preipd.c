@@ -1,10 +1,7 @@
-/*
- *	preip daemon
- *
- *	Authors:
- *	simon Jiang		<simon.jiang@liteon.com>
- *	create Date:		2006.12.06
- */
+/*****************************************************************************
+  File Name     : preipd.c
+  Description   : preip layer 2 daemon process at user space.
+******************************************************************************/
 
 /*PRE IP Daemon*/
 #include <sys/types.h>		
@@ -17,12 +14,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-//#include "ostypes.h"
-//#include "sysconf.h"   /* add by peter, 2008.7.30*/
-//#include "b_adminConf.h"
-//#include "wlanconf.h"
 
-#define PRE_IP_DEBUG
+
+//#define PRE_IP_DEBUG
 
 #define PREIP_DAEMON_INCLUDE
 typedef unsigned char u8;
@@ -759,6 +753,56 @@ int preip_get_deviceid(u8 *deviceid)
     return T_SUCCESS;
 }
 
+int preip_get_version(u8 *version)
+{
+	FILE *fp;
+	char c;
+	char ch;
+	int count=0,i=0;
+    
+	if(!version)
+		return T_FAILURE;
+	
+	if(!(fp=fopen("/version","r"))){
+		printf("cant open file!\n");
+		return T_FAILURE;
+	}
+	ch=fgetc(fp);
+	while(ch!= EOF)
+	{
+		ch=fgetc(fp);
+		count++;
+	}
+	fclose(fp);
+
+	char *buffer = (char*)malloc(count*sizeof(char));
+	if(buffer != NULL)
+	{
+		memset(buffer,0,count*sizeof(char));
+	}
+	if (!(fp = fopen("/version", "r")))
+	{
+		printf("cant open file!\n");
+		free(buffer);
+		return T_FAILURE;
+	}
+	while ((c = getc(fp)) != EOF) {
+		//printf("%c",c);
+		buffer[i] = c;
+		i++;
+	}
+	i--;
+	fclose(fp);
+	buffer[i] = '\0';
+	printf("Firmware Version %s\n",buffer);
+
+    strncpy(version, buffer, 7);
+    
+	free(buffer);
+
+    return T_SUCCESS;
+}
+
 int preip_get_dhcp(u8 *dhcp)
 {
 	char buf_proto[32] = {0};
@@ -978,6 +1022,151 @@ int preip_get_asso_status(u8 *asso_status)
 			*asso_status = 0;
 			
 	}
+    
+    return T_SUCCESS;
+}
+
+
+ /*
+ * parse the mac and store into *addr.
+ * the format of s is HH:HH:HH:HH:HH:HH
+ */
+ #define MAC_ADDR_LEN 17
+int inet_atonmac(const char *s, char *addr)
+{
+    int mac[6], ret;
+
+    memset(addr, 0, 6);
+
+    if(strlen(s)!=MAC_ADDR_LEN)
+    {
+        printf("error mac address string length, %d\n", strlen(s));
+        return -1;
+    }
+    
+    ret = sscanf(s, "%x:%x:%x:%x:%x:%x", 
+        &mac[0],&mac[1],&mac[2],&mac[3],&mac[4],&mac[5]);
+
+    if(ret != 6)
+    {
+        printf("parse mac address string error\n");
+        return -1;
+    }
+
+    addr[0] = (char)mac[0];
+    addr[1] = (char)mac[1];
+    addr[2] = (char)mac[2];
+    addr[3] = (char)mac[3];
+    addr[4] = (char)mac[4];
+    addr[5] = (char)mac[5];
+
+	return 0;
+}
+
+int preip_get_bssid(u8 *bssid)
+{
+	int ret = 0;
+	char macBuf[18] = {0};
+	char iOpMode[32] = {0};
+    int radio = RADIO_2G;
+
+	int associated = 999;
+
+
+	if(!bssid)
+		return T_FAILURE;
+
+	if (RADIO_2G == radio) {
+		ezplib_get_attr_val("wl_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
+	} else {
+		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
+	}
+	if (!strcmp(iOpMode, "client")) {
+
+	
+    	//0->Disassociated, 1->Associated, 2->Unkown, 3-> --
+    	getAPConnectStatus(RADIO_2G, &associated);
+    
+        if(associated == 1)
+        {
+            ret = get_sta_assoc_bssid(radio, macBuf);
+            
+		    if(inet_atonmac(macBuf, (char *)bssid) < 0)
+            {
+                printf("Invalid bssid %s\n", macBuf);
+
+                memcpy(bssid, 0, 6);
+            }
+
+            printf("BSSID: %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x\n", 
+                bssid[0], bssid[1],bssid[2],
+                bssid[3],bssid[4],bssid[5]);
+            
+        }else
+        {
+            memcpy(bssid, 0, 6);
+        }
+		
+	} else {
+		memcpy(bssid, 0, 6);
+	}
+
+	return T_SUCCESS;
+}
+
+int preip_get_bandwidth(u8 *bandwidth)
+{
+	int htbw = 0;
+    int radio = RADIO_2G;
+
+	if(!bandwidth)
+		return T_FAILURE;
+
+    if(get_bandwidth(radio, &htbw) == T_SUCCESS)
+    {
+        *bandwidth = (u8)htbw;
+
+        return T_SUCCESS;
+    }
+
+    return T_FAILURE;
+}
+
+typedef struct Channel_s
+{
+     int chan_number;
+     int frequency;
+     unsigned char hasUpper;
+     unsigned char hasLower;
+     unsigned char centerHT80;
+     unsigned char isDFS;
+}Channel_t;
+
+int preip_get_channel(u8 *channel)
+{
+    Channel_t channel_get;
+
+	if(!channel)
+		return T_FAILURE;
+
+	//channel number
+	memset(&channel_get, 0, sizeof(Channel_t));
+	get_current_channel(0, &channel_get);
+	
+    *channel = (u8)channel_get.chan_number;
+
+    printf("Channel: %d\n", *channel);
+
+    return T_SUCCESS;
+}
+
+int preip_get_wirelessmode(u8 *mode)
+{
+	if(!mode)
+		return T_FAILURE;
+
+    /* 0: 11bgn; 1: 11bg; 2:11b; 3:11an; 4:11a; 5: 11ac*/
+    *mode = 3;
     
     return T_SUCCESS;
 }
@@ -1797,12 +1986,17 @@ int preip_process_discovery(int skfd, PreipFramInfo_t *frame_info)
 
     preip_get_mac(p_resp->mac);
     preip_get_deviceid(p_resp->deviceid);
+    preip_get_version(p_resp->version);
     preip_get_dhcp(&p_resp->dhcp);
     preip_get_ip(p_resp->ip);
     preip_get_netmask(&p_resp->netmask);
     preip_get_essid(p_resp->essid);
     preip_get_rssithr(&p_resp->rssithr_conn, &p_resp->rssithr_disconn);
     preip_get_asso_status(&p_resp->asso_status);
+    //preip_get_bssid(p_resp->bssid);
+    preip_get_channel(&p_resp->channel);
+    preip_get_bandwidth(&p_resp->bandwidth);
+    preip_get_wirelessmode(&p_resp->ieee80211mode);
     preip_get_rssi(&p_resp->rssi);
     preip_get_rssi_per_chain(p_resp->rssi_per_chain);
     preip_get_security(p_resp->security);
@@ -1875,12 +2069,26 @@ int main(int argc, char *argv[])
     char cmd[150];  /* enlarge the length of cmd and prevent stack overflow! bug1275 by roger 2008-5-14*/
     int skfd;
     PreipFramInfo_t frame_info;
+    int dbg_flag = 0;
 
 #ifdef PRE_IP_DEBUG
     printf("preipd start...\n");
-    sleep(1);
 #endif
-    //Daemon_Init();	
+
+    sleep(1);
+
+    if(argc > 1)
+    {
+        if(strstr(argv[1], "-d"))
+        {
+            dbg_flag = 1;
+        }
+    }
+
+    /* if no debug flag, start it at background*/
+    if(dbg_flag == 0)
+        Daemon_Init();
+
     skfd = socket(PF_NETLINK, SOCK_RAW, NETLINK_PREIP);
     if(skfd < 0){
         printf("%s,sock error\n",__func__);

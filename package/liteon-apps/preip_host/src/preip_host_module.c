@@ -1,6 +1,8 @@
-/* Pre-IP Protocol Routines*/
-/* Development Log */
-/* */
+/*****************************************************************************
+  File Name     : pre_host_module.c
+  Description   : preip layer 2 control process at kernel space.
+                  Send (from user space) and recv LLC packet.
+******************************************************************************/
 
 #ifndef EXPORT_SYMTAB
 #define EXPORT_SYMTAB
@@ -13,7 +15,6 @@
 #include <linux/string.h>
 #include <linux/kernel.h>
 #include <linux/sched.h>
-#include <linux/capability.h>
 #include <linux/socket.h>
 #include <linux/sockios.h>
 #include <linux/errno.h>
@@ -25,13 +26,10 @@
 #include <linux/etherdevice.h>
 #include <linux/trdevice.h>
 #include <linux/skbuff.h>
-#include <linux/proc_fs.h>
-#include <linux/seq_file.h>
 #include <linux/stat.h>
 #include <linux/init.h>
 #include <linux/net.h>
-#include <linux/rcupdate.h>
-#include <linux/jhash.h>
+
 
 #include <net/ip.h>
 #include <net/icmp.h>
@@ -324,7 +322,7 @@ A_BOOL PreIP_FrameValid(u8* pbuf, int len)
 		||(psap->vendorid[2] != PREIP_PRIV_ID3))
     {
 #ifdef PRE_IP_DEBUG
-        printk("PreIP_FrameValid: vendor id not 3COM,vendor ID :%x-%x-%x\n",psap->vendorid[0] ,psap->vendorid[1] ,psap->vendorid[2] );
+        printk("PreIP_FrameValid: vendor ID : %x-%x-%x\n",psap->vendorid[0] ,psap->vendorid[1] ,psap->vendorid[2] );
 #endif
         return FALSE;
     }    

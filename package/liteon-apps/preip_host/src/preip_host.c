@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-//#define PRE_IP_DEBUG
+#define PRE_IP_DEBUG
 //#define DUMP_PACKET_CONTENT
 
 typedef unsigned char u8;
@@ -120,15 +120,15 @@ malloc_error:
 }
 
 
-T_INT32 preip_waiting(int skfd,char *buf, int len)
+T_INT32 preip_waiting(int skfd,char *buf, int len, struct timeval *tv)
 {
     struct sockaddr_nl dest_kernel;
     socklen_t dest_kernel_len;
     struct nlmsghdr* rcvNlh;
     fd_set rfds;
     int errorNo = 0;
-    int ret = 0;
-    
+    int ret = 0, ret_select;
+
 #ifdef PRE_IP_DEBUG
     printf("preipWaiting: entry\n");
 #endif
@@ -142,8 +142,9 @@ T_INT32 preip_waiting(int skfd,char *buf, int len)
     dest_kernel.nl_groups = 0; 
     rcvNlh = (struct nlmsghdr *)malloc(NLMSG_SPACE(sizeof(struct nl_preip_info)));
 
+
     dest_kernel_len = sizeof(dest_kernel);
-    if (select(skfd+1, &rfds, NULL, NULL, NULL) > 0){
+    if ((ret_select=select(skfd+1, &rfds, NULL, NULL, tv)) > 0){
         if ((ret=recvfrom(skfd, rcvNlh,NLMSG_LENGTH(sizeof(struct nl_preip_info)),0,(struct sockaddr*)&dest_kernel,&dest_kernel_len)) > 0){
 
 #ifdef PRE_IP_DEBUG
@@ -164,9 +165,15 @@ T_INT32 preip_waiting(int skfd,char *buf, int len)
         }else{
             errorNo = 2;
         }
-    }else
+    }
+    else if(ret_select == 0)
+    {
+        printf("No response\n");
         errorNo = 3;
-    
+    }else
+    {
+        errorNo = 4;
+    }
   	
     printf("%s return error, error no:%d\n",__func__,errorNo);
 
@@ -194,6 +201,9 @@ int preip_discovery_func(u8 *dst_mac)
     u32 tmp32;
     u16 tmp16;
     char *str;
+    struct timeval tv;
+    struct timeval tv_begin, tv_now;
+
 
 #ifdef PRE_IP_DEBUG
     printf("preipd start...\n");
@@ -237,16 +247,39 @@ int preip_discovery_func(u8 *dst_mac)
     /* wait for response*/
     memset((u8 *)&preip_recv_buf, 0x0, sizeof(preip_recv_buf));
 
-    while(1){
-        readlen = preip_waiting(skfd,(char *)&preip_recv_buf, sizeof(preip_recv_buf));
+    tv.tv_sec = PREIP_WAIT_MAX_TIME_SEC;  /* timeout 5s*/
+    tv.tv_usec = 0;
+
+    gettimeofday(&tv_begin, NULL);
+    
+    while(1)
+    {
+        gettimeofday(&tv_now, NULL);
+
+        /* wait for max 5 seconds*/
+        if(tv_now.tv_sec - tv_begin.tv_sec > PREIP_WAIT_MAX_TIME_SEC)
+        {
+            printf("\n");
+
+            return 0;
+        }
+
+        tv.tv_sec = PREIP_WAIT_MAX_TIME_SEC - (tv_now.tv_sec - tv_begin.tv_sec);
+        
+        readlen = preip_waiting(skfd,(char *)&preip_recv_buf, sizeof(preip_recv_buf), &tv);
 
 #ifdef PRE_IP_DEBUG
         printf("%s: read length:%d \n",__func__, readlen);
 #endif
 
+        /* timeout, no response*/
         if (readlen < 0)
+        {
+            sleep(1);
+            
             continue;
-
+        }
+        
         /* check length*/
         /*
             if(readlen < sizeof(preip_recv_buf))
@@ -272,13 +305,14 @@ int preip_discovery_func(u8 *dst_mac)
         {
             preip_wifi_security_t *preip_sec = (preip_wifi_security_t *)p_resp->security;
             
-            printf("Discovery Reponse\n");
+            printf("\nDiscovery Reponse\n");
             printf("============================\n");
             /* bellow is the setting*/
             printf("MAC: %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x\n", 
                 p_resp->mac[0], p_resp->mac[1],p_resp->mac[2],
                 p_resp->mac[3],p_resp->mac[4],p_resp->mac[5]);
             printf("Device ID: %s\n", p_resp->deviceid);
+            printf("Firmware Version: %s\n", p_resp->version);
             printf("SSID: %s\n", p_resp->essid);
             printf("DHCP: %s\n", p_resp->dhcp ? "enabled":"disabled");
             printf("IP Address: %d.%d.%d.%d\n", p_resp->ip[0],p_resp->ip[1],p_resp->ip[2], p_resp->ip[3]);
@@ -317,11 +351,11 @@ int preip_discovery_func(u8 *dst_mac)
             /* bellow is status*/
             printf("Connect Status: %s\n", p_resp->asso_status ? "Associated":"Disassociated");
 
-            printf("BSSID: %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x\n", 
+            printf("BSSID: %2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X\n", 
                 p_resp->bssid[0], p_resp->bssid[1],p_resp->bssid[2],
                 p_resp->bssid[3],p_resp->bssid[4],p_resp->bssid[5]);
 
-            printf("SSID: %d\n", p_resp->channel);
+            printf("Channel: %d\n", p_resp->channel);
             
             printf("Band width: %s\n", p_resp->bandwidth==0 ? "20MHz" : ((p_resp->bandwidth==1)?"40MHz":"80MHz"));
 
@@ -400,7 +434,8 @@ int preip_set_func(u8 *dst_mac, u8 id, u8 *val_buf)
     /* set dst_mac */
     memcpy(p_set_item->mac, dst_mac, 6);
 
-    
+
+    /* set items*/
     switch(id)
     {
     case PREIP_ID_SET_DEVID:
@@ -477,80 +512,38 @@ int preip_set_func(u8 *dst_mac, u8 id, u8 *val_buf)
 
 }
 
- /*
- * parse the mac  and store into *addr.
- * the format is HH:HH:HH:HH:HH:HH
+  /*
+ * parse the mac and store into *addr.
+ * the format of s is HH:HH:HH:HH:HH:HH
  */
  #define MAC_ADDR_LEN 17
-int inet_atonmac(const char *s, char *addr, int addr_len)
+int inet_atonmac(const char *s, char *addr)
 {
+    int mac[6], ret;
 
-    char Tmac[] = "HH:HH:HH:HH:HH:HH";
-    unsigned char mac_addr[18];
-    //char *tmp = mac_addr;
-    char c;
-    char *ptr = (char *)s;
-    int val = 0;
-    int i, j;
-    int allzero = 1;
-    //int all0xff = 1;
+    memset(addr, 0, 6);
 
-    memset(mac_addr,0,sizeof(mac_addr));
-
-    if(addr_len != 17)
+    if(strlen(s)!=MAC_ADDR_LEN)
+    {
+        printf("error mac address string length, %d\n", strlen(s));
         return -1;
+    }
+    
+    ret = sscanf(s, "%x:%x:%x:%x:%x:%x", 
+        &mac[0],&mac[1],&mac[2],&mac[3],&mac[4],&mac[5]);
 
-    i = j = 0;
-    while(1){
-        c = *ptr++;
-        if ( Tmac[i] == 'H' ){
-            
-            /* must be hex char. */
-            val = val * 16;
-            if ( isdigit(c) ){
-                val += c - '0';
-                mac_addr[i] = c;
-            }else if(c >= 'a' && c <= 'f'){
-                val += c - 'a' + 10;
-                mac_addr[i] = c;
-            }else if(c >= 'A' && c <= 'F'){
-                val += c - 'a' + 10;
-                mac_addr[i] = c;
-            }else
-                return -1;
-        } else{
-            /* here should be : */
-            if(j == 0){
-                int x;
-                
-                //donn't distinguish globle or local mac
-                x = val & 0x01;
-                if(x != 0)
-                    return -1;
-            }
-            
-            if(val != 0){
-                allzero = 0;
-            }
+    if(ret != 6)
+    {
+        printf("parse mac address string error\n");
+        return -1;
+    }
 
-            val = 0;
-            j++;
-            if(j == 6){
-                if ((c != '\0') || allzero){
-                    return -1;
-                }
-
-                memcpy(addr,mac_addr,addr_len);
-                return 0;
-            }
-            if(c != ':'){
-                return 0;
-            }else{
-                mac_addr[i] = c;
-            }
-        }
-        ++i;
-    }   
+    addr[0] = (char)mac[0];
+    addr[1] = (char)mac[1];
+    addr[2] = (char)mac[2];
+    addr[3] = (char)mac[3];
+    addr[4] = (char)mac[4];
+    addr[5] = (char)mac[5];
 
 	return 0;
 }
@@ -783,11 +776,20 @@ int main(int argc, char *argv[])
                 }
 
                 /* check if valid mac*/
-                if (inet_atonmac(argv[2], (char *)dst_addr, MAC_ADDR_LEN) < 0) {
+                if (inet_atonmac(argv[2], (char *)dst_addr) < 0) {
                     printf("Invalid MAC address. Should be as xx:xx:xx:xx:xx:xx\n");
                     return -1;
                 }
-            }else
+
+            }
+            else if(argc == 2)
+            {
+                /* discovery process*/
+                preip_discovery_func(dst_addr);
+
+                return 0;
+            }
+            else
             {
                 printf("Invalid input: too many args!\n");
                 usage();
@@ -819,7 +821,7 @@ int main(int argc, char *argv[])
             }
 
             /* check if valid mac*/
-            if (inet_atonmac(argv[2], (char *)dst_addr, MAC_ADDR_LEN) < 0) {
+            if (inet_atonmac(argv[2], (char *)dst_addr) < 0) {
                 printf("Invalid MAC address. Should be as xx:xx:xx:xx:xx:xx\n");
                 usage();
                 return -1;

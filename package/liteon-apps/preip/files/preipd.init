@@ -8,14 +8,16 @@ boot() {
 }
 
 start() {
-	[ -e /usr/sbin/preip ] && {
+	[ -e /usr/sbin/preipd ] && {
 		echo "$DAEMON_NAME start..."
-		/usr/sbin/preip & 2>&1
+		insmod /usr/sbin/preip.ko
+		/usr/sbin/preipd & 2>&1
 	}
         
 }
 
 stop() {
 	echo "$DAEMON_NAME stop..."
-	killall preip
+	killall preipd
+	rmmod preip
 }

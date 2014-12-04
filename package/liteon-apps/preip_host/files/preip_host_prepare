@@ -1,0 +1,5 @@
+kill `pidof preipd`
+sleep 1
+rmmod preip
+
+insmod /usr/sbin/preip_host_module.ko
