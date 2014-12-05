@@ -1081,6 +1081,7 @@ int preip_get_bssid(u8 *bssid)
 	} else {
 		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", iOpMode, sizeof(iOpMode), EZPLIB_USE_CLI);
 	}
+    
 	if (!strcmp(iOpMode, "client")) {
 
 	
@@ -1095,7 +1096,7 @@ int preip_get_bssid(u8 *bssid)
             {
                 printf("Invalid bssid %s\n", macBuf);
 
-                memcpy(bssid, 0, 6);
+                memset(bssid, 0, 6);
             }
 
             printf("BSSID: %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x\n", 
@@ -1104,11 +1105,11 @@ int preip_get_bssid(u8 *bssid)
             
         }else
         {
-            memcpy(bssid, 0, 6);
+            memset(bssid, 0, 6);
         }
 		
 	} else {
-		memcpy(bssid, 0, 6);
+		memset(bssid, 0, 6);
 	}
 
 	return T_SUCCESS;
@@ -1993,7 +1994,7 @@ int preip_process_discovery(int skfd, PreipFramInfo_t *frame_info)
     preip_get_essid(p_resp->essid);
     preip_get_rssithr(&p_resp->rssithr_conn, &p_resp->rssithr_disconn);
     preip_get_asso_status(&p_resp->asso_status);
-    //preip_get_bssid(p_resp->bssid);
+    preip_get_bssid(p_resp->bssid);
     preip_get_channel(&p_resp->channel);
     preip_get_bandwidth(&p_resp->bandwidth);
     preip_get_wirelessmode(&p_resp->ieee80211mode);
@@ -2001,9 +2002,10 @@ int preip_process_discovery(int skfd, PreipFramInfo_t *frame_info)
     preip_get_rssi_per_chain(p_resp->rssi_per_chain);
     preip_get_security(p_resp->security);
 
-	printf("%s:%d mac:%s, deviceid:%s, dhcp:%d, ip:%s, netmask:%d, essid:%s, \
-		connRssi:%d, disconnRssi:%d, rssi:%d \n", __FUNCTION__, __LINE__,p_resp->mac, 
-		p_resp->deviceid, p_resp->dhcp, p_resp->ip, p_resp->netmask, p_resp->essid,
+	printf("%s:%d mac:%s, deviceid:%s, dhcp:%d, ip:%d.%d.%d.%d, netmask:%d, essid:%s,"
+		"connRssi:%d, disconnRssi:%d, rssi:%d \n", __FUNCTION__, __LINE__,p_resp->mac, 
+		p_resp->deviceid, p_resp->dhcp, p_resp->ip[0],p_resp->ip[1],p_resp->ip[2], p_resp->ip[3],
+		p_resp->netmask, p_resp->essid,
 		p_resp->rssithr_conn, p_resp->rssithr_disconn, p_resp->rssi);
 
     ret = preipSend(skfd, NLI_TYPE_RUN, (char *)frame_info, sizeof(PreipFramInfo_t));
