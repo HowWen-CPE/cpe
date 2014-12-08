@@ -1,6 +1,0 @@
-#!/bin/sh /etc/rc.common
-
-START=20
-boot () {
-	cp /etc/wl/channellist /tmp
-}
