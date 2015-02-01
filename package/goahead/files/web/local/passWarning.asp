@@ -6,7 +6,7 @@
 	<link rel="stylesheet" title="Standard" href="../css.css" type="text/css" media="screen" />
    <link href="../table.css" rel="stylesheet" type="text/css" />
 <title>.::Welcome to <% getCfgGeneral(1, 'SystemName'); %>::.</title>
-<link href="/local/advance/images/expert.css" rel="stylesheet" type="text/css" />
+<link href="/local/advance/images/expert.css?version=general_0.1.3" rel="stylesheet" type="text/css" />
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head>
 <script type="text/javascript" src="/lang/b28n.js"></script>
 <script type="text/JavaScript">

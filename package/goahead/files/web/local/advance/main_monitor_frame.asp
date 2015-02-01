@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1"  />
 <meta http-equiv="Pragma" content="no-cache">
 <title>.::Welcome to <% getCfgGeneral(1, 'SystemName'); %>::.</title>
-<link href="images/inside_main_frame.css" rel="stylesheet" type="text/css" />
+<link href="images/inside_main_frame.css?version=general_0.1.3" rel="stylesheet" type="text/css" />
 <link href="images/dtree.css" rel="stylesheet" type="text/css" />
 <link href="images/table.css" rel="stylesheet" type="text/css" />
 <script type="text/javascript" src="/lang/b28n.js"></script>
@@ -15,7 +15,7 @@ var prev_submenu_index=1;
 var polling_interval=0;
 var wlan_polling_interval=0;
 var cur_user = "<% getCfgGeneral(1, "AdminCurUser"); %>";
-var modelname = "CPE&nbsp;<% getCfgGeneral(1, "ProductName"); %>";
+var modelname = "&nbsp;<% getCfgGeneral(1, "ProductName"); %>";
 var mac_repeater = "<% getCfgGeneral(1, "ApCliMacRepeater"); %>";
 var board_model = "<% getCfgZero(1, "board_model"); %>";
 
@@ -91,10 +91,10 @@ function MM_showHideLayers() { //v6.0
 <body onresize="onResizeWindow()"; scroll="no" onLoad="initTranslation()">
 <div id="wrapper">
   <div id="top"><div class="top_position"><div class="logo"></div>
-  <div class="modelname" id="modelname">CPE&nbsp;<% getCfgGeneral(1, "ProductName"); %></div>
+  <div class="modelname" id="modelname">&nbsp;<% getCfgGeneral(1, "ProductName"); %></div>
   <div class="quick_link">
     <ul>
-      <li class="about" onclick="MM_showHideLayers('popup','','show','popup4_table','','show')"><a href="#" title="About" id=id_About></a></li>
+      <li style="display:none" class="about" onclick="MM_showHideLayers('popup','','show','popup4_table','','show')"><a href="#" title="About" id=id_About></a></li>
         <li class="home" style="display:none"><a href="../index_login.asp" title="Home" target="_parent" id=id_Home></a></li>
       <li onclick="MM_showHideLayers('popup3_table','','show','popup','','show')"><a href="#" title="Logout" id=id_Logout></a></li>
       <li class="line"></li>
@@ -567,7 +567,7 @@ else if("WP868" == board_model) {
         <tr>
           <td width="19" background="images/popup_main_left.gif">&nbsp;</td>
           <td bgcolor="#FFFFFF"><span class="popupcontent">
-            <table width="95%" border="0" align="center" cellpadding="0" cellspacing="0">
+            <table width="95%" border="0" align="center" cellpadding="0" cellspacing="0" style="display:none">
               <tr>
                 <td width="27%"><center>
                   <img src="images/i_info.jpg" width="50" height="49" />

@@ -78,7 +78,7 @@ CONFIG_TARGET_IMAGE_VERSION="v0.2.13"
 #
 # Liteon Firmware Magic Number
 #
-CONFIG_MAGIC_NUM="0x4c383338"
+CONFIG_MAGIC_NUM="0x57434853"
 
 #
 # Global build settings
@@ -1031,8 +1031,8 @@ CONFIG_PACKAGE_version=y
 #
 # Liteon Generic Platform Product Information
 #
-CONFIG_VERSION_CONFIG_APPVERSIONID="v0.2.4"
-CONFIG_VERSION_CONFIG_VERSIONID="v0.2.4"
+CONFIG_VERSION_CONFIG_APPVERSIONID="v0.1.2"
+CONFIG_VERSION_CONFIG_VERSIONID="v0.1.2"
 CONFIG_PRODUCT_NAME="GP_WP838"
 CONFIG_PACKAGE_wireless-tools=y
 
@@ -1097,6 +1097,7 @@ CONFIG_PACKAGE_zlib=y
 #
 # Network
 #
+CONFIG_PACKAGE_curl=y
 
 #
 # Firewall
@@ -1331,6 +1332,7 @@ CONFIG_PACKAGE_kmod-lib-crc-ccitt=y
 # CONFIG_PACKAGE_kmod-lib-lzo is not set
 CONFIG_PACKAGE_kmod-lib-textsearch=y
 # CONFIG_PACKAGE_kmod-lib-zlib is not set
+CONFIG_PACKAGE_libcurl=y
 
 #
 # Native Language Support
@@ -1675,6 +1677,10 @@ CONFIG_PACKAGE_uboot_wp838_QCA10.1.436=y
 #
 # CONFIG_PACKAGE_PFD_Test_wp838 is not set
 CONFIG_PACKAGE_boarddata=y
+CONFIG_PACKAGE_cli=y
+CONFIG_PACKAGE_preip=y
+CONFIG_PACKAGE_libncurses=y
+CONFIG_PACKAGE_libreadline=y
 CONFIG_PACKAGE_ethread=y
 CONFIG_PACKAGE_flash=y
 CONFIG_PACKAGE_locator=y

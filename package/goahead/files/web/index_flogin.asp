@@ -28,7 +28,7 @@ function show_div(show,id) {
     	document.getElementById(id).className  = "off" ;
 }
 
-var modelname = "HoWen CPE&nbsp;<% getCfgGeneral(1, 'ProductName'); %>";
+var modelname = " &nbsp;<% getCfgGeneral(1, 'ProductName'); %>";
 function initTranslation()
 {
 	var lang="<% getCfgGeneral(1, "Language"); %>";

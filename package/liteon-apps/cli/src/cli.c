@@ -941,7 +941,7 @@ LOCAL A_BOOL cliLoginRead(CLI * pCli, int telnet)
     A_BOOL ok;
     //char cmd[128] = {0};
     //char dev_get[33] = {0};
-    char dev_name[33] = {0};
+    char dev_name[33]="CPE-5GHz";
     //int name_len = 0;
     //FILE *fp;
     char prompt[100];
@@ -949,12 +949,12 @@ LOCAL A_BOOL cliLoginRead(CLI * pCli, int telnet)
 #if 0
     if(T_FAILURE == get_sysname_from_nvram(dev_name))
 #else
-    if(T_FAILURE == get_productname_from_nvram(dev_name))
-#endif
-    {
-    	strcpy(dev_name, SYS_NAME);
-	}
-	
+    //if(T_FAILURE == get_productname_from_nvram(dev_name))
+
+    //{
+    //	strcpy(dev_name, SYS_NAME);
+	//}
+#endif	
     sprintf(prompt, "%s login: ", dev_name);
 
     for (;;)
@@ -1115,7 +1115,7 @@ parser(CLI * pCli, int fd, struct parse_token_s *pTbl)
     int i, len, status;
     //A_UINT32 cksum = 0;
     int invalid = 0;
-    char dev_name[33]={0};
+    char dev_name[33]="CPE-5GHz";
 
     char prompt[100];
     //*eof = 0;
@@ -1130,12 +1130,16 @@ parser(CLI * pCli, int fd, struct parse_token_s *pTbl)
      */
 #if 0
     if(T_FAILURE == get_sysname_from_nvram(dev_name))
-#else
-    if(T_FAILURE == get_productname_from_nvram(dev_name))
-#endif
-    	{
-          return FALSE;
+    {
+        return FALSE;
 	}
+#else
+    //if(T_FAILURE == get_productname_from_nvram(dev_name))
+    //{
+    //    return FALSE;
+	//}
+#endif
+
 	 
 //#define SINGLECRAD_DUALRADIO
 

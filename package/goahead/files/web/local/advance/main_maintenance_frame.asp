@@ -92,13 +92,13 @@ function MM_showHideLayers() { //v6.0
 <body onresize="onResizeWindow()"; scroll="no" onLoad="initTranslation()">
 <div id="wrapper">
   <div id="top"><div class="top_position"><div class="logo"></div>
-  <div class="modelname">CPE&nbsp;<% getCfgGeneral(1, "ProductName"); %></div>
+  <div class="modelname">&nbsp;<% getCfgGeneral(1, "ProductName"); %></div>
   <div class="quick_link">
     <ul>
 	<!--
       <li class="easy" title="Easy Mode"><a href="../networkmap.asp" id=id_EasyMode></a></li>
 	-->
-      <li class="about" onclick="MM_showHideLayers('popup','','show','popup4_table','','show')"><a href="#" title="About" id=id_About></a></li>
+      <li style="display:none" class="about" onclick="MM_showHideLayers('popup','','show','popup4_table','','show')"><a href="#" title="About" id=id_About></a></li>
         <li class="home" style="display:none"><a href="../index_login.asp" title="Home" target="_parent" id=id_Home></a></li>
       <li onclick="MM_showHideLayers('popup3_table','','show','popup','','show')"><a href="#" title="Logout" id=id_Logout></a></li>
       <li class="line"></li>
@@ -382,7 +382,7 @@ if(lang=="zhcn")
         <tr>
           <td width="19" background="images/popup_main_left.gif">&nbsp;</td>
           <td bgcolor="#FFFFFF"><span class="popupcontent">
-            <table width="95%" border="0" align="center" cellpadding="0" cellspacing="0">
+            <table width="95%" border="0" align="center" cellpadding="0" cellspacing="0" style='display:none;'>
               <tr>
                 <td width="27%"><center>
                   <img src="images/i_info.jpg" width="50" height="49" />

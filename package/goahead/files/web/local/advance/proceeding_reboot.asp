@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <link href="/table.css" rel="stylesheet" type="text/css" />
-<link href="/local/advance/images/expert.css" rel="stylesheet" type="text/css" />
+<link href="/local/advance/images/expert.css?version=general_0.1.3" rel="stylesheet" type="text/css" />
 <title>.::Welcome to <% getCfgGeneral(1, 'SystemName'); %>::.</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <script type="text/javascript" src="/lang/b28n.js"></script>

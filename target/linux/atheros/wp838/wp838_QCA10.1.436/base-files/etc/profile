@@ -15,7 +15,8 @@ export PS1='\u@\h:\w\$ '
 [ -x /usr/bin/ldd ] || ldd() { LD_TRACE_LOADED_OBJECTS=1 $*; }
 
 
-echo HoWen CPE HW-WCHS01
+#echo HoWen CPE HW-WCHS01
+echo 5GHz 300Mbps CPE
 
 if [ -f /version ]; then  cat /version | xargs echo Firmware version: ; fi
 

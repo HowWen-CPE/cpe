@@ -1,6 +1,0 @@
-#!/bin/sh
-
-if [ $@ == "restart" ]; then
-   /etc/init.d/network-lan restart
-   /etc/init.d/network-wan restart
-fi

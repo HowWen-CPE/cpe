@@ -2104,7 +2104,9 @@ static int getCfgGeneral(int eid, webs_t wp, int argc, char_t **argv)
 		value = reValue;	
 	} else if (!strcmp(field, "ProductName")) {
 		value = nvram_safe_get("license_key");
-		strcpy(reValue, value);
+        
+		//strcpy(reValue, value);
+		strcpy(reValue, "5GHz 300Mbps CPE");
 		value = reValue;
 	}
 	else if (!strcmp(field, "SystemName")){
