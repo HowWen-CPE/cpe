@@ -1,1 +1,0 @@
-OPTIONS="-C br-lan0 -S br-wan0"

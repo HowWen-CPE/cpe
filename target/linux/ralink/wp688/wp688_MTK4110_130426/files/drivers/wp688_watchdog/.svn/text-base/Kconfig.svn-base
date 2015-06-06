@@ -1,2 +1,0 @@
-config WP688_WDT
-        tristate "WP688 watchdog"

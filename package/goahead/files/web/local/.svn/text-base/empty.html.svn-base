@@ -1,5 +1,0 @@
-<html>
-<script>
-parent.location.href="/local/networkmap.asp";
-</script>
-</html>
