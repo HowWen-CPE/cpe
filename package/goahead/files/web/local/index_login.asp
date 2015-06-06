@@ -299,7 +299,7 @@ function MM_showHideLayers() { //v6.0
 <div class="index_bg" id="index_bg"></div>
 <!--<div class="frame_left"></div>
 <div class="frame_right"></div>-->
-<div class="logo" id="logo"><ul><li class="modelname" id="modelname">HoWen CPE&nbsp;<% getCfgGeneral(1, 'ProductName'); %><!--< getCfgGeneral(1, "SystemName"); >--></li></ul></div>
+<div class="logo" id="logo"><ul><li class="modelname" id="modelname"> &nbsp;<% getCfgGeneral(1, 'ProductName'); %><!--< getCfgGeneral(1, "SystemName"); >--></li></ul></div>
 <!--<div class="home_image"></div>-->
 <div class="home_note">
   <ul>

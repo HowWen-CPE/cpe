@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
 <meta http-equiv="Pragma" content="no-cache">
 <title>.::Welcome to <% getCfgGeneral(1, 'SystemName'); %>::.</title>
-<link href="images/expert.css" rel="stylesheet" type="text/css" />
+<link href="images/expert.css?version=general_0.1.3" rel="stylesheet" type="text/css" />
 <link href="images/table.css" rel="stylesheet" type="text/css" />
 <style type="text/css" media="all">
 .blod {font-weight: bold;}
@@ -48,7 +48,7 @@ function MM_showHideLayers() { //v6.0
 var refresh_interval_select=0;
 var	time_id=0;
 var cur_user = "<% getCfgGeneral(1, "AdminCurUser"); %>";
-var modelname = "CPE&nbsp;<% getCfgGeneral(1, "ProductName"); %>";
+var modelname = "&nbsp;<% getCfgGeneral(1, "ProductName"); %>";
 
 function refresh_info(){
 InfoFrame.location.href = '/local/advance/dashboard_info.asp';
@@ -175,13 +175,13 @@ function initTranslation()
 <div id="popup"></div>
 <div id="wrapper">
   <div id="top"><div class="logo"></div>
-    <div class="modelname" id="modelname">CPE&nbsp;<% getCfgGeneral(1, "ProductName"); %></div>
+    <div class="modelname" id="modelname">&nbsp;<% getCfgGeneral(1, "ProductName"); %></div>
     <div class="quick_link">
       <ul>
 	  <!--
         <li class="easy" title="Easy Mode"><a href="../networkmap.asp" target="_parent"><font id="dashEzMode"></font></a></li>
 	  -->
-        <li class="about" onclick="MM_showHideLayers('popup','','show','popup4_table','','show')"><a href="#" title="About"><font id="dashAbout"></font></a></li>
+        <li style="display:none" class="about" onclick="MM_showHideLayers('popup','','show','popup4_table','','show')"><a href="#" title="About"><font id="dashAbout"></font></a></li>
         <li class="home" style="display:none"><a href="../index_login.asp" title="Home" target="_parent"><font id="dashHome"></font></a></li>
         <li onclick="MM_showHideLayers('popup','','show','popup3_table','','show')"><a href="#" title="Logout"><font id="dashLogout"></font></a></li>
         <li class="line"></li>
@@ -341,7 +341,7 @@ if(lang=="zhcn")
         <tr>
           <td width="19" background="images/popup_main_left.gif">&nbsp;</td>
           <td bgcolor="#FFFFFF"><span class="popupcontent">
-            <table width="95%" border="0" align="center" cellpadding="0" cellspacing="0">
+            <table width="95%" border="0" align="center" cellpadding="0" cellspacing="0" style='display:none;'>
               <tr>
                 <td width="27%"><center>
                   <img src="images/i_info.jpg" width="50" height="49" />

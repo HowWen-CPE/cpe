@@ -106,7 +106,7 @@
 #define BW_UPLOAD_MIN "64"
 /* Board dependent definition. */
 
-#define LAN_DHCPSV6_RULE "default^1^2001:db8:feed:b00::^2001:db8:feed:b00::^2001:db8:feed:b00::^howentech.com^custom^^^0^100^200^30|default^0^2001:db8:feed:b10::^2001:db8:feed:b10::^2001:db8:feed:b10::^howentech.com^custom^^^0^100^200^30"
+#define LAN_DHCPSV6_RULE "default^1^2001:db8:feed:b00::^2001:db8:feed:b00::^2001:db8:feed:b00::^CPE_5GHz^custom^^^0^100^200^30|default^0^2001:db8:feed:b10::^2001:db8:feed:b10::^2001:db8:feed:b10::^CPE_5GHz^custom^^^0^100^200^30"
 #define LAN_STATICV6_RULE_DEFAULT "2001:db8:feed:b00::^1^2001:db8:feed:b00::^1^2001:db8:feed:b00::^1^64^^^^^^^^^^|2001:db8:feed:b10::^1^2001:db8:feed:b10::^1^2001:db8:feed:b10::^1^64^^^^^^^^^^"
 
 
@@ -140,7 +140,7 @@
 #define BW_ENABLE "1"
 #define BW_SBM_RULE_NUM "0"
 #define BW_SBM_RULE ""
-#define LAN_DHCPS_RULE "default^DHCPS^1^254^86400^howentech.com^^dnsrelay^^^^^dnsrelay^opendns^opendns^192.168.1.2^24^60^"
+#define LAN_DHCPS_RULE "default^DHCPS^1^254^86400^CPE_5GHz^^dnsrelay^^^^^dnsrelay^opendns^opendns^192.168.1.2^24^60^"
 #define VNC_SESSION_MAX "16"
 
 #define BT_TORRENT_MAX "10"
@@ -413,8 +413,8 @@
 
 /* unsort */
 #define WAN_TUNNEL6_RULE "72.52.104.74^2001:470:1f04:d1c::2/64^2001:470:1f04:d1c::1"
-#define GUEST_LAN_RULE "0^rai3^br2^1^192.168.2.1^24^0^0^1^howentech.com^33^32"
-#define GUEST_5G_LAN_RULE "0^ra3^br2^1^192.168.2.1^24^0^0^1^howentech.com^33^32"
+#define GUEST_LAN_RULE "0^rai3^br2^1^192.168.2.1^24^0^0^1^CPE_5GHz^33^32"
+#define GUEST_5G_LAN_RULE "0^ra3^br2^1^192.168.2.1^24^0^0^1^CPE_5GHz^33^32"
 
 
 #define GROUP1 "group^RWGROUP^v1^rw"
@@ -454,7 +454,7 @@
 
 //#define UPNP_FRIENDLYNAME   "HOWEN Internet Sharing Gateway"
 //#define MANUFACTURER        "HOWEN Communications Corp."
-//#define MANUFACTURERURL     "http://www.howentech.com"
+//#define MANUFACTURERURL     "http://www.CPE_5GHz"
 //#define MODELDESCRIPTION    "HOWEN Internet Sharing Gateway"
 //#define MODELNAME           "HOWEN Internet Sharing Gateway"
 
@@ -850,12 +850,16 @@ nvram_tuple_t nvram_factory_default[] = {
 		NVRAM_NONE,
 		0 
 	},
-	{ "license_key", "HW-WCHS01",
+	{ 
+	  //"license_key", "HW-WCHS01",
+	  "license_key", "CPE-5GHz",
 		NVRAM_PROTECTED | NVRAM_CUSTOMIZED,
 		0 
 	},
 
-	{ "hostname", "HW-WCHS01",
+	{ 
+          //"hostname", "HW-WCHS01",
+        "hostname", "CPE-5GHz",
 		NVRAM_NONE,
 		0 
 	},

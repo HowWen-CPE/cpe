@@ -564,14 +564,14 @@ int get_sta_assoc_bssid(int radio, char *bssid)
 	if(T_FAILURE == ret) {
 		return ret;
 	}
-	printf("%s:%d, ifacename: %s\n", __FUNCTION__, __LINE__, ifacename);
-    char cmd[128] = {0};
+	//printf("%s:%d, ifacename: %s\n", __FUNCTION__, __LINE__, ifacename);
+    char cmd[256] = {0};
     FILE *fin = NULL;
     char c;
     //Get the last field on line containing 'Access Point' but doesn't contains Not-Associated
     sprintf(cmd, "iwconfig %s | awk '/Access Point/{if(0==match($0, \"Not-Associated\")){print $NF}}'> /tmp/sta_bssid", ifacename);
 	system(cmd);
-	printf("%s:%d cmd=%s\n", __FUNCTION__, __LINE__, cmd);
+	//printf("%s:%d cmd=%s\n", __FUNCTION__, __LINE__, cmd);
 	//EXE_COMMAND(cmd);
 
     fin = fopen("/tmp/sta_bssid","r");
@@ -594,7 +594,7 @@ int get_sta_assoc_bssid(int radio, char *bssid)
 	}
 	
     fclose(fin);
-	printf("bssid = %s\n", bssid);
+	//printf("bssid = %s\n", bssid);
     //EXE_COMMAND("rm -f /tmp/sta_bssid");    
     system("rm -f /tmp/sta_bssid");
     /*Get STA BSSID From NVRAM*/

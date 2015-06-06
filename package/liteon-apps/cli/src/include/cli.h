@@ -217,6 +217,8 @@ typedef T_UINT32 Semaphore_t;
 #define CLI_PARSE_NOMESSAGE             9
 #define CLI_PARSE_ACCESS_LINUX          99999
 
+#define CLI_MAX_SESSION                 5
+
 #if 0
 #define SETFALIED      "Set failed.\n"
 #endif

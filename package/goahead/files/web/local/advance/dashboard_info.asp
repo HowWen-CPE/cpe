@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
 <meta http-equiv="Pragma" content="no-cache">
 <title>.::Welcome to <% getCfgGeneral(1, 'SystemName'); %>::.</title>
-<link href="images/expert.css" rel="stylesheet" type="text/css" />
+<link href="images/expert.css?version=general_0.1.3" rel="stylesheet" type="text/css" />
 <link href="images/table.css" rel="stylesheet" type="text/css" />
 <style>
 td {white-space: nowrap;}
