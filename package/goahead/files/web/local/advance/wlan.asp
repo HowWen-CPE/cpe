@@ -217,6 +217,15 @@ function submit_apply()
 		return false;
 	}
 
+	if ((document.wireless_basic.enablessid.checked == true) 
+		&& (document.wireless_basic.ssid.value == ""))
+	{
+		alert("Please enter SSID!");
+		document.wireless_basic.ssid.focus();
+		document.wireless_basic.ssid.select();
+		return false;
+	}
+
 	if ((document.wireless_basic.enablessid1.checked == true) 
 		&& (document.wireless_basic.mssid_1.value == ""))
 	{
@@ -317,6 +326,12 @@ function submit_apply()
 	}	
 */
 
+	if(isASCII(document.wireless_basic.ssid.value) == false){
+		alert('System only support ASCII characters.');
+		document.wireless_basic.ssid.focus();
+		document.wireless_basic.ssid.select();
+		return false;
+	}	
 	if(isASCII(document.wireless_basic.ssid.value) == false){
 		alert('System only support ASCII characters.');
 		document.wireless_basic.ssid.focus();
@@ -504,6 +519,8 @@ function initTranslation()
 	e = document.getElementById("GeneralWirelessSSID7");
 	e.innerHTML = _("general wireless ssid7");	
 	
+	e = document.getElementById("GeneralWirelessEnable");
+	e.innerHTML = _("wireless enable");	
 	e = document.getElementById("GeneralWirelessEnable1");
 	e.innerHTML = _("wireless enable");
 	e = document.getElementById("GeneralWirelessEnable2");
@@ -524,6 +541,7 @@ function initAll()
 {
 	initTranslation();
 	
+	var Enable_Radio = '<% getCfgZero(1, "EnableRadio" ); %>';
 	var Enable_SSID  = '<% getCfgZero(1, "EnableSSID" ); %>';
 	var Enable_SSID1 = '<% getCfgZero(1, "EnableSSID1"); %>';
 	var Enable_SSID2 = '<% getCfgZero(1, "EnableSSID2"); %>';	
@@ -565,6 +583,12 @@ function initAll()
 	PhyMode = 1*PhyMode;
 	if (PhyMode == 9)
 		document.wireless_basic.wirelessmode.options.selectedIndex = 0;
+
+	if (Enable_SSID == "1"){
+		document.wireless_basic.enablessid.checked = true;
+	}else{
+		document.wireless_basic.enablessid.checked = false;
+	}
 
 	if (Enable_SSID1 == "1"){
 		document.wireless_basic.enablessid1.checked = true;
@@ -700,7 +724,7 @@ function initAll()
 	refreshExtChannel();
 	SetExtIdx(nv_ext);
 
-	document.wireless_basic.generalRadioSwitch.options[eval(Enable_SSID)].selected=true;
+	document.wireless_basic.generalRadioSwitch.options[eval(Enable_Radio)].selected=true;
 	onGeneralRadioSwitch();
 	
 	parent.adjustMyFrameHeight();
@@ -737,6 +761,7 @@ function onGeneralRadioSwitch()
 		document.wireless_basic.hidemssid_6.disabled = false;
 		document.wireless_basic.hidemssid_7.disabled = false;
 
+		document.wireless_basic.enablessid.disabled = false;
 		document.wireless_basic.enablessid1.disabled = false;
 		document.wireless_basic.enablessid2.disabled = false;
 		document.wireless_basic.enablessid3.disabled = false;
@@ -758,7 +783,7 @@ function onGeneralRadioSwitch()
 		refreshExtChannel();
 		SetExtIdx(nv_ext);
 
-
+		toggleEnableSSID();
 		toggleEnableSSID1();
 		toggleEnableSSID2();
 		toggleEnableSSID3();
@@ -795,6 +820,7 @@ function onGeneralRadioSwitch()
 		document.wireless_basic.hidemssid_6.disabled = true;
 		document.wireless_basic.hidemssid_7.disabled = true;
 
+		document.wireless_basic.enablessid.disabled = true;
 		document.wireless_basic.enablessid1.disabled = true;
 		document.wireless_basic.enablessid2.disabled = true;
 		document.wireless_basic.enablessid3.disabled = true;
@@ -812,6 +838,19 @@ function onGeneralRadioSwitch()
 
 }
 
+function toggleEnableSSID()
+{
+	if (document.wireless_basic.enablessid.checked == true ) {
+		document.wireless_basic.ssid.disabled = false;
+		document.wireless_basic.hidessid.disabled = false;
+		document.wireless_basic.IntraBSS.disabled = false;
+	}
+	else {
+		document.wireless_basic.ssid.disabled = true;
+		document.wireless_basic.hidessid.disabled = true;
+		document.wireless_basic.IntraBSS.disabled = true;
+	}
+}
 
 function toggleEnableSSID1()
 {
@@ -941,7 +980,10 @@ function toggleEnableSSID7()
   </tr>
 
   <tr height=25>
-    <td>&nbsp;</td>
+    <td>
+      <input type="checkbox" name=enablessid value="1" onclick="toggleEnableSSID()"/>
+      <font id="GeneralWirelessEnable">Enable </font>
+    </td>
     <td>
       <font id="GeneralWirelessSSID">Network Name(SSID) :</font>
     </td>
@@ -1151,8 +1193,8 @@ function toggleEnableSSID7()
 	<select id="sz11gChannel" name="sz11gChannel" size="1" onChange="refreshExtChannel()"  style="width:240px">
 	</select>                        
 </td>
-<td width="*">
-&nbsp;
+<td width="*">&nbsp;
+
 </td>
 </tr>
 </table>

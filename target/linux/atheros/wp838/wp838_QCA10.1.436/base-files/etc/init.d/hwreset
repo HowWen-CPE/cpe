@@ -34,6 +34,6 @@ boot () {
 
 
 #WLAN Process
-    /etc/wl/wlan-init
+    sh -x /etc/wl/wlan-init > /dev/console
     sleep 5
 }

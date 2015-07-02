@@ -169,6 +169,20 @@
 	<message msgid="wan macop1" msgstr="原厂预设值"/>
 	<message msgid="wan macop2" msgstr="仿制电脑的 MAC 地址 - IP 地址"/>
 	<message msgid="wan macop3" msgstr="设置广域网络 MAC 地址"/>
+        <message msgid="service detection" msgstr="网络服务检测" />
+        <message msgid="Enable Detection Service" msgstr="启用网络服务检测" />
+        <message msgid="retry count" msgstr="重试次数 :" />
+        <message msgid="retry timeout" msgstr="重试超时次数 : " />
+        <message msgid="default gateway" msgstr="默认网关" />
+        <message msgid="isp host" msgstr="ISP 主机: " />
+        <message msgid="isp host1" msgstr="ISP 主机" />
+        <message msgid="icmp host" msgstr="ICMP 主机  :" />
+        <message msgid="retry Timeout" msgstr="秒（范围：5-999)" />
+        <message msgid="multiWAN Title" msgstr="多广域网络" />
+        <message msgid="multiWAN1" msgstr="广域网络1" />
+        <message msgid="multiWAN2" msgstr="广域网络2" />
+        <message msgid="link BackUp" msgstr="智能链路备份" />
+        <message msgid="multiWAN Mode" msgstr="主广域网络(请指定主广域网络口)" />
 	<message msgid="wan Apply" msgstr="应用"/>
 	<message msgid="wan Reset" msgstr="重设"/>
 	<message msgid="snooping title" msgstr="IGMP 窥探设置"/>
@@ -282,6 +296,7 @@
 	<message msgid="Multicast" msgstr="多址传送"/>
 	<message msgid="Auto_bridge" msgstr="自动桥接"/>
 	<message msgid="Enable_Auto_bridge_mode" msgstr="启用自动桥接模式"/>
+	<message msgid="WAN_Interface_index" msgstr="广域网接口索引" />
 	<message msgid="Dynamic_DNS_Setup" msgstr="动态 DNS 设置"/>
 	<message msgid="Enable_Dynamic_DNS" msgstr="启用动态 DNS"/>
 	<message msgid="Service_Provider" msgstr="服务提供者："/>
@@ -495,6 +510,64 @@
 <message msgid="stp set 0" msgstr="关闭" />
 <message msgid="stp Apply" msgstr="应用" />
 <message msgid="stp Reset" msgstr="重设" />
+<!-- switch_qos.asp --> 
+<message msgid="QueueTitle" msgstr="队列设置" />
+<message msgid="QosQueueMode" msgstr="队列模式" />
+<message msgid="QosQueueMode_0" msgstr="Strict" />
+<message msgid="QosQueueMode_1" msgstr="WRR" />
+<message msgid="WrrWeight" msgstr="WRR权重" />
+<message msgid="LowQueue" msgstr="低级队列" />
+<message msgid="NormalQueue" msgstr="普通队列" />
+<message msgid="MediumQueue" msgstr="中级队列" />
+<message msgid="HighQueue" msgstr="高级队列" />
+<message msgid="ModeTitle" msgstr="分类模式设置" />
+<message msgid="ModeLable" msgstr="分类模式" />
+<message msgid="ClassifyMode_0" msgstr="802.1p" />
+<message msgid="ClassifyMode_1" msgstr="DSCP" />
+<message msgid="Dot1pMap" msgstr="802.1p优先级图" />
+<message msgid="Dot1pPriority" msgstr="802.1p优先级配置" />
+<message msgid="Dot1pAllDefault" msgstr="统一默认优先级" />
+<message msgid="Dot1pAllLow" msgstr="统一低优先级" />
+<message msgid="Dot1pAllNormal" msgstr="统一普通优先级" />
+<message msgid="Dot1pAllMedium" msgstr="统一中优先级" />
+<message msgid="Dot1pAllHigh" msgstr="统一高优先级" />
+<message msgid="Dot1pPriority_Colum1" msgstr="优先级" />
+<message msgid="Dot1pPriority_Colum2" msgstr="优先级" />
+<message msgid="Dot1pPriority_Colum3" msgstr="优先级" />
+<message msgid="Dot1pPriority_Colum4" msgstr="优先级" />
+<message msgid="Dot1pClass_Colum1" msgstr="队列" />
+<message msgid="Dot1pClass_Colum2" msgstr="队列" />
+<message msgid="Dot1pClass_Colum3" msgstr="队列" />
+<message msgid="Dot1pClass_Colum4" msgstr="队列" />
+<message msgid="DscpMap" msgstr="DSCP优先级图" />
+<message msgid="DscpPriority" msgstr="DSCP优先级设置" />
+<message msgid="DscpAllDefault" msgstr="统一默认优先级" />
+<message msgid="DscpAllLow" msgstr="统一低优先级" />
+<message msgid="DscpAllNormal" msgstr="统一普通优先级" />
+<message msgid="DscpAllMedium" msgstr="统一中优先级" />
+<message msgid="DscpAllHigh" msgstr="统一高优先级" />
+<message msgid="DscpPriority_Colum1" msgstr="优先级" />
+<message msgid="DscpPriority_Colum2" msgstr="优先级" />
+<message msgid="DscpPriority_Colum3" msgstr="优先级" />
+<message msgid="DscpPriority_Colum4" msgstr="优先级" />
+<message msgid="DscpClass_Colum1" msgstr="队列" />
+<message msgid="DscpClass_Colum2" msgstr="队列" />
+<message msgid="DscpClass_Colum3" msgstr="队列" />
+<message msgid="DscpClass_Colum4" msgstr="队列" />
+<message msgid="Level_Low" msgstr="低级" />
+<message msgid="Level_Normal" msgstr="普通" />
+<message msgid="Level_Medium" msgstr="中级" />
+<message msgid="Level_High" msgstr="高级" />
+<!-- lag.asp --> 
+<message msgid="trunking" msgstr="链路聚合 : " />
+<message msgid="trunking setting" msgstr="链路聚合设置" />
+<message msgid="trunking set 1" msgstr="开启" />
+<message msgid="trunking set 0" msgstr="关闭" />
+<message msgid="lag name" msgstr="LAG名称 : " />
+<message msgid="lag members" msgstr="LAG成员 : " />
+<message msgid="trunking Apply" msgstr="应用" />
+<message msgid="trunking Reset" msgstr="重设" />
+<message msgid="- Require that connected switch have the appropriate ports grouped together."   msgstr="- 要求关联的交换机对应端口链路聚合" />
 <!-- route_table.asp --> 
 <message msgid="route_table" msgstr="路由表" />
 <!-- vpn_ipsec.asp --> 
@@ -595,4 +668,7 @@
 <message msgid="User Name error. Chatacter Hyphen is not supported in this field." msgstr="用户名错误。不支持空格和短横线字符。" />
 <message msgid="Password error. Chatacter Hyphen is not supported in this field." msgstr="密码错误。不支持空格和短横线字符。" />
 <message msgid="Custom Server error. Chatacter Hyphen is not supported in this field." msgstr="客户服务错误。不支持空格和短横线字符。" />
+<!--lan.asp alert-->
+<message msgid="LAN IP conflict with DMZ server IP" msgstr="LAN IP地址和DMZ服务IP地址冲突。" />
+<message msgid="If you set up this LAN IP,DMZ will be clear." msgstr="如果强制设置该LAN IP地址，DMZ服务将不能工作。" />
 </po>

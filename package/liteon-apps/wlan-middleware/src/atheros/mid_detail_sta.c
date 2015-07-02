@@ -2,9 +2,9 @@
 #include    <stdlib.h>
 #include    <stdio.h>
 #include	<string.h>
-
 #include    <sys/ioctl.h>
 #include    <arpa/inet.h>
+#include	<assert.h>
 
 #ifdef CONFIG_DEFAULTS_KERNEL_2_6_21
 #include    <linux/types.h>
@@ -13,12 +13,27 @@
 #endif//End of #ifdef CONFIG_DEFAULTS_KERNEL_2_6_21
 
 #include    <linux/wireless.h>
-#include	<assert.h>
 
 #include	"nvram.h"
 #include	"nvram_rule.h"
-#include    "mid_common.h"
+
 #include    "mid_detail.h"
+#include    "mid_common.h"
+#include	"mid_common_nvram.h"
+
+#include	"mid_detail_sta.h"
+#include	"mid_detail_ap_set.h"
+
+
+
+/*wlan-chip-vendor specified 
+private functions declartions */
+
+int get_sta_assoc_secmode(radio)
+{
+	return nvram_get_sta_secmode(radio);
+}
+
 
 
 /**
@@ -963,7 +978,7 @@ int get_sta_assoc_wmode(int radio, char *wmode)
  * \author frank
  * \date 2014-01-08
  */
-int get_sta_assoc_authmode(int radio, int *auth_mode, int *enc_type)
+int get_sta_assoc_authmode(int radio, int *auth_mode)
 {
 	char TempBuf_opmode[8] = {0};
 	char auth_mode_get[32] = {0};
@@ -1037,17 +1052,6 @@ int get_sta_assoc_authmode(int radio, int *auth_mode, int *enc_type)
 		fprintf(stderr, "%d@%s unknow authmode:%s\r\n", __LINE__, __FUNCTION__, auth_mode_get);
 	}
 
-	if (strstr(auth_mode_get, "TKIPAES")) {		
-		*enc_type = ENCRY_TKIPAES;
-	} else if (strstr(auth_mode_get, "TKIP")) {
-		*enc_type = ENCRY_TKIP;
-	} else if (strstr(auth_mode_get, "AES")) {
-		*enc_type = ENCRY_AES;
-	} else if (strstr(auth_mode_get, "NONE")) {
-		*enc_type = ENCRY_NONE;
-	} else {
-		*enc_type = AUTHMODE_UNDEFINED;
-	}
 
 	fclose(fin);
 	//EXE_COMMAND("rm -f /tmp/sta_security"); 
@@ -1072,7 +1076,7 @@ int get_sta_assoc_ap_info(int radio, AP_INFO *ap_info)
 	ret += get_sta_assoc_ssid(radio, ap_info->ssid);
 	ret += get_sta_assoc_bssid(radio, ap_info->bssid);
 	ret += get_sta_assoc_rssi(radio, ap_info->rssi);
-	ret += get_sta_assoc_authmode(radio, &(ap_info->auth_mode), &(ap_info->enc_type));
+	ret += get_sta_assoc_authmode(radio, &(ap_info->auth_mode));
 	return T_SUCCESS==ret ? T_SUCCESS: T_FAILURE;
 }
 
@@ -1536,46 +1540,6 @@ int get_ap_list(int radio, SCAN_AP_LIST *ap_list)
 /*****************************************************************/
 /*Op Mode Switch                                                 */
 /*****************************************************************/
-int get_sta_assoc_secmode(radio)
-{
-	return nvram_get_sta_secmode(radio);
-}
-#if 0
-int set_device_mode(int radio, int op_mode)
-{
-    int device_mode;
-    char radio_name[8];
-    char cmd[128];
-    int ret;
-    switch(op_mode)
-        {
-            case OP_MODE_NORMAL:
-            case OP_MODE_AP:
-                device_mode = 0;
-                break;  
-            case OP_MODE_STA0:
-                device_mode = 1;
-                break;  
-            case OP_MODE_WISP:
-                device_mode = 2;
-                break;  
-            default:
-                printf("Error:Such operation mode is not supported current, please check it\n");
-                return T_FAILURE;
-        }   
-    /*Construct AP*/
-    ret = construct_main_ap(radio_name, radio);
-    if(T_FAILURE == ret)
-        {
-            fprintf(stderr, "ERRO:Construct main AP failure!\n");
-            return T_FAILURE;
-        }
-    sprintf(cmd, "iwpriv %s set DeviceMode=%d", radio_name, device_mode);
-    printf("CMD in set_device_mode is %s\n", cmd);
-    EXE_COMMAND(cmd);
-    return T_SUCCESS;
-}
-#endif
 int set_apcli_disconnect_ap(int radio)
 {
     return T_SUCCESS;

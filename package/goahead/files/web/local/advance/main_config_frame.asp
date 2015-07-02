@@ -794,7 +794,12 @@ else if("WP868" == board_model) {
 <span id = "menu_20_4" class = "off" >
         <li><a target="InfoFrame" href="/local/advance/wlan_advance.asp" title="Advanced" onclick="onChangeHeadMenu(20, 4, _('CONFIGURATION')+' > '+_('Network')+' > '+_('Wireless LAN 2.4G')+' > '+_('Advanced'))"><span><script>document.write(_("Advanced"))</script></span></a></li>
 </span> 
-
+<span id = "menu_20_5_hightline" class = "off" >
+        <li class="hightline"><a title="WDS"><span><script>document.write(_("WDS"))</script></span></a></li>
+</span>    
+<span id = "menu_20_5" class = "off" >
+        <li><a target="InfoFrame" href="/local/advance/wireless_wds_r.asp" title="WDS" onclick="onChangeHeadMenu(20, 5, _('CONFIGURATION')+' > '+_('Network')+' > '+_('Wireless LAN 2.4G')+' > '+_('WDS'))"><span><script>document.write(_("WDS"))</script></span></a></li>
+</span>
 <!-- AP and Router Mode 2.4G For wp838 only-->    
 <span id = "menu_21_1_hightline" class = "off" >
         <li class="hightline"><a title="Basic"><span><script>document.write(_("Basic"))</script></span></a></li>
@@ -826,6 +831,13 @@ else if("WP868" == board_model) {
 <span id = "menu_21_5" class = "off" >
         <li><a target="InfoFrame" href="/local/advance/qos.asp" title="WMM" onclick="onChangeHeadMenu(21, 5, _('CONFIGURATION')+' > '+_('Network')+' > '+_('Wireless LAN 2.4G')+' > '+_('WMM'))"><span><script>document.write(_("WMM"))</script></span></a></li>
 </span> 
+<span id = "menu_21_6_hightline" class = "off" >
+        <li class="hightline"><a title="WDS"><span><script>document.write(_("WDS"))</script></span></a></li>
+</span>    
+<span id = "menu_21_6" class = "off" >
+        <li><a target="InfoFrame" href="/local/advance/wireless_wds_a.asp" title="WDS" onclick="onChangeHeadMenu(21, 6, _('CONFIGURATION')+' > '+_('Network')+' > '+_('Wireless LAN 2.4G')+' > '+_('WDS'))"><span><script>document.write(_("WDS"))</script></span></a></li>
+</span>
+
 <!-- 
 <span id = "menu_20_6_hightline" class = "off" >
         <li class="hightline"><a title="WPS"><span><script>document.write(_("WPS"))</script></span></a></li>
@@ -1404,6 +1416,12 @@ else if("WP868" == board_model) {
 </span>    
 <span id = "menu_35_5" class = "off" >
         <li><a target="InfoFrame" href="/local/advance/qos_5g.asp" title="WMM" onclick="onChangeHeadMenu(35, 5, _('CONFIGURATION')+' > '+_('Network')+' > '+_('Wireless LAN 5G')+' > '+_('WMM'))"><span><script>document.write(_("WMM"))</script></span></a></li>
+</span> 
+<span id = "menu_35_6_hightline" class = "off" >
+        <li class="hightline"><a title="WDS"><span><script>document.write(_("WDS"))</script></span></a></li>
+</span>    
+<span id = "menu_35_6" class = "off" >
+        <li><a target="InfoFrame" href="/local/advance/wireless_wds_a_5g.asp" title="WDS" onclick="onChangeHeadMenu(35, 6, _('CONFIGURATION')+' > '+_('Network')+' > '+_('Wireless LAN 5G')+' > '+_('WDS'))"><span><script>document.write(_("WDS"))</script></span></a></li>
 </span> 
 <!--TODO 5g WISP + UR opmode==7 -->
 <!--

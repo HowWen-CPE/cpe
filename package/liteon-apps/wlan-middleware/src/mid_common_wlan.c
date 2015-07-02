@@ -1,12 +1,15 @@
-#include    <stdlib.h>
-#include    <stdio.h>
-#include <string.h>
-#include        "nvram.h"
-#include "nvram_rule.h"
-
-#include "mid_common.h"
+#include	<stdlib.h>
+#include	<stdio.h>
+#include	<string.h>
 #include	<sys/ioctl.h>
 #include	<unistd.h>
+
+#include	"mid_detail.h"
+#include	"mid_common.h"
+#include	"mid_common_nvram.h"
+
+#include    "nvram.h"
+#include	"nvram_rule.h"
 
 /*
 *
@@ -331,7 +334,6 @@ void format_bssid_lower(char *str1, char* str2)
         *str2 = '\0'; //NULL Terminate
 }
 
-#if defined(GP_WP688)
 void delspace1(char *Buf1, char* Buf2)
 {
         while(*Buf1 != '\0')
@@ -347,7 +349,6 @@ void delspace1(char *Buf1, char* Buf2)
         *Buf2 = '\0'; //NULL Terminate
 
 }
-#elif defined(GP_WP838)
 //Get bssid from a string and delete the ' or " at the begining or end of the string
 void format_ssid(char *str1, char* str2)
 {
@@ -372,11 +373,8 @@ void format_ssid(char *str1, char* str2)
         }
         *str2 = '\0'; //NULL Terminate
 }
-#endif
 
 
-#if defined(GP_WP688)
-#elif defined(GP_WP838)
 int convert_special_characters(int radio, char *target_str, int target_len, char *origin_str)
 {
     int i, j;
@@ -421,7 +419,6 @@ int convert_special_characters(int radio, char *target_str, int target_len, char
     
     return T_SUCCESS;
 }
-#endif
 
 
 /* Adjust Leap Year or not? */
@@ -479,8 +476,6 @@ date sec2date(long sec)
     return d;
 }
 
-#if defined(GP_WP688)
-#elif defined(GP_WP838)
 //Get channel from string
 int extract_channel(char channel[], char str[], char pattern[])
 {
@@ -516,44 +511,8 @@ int extract_channel(char channel[], char str[], char pattern[])
     }
     return T_FAILURE;
 }
-#endif
 
-//Get associated bssid of sta from a string
-#if 0
-#if defined(GP_WP688)
-int extract_assoc_bssid(char bssid[], char str[], char pattern[])
-{
-    int lnth, lnthdif,i,j,k;
-        char tmpBssid[32];
-    lnth=length(pattern);
-    lnthdif=length(str)-lnth+1;
-    if (lnth>0 && lnthdif>0){
-        i=0;
-        while (i<lnthdif){
-            j=i; k=0;
-                        //printf("str is %s\n", &str[j]);
-                        //printf("pattern is %s\n", pattern);
-            while (k<lnth && str[j++]==pattern[k]) k++;
-            if (k==lnth){
-                    //snprintf(tmpBssid, 18, "%s", &str[i+lnth]);
-                                strcpy(tmpBssid, (str+i+lnth));
-                                printf("tmpBssid is %s\n", tmpBssid);
-                                format_bssid_upper(tmpBssid, bssid);
-                                //strcpy(bssid, &str[i+lnth]);
-                return T_SUCCESS;
-            }else{
-                i++;
-            }
-        }
-    }
-    return T_FAILURE;
-}
-#elif defined(GP_WP838)
-#endif
-#endif
 
-#if defined(GP_WP688)
-#elif defined(GP_WP838)
 int extract_assoc_ssid(char ssid[], char str[], char pattern[])
 {
     int lnth, lnthdif,i,j,k;
@@ -583,7 +542,6 @@ int extract_assoc_ssid(char ssid[], char str[], char pattern[])
     }
     return T_FAILURE;
 }
-#endif
 
 //Read one line from a file
 void readline(char str[], FILE *fin)
@@ -595,36 +553,22 @@ void readline(char str[], FILE *fin)
     str[n] = '\0';
 }
 
-#if defined(GP_WP688)
-int convert_vap_id(int radio, unsigned char vap_id)
-{
-    int actual_id;
-    actual_id = vap_id;
-    return actual_id;
-}
-#elif defined(GP_WP838)
 int convert_vap_id(int radio, unsigned char vap_id)
 {
     int actual_id = 0;
-    
-#ifdef SINGLE_RADIO
-    actual_id = vap_id*2;
-#else
-
+	int wl_num = atoi(nvram_get("wl_num"));
     if(RADIO_2G == radio)
         {
-            actual_id = vap_id*2;
+            actual_id = vap_id*wl_num;
         }
     else if(RADIO_5G == radio)
         {
-            actual_id = vap_id*2 + 1;
+            actual_id = vap_id*wl_num + 1;
         }
-#endif
-    return actual_id;
 
+    return actual_id;
 }
 
-#endif
 /**
  * \brief  Construct VAP Interface Name according to radio(2.4G/5G), 
  *		   vapi_id(0~7) and mode(WLAN_MODE_AP|WLAN_MODE_STA)
@@ -649,6 +593,10 @@ int construct_vap(char* name, unsigned int radio, unsigned char vap_id, unsigned
                 {
                   sprintf(name, "%s%d", STA_NAME_2G, actual_id);
                 }
+            else if(WLAN_MODE_WDS == mode)
+                {
+                  sprintf(name, "%s%d", WDS_NAME_2G, actual_id);
+                }
             else
                 {
                   printf("ERROR:Construct vap error!\n");
@@ -665,6 +613,10 @@ int construct_vap(char* name, unsigned int radio, unsigned char vap_id, unsigned
                 {
                   sprintf(name, "%s%d", STA_NAME_5G, actual_id);
                 }
+            else if(WLAN_MODE_WDS == mode)
+                {
+                  sprintf(name, "%s%d", WDS_NAME_5G, actual_id);
+                }
             else
                 {
                   printf("ERROR:Construct vap error!\n");
@@ -678,6 +630,37 @@ int construct_vap(char* name, unsigned int radio, unsigned char vap_id, unsigned
         }
 
     return T_SUCCESS;
+}
+
+/**
+ * \brief  Construct WDS Interface Name according to radio(2.4G/5G), 
+ *		   vapi_id(0~3) 
+ * \return T_SUCCESS on Success, T_FAILURE on Failure
+ * \param[out] name the generated interface name
+ * \param[in] radio RADIO_2G or RADIO_5G
+ * \param[in] vap_id 0~7
+ * \date 2014-06-09
+ * \author frank
+ */
+int construct_wds(char* name, unsigned int radio,
+		unsigned char vap_id)
+{
+	int actual_id;
+	actual_id = convert_vap_id(radio, vap_id); 
+
+	if(RADIO_2G == radio) {
+		sprintf(name, "%s%d", WDS_NAME_2G, actual_id);
+		return T_SUCCESS;
+	}
+	else if(RADIO_5G == radio) {
+		sprintf(name, "%s%d", WDS_NAME_5G, actual_id);
+		return T_SUCCESS;
+	}
+	else {
+		printf("ERROR:Construct vap error!\n");
+	}
+
+	return T_FAILURE;
 }
 
 
@@ -807,7 +790,6 @@ int wait_for_bridge_setup(int radio, int mode)
 }
 
 
-#if defined(GP_WP688)
 //VAP up and down
 int vap_up_down(int radio, int vapid, int mode, int up)
 {
@@ -824,60 +806,14 @@ int vap_up_down(int radio, int vapid, int mode, int up)
     if(up)
         {
             sprintf(cmd, "ifconfig %s up", vap_name);
-			#ifdef MID_DEBUG
             EXE_COMMAND(cmd);
-			#else
-			system(cmd);
-			#endif
         }
     else
         {
             sprintf(cmd, "ifconfig %s down", vap_name);
-			#ifdef MID_DEBUG
             EXE_COMMAND(cmd);
-			#else
-			system(cmd);
-			#endif
         }
-    return T_SUCCESS;
-}
-#elif defined(GP_WP838)
-//VAP up and down
-int vap_up_down(int radio, int vapid, int mode, int up)
-{
-    char vap_name[VAP_NAME_LEN];
-    int ret;
-    char cmd[128];
-    /*Construct vap name by radio, vap_id and vap mode*/
-    ret = construct_vap(vap_name, radio, vapid, mode);
-    if(T_FAILURE == ret)
-        {
-                printf("ERROR:Construct VAP failure!\n");
-        }
-
-    if(up)
-        {
-			#ifdef MID_DEBUG
-			sprintf(cmd, "ifconfig %s up", vap_name);
-            EXE_COMMAND(cmd);
-			#else
-			//system("echo \"0 0 0 0\" > /proc/sys/kernel/printk");
-			sprintf(cmd, "ifconfig %s up 1>/dev/null 2>/dev/null", vap_name);
-			system(cmd);
-			#endif
-        }
-    else
-        {
-			#ifdef MID_DEBUG
-			sprintf(cmd, "ifconfig %s down", vap_name);
-            EXE_COMMAND(cmd);
-			#else
-			//system("echo \"0 0 0 0\" > /proc/sys/kernel/printk");
-			sprintf(cmd, "ifconfig %s down 1>/dev/null 2>/dev/null", vap_name);
-			system(cmd);
-			#endif
-        }
-
+#if defined(atheros)
     if(up)
     {
         /* wait 500 million seconds */
@@ -887,6 +823,7 @@ int vap_up_down(int radio, int vapid, int mode, int up)
     {
         usleep(500000);
     }
+#endif
 
     return T_SUCCESS;
 }
@@ -968,7 +905,7 @@ int create_vap(int radio, int vapid, int mode)
     /*Construct vap name by radio, vap_id and vap mode*/
     ret = construct_vap(vap_name, radio, vapid, mode);
     MID_ASSERT((T_SUCCESS == ret), "ERROR:Construct VAP failure!");
-    MID_ASSERT(((WLAN_MODE_AP == mode) || (WLAN_MODE_STA == mode)), "ERROR:Invalid wlan mode!");
+    MID_ASSERT(((WLAN_MODE_AP == mode) || (WLAN_MODE_STA == mode) || (WLAN_MODE_WDS == mode)), "ERROR:Invalid wlan mode!");
     //Create vap first
     if(WLAN_MODE_AP == mode) 
     {
@@ -982,6 +919,15 @@ int create_vap(int radio, int vapid, int mode)
         EXE_COMMAND(cmd);
         //sleep(1);
     }
+	else if(WLAN_MODE_WDS == mode)
+	{
+        sprintf(cmd, "wlanconfig %s create wlandev wifi%d wlanmode ap", vap_name, radio);
+        EXE_COMMAND(cmd);
+	}
+	else
+	{
+		return T_FAILURE;
+	}
     
     while(max_sleep > 0)
     {
@@ -1022,7 +968,7 @@ int destroy_vap(int radio, int vapid, int mode)
     /*Construct vap name by radio, vap_id and vap mode*/
     ret = construct_vap(vap_name, radio, vapid, mode);
     MID_ASSERT((T_SUCCESS == ret), "ERROR:Construct VAP failure!");
-    MID_ASSERT(((WLAN_MODE_AP == mode) || (WLAN_MODE_STA == mode)), "ERROR:Invalid wlan mode!");
+    MID_ASSERT(((WLAN_MODE_AP == mode) || (WLAN_MODE_STA == mode) || (WLAN_MODE_WDS == mode)), "ERROR:Invalid wlan mode!");
     //Down the vap before destory
     //vap_up_down(radio, vapid, mode, VAP_DOWN);    
     //Destroy the vap by command
@@ -1074,12 +1020,15 @@ int create_all_vap(int radio, int mode)
         for(i=0; i < vap_num; i++)
         {
             create_vap(radio, i, mode);
+            if(i<WDS_VAP_NUM) {
+				create_vap(radio, i, WLAN_MODE_WDS);
+			}
         }
     }
     else if(WLAN_MODE_STA == mode)
     {
         create_vap(radio, 0, mode);
-#if defined(GP_WP838)
+#if defined(atheros)
 		set_extra_sta(radio);
 #endif
     }
@@ -1119,128 +1068,23 @@ int destroy_all_vap(int radio, int mode)
         for(i=0; i < vap_num; i++)
         {
             destroy_vap(radio, i, mode);
+            if(i < WDS_VAP_NUM) {
+				destroy_vap(radio, i, WLAN_MODE_WDS);
+            }
         }
     }
     else if(WLAN_MODE_STA == mode)
     {
         destroy_vap(radio, 0, mode);
     }
+    else{
+		return T_FAILURE;
+    }
 
     return T_SUCCESS;
 }
-#endif //End of    #if defined(GP_WP688)
 
 
-
-
-//Radio up or down
-#if defined(GP_WP688)
-/*Set Radio(2.4G or 5G) on/off, we use rai0(2.4G) or ra0(5G) as main ap*/
-int radio_up_down(int radio, int up)
-{
-    int ret;
-    int i;
-    char radio_name[VAP_NAME_LEN];
-    //RalinkVAP_t vap_list[RADIOA_VAP_MAX_NUM];
-    int vap_num;
-    int radio_status;
-    char cmd[128];
-    /*Construct main VAP name*/
-    construct_main_ap(radio_name, radio);
-
-    /*Judge if up or down*/
-    if(up)
-        {
-            /*Get the radio status, if is already up, return*/
-	     ret = get_radio_status(radio, &radio_status);
-	     if(T_FAILURE == ret) 
-	     	{
-			printf("get radio status failure!\n");
-			return T_FAILURE; 
-		}
-	     if(RADIO_UP == radio_status)
-	     	{
-	     		return T_SUCCESS;
-	     	}
-#if 0
-            /*main VAP up*/
-	     sprintf(cmd, "ifconfig %s up", radio_name);
-            system(cmd);
-	     /*Wait for a moment*/
-	     sleep(5);
-
-            /*Set RadioOn as on*/
-	     memset(cmd, 0, sizeof(cmd));
-            /*Set RadioOn as on*/
-	     sprintf(cmd, "iwpriv %s set RadioOn=1", radio_name);
-            system(cmd);
-#endif 
-            /*main VAP up*/
-	     sprintf(cmd, "/etc/wl/wlan-init create");
-            system(cmd);
-	     /*Wait for a moment*/
-	     sleep(5);
-#if 0
-	     memset(cmd, 0, sizeof(cmd));
-	     sprintf(cmd, "/etc/wl/wlan-init init");
-            system(cmd);
-#endif
-            /*Set RadioOn as on*/
-	     memset(cmd, 0, sizeof(cmd));
-            /*Set RadioOn as on*/
-	     sprintf(cmd, "iwpriv %s set RadioOn=1", radio_name);
-            system(cmd);
-       }
-    /*Down the radio*/
-    else
-    	{
-	     /*Get VAP num from wlv_rule_num*/
-	     vap_num = atoi(nvram_safe_get("wlv_rule_num"));
-            printf("vap_num is %d\n",vap_num);
-            /*Down all the VAPs exclude main VAP*/
-            for(i=1; i < vap_num; i++)
-            	{	
-			ret = vap_up_down(radio,  i, WLAN_MODE_AP, VAP_DOWN);	
-			if(T_FAILURE == ret)
-				{
-					printf("ERROR:up/dwon VAP failure\n");
-					return T_FAILURE;
-				}
-            	}
-	     /*Down all the VAPs in WDS mod*/
-#if 0
-            for(i=0; i < WDS_NUM; i++)
-            	{
-			ret = vap_up_down(radio,  i, MODE_WDS, VAP_DOWN);	
-			if(T_FAILURE == ret)
-				{
-					printf("ERROR:up/dwon WDS VAP failure\n");
-					return T_FAILURE;
-				}
-            	}
-#endif
-	     /*Down APCLI*/
-	     ret = vap_up_down(radio,  0, WLAN_MODE_STA, VAP_DOWN);	
-	     if(T_FAILURE == ret)
-		{
-			printf("ERROR:up/dwon APCLI VAP failure\n");
-			return T_FAILURE;
-		}
-	     
-            /*main VAP down*/
-	     sprintf(cmd, "ifconfig %s down", radio_name);
-            system(cmd);
-	     /*Wait for a moment*/
-	     sleep(3);
-		 
-	     memset(cmd, 0, sizeof(cmd));
-            /*Set RadioOn as off*/
-	     sprintf(cmd, "iwpriv %s set RadioOn=0", radio_name);
-            system(cmd);
-    	}
-    return T_SUCCESS;
-}
-#elif defined(GP_WP838)
 int kill_all_authentication_daemon(int radio, int mode)
 {
     int i;
@@ -1321,59 +1165,6 @@ int kill_all_authentication_daemon(int radio, int mode)
 
     return T_SUCCESS;
 }
-
-
-int radio_up_down(int radio, int up, int mode)
-{
-    int i;
-    int vap_num;
-    int vap_status;
- 
-    /*Get VAP num from wlv_rule_num*/
-    vap_num = nvram_get_vap_num(radio); 
-    printf("vap_num is %d\n",vap_num);
-
-    if(up)
-    {
-        /*Up the VAP which is enable*/
-        if(WLAN_MODE_AP == mode)
-        {
-            for(i = 0; i < vap_num; i++)
-                {    
-                    nvram_get_vap_status(radio, i, &vap_status);
-                    if(VAP_UP == vap_status)
-                    {
-                        vap_up_down(radio, i, mode, VAP_UP);    
-                    }
-                }
-        }
-        else if(WLAN_MODE_STA == mode)
-        {
-            vap_up_down(radio, 0, mode, VAP_UP);    
-        }
-        //sleep(1);
-    }
-    else
-    {
-        /*Down all the VAPs, down main VAP at last*/
-        if(WLAN_MODE_AP == mode)
-        {
-            for(i = vap_num - 1; i >= 0; i--)
-                {    
-                    vap_up_down(radio, i, mode, VAP_DOWN);    
-                }
-        }
-        else if(WLAN_MODE_STA == mode)
-        {
-            vap_up_down(radio, 0, mode, VAP_DOWN);    
-        }
-        //sleep(1);
-    }
-
-    return T_SUCCESS;
-}
-#endif //End of    #if defined(GP_WP688)
-
 
 int get_channel(char channel[], char str[], char pattern[])
 {
@@ -1466,7 +1257,6 @@ int get_sta_ssid(char ssid[], char str[], char pattern[])
 	return T_FAILURE;
 }
 
-#if defined(GP_WP688)
 /*Get the link status of one vap by reading ifconfig result*/
 int get_vap_link_status(int *status, char str[], char pattern[])
 {
@@ -1515,18 +1305,6 @@ int down_all_ssid(int radio)
 		    return T_FAILURE;
 		}
         }
-#if 0
-    /*Down all the VAPs in WDS mod*/
-    for(i=0; i < WDS_NUM; i++)
-        {
-	    ret = vap_up_down(radio,  i, MODE_WDS, VAP_DOWN);	
-            if(T_FAILURE == ret)
-	        {
-                    printf("ERROR:up/dwon WDS VAP failure\n");
-                    return T_FAILURE;
-                }
-        }
-#endif
     /*main VAP down*/
     sprintf(cmd, "ifconfig %s down", radio_name);
     system(cmd);
@@ -1534,7 +1312,5 @@ int down_all_ssid(int radio)
     sleep(3);
     return T_SUCCESS;
 }
-#elif defined(GP_WP838)
-#endif
 
 

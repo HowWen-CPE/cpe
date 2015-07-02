@@ -27,13 +27,19 @@ define Package/wlan-middleware/description
  It works on bcm47xx (Linux 2.6) without using the kernel api.
 endef
 
+define Package/wlan-middleware/config
+	source "$(SOURCE)/Config.in"
+endef
+
 define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
 	$(CP) ./src/*.c $(PKG_BUILD_DIR)/
-	$(CP) ./src/Makefile $(PKG_BUILD_DIR)/
+	$(CP) ./src/$(CONFIG_WLAN_CHIP_VENDOR)/*.c $(PKG_BUILD_DIR)/
 	mkdir -p $(PKG_BUILD_DIR)/include
-	$(CP) ./src/include/* $(PKG_BUILD_DIR)/include
-	$(CP) ./src/$(CONFIG_TARGET_BOARD)/* $(PKG_BUILD_DIR)/
+	$(CP) ./include/*.h $(PKG_BUILD_DIR)/include
+	$(CP) ./include/$(CONFIG_WLAN_CHIP_VENDOR)/*.h $(PKG_BUILD_DIR)/include
+
+	$(CP) ./src/Makefile $(PKG_BUILD_DIR)/
 endef
 
 define Build/Configure
@@ -42,9 +48,12 @@ endef
 define Build/Compile
 	$(MAKE) -C $(PKG_BUILD_DIR) \
 		CC="$(TARGET_CC)" \
-		CFLAGS="$(TARGET_CFLAGS) -Wall -I. -I $(STAGING_DIR)/usr/include -I $(PKG_BUILD_DIR) -I $(BUILD_DIR)/nvram $(EZP_CFLAGS) -D $(CONFIG_PRODUCT_NAME)"
-#		CFLAGS="$(TARGET_CFLAGS) -Wall -I. -I $(BUILD_DIR)/nvram $(EZP_CFLAGS)" \
-#		LDFLAGS="$(TARGET_LDFLAGS)"
+		CFLAGS="$(TARGET_CFLAGS) -Wall -I. \
+		-I $(STAGING_DIR)/usr/include -I $(PKG_BUILD_DIR) \
+		-I $(BUILD_DIR)/nvram \
+		$(EZP_CFLAGS) \
+		-D $(CONFIG_PRODUCT_NAME) \
+		-D $(CONFIG_WLAN_CHIP_VENDOR)"
 endef
 
 define Build/InstallDev
@@ -58,7 +67,7 @@ define Package/wlan-middleware/install
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/libwlan-middleware.so $(1)/usr/lib/
 	$(INSTALL_DIR) $(1)/etc/wl
-	$(INSTALL_BIN) ./files/$(CONFIG_TARGET_BOARD)/* $(1)/etc/wl
+	$(INSTALL_BIN) ./files/$(CONFIG_WLAN_CHIP_VENDOR)/* $(1)/etc/wl
 	$(LN) /tmp/RT2860AP.dat $(1)/etc/wl/RT2860AP.dat
 endef
 

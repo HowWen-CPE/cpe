@@ -6,6 +6,8 @@
 #include <sys/ioctl.h>
 #include <assert.h>
 #include <errno.h>
+#include <unistd.h>
+#include <sys/file.h>	//flock
 
 #include "nvram.h"
 
@@ -163,6 +165,10 @@ void nvram_close(void)
 int _nvram_set(const char *name, const char *value)
 {
 	int ret = 0;
+
+	int fd = open(NV_DEV, O_RDONLY);
+	flock(fd, LOCK_EX);
+
 	if (nvram_fd < 0) {
 		if ((ret = _nvram_init(&nvram_fd))) {
 			return ret;
@@ -170,6 +176,8 @@ int _nvram_set(const char *name, const char *value)
 	}
 
 	ret = nvram_bufset(name, value);
+	flock(fd, LOCK_UN);
+	close(fd);
 	return -1 == ret ? -1 : 0;
 }
 
@@ -247,6 +255,8 @@ char * _nvram_get(const char *name)
 char * nvram_get(const char *name)
 {
 	char * ret = NULL;
+	int fd = open(NV_DEV, O_RDONLY);
+	flock(fd, LOCK_EX);
 	
 	if (nvram_fd < 0) {
 		if (nvram_init(NULL)) {
@@ -256,6 +266,8 @@ char * nvram_get(const char *name)
 	}
 	
 	ret = _nvram_get(name);
+	flock(fd, LOCK_UN);
+	close(fd);
 	return ret;
 }
 
@@ -516,6 +528,21 @@ void nvram_buflist(void)
 	}
 }
 
+void file_sync(void)
+{
+	int fd = 0;
+	fd = open(NVRAM_FILENAME, O_RDWR);
+	if(-1 == fd) {
+		perror("file_sync open");
+		return ;
+	}
+
+	if(-1 == fsync(fd)) {
+		perror("file_sync fsync");
+	}
+	close(fd);
+}
+
 int _nvram_commit()
 {
 	int fd;
@@ -544,6 +571,10 @@ int _nvram_commit()
 	close(fd);
 
 	fb[index].dirty = 0;
+
+	if(1==nvr.useFile) {
+		file_sync();	
+	}
 
 	return 0;
 }

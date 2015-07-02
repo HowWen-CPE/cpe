@@ -179,6 +179,9 @@ static void APDelete5GAccessPolicyList(webs_t wp, char_t * path, char_t * query)
 //void DeleteAccessPolicyList(int nvram, webs_t wp, char_t *path, char_t *query);
 void Delete5GAccessPolicyList(webs_t wp, char_t * path, char_t * query);
 static void RogueAPDetection(webs_t wp, char_t * path, char_t * query);
+static void wireless_wds(webs_t wp, char_t * path, char_t * query);
+static void wireless5g_wds(webs_t wp, char_t * path, char_t * query);
+
 
 // Tommy
 /*
@@ -5622,6 +5625,195 @@ static void wispwifiApcli(webs_t wp, char_t * path, char_t * query)
 	websRedirect(wp, "local/advance/apcli_wisp.asp");
 }
 
+
+static void wireless_wds(webs_t wp, char_t * path, char_t * query)
+{
+	char_t *wdsmode;
+
+	char_t *wds[4];
+	char_t *secmode[4];
+	char_t *wpapsk[4];	
+
+	//Disable, AP+Bridge or Bridge only
+	wdsmode = websGetVar(wp, T("wds_mode"), T("0"));
+
+	int i = 0;
+	char param[32] = {0};
+	for(i=0;i<4;i++) {
+		//remote mac address
+		sprintf(param, "wds_%d", i+1);
+		wds[i] = websGetVar(wp, T(param), T(""));
+
+		//NONE, AES or TKIP
+		sprintf(param, "wds_sec_mode_%d", i+1);
+		secmode[i] = websGetVar(wp, T(param), T("NONE"));
+
+		//PSK Key
+		sprintf(param, "wds_wpapsk_%d", i+1);
+		wpapsk[i] = websGetVar(wp, T(param), T(""));
+	}
+
+	// Disable mode 
+	if(!strcmp(wdsmode,"0")) {
+		ezplib_replace_attr("wl0_wds_rule", 0, "mode", "disabled");
+	    printf("WDS Disable mode, do nothing\n");
+	}
+	// AP+Bridge or Bridge Only
+	else if(!strcmp(wdsmode,"1") || !strcmp(wdsmode,"2")) {
+		//WDS Mode
+		if(!strcmp(wdsmode,"1")) {
+			ezplib_replace_attr("wl0_wds_rule", 0, "mode", "bridgeap");
+		}
+		else {
+			ezplib_replace_attr("wl0_wds_rule", 0, "mode", "bridge");
+		}
+
+		//Iterator
+		for (i=0;i<4;i++) {
+			printf("replace wds:[%s]\r\n", wds[i]);
+			//Remote MAC Address
+			ezplib_replace_attr("wl0_wds_basic_rule", i, "hwaddr", wds[i]);
+			
+			//Security
+			if(!strcmp(secmode[i],"NONE")) {
+				ezplib_replace_attr("wl0_wds_basic_rule", i, "secmode", "none");
+			}
+			else if(!strcmp(secmode[i],"AES")) {
+				ezplib_replace_attr("wl0_wds_basic_rule", i, "secmode", "aes");
+				ezplib_replace_attr("wl0_wds_sec_wpa_rule", i, "crypto", "aes");
+				ezplib_replace_attr("wl0_wds_sec_wpa_rule", i, "key", wpapsk[i]);
+			}
+			else if(!strcmp(secmode[i],"TKIP")) {
+				ezplib_replace_attr("wl0_wds_basic_rule", i, "secmode", "tkip");
+				ezplib_replace_attr("wl0_wds_sec_wpa_rule", i, "crypto", "tkip");
+				ezplib_replace_attr("wl0_wds_sec_wpa_rule", i, "key", wpapsk[i]);
+			}
+			else {
+				fprintf(stderr, "Get security error secmode:%s\n", secmode[i]);
+			}
+		}
+	}
+	//Repeater
+	else {
+		ezplib_replace_attr("wl0_wds_rule", 0, "mode", "repeater");
+		printf("repeater mode, will be implemented later\n");
+	}
+	nvram_commit();
+
+#if defined(atheros) 
+	set_wlan_basic(RADIO_2G);
+#elif defined(ralink)
+	set_ap_wds(RADIO_2G);//down wdsi* then invoke set_wlan_basic
+#else
+	#error "Unsupported CONFIG_WLAN_CHIP_VENDOR"
+#endif
+	
+	setWebMessage(0, NULL);
+
+#if defined(atheros) 
+	websRedirect(wp, "local/advance/wireless_wds_a.asp");
+#elif defined(ralink)
+	websRedirect(wp, "local/advance/wireless_wds_r.asp");
+#else
+	#error "Unsupported CONFIG_WLAN_CHIP_VENDOR"
+#endif
+
+}
+
+static void wireless5g_wds(webs_t wp, char_t * path, char_t * query)
+{
+	char_t *wdsmode;
+
+	char_t *wds[4];
+	char_t *secmode[4];
+	char_t *wpapsk[4];	
+
+	//Disable, AP+Bridge or Bridge only
+	wdsmode = websGetVar(wp, T("wds_mode"), T("0"));
+
+	int i = 0;
+	char param[32] = {0};
+	for(i=0;i<4;i++) {
+		//remote mac address
+		sprintf(param, "wds_%d", i+1);
+		wds[i] = websGetVar(wp, T(param), T(""));
+
+		//NONE, AES or TKIP
+		sprintf(param, "wds_sec_mode_%d", i+1);
+		secmode[i] = websGetVar(wp, T(param), T("NONE"));
+
+		//PSK Key
+		sprintf(param, "wds_wpapsk_%d", i+1);
+		wpapsk[i] = websGetVar(wp, T(param), T(""));
+	}
+
+	// Disable mode 
+	if(!strcmp(wdsmode,"0")) {
+		ezplib_replace_attr("wl1_wds_rule", 0, "mode", "disabled");
+	    printf("WDS Disable mode, do nothing\n");
+	}
+	// AP+Bridge or Bridge Only
+	else if(!strcmp(wdsmode,"1") || !strcmp(wdsmode,"2")) {
+		//WDS Mode
+		if(!strcmp(wdsmode,"1")) {
+			ezplib_replace_attr("wl1_wds_rule", 0, "mode", "bridgeap");
+		}
+		else {
+			ezplib_replace_attr("wl1_wds_rule", 0, "mode", "bridge");
+		}
+
+		//Iterator
+		for (i=0;i<4;i++) {
+			//Remote MAC Address
+			ezplib_replace_attr("wl1_wds_basic_rule", i, "hwaddr", wds[i]);
+			
+			//Security
+			if(!strcmp(secmode[i],"NONE")) {
+				ezplib_replace_attr("wl1_wds_basic_rule", i, "secmode", "none");
+			}
+			else if(!strcmp(secmode[i],"AES")) {
+				ezplib_replace_attr("wl1_wds_basic_rule", i, "secmode", "aes");
+				ezplib_replace_attr("wl1_wds_sec_wpa_rule", i, "crypto", "aes");
+				ezplib_replace_attr("wl1_wds_sec_wpa_rule", i, "key", wpapsk[i]);
+			}
+			else if(!strcmp(secmode[i],"TKIP")) {
+				ezplib_replace_attr("wl1_wds_basic_rule", i, "secmode", "tkip");
+				ezplib_replace_attr("wl1_wds_sec_wpa_rule", i, "crypto", "tkip");
+				ezplib_replace_attr("wl1_wds_sec_wpa_rule", i, "key", wpapsk[i]);
+			}
+			else {
+				fprintf(stderr, "Get security error secmode:%s\n", secmode[i]);
+			}
+		}
+	}
+	//Repeater
+	else {
+		ezplib_replace_attr("wl1_wds_rule", 0, "mode", "repeater");
+		printf("repeater mode, will be implemented later\n");
+	}
+	nvram_commit();
+
+#if defined(atheros) 
+	set_wlan_basic(RADIO_5G);
+#elif defined(ralink)
+	set_ap_wds(RADIO_5G);//down wdsi* then invoke set_wlan_basic
+#else
+	#error "Unsupported CONFIG_WLAN_CHIP_VENDOR"
+#endif
+	
+	setWebMessage(0, NULL);
+
+#if defined(atheros) 
+	websRedirect(wp, "local/advance/wireless_wds_a_5g.asp");
+#elif defined(ralink)
+	websRedirect(wp, "local/advance/wireless_wds_r_5g.asp");
+#else
+	#error "Unsupported CONFIG_WLAN_CHIP_VENDOR"
+#endif
+
+}
+
+
 /* goform/wispwifi5GApcli */
 static void wispwifi5GApcli(webs_t wp, char_t * path, char_t * query)
 {
@@ -8487,9 +8679,9 @@ static int chanIsDFSRadar(int chan, int *result)
 	int dfsNum = 0;
 	int radarNum = 0;
 	DFS_CHAN_LIST dfs_list;
-	DFS_REQ_NOLINFO radar_list;
+	DFS_CHAN_LIST radar_list;
 	memset(&dfs_list, 0, sizeof(DFS_CHAN_LIST));
-	memset(&radar_list, 0, sizeof(DFS_REQ_NOLINFO));
+	memset(&radar_list, 0, sizeof(DFS_CHAN_LIST));
 
 	*result = NODFS_CHAN;
 	if(T_FAILURE == get_radarchannel(&radar_list))
@@ -8511,9 +8703,9 @@ static int chanIsDFSRadar(int chan, int *result)
 		if(chan == dfs_list.chan_list[dfsNum].chan_num)
 		{
 			flag = NORADAR_CHAN;
-			for(radarNum=0; radarNum<radar_list.ic_nchans; radarNum++)
+			for(radarNum=0; radarNum<radar_list.dfs_num; radarNum++)
 			{
-				if(dfs_list.chan_list[dfsNum].chan_freq == radar_list.dfs_nol[radarNum].nol_freq)
+				if(dfs_list.chan_list[dfsNum].chan_num == radar_list.chan_list[radarNum].chan_num)
 				{
 					flag = RADAR_CHAN;
 					break;
@@ -8647,7 +8839,7 @@ void APGeneral(webs_t wp, char_t * path, char_t * query)
 	char_t *generalRadioSwitch = websGetVar(wp, T("generalRadioSwitch"), T("0"));
 	if (!strcmp(ModeTmpBuf, "ap")) {
 		ezplib_replace_attr("wl_ap_basic_rule", 0, "enable", generalRadioSwitch);
-		ezplib_replace_attr("wl0_basic_rule", 0, "enable", generalRadioSwitch);
+		//ezplib_replace_attr("wl0_basic_rule", 0, "enable", generalRadioSwitch);
 	}
 	else if (!strcmp(ModeTmpBuf, "client")) {
 		ezplib_replace_attr("wl_basic_rule", 0, "enable", generalRadioSwitch);
@@ -8671,7 +8863,7 @@ void APGeneral(webs_t wp, char_t * path, char_t * query)
 	mssid_7 = websGetVar(wp, T("mssid_7"), T(""));
 
 	/*Enable, Hide, Enable Intra-BSS Traffic */
-//  enablessid  = websGetVar(wp, T("enablessid"),  T(""));
+    enablessid  = websGetVar(wp, T("enablessid"),  T(""));
 	enablessid1 = websGetVar(wp, T("enablessid1"), T(""));
 	enablessid2 = websGetVar(wp, T("enablessid2"), T(""));
 	enablessid3 = websGetVar(wp, T("enablessid3"), T(""));
@@ -8706,32 +8898,42 @@ void APGeneral(webs_t wp, char_t * path, char_t * query)
 		return;
 	}
 
+#if 0
 	/* SSID */
 	if (0 == strlen(ssid)) {
 		nvram_commit();
 		websError(wp, 403, T("'SSID' should not be empty!"));
 		return;
 	}
+#endif
 
 	/* SSID */
-	if (0 != strlen(ssid)) {
-		ezplib_replace_attr("wl0_ssid_rule", 0, "ssid", ssid);
-		//enable ssid
-		// AXIM/Holmas say: First SSID must be enable.
-		ezplib_replace_attr("wl0_basic_rule", 0, "enable", "1");
-		// Hide SSID    
-		if (!strncmp(hidessid, "1", 2)) {
-			ezplib_replace_attr("wl0_basic_rule", 0, "hidden", "1");
-		} else {
-			ezplib_replace_attr("wl0_basic_rule", 0, "hidden", "0");
-		}
-		// Intra-BSS
-		if (!strncmp(intra_bss, "1", 2)) {
-			ezplib_replace_attr("wl0_basic_rule", 0, "isolation", "1");
-		} else {
-			ezplib_replace_attr("wl0_basic_rule", 0, "isolation", "0");
-		}
-	}
+    if (!strncmp(enablessid, "1", 2)) {
+        ezplib_replace_attr("wl0_basic_rule", 0, "enable", "1");
+        
+    	if (0 != strlen(ssid)) {
+    		ezplib_replace_attr("wl0_ssid_rule", 0, "ssid", ssid);
+    		//enable ssid
+    		// AXIM/Holmas say: First SSID must be enable.
+    		ezplib_replace_attr("wl0_basic_rule", 0, "enable", "1");
+    		// Hide SSID    
+    		if (!strncmp(hidessid, "1", 2)) {
+    			ezplib_replace_attr("wl0_basic_rule", 0, "hidden", "1");
+    		} else {
+    			ezplib_replace_attr("wl0_basic_rule", 0, "hidden", "0");
+    		}
+    		// Intra-BSS
+    		if (!strncmp(intra_bss, "1", 2)) {
+    			ezplib_replace_attr("wl0_basic_rule", 0, "isolation", "1");
+    		} else {
+    			ezplib_replace_attr("wl0_basic_rule", 0, "isolation", "0");
+    		}
+    	}
+    }else
+    {
+        ezplib_replace_attr("wl0_basic_rule", 0, "enable", "0");
+    }
+    
 	//enable ssid1
 	if (!strncmp(enablessid1, "1", 2)) {
 		ezplib_replace_attr("wl0_basic_rule", 1, "enable", "1");
@@ -12905,6 +13107,8 @@ void formDefineWireless(void)
 	websFormDefine(T("RogueAPDetection"), RogueAPDetection);
 	websFormDefine(T("wispwifiApcli"), wispwifiApcli);
 	websFormDefine(T("wispwifi5GApcli"), wispwifi5GApcli);
+	websFormDefine(T("wireless_wds"), wireless_wds);
+	websFormDefine(T("wireless5g_wds"), wireless5g_wds);
 	websFormDefine(T("urwifiApcli"), urwifiApcli);
 	websFormDefine(T("urwifi5GApcli"), urwifi5GApcli);
 

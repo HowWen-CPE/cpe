@@ -3524,75 +3524,480 @@ static int getCfgGeneral(int eid, webs_t wp, int argc, char_t **argv)
 	        value = reValue;
 	}
 	//-------------------------- Aron patch end
-// WDS Start +++
+	// WDS Start ++++++
+	else if (!strcmp(field, "wds_mode")){
+		ezplib_get_attr_val("wl0_wds_rule", 0, "mode", TempBuf, 32, EZPLIB_USE_CLI);
+		if (!strcmp(TempBuf, "disabled")){
+			strcpy(reValue, "0");
+		}else if (!strcmp(TempBuf, "bridgeap")){
+			strcpy(reValue, "1");
+		}else if (!strcmp(TempBuf, "bridge")){
+			strcpy(reValue, "2");
+		}else if (!strcmp(TempBuf, "repeater")){
+			strcpy(reValue, "3");
+		}else{
+			printf(" Error : No arg !!!! \n");	
+		}
+		value = reValue;
+	}
+	  else if (!strcmp(field, "wds_mode_5g")){
+		ezplib_get_attr_val("wl1_wds_rule", 0, "mode", TempBuf, 32, EZPLIB_USE_CLI);
+		if (!strcmp(TempBuf, "disabled")){
+			strcpy(reValue, "0");
+		}else if (!strcmp(TempBuf, "bridgeap")){
+			strcpy(reValue, "1");
+		}else if (!strcmp(TempBuf, "bridge")){
+			strcpy(reValue, "2");
+		}else if (!strcmp(TempBuf, "repeater")){
+			strcpy(reValue, "3");
+		}else{
+			printf(" Error : No arg !!!! \n");	
+		}
+		value = reValue;
+	}
+	else if (!strcmp(field, "wds_1")){
+		ezplib_get_attr_val("wl0_wds_basic_rule", 0, "hwaddr", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}
+	else if (!strcmp(field, "wds_2")){
+		ezplib_get_attr_val("wl0_wds_basic_rule", 1, "hwaddr", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}
+	else if (!strcmp(field, "wds_3")){
+		ezplib_get_attr_val("wl0_wds_basic_rule", 2, "hwaddr", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}
+	else if (!strcmp(field, "wds_4")){
+		ezplib_get_attr_val("wl0_wds_basic_rule", 3, "hwaddr", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	
+	else if (!strcmp(field, "wds_sec_mode_1")){
+		ezplib_get_attr_val("wl0_wds_basic_rule", 0, "secmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	
+	else if (!strcmp(field, "wds_sec_mode_2")){
+		ezplib_get_attr_val("wl0_wds_basic_rule", 1, "secmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	
+	else if (!strcmp(field, "wds_sec_mode_3")){
+		ezplib_get_attr_val("wl0_wds_basic_rule", 2, "secmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	
+	else if (!strcmp(field, "wds_sec_mode_4")){
+		ezplib_get_attr_val("wl0_wds_basic_rule", 3, "secmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	
+	//NONE , WEP, AES, TKIP
+	else if (!strcmp(field, "wds_wpa_crypto_1")){
+		ezplib_get_attr_val("wl0_wds_sec_wpa_rule", 0, "crypto", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	// AES, TKIP	
+	else if (!strcmp(field, "wds_wpa_crypto_2")){
+		ezplib_get_attr_val("wl0_wds_sec_wpa_rule", 1, "crypto", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	// AES, TKIP	
+	else if (!strcmp(field, "wds_wpa_crypto_3")){
+		ezplib_get_attr_val("wl0_wds_sec_wpa_rule", 2, "crypto", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	// AES, TKIP	
+	else if (!strcmp(field, "wds_wpa_crypto_4")){
+		ezplib_get_attr_val("wl0_wds_sec_wpa_rule", 3, "crypto", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	// AES, TKIP	
+	//WDS PSK 2G 1
+	else if (!strcmp(field, "wds_wpapsk_1")){
+		//FIXME
+		ezplib_get_attr_val("wl0_wds_sec_wpa_rule", 0, "key", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "&", "&#38;");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "&quot;");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}
+	//WDS PSK 2G 2
+	else if (!strcmp(field, "wds_wpapsk_2")){
+		//FIXME
+		ezplib_get_attr_val("wl0_wds_sec_wpa_rule", 1, "key", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "&", "&#38;");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "&quot;");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}
+	//WDS PSK 2G 3
+	else if (!strcmp(field, "wds_wpapsk_3")){
+		//FIXME
+		ezplib_get_attr_val("wl0_wds_sec_wpa_rule", 2, "key", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "&", "&#38;");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "&quot;");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}
+	//WDS PSK 2G 4
+	else if (!strcmp(field, "wds_wpapsk_4")){
+		//FIXME
+		ezplib_get_attr_val("wl0_wds_sec_wpa_rule", 3, "key", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "&", "&#38;");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "&quot;");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}
+	else if (!strcmp(field, "DefWEPKey")){
+		ezplib_get_attr_val("wl0_wds_sec_wep_rule", 0, "key_index", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	} // key id of four wep key
+	else if (!strcmp(field, "WEPKey_Code")){
+		ezplib_get_attr_val("wl0_wds_sec_wep_rule", 0, "keytype", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}//ascii or hex
+	else if (!strcmp(field, "wep_encry")){
+		ezplib_get_attr_val("wl0_wds_sec_wep_rule", 0, "wep_encry", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	//64bit or 128bit
+	else if (!strcmp(TempBuf, "wds_wep_auth_1")){
+		ezplib_get_attr_val("wl0_wds_sec_wep_rule", 0, "encmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}//enc mode,open or shared
+	else if (!strcmp(TempBuf, "wds_wep_auth_2")){
+		ezplib_get_attr_val("wl0_wds_sec_wep_rule", 1, "encmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}//enc mode,open or shared
+	else if (!strcmp(TempBuf, "wds_wep_auth_3")){
+		ezplib_get_attr_val("wl0_wds_sec_wep_rule", 2, "encmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}//enc mode,open or shared
+	else if (!strcmp(TempBuf, "wds_wep_auth_4")){
+		ezplib_get_attr_val("wl0_wds_sec_wep_rule", 3, "encmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}//enc mode,open or shared
+	else if (!strcmp(field, "wds_key1")){
+		ezplib_get_attr_val("wl0_wds_sec_wep_rule", 0, "key1", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "\\", "\\\\");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "\\\"");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}
+	else if (!strcmp(field, "wds_key2")){
+		ezplib_get_attr_val("wl0_wds_sec_wep_rule", 0, "key2", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "\\", "\\\\");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "\\\"");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}
+	else if (!strcmp(field, "wds_key3")){
+		ezplib_get_attr_val("wl0_wds_sec_wep_rule", 0, "key3", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "\\", "\\\\");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "\\\"");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}
+	else if (!strcmp(field, "wds_key4")){
+		ezplib_get_attr_val("wl0_wds_sec_wep_rule", 0, "key4", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "\\", "\\\\");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "\\\"");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}	
 	else if (!strcmp(field, "WdsList")){
 		memset(reValue,0,sizeof(reValue));
 		for (i = 0; i < 4; i++){		
 			ezplib_get_attr_val("wl0_wds_basic_rule", i, "hwaddr", TempBuf, 32, EZPLIB_USE_CLI);
-			if (!strcmp(TempBuf, "")){
-				break;
-			}else{
-				strcat(reValue, TempBuf);
+			strcat(reValue, TempBuf);
+			if(i<3)
+			{
 				strcat(reValue,";");
-			}	
-    	}
-		value = reValue;
-	}
-	else if (!strcmp(field, "WdsEncrypType")){
-		ezplib_get_attr_val("wl0_wds_basic_rule", 0, "secmode", TempBuf, 32, EZPLIB_USE_CLI);
-		if (!strcmp(TempBuf, "disabled")){
-			strcpy(reValue, "NONE");
-		}else if (!strcmp(TempBuf, "wep")){
-			strcpy(reValue, "WEP");
-		}else if (!strcmp(TempBuf, "psk")){
-			ezplib_get_attr_val("wl0_wds_sec_wpa_rule", 0, "crypto", TempBuf, 32, EZPLIB_USE_CLI);
-			if (!strcmp(TempBuf, "tkip")){
-				strcpy(reValue, "TKIP");
-			}else if (!strcmp(TempBuf, "aes")){
-				strcpy(reValue, "AES");
 			}
-		}
+	    }
 		value = reValue;
 	}
-	else if (!strcmp(field, "Wds0Key")){
-			ezplib_get_attr_val("wl0_wds_sec_wep_rule", 0, "key", buf, 65, EZPLIB_USE_CLI);
-			strcpy(reValue, TempBuf);
+	else if (!strcmp(field, "wds_5g_1")){
+		ezplib_get_attr_val("wl1_wds_basic_rule", 0, "hwaddr", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
 		value = reValue;
 	}
-	else if (!strcmp(field, "Wds5GList")){
-	       memset(reValue,0,sizeof(reValue));
+	else if (!strcmp(field, "wds_5g_2")){
+		ezplib_get_attr_val("wl1_wds_basic_rule", 1, "hwaddr", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}
+	else if (!strcmp(field, "wds_5g_3")){
+		ezplib_get_attr_val("wl1_wds_basic_rule", 2, "hwaddr", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}
+	else if (!strcmp(field, "wds_5g_4")){
+		ezplib_get_attr_val("wl1_wds_basic_rule", 3, "hwaddr", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	
+	else if (!strcmp(field, "wds_sec_mode_5g_1")){
+		ezplib_get_attr_val("wl1_wds_basic_rule", 0, "secmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	
+	else if (!strcmp(field, "wds_sec_mode_5g_2")){
+		ezplib_get_attr_val("wl1_wds_basic_rule", 1, "secmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	
+	else if (!strcmp(field, "wds_sec_mode_5g_3")){
+		ezplib_get_attr_val("wl1_wds_basic_rule", 2, "secmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	
+	else if (!strcmp(field, "wds_sec_mode_5g_4")){
+		ezplib_get_attr_val("wl1_wds_basic_rule", 3, "secmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	
+	//NONE , WEP, AES, TKIP
+	else if (!strcmp(field, "wds_wpa_crypto_5g_1")){
+		ezplib_get_attr_val("wl1_wds_sec_wpa_rule", 0, "crypto", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	// AES, TKIP	
+	else if (!strcmp(field, "wds_wpa_crypto_5g_2")){
+		ezplib_get_attr_val("wl1_wds_sec_wpa_rule", 1, "crypto", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	// AES, TKIP	
+	else if (!strcmp(field, "wds_wpa_crypto_5g_3")){
+		ezplib_get_attr_val("wl1_wds_sec_wpa_rule", 2, "crypto", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	// AES, TKIP	
+	else if (!strcmp(field, "wds_wpa_crypto_5g_4")){
+		ezplib_get_attr_val("wl1_wds_sec_wpa_rule", 3, "crypto", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	// AES, TKIP	
+
+	//WDS PSK 5G 1
+	else if (!strcmp(field, "wds_wpapsk_5g_1")){
+		//FIXME
+		ezplib_get_attr_val("wl1_wds_sec_wpa_rule", 0, "key", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "&", "&#38;");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "&quot;");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}
+	//WDS PSK 5G 2
+	else if (!strcmp(field, "wds_wpapsk_5g_2")){
+		//FIXME
+		ezplib_get_attr_val("wl1_wds_sec_wpa_rule", 1, "key", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "&", "&#38;");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "&quot;");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}
+	//WDS PSK 5G 3
+	else if (!strcmp(field, "wds_wpapsk_5g_3")){
+		//FIXME
+		ezplib_get_attr_val("wl1_wds_sec_wpa_rule", 2, "key", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "&", "&#38;");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "&quot;");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}
+	//WDS PSK 5G 4
+	else if (!strcmp(field, "wds_wpapsk_5g_4")){
+		//FIXME
+		ezplib_get_attr_val("wl1_wds_sec_wpa_rule", 3, "key", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "&", "&#38;");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "&quot;");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}
+	else if (!strcmp(field, "DefWEPKey_5g")){
+		ezplib_get_attr_val("wl1_wds_sec_wep_rule", 0, "key_index", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	} // key id of four wep key
+	else if (!strcmp(field, "WEPKey_Code_5g")){
+		ezplib_get_attr_val("wl1_wds_sec_wep_rule", 0, "keytype", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}//ascii or hex
+	else if (!strcmp(field, "wep_encry_5g")){
+		ezplib_get_attr_val("wl1_wds_sec_wep_rule", 0, "wep_encry", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}	//64bit or 128bit
+	else if (!strcmp(TempBuf, "wds_wep_auth_5g_1")){
+		ezplib_get_attr_val("wl1_wds_sec_wep_rule", 0, "encmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}//enc mode,open or shared
+	else if (!strcmp(TempBuf, "wds_wep_auth_5g_2")){
+		ezplib_get_attr_val("wl1_wds_sec_wep_rule", 1, "encmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}//enc mode,open or shared
+	else if (!strcmp(TempBuf, "wds_wep_auth_5g_3")){
+		ezplib_get_attr_val("wl1_wds_sec_wep_rule", 2, "encmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}//enc mode,open or shared
+	else if (!strcmp(TempBuf, "wds_wep_auth_5g_4")){
+		ezplib_get_attr_val("wl1_wds_sec_wep_rule", 3, "encmode", TempBuf, 32, EZPLIB_USE_CLI);
+		strcpy(reValue, TempBuf);
+		value = reValue;
+	}//enc mode,open or shared
+	else if (!strcmp(field, "wds_key1_5g")){
+		ezplib_get_attr_val("wl1_wds_sec_wep_rule", 0, "key1", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "\\", "\\\\");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "\\\"");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}
+	else if (!strcmp(field, "wds_key2_5g")){
+		ezplib_get_attr_val("wl1_wds_sec_wep_rule", 0, "key2", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "\\", "\\\\");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "\\\"");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}
+	else if (!strcmp(field, "wds_key3_5g")){
+		ezplib_get_attr_val("wl1_wds_sec_wep_rule", 0, "key3", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "\\", "\\\\");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "\\\"");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}
+	else if (!strcmp(field, "wds_key4_5g")){
+		ezplib_get_attr_val("wl1_wds_sec_wep_rule", 0, "key4", buf, 65, EZPLIB_USE_CLI);
+		strcpy(reValue, buf);
+		char *str;
+		str=sub_replace(reValue, "\\", "\\\\");
+		strcpy(reValue,str);
+		free(str);
+
+		str=sub_replace(reValue, "\"", "\\\"");
+		strcpy(reValue,str);
+		free(str);
+		value = reValue;
+	}	
+	else if (!strcmp(field, "WdsList_5g")){
+		memset(reValue,0,sizeof(reValue));
 		for (i = 0; i < 4; i++){		
 			ezplib_get_attr_val("wl1_wds_basic_rule", i, "hwaddr", TempBuf, 32, EZPLIB_USE_CLI);
-			if (!strcmp(TempBuf, "")){
-				break;
-			}else{
-				strcat(reValue, TempBuf);
+			strcat(reValue, TempBuf);
+			if(i<3)
+			{
 				strcat(reValue,";");
-			}	
+			}
+
     	}
 		value = reValue;
 	}
-	else if (!strcmp(field, "Wds5GEncrypType")){
-		ezplib_get_attr_val("wl1_wds_basic_rule", 0, "secmode", TempBuf, 32, EZPLIB_USE_CLI);
-		if (!strcmp(TempBuf, "disabled")){
-			strcpy(reValue, "NONE");
-		}else if (!strcmp(TempBuf, "wep")){
-			strcpy(reValue, "WEP");
-		}else if (!strcmp(TempBuf, "psk")){
-			ezplib_get_attr_val("wl1_wds_sec_wpa_rule", 0, "crypto", TempBuf, 32, EZPLIB_USE_CLI);
-			if (!strcmp(TempBuf, "tkip")){
-				strcpy(reValue, "TKIP");
-			}else if (!strcmp(TempBuf, "aes")){
-				strcpy(reValue, "AES");
-			}
-		}
-		value = reValue;
-	}
-	else if (!strcmp(field, "Wds0Key")){
-			ezplib_get_attr_val("wl1_wds_sec_wep_rule", 0, "key", buf, 65, EZPLIB_USE_CLI);
-			strcpy(reValue, TempBuf);
-		value = reValue;
-	}
+
 
 // WDS End ---	
 // LogSetting Start +++
@@ -6432,7 +6837,7 @@ static int getCfgZero(int eid, webs_t wp, int argc, char_t **argv)
 	        value = reValue;
 	}
 	//------------------------ Aron patch end
-	else if(!strcmp(field, "EnableSSID")) //enable ssid (Entire control of Radio)
+	else if(!strcmp(field, "EnableRadio")) //enable ssid (Entire control of Radio)
 	{
 		if (!strcmp(ModeTmpBuf, "ap")){
 			ezplib_get_attr_val("wl_ap_basic_rule", 0, "enable", buf, TMP_LEN, EZPLIB_USE_CLI); 
@@ -6442,6 +6847,14 @@ static int getCfgZero(int eid, webs_t wp, int argc, char_t **argv)
 		}
 		strcpy(reValue, buf);
 	        value = reValue;	
+	}
+    //SSID0 for ap mode
+	else if(!strcmp(field, "EnableSSID")) //enable ssid1
+	{
+		ezplib_get_attr_val("wl0_basic_rule", 0, "enable", buf, TMP_LEN, EZPLIB_USE_CLI); 
+		strcpy(reValue, buf);
+	        value = reValue;	
+		
 	}
 	else if(!strcmp(field, "EnableSSID1")) //enable ssid1
 	{

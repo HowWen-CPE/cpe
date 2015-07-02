@@ -812,7 +812,7 @@ char *rule_attr_desc(const char *rule)
 	return "";
 }
 
-char *	same_attr_rule(const char *rule, int bColor)
+const char *same_attr_rule(const char *rule, int bColor)
 {
 	enum attr_enum {
 #define aa(x, y) x, 	
@@ -839,7 +839,7 @@ char *	same_attr_rule(const char *rule, int bColor)
 #undef aa
 	};
 
-	char buf[32768] = {0};
+	static char buf[32768] = {0};
 	char tmp_rule[64] = {0};
 	struct __rule_2_attr *r2a = NULL;
 	for (r2a = rule_2_attr; r2a->rule != NULL ; r2a++) {
@@ -848,6 +848,7 @@ char *	same_attr_rule(const char *rule, int bColor)
 			for (r2a = rule_2_attr; r2a->rule != NULL ; r2a++) {
 				if ( (r2a->attr_index == ai) && strcmp(r2a->rule, rule) ) {
 					SPR(tmp_rule, "%s,", r2a->rule);
+					memset(buf, 0, sizeof(buf));
 					strcat(buf, tmp_rule);
 				}
 			}

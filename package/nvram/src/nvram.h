@@ -6,6 +6,7 @@
  */
 #define FLASH_BLOCK_NUM 1
 #define NV_DEV "/dev/nvram"
+#define NVRAM_FILENAME "/mnt/mmc/.nvramblock"
 
 #define NVRAM_IOCTL_GET		0x01
 #define NVRAM_IOCTL_GETALL	0x02
@@ -42,6 +43,7 @@ typedef struct nvram_ioctl_s {
 	int ret;
 	char *name;
 	char *value;
+	int useFile;
 } nvram_ioctl_t;
 
 
@@ -149,7 +151,7 @@ char *	nvram_get_default(const char *name);
 int 	nvram_dump(void);
 int 	nvram_dump_default(void);
 char *	rule_attr_desc(const char *rule);
-char *	same_attr_rule(const char *rule, int bColor);
+const char *same_attr_rule(const char *rule, int bColor);
 int		nvram_show_desc(const char *rule, int bColor);
 #endif /* ifdef DEBUG*/
 #endif /* _nvram_h_ */

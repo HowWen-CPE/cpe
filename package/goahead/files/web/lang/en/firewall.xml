@@ -183,6 +183,8 @@
 <message msgid="Internal ip could not be lan ip" msgstr="Internal ip couldn't be lan ip!" />
 <message msgid="External mapping ip could not be wan ip" msgstr="External mapping ip couldn't be wan ip!" />
 <message msgid="server ip could not be lan ip" msgstr="server ip couldn't be lan ip!" />
+<message msgid="Invalid Extern server ip address!It should NOT be located in the same subnet of current LAN IP address." msgstr="Invalid Extern server ip address!It should NOT be located in the same subnet of current LAN IP address." />
+<message msgid="Please disable L2TP Server function." msgstr="Please disable L2TP Server function." />
 <!-- alert message add by kissth 2014-02-10 -->
 <message msgid="Invalid MTU! Valid MTU value is [1280,1460]." msgstr="Invalid MTU! Valid MTU value is [1280,1460]." />
 <message msgid="Max VPN Client number should not be empty." msgstr="Max VPN Client number should not be empty." />
@@ -268,6 +270,13 @@
 <message msgid="pppoe Set" msgstr="PPPOE Passthrough"/>
 <message msgid="VPN Apply" msgstr="Apply"/>
 <message msgid="VPN Reset" msgstr="Cancel"/>
+<!--attack prevention-->
+<message msgid="ip Spoof" msgstr="IP Spoofing Checks"/>
+<message msgid="ip Spoofing" msgstr="IP Spoofing"/>
+<message msgid="dos Check" msgstr="Dos Checks"/>
+<message msgid="icmp Flood" msgstr="ICMP Flood"/>
+<message msgid="syn Flood" msgstr="SYN Flood"/>
+<message msgid="udp Flood" msgstr="UDP Flood"/>
 <!-- firmware upgrade-->
 <message msgid="firmware size is too large to write down" msgstr="firmware size is too large to write down"/>
 <message msgid="Port has been occupied" msgstr="Port has been occupied"/>

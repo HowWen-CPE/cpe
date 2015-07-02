@@ -3,53 +3,32 @@
 #include    <stdio.h>
 #include	<string.h>
 #include	<unistd.h> /*close*/
-
+#include	<syslog.h>
+#include	<assert.h>
 #include    <sys/ioctl.h>
 #include    <arpa/inet.h>
+
 #ifdef CONFIG_DEFAULTS_KERNEL_2_6_21
 #include    <linux/types.h>
 #include    <linux/socket.h>
 #include    <linux/if.h>
 #endif//End of #ifdef CONFIG_DEFAULTS_KERNEL_2_6_21
+
 #include    <linux/wireless.h>
-// Tommy, Add syslog, 2009/10/21 04:47
-#include <syslog.h>
-#include <assert.h>
 
-//kernel
-#include <linux/wireless.h>
+#include	"nvram.h"
+#include	"nvram_rule.h"
 
-#include "nvram.h"
-#include "nvram_rule.h"
+#include    "mid_detail.h"
+#include	"mid_common.h"
+#include	"mid_common_nvram.h"
 
-#include "mid_detail.h"
-#include "mid_common.h"
+#include	"mid_detail_ap_get.h" 
 
-/*Get the link status of one vap by reading ifconfig result*/
-#if 0
-static int parse_vap_link_status(int *status, char str[], char pattern[])
-{
-    int lnth, lnthdif,i,j,k;
-    lnth=length(pattern);
-    lnthdif=length(str)-lnth+1;
-    if (lnth>0 && lnthdif>0){
-        i=0;
-        while (i<lnthdif){
-            j=i; k=0;
-            while (k<lnth && str[j++]==pattern[k]) k++;
-            if (k==lnth){
-                *status = VAP_UP;
-                printf("VAP Link UP\n");
-                return T_SUCCESS;
-            }else{
-                i++;
-            }
-        }
-    }
-    //printf("ERROR: get link status error!\n");
-    return T_FAILURE;
-}
-#endif
+/*wlan-chip-vendor specified 
+private functions declartions */
+int get_wifi_status(int radio, int *status);
+int get_vap_status(int radio, int vapid, int mode, int *vap_status);
 
 /*************************************/
 /*>>>>>>>>>>general process>>>>>>>>>>*/
@@ -497,16 +476,11 @@ int get_wirelessmode(int radio, int *wmode)
     fin = fopen("/tmp/current_wireless_mode","r");
             
     /*Parse rate from /tmp/current_wlan_rate file*/
-    //while ((c=fgetc(fin)) != EOF){
-    //    ungetc(c,fin);        
-    //    readline(str,fin);
-     //   strcpy_delspace(str, wireless_mode);
-    //}
-    if (fgets(str, 256, fin) == NULL) {
-	fclose(fin);
-	return T_FAILURE;
+    while ((c=fgetc(fin)) != EOF){
+        ungetc(c,fin);        
+        readline(str,fin);
+        strcpy_delspace(str, wireless_mode);
     }
-    strcpy_delspace(str, wireless_mode);
 
 	fclose(fin);
     //EXE_COMMAND("rm -f /tmp/current_wireless_mode");
@@ -519,7 +493,7 @@ int get_wirelessmode(int radio, int *wmode)
 	} else if (strstr(wireless_mode, "11ACV") != NULL) {
 		*wmode = WMODE_11AC_MIXED;
 	} else {
-        //MID_ERROR("Can not get wireless mode or the wireless mode is not supported by now!");
+        MID_ERROR("Can not get wireless mode or the wireless mode is not supported by now!");
         return T_FAILURE;
     }
 
@@ -815,174 +789,7 @@ int get_channel_list(int radio, ChannelListInfo_t *channel_list)
 }
 
 
-int get_max_txpower(int radio, int *max_txpower)
-{
-    char str[256] = {0},c;
-    char txpower_s[8] = {0};
-    char wifi_name[8] = {0};
-    int wlan_mode = 0;
-	int ret = 0;
-    FILE *fin;
-    char cmd[256] = {0};
-	char TempBuf_opmode[32] = {0};
 
-    if(RADIO_2G == radio)
-    {
-        //strcpy(wifi_name, "wifi0");
-		//iwpriv wifi0 getTxMaxPower2G | awk '{gsub(/getTxMaxPower2G:/,"");print $2}'
-		//sprintf(cmd, "iwpriv %s getTxMaxPower2G | awk '{gsub(/getTxMaxPower2G:/,\"\");print $2}' > /tmp/max_txpower", wifi_name);
-		ezplib_get_attr_val("wl_mode_rule", 0, "mode", TempBuf_opmode, 32, EZPLIB_USE_CLI);
-    }
-    else if(RADIO_5G == radio)
-    {
-        //strcpy(wifi_name, "wifi1");
-		//iwpriv wifi1 getTxMaxPower5G | awk '{gsub(/getTxMaxPower5G:/,"");print $2}'
-		//sprintf(cmd, "iwpriv %s getTxMaxPower5G | awk '{gsub(/getTxMaxPower5G:/,\"\");print $2}' > /tmp/max_txpower", wifi_name);
-		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", TempBuf_opmode, 32, EZPLIB_USE_CLI);
-    }
-	else
-	{
-		printf("ERROR: Radio is Not 2.4G or 5G!\n");
-		return T_FAILURE;
-	}
-	
-    if(!strcmp(TempBuf_opmode,"ap"))
-	{
-		wlan_mode = WLAN_MODE_AP;          
-	}
-	else if(!strcmp(TempBuf_opmode,"client"))
-	{
-		wlan_mode = WLAN_MODE_STA;
-	}
-	else
-	{
-		printf("ERROR: WLAN OP MODE is Not AP or Client!\n");
-		return T_FAILURE;
-	}
-	
-	ret = construct_vap(wifi_name, radio, 0, wlan_mode);
-	if(T_FAILURE == ret)
-	{
-		printf("ERROR:Construct VAP failure!\n");
-		return T_FAILURE;
-	}
-
-	if((WLAN_MODE_STA == wlan_mode) && (RADIO_5G == radio))
-	{
-		//sprintf(cmd, "iwconfig %s txpower %d;sleep 5;iwconfig %s | awk '/Tx-Power/{print substr($4,10);}' > /tmp/max_txpower", wifi_name, 100, wifi_name);
-		printf("Wireless Client Mode: Txpower Shell\n");
-		return T_SUCCESS;
-	}
-	else
-	{
-		if (RADIO_5G == radio) 
-		{
-			sprintf(cmd, "iwconfig %s txpower %d;sleep 2;iwconfig %s | awk '/Tx-Power/{print substr($4,10);}' > /tmp/max_txpower", 
-			wifi_name, 100, wifi_name);
-		}
-		else
-		{
-			//iwpriv wifi0 getTxMaxPower2G | awk '{gsub(/getTxMaxPower2G:/,"");print $2}'
-			sprintf(cmd, "iwpriv wifi0 getTxMaxPower2G | awk '{gsub(/getTxMaxPower2G:/,\"\");print $2}' > /tmp/max_txpower");
-		}
-	}
-	#ifdef MID_DEBUG
-    EXE_COMMAND(cmd);
-	#else
-	system(cmd);
-	#endif
-    fin = fopen("/tmp/max_txpower","r");
-            
-    //while ((c=fgetc(fin)) != EOF){
-    //    ungetc(c,fin);        
-    //    readline(str,fin);
-    //    strcpy_delspace(str, txpower_s);
-    //    *max_txpower = atoi(txpower_s);
-    //}
-    memset(cmd, 0, sizeof(cmd));
-    if (!fgets(cmd, 16, fin)) {
-		fclose(fin);
-		printf("ERROR: get max power fail\n");
-		return T_FAILURE;
-	}
-	
-	*max_txpower = atoi(cmd);
-
-    fclose(fin);
-	#ifdef MID_DEBUG
-    EXE_COMMAND("rm -f /tmp/max_txpower");
-	#else
-	system("rm -f /tmp/max_txpower");
-	#endif
-
-    return T_SUCCESS;
-}
-
-/************Get Txchainmask Num**********
-**1,2,4:	Signal Chain
-**3,5:	Double Chain
-**7:	Three Chain
-**************************************/
-int get_chainmask_num(int radio, int *chain_num)
-{
-	FILE *fin;
-	int chain_tmp = 0;
-	int chain_count = 0;
-	char c;
-    char str[256] = {0};
-    char chain_str[8] = {0};
-    char wifi_name[8] = {0};
-    char cmd[256] = {0};
-	char buf[16] = {0};
-
-    if(RADIO_2G == radio)
-    {
-        strcpy(wifi_name, "wifi0");
-    }
-    else if(RADIO_5G == radio)
-    {
-        strcpy(wifi_name, "wifi1");
-    }
-    //iwpriv wifiN get_txchainmask | awk '{gsub(/get_txchainmask:/,"");print}' | awk '{print $2}'
-    sprintf(cmd, "iwpriv %s get_txchainmask | awk '{gsub(/get_txchainmask:/,\"\");print}' | awk '{print $2}' > /tmp/chainmask_num", wifi_name);
-	#ifdef MID_DEBUG
-	EXE_COMMAND(cmd);
-	#else
-	system(cmd);
-	#endif
-    fin = fopen("/tmp/chainmask_num","r");
-            
-    //while ((c=fgetc(fin)) != EOF){
-    //    ungetc(c,fin);        
-    //    readline(str,fin);
-    //    strcpy_delspace(str, chain_str);
-    //    chain_tmp = atoi(chain_str);
-	//	printf("-----------------\n");
-    //}
-    if (!fgets(buf, 8, fin)) {
-		fclose(fin);
-		return T_FAILURE;
-	}
-
-    fclose(fin);
-	#ifdef MID_DEBUG
-    EXE_COMMAND("rm -f /tmp/chainmask_num");
-	#else
-	system("rm -f /tmp/chainmask_num");
-	#endif
-
-	//while (chain_tmp){
-	//	chain_count++;
-	//	chain_tmp &= (chain_tmp - 1);
-	//}
-
-	if ((atoi(buf) < 1) || (atoi(buf) > 7)){
-		printf("TxChainMask illegal value\n");
-		return T_FAILURE;
-	}
-	*chain_num = chain_count;
-    return T_SUCCESS;
-}
 
 /**
  * @brief Get station list
@@ -1480,47 +1287,57 @@ int get_dfschannel(DFS_CHAN_LIST *dfs_list)
 /*                                         GET  RADAR CHANNEL LIST                                        */
 /*                                     Added By Andy Yu in 20140311                                   */
 /*****************************************************************/
-int get_radarchannel(DFS_REQ_NOLINFO *dfs_list)
+int get_radarchannel(DFS_CHAN_LIST *radar_list)
 {
-	struct ifreq ifr;
-	DFS_RADAR_HANDLER radarnol;
-	memset(&radarnol, 0, sizeof(DFS_RADAR_HANDLER));
-	DFS_RADAR_HANDLER *radar = &radarnol;
+	FILE *fp;
+	int ret = 0;
+	int num = 0;
+	int tmp_num = 0;
+	int tmp_freq = 0;
+	char cmd[128] = {0};
 
-	radar->s = socket(AF_INET, SOCK_DGRAM, 0);
-	if (radar->s < 0)
+	sprintf(cmd, "radartool -i %s getnol | awk '{print $2 \"=\" $3}' | awk -F '=' '{print $2 \"\\t\" $4}' > /tmp/radarChan", RADIO5_DEFAULT);
+	EXE_COMMAND(cmd);
+
+	if (NULL == (fp = fopen("/tmp/radarChan","r")))
 	{
-		printf("SOCKET ERROR: Radar List\n");
-		return T_FAILURE;
+		printf("radar Channel list is NONE\n");
+        return T_FAILURE;
 	}
-	strncpy(radar->atd.ad_name, RADIO5_DEFAULT, sizeof (radar->atd.ad_name));
-
-    radar->atd.ad_id = DFS_GET_NOL | ATH_DIAG_DYN;
-    radar->atd.ad_in_data = NULL;
-    radar->atd.ad_in_size = 0;
-    radar->atd.ad_out_data = (void *) dfs_list;
-    radar->atd.ad_out_size = sizeof(DFS_REQ_NOLINFO);
-    strcpy(ifr.ifr_name, radar->atd.ad_name);
-    ifr.ifr_data = (void *) &radar->atd;
-
-    if (ioctl(radar->s, SIOCGATHPHYERR, &ifr) < 0)
-    {
-    	printf("ERROR: wifi1 get radar list\n");
-		close(radar->s);
-		return T_FAILURE;
-    }
-	close(radar->s);
-#if 0
-	int i = 0;
-	for(i=0; i<dfs_list->ic_nchans; i++)
+	else
 	{
-		printf("nol:%d channel=%d MHz width=%d MHz time left=%u seconds nol starttick=%llu \n", 
-            i, dfs_list->dfs_nol[i].nol_freq, dfs_list->dfs_nol[i].nol_chwidth, ((dfs_list->dfs_nol[i].nol_timeout_ms)/1000),
-            (unsigned long long)dfs_list->dfs_nol[i].nol_start_ticks);
+		while(!feof(fp))
+		{
+			ret = fscanf(fp, "%d%d", &tmp_num, &tmp_freq);
+			if (2 != ret)
+			{
+				printf("Radar Chan Read End, fscanf Num: %d\n", ret);
+				break;
+			}
+			radar_list->chan_list[num].chan_num = tmp_num;
+			radar_list->chan_list[num].chan_freq = tmp_freq;
+			num++;
+			radar_list->dfs_num = num;
+		}
 	}
+	
+	fclose(fp);
+
+#if 1
+		sprintf(cmd, "rm -rf /tmp/radarChan");
+		EXE_COMMAND(cmd);
+#else
+		int k = 0;
+		printf("Radar Num: %d\n", radar_list->dfs_num);
+		for (k = 0; k < radar_list->dfs_num; k++)
+		{
+			printf("%d %d\n", radar_list->chan_list[k].chan_num, radar_list->chan_list[k].chan_freq);
+		}
 #endif
+
 	return T_SUCCESS;
 }
+
 
 /*****************************************************************/
 /*                                         GET  DFS CAC STATE                                        	  */
@@ -1528,37 +1345,50 @@ int get_radarchannel(DFS_REQ_NOLINFO *dfs_list)
 /*****************************************************************/
 int get_cacstate(unsigned int *cac_state)
 {
-	struct ifreq ifr;
-	DFS_RADAR_HANDLER radarnol;
-	memset(&radarnol, 0, sizeof(DFS_RADAR_HANDLER));
-	DFS_RADAR_HANDLER *radar = &radarnol;
+	FILE *fp;
+	int ret = 0;
+	unsigned int tmp = 1;
+	char cmd[128] = {0};
 
-	radar->s = socket(AF_INET, SOCK_DGRAM, 0);
-	if (radar->s < 0)
+	*cac_state = 1;
+	sprintf(cmd, "radartool -i %s iscacdone > /tmp/CACState", RADIO5_DEFAULT);
+	EXE_COMMAND(cmd);
+
+	if (NULL == (fp = fopen("/tmp/CACState","r")))
 	{
-		printf("SOCKET ERROR: CAC State\n");
-		return T_FAILURE;
+		printf("ERROR: DFS CACState\n");
+        return T_FAILURE;
 	}
-	strncpy(radar->atd.ad_name, RADIO5_DEFAULT, sizeof (radar->atd.ad_name));
+	else
+	{
+		ret = fscanf(fp, "%d", &tmp);
+		if (1 != ret)
+		{
+			printf("DFS CACState ERROR: %d\n", ret);
+			fclose(fp);
+			sprintf(cmd, "rm -rf /tmp/CACState");
+			EXE_COMMAND(cmd);
+			return T_FAILURE;
+		}
 
-    radar->atd.ad_id = DFS_IS_CAC_DONE | ATH_DIAG_DYN;
-    radar->atd.ad_in_data = NULL;
-    radar->atd.ad_in_size = 0;
-    radar->atd.ad_out_data = (void *) cac_state;
-    radar->atd.ad_out_size = sizeof(unsigned int);
-    strcpy(ifr.ifr_name, radar->atd.ad_name);
-    ifr.ifr_data = (void *) &radar->atd;
+		if (0 == tmp)
+		{
+			*cac_state = 0;	
+		}
+		else
+		{
+			*cac_state = 1;
+		}
+	}
+	
+	fclose(fp);
+	
+	sprintf(cmd, "rm -rf /tmp/CACState");
+	EXE_COMMAND(cmd);
 
-    if (ioctl(radar->s, SIOCGATHPHYERR, &ifr) < 0)
-    {
-    	printf("ERROR: Get CAC State\n");
-		close(radar->s);
-		return T_FAILURE;
-    }
-	close(radar->s);
-#if 0
+#if 1
 	printf("CAC STATE: %d\n", *cac_state);
-#endif
+#endif	
 	return T_SUCCESS;
 }
 

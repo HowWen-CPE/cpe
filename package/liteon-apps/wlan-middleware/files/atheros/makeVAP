@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -x
 if [ "${1}" = "" ]; then
     echo "MAKEVAP_PRINT: makeVAP usage"
     echo "MAKEVAP_PRINT: makeVAP mode essid IFstr"
@@ -356,3 +356,40 @@ if [ "${MODE}" = "sta" -a "${IFNUM}" = "0" ]; then
 fi
 
 echo Created ${APNAME} mode ${MODE} for "${ESSID}"
+
+
+##
+## Enable WDS if selected
+##
+
+if [ "${SUB_MODE}" = "wds" ]; then
+	#create no more than 8 WDS interfaces
+	APNAME=`wlanconfig $SUB_MODE$VAP_ID create wlandev wifi$IFNUM wlanmode ${MODE}`
+
+	#WDS ESSID
+	iwconfig ${APNAME} essid "Generic-WDS"
+echo MAKEVAP_PRINT: iwconfig ${APNAME} essid Generic-WDS
+
+	#WDS MODE
+    if [ "${CH_MODE}" != "" ]; then
+        iwpriv ${APNAME} mode $CH_MODE
+echo MAKEVAP_PRINT: iwpriv ${APNAME} mode $CH_MODE
+    fi 
+
+	#WDS CHANNEL
+	if [ "${PRI_CH}" != "" ]; then 
+		iwconfig ${APNAME} channel ${PRI_CH}
+echo MAKEVAP_PRINT: iwconfig ${APNAME} channel ${PRI_CH}
+	fi 
+
+	#WDS
+    iwpriv ${APNAME} wds 1
+echo MAKEVAP_PRINT: iwpriv ${APNAME} wds 1
+
+	#WDS won't send beacon
+	wlanconfig ${APNAME} nawds mode 2
+echo MAKEVAP_PRINT: wlanconfig ${APNAME} nawds mode 2
+
+	echo Created "${APNAME}" mode "${SUB_MODE}""$VAP_ID" wifi"${IFNUM}"
+fi
+

@@ -1496,6 +1496,8 @@ struct attr wl_advanced_rule_attr[] = {
     { "wdstxmode", show_value, show_value},
     { "antennamode", show_value, show_value},
     { "distance", show_value, show_value},
+    { "txchainmask", show_value, show_value},
+    { "rxchainmask", show_value, show_value},
     { NULL, NULL, NULL }
 };
 
@@ -1660,16 +1662,24 @@ struct attr wl_wds_basic_rule_attr[] = {
 };
 
 /* key */
-struct attr wl_wds_sec_wep_rule_attr[] = {
+struct attr wl_wds_sec_wpa_rule_attr[] = {
     { "key", show_value, show_value },
+    { "crypto", show_value, show_value },		
     { NULL, NULL, NULL }
 };
 
 /* key^crypto */
-struct attr wl_wds_sec_wpa_rule_attr[] = {
-    { "key", show_value, show_value },
-    { "crypto", show_value, show_value },
+struct attr wl_wds_sec_wep_rule_attr[] = {
+    { "key_index", show_value, show_value },
+    { "key1", show_value, show_value },
+    { "key2", show_value, show_value },
+    { "key3", show_value, show_value },
+    { "key4", show_value, show_value },
+    { "keytype", show_value, show_value },
+    { "encmode", show_value, show_value },
+    { "wep_encry", show_value, show_value },
     { NULL, NULL, NULL }
+
 };
 
 /* enable^ssid^bssid^secmode^addrmode^lockmac^macrepeater^connrssi^disconnrssi */

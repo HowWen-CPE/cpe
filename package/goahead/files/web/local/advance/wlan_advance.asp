@@ -137,9 +137,9 @@ function initValue()
 
 	show_div(true, "AdvanceDTIM");
 
-
-	var Enable_SSID  = '<% getCfgZero(1, "EnableSSID" ); %>';
-	if (Enable_SSID == "0"){
+	var Enable_Radio = '<% getCfgZero(1, "EnableRadio" ); %>';
+	
+	if (EnableRadio == "0"){
 		document.wireless_advanced.bcn_int.disabled =true;
 		document.wireless_advanced.dtim.disabled = true;
 		document.wireless_advanced.tx_power.disabled = true;

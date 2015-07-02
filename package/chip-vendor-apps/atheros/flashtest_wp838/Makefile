@@ -15,7 +15,7 @@ define Package/flashtest_wp838
   CATEGORY:=Utilities
   TITLE:=flashtest_wp838
   DEPENDS:=@TARGET_atheros_wp838_wp838_QCA10_1_436
-  SUBMENU:=Ralink Application
+  SUBMENU:=Atheros Application
 endef
 
 define Package/flashtest_wp838/description

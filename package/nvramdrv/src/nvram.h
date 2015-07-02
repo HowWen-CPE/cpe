@@ -3,6 +3,7 @@
 
 #define NVRAM_MTDNAME "nvram"
 #define NVRAM_DEVNAME "nvram"
+#define NVRAM_FILENAME "/mnt/mmc/.nvramblock"
 
 #define RANV_PRINT(x, ...) do { if (nvram_debug) printk("\n%s %d: " x, __FILE__, __LINE__, ## __VA_ARGS__); } while(0)
 #define RANV_ERROR(x, ...) do { printk("%s %d: ERROR! " x, __FILE__, __LINE__, ## __VA_ARGS__); } while(0)
@@ -50,6 +51,7 @@ typedef struct nvram_ioctl_s {
 	int ret;
 	char *name;
 	char *value;
+	int useFile;
 } nvram_ioctl_t;
 
 
@@ -62,6 +64,11 @@ typedef struct nvram_ioctl_s {
 static int mtd_write_nm(char *name, loff_t to, 
 	size_t len, const u_char *buf);
 static int mtd_read_nm(char *name, loff_t from, 
+	size_t len, u_char *buf);
+
+static int file_write_nm(char *name, loff_t to, 
+	size_t len, const u_char *buf);
+static int file_read_nm(char *name, loff_t from, 
 	size_t len, u_char *buf);
 
 static int init_nvram_block(void);

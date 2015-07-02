@@ -945,14 +945,18 @@ aa( wl_advanced_rule_attr, ""
 "extcha\r\n\t"
 "wdstxmode              [CCK|OFDM|HTMIX|GREENFIELD]\r\n\t"
 "antennamode            [1:external0:internal]\r\n\t"
-"distance")
+"distance               \r\n\t"
+"txchainmask            \r\n\t"
+"rxchainmask            \r\n\t")
 
 aa( wl_wds_rule_attr, ""
-"mode                   mode:\r\n\t"
-"                       disabled 1\r\n\t"
-"                       restrict 2\r\n\t"
-"                       bridge 3\r\n\t"
-"                       repeater 4:lazy\r\n\t"
+#if defined(atheros)
+"mode                   [disabled|bridgeap]\r\n\t"
+#elif defined(ralink)
+"mode                   [disabled|bridgeap|bridge]\r\n\t"
+#else
+#error "Unsupported WLAN Chip Vendor!!!!" 
+#endif
 "timeout")
 
 aa( wl_wme_rule_attr, ""
@@ -1057,15 +1061,31 @@ aa( wlv_acl_rule_attr, ""
 "flag")
 
 aa( wl_wds_basic_rule_attr, ""
-"hwaddr\r\n\t"
-"secmode")
-
-aa( wl_wds_sec_wep_rule_attr, ""
-"key")
+"hwaddr                 XX:XX:XX:XX:XX:XX\r\n\t"
+#if defined(atheros)
+"secmode                [none|aes]"
+#elif defined(ralink)
+"secmode                [none|aes|tkip]"
+#else
+#error "Unsupported WLAN Chip Vendor!!!!" 
+#endif
+)
 
 aa( wl_wds_sec_wpa_rule_attr, ""
-"key\r\n\t"
-"crypto")
+"key                    8~63 printable ASCII or 8~64 HEX\r\n\t"
+"crypto                 [tkip|aes]")
+
+
+aa( wl_wds_sec_wep_rule_attr, ""
+"key_index              1~4\r\n\t"
+"key1                   5 ASCII or 10 HEX for 64Bits; 13 ASCII or 26 HEX for 128Bits\r\n\t"
+"key2                   5 ASCII or 10 HEX for 64Bits; 13 ASCII or 26 HEX for 128Bits\r\n\t"
+"key3                   5 ASCII or 10 HEX for 64Bits; 13 ASCII or 26 HEX for 128Bits\r\n\t"
+"key4                   5 ASCII or 10 HEX for 64Bits; 13 ASCII or 26 HEX for 128Bits\r\n\t"
+"keytype                [0:hex|1:ascii]\r\n\t"
+"encmode                [open|shared]\r\n\t"
+"wep_encry              [0:64bits|1:128bits]")
+
 
 //STA General
 aa( wl_apcli_rule_attr, ""

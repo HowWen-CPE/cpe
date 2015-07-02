@@ -36,7 +36,7 @@
 #define APCLI_RULE_MAX WL_APCLI_NUM
 
 
-#define WLAN_DEV_PREFIX "ath sta"
+#define WLAN_DEV_PREFIX "ath sta wds"
 
 #define WAN0_IFNAME "br-wan0"
 
@@ -46,7 +46,10 @@
 #define WAN0_PORTS "4"
 
 #define LAN0_IFNAME "br-lan0"
-#define LAN0_IFNAMES "eth0 eth1 ath0 ath1 ath2 ath3 ath4 ath5 ath6 ath7 ath8 ath9 ath10 ath11 ath12 ath13 ath14 ath15"
+#define LAN0_IFNAMES "eth0 eth1 "\
+	"ath0 ath1 ath2 ath3 ath4 ath5 ath6 ath7 "\
+	"ath8 ath9 ath10 ath11 ath12 ath13 ath14 ath15 "\
+	"wds0 wds1 wds2 wds3 wds4 wds5 wds6 wds7"
 #define LAN0_IFNAMES_WDS "vlan1 ra0 ra1 rai0 rai1 apcli0 apclii0 wds0 wds1 wds2 wds3 wdsi0 wdsi1 wdsi2 wdsi3"
 #define LAN0_HWNAME ""
 #define LAN0_DEVICE "vlan1"
@@ -55,15 +58,15 @@
 #define LAN1_DEVICE "br2"
 
 #define BR_RULE_GUESTLAN "GuestLAN^0^ra1^"
-#define BR_RULE "LAN1^1^eth0 eth1 ath0 ath1 ath2 ath3 ath4 ath5 ath6 ath7 ath8 ath9 ath10 ath11 ath12 ath13 ath14 ath15^|WAN1^0^^|GuestLAN^0^^"
-#define BR_LAN_RULE "LAN1^1^eth0 eth1 sta0 ath1 ath2 ath3 ath4 ath5 ath6 ath7 ath8 ath9 ath10 ath11 ath12 ath13 ath14 ath15^|GuestLAN^0^ra1^"
+#define BR_RULE "LAN1^1^eth0 eth1 ath0 ath1 ath2 ath3 ath4 ath5 ath6 ath7 ath8 ath9 ath10 ath11 ath12 ath13 ath14 ath15 wds0 wds1 wds2 wds3 wds4 wds5 wds6 wds7^|WAN1^0^^|GuestLAN^0^^"
+#define BR_LAN_RULE "LAN1^1^eth0 eth1 sta0 ath1 ath2 ath3 ath4 ath5 ath6 ath7 ath8 ath9 ath10 ath11 ath12 ath13 ath14 ath15 wds0 wds1 wds2 wds3 wds4 wds5 wds6 wds7^|GuestLAN^0^ra1^"
 #define BR_WAN_RULE "WAN1^1^^"
-#define LAN_WAN_MODE_RULE "normal^eth0 ath0 ath1 ath2 ath3 ath4 ath5 ath6 ath7 ath8 ath9 ath10 ath11 ath12 ath13 ath14 ath15^eth1"\
-						"|ap^eth0 eth1 ath0 ath1 ath2 ath3 ath4 ath5 ath6 ath7 ath8 ath9 ath10 ath11 ath12 ath13 ath14 ath15^"\
-						"|wisp0^eth0 eth1 ath1 ath3 ath5 ath7 ath9 ath11 ath13 ath15^sta0"\
-						"|wisp1^eth0 eth1 ath0 ath2 ath4 ath6 ath8 ath10 ath12 ath14^sta1"\
-						"|sta0^eth0 eth1 sta0 ath1 ath3 ath5 ath7 ath9 ath11 ath13 ath15^"\
-						"|sta1^eth0 eth1 sta1 ath0 ath2 ath4 ath6 ath8 ath10 ath12 ath14^"
+#define LAN_WAN_MODE_RULE "normal^eth0 ath0 ath1 ath2 ath3 ath4 ath5 ath6 ath7 ath8 ath9 ath10 ath11 ath12 ath13 ath14 ath15 wds0 wds1 wds2 wds3 wds4 wds5 wds6 wds7^eth1"\
+						"|ap^eth0 eth1 ath0 ath1 ath2 ath3 ath4 ath5 ath6 ath7 ath8 ath9 ath10 ath11 ath12 ath13 ath14 ath15 wds0 wds1 wds2 wds3 wds4 wds5 wds6 wds7^"\
+						"|wisp0^eth0 eth1 ath1 ath3 ath5 ath7 ath9 ath11 ath13 ath15 wds1 wds3 wds5 wds7^sta0"\
+						"|wisp1^eth0 eth1 ath0 ath2 ath4 ath6 ath8 ath10 ath12 ath14 wds0 wds2 wds4 wds6^sta1"\
+						"|sta0^eth0 eth1 sta0 ath1 ath3 ath5 ath7 ath9 ath11 ath13 ath15 wds1 wds3 wds5 wds7^"\
+						"|sta1^eth0 eth1 sta1 ath0 ath2 ath4 ath6 ath8 ath10 ath12 ath14 wds0 wds2 wds4 wds6^"
  
 #define LAN_WAN_MODE_DEFAULT "sta0"
 
@@ -211,7 +214,7 @@
 
 #define WL1_ADVANCED_RULE "1^ap^default^0^2346^2346^1^100^0^1^1^off^off^off^0^0^0^0^0^0^1^1^0^33^5^0^1^64^0^1^0^1^2000|1^ap^default^0^2346^2346^1^100^0^1^1^off^off^off^0^0^0^0^0^0^1^1^0^33^5^0^1^64^0^1^0^1^2000"
 #define WL1_AP_ADVANCED_RULE "1^ap^default^0^2346^2346^1^100^0^1^1^off^off^off^0^0^0^0^0^0^0^1^0^33^5^0^1^64^0^1^0^1^2000|1^ap^default^0^2346^2346^1^100^0^1^1^off^off^off^0^0^0^0^0^0^1^1^0^33^5^0^1^64^0^1^0^1^2000"
-#define WL_WDS_RULE "disabled^1|disabled^1"
+#define WL0_WDS_RULE "disabled^1|disabled^1"
 #define WL1_WDS_RULE "disabled^1|disabled^1"
 #define WL_WME_RULE "15 1023 7 0 0 off^15 1023 3 0 0 off^7 15 2 6016 3008 off^3 7 2 3264 1504 off^15 1023 7 0 0 off^15 63 3 0 0 off^7 15 1 6016 3008 off^3 7 1 3264 1504 off^off^128|15 1023 7 0 0 off^15 1023 3 0 0 off^7 15 2 6016 3008 off^3 7 2 3264 1504 off^15 1023 7 0 0 off^15 63 3 0 0 off^7 15 1 6016 3008 off^3 7 1 3264 1504 off^off^128"
 #define WL_MODE_RULE "client^0^0|ap^0^0"
@@ -224,10 +227,10 @@
 #define WL_ACL_BASIC_RULE "0^1"
 
 /* WDS */
-#define WL0_WDS_BASIC_RULE "^disabled|^disabled|^disabled|^disabled"
-#define WL1_WDS_BASIC_RULE "^disabled|^disabled|^disabled|^disabled"
-#define WL0_WDS_SEC_WEP_RULE "|||"
-#define WL0_WDS_SEC_WPA_RULE "^tkip|^tkip|^tkip|^tkip"
+#define WL0_WDS_BASIC_RULE "^none|^none|^none|^none"
+#define WL1_WDS_BASIC_RULE "^none|^none|^none|^none"
+#define WL0_WDS_SEC_WEP_RULE "1^^^^^^open^0|1^^^^^^open^0|1^^^^^^open^0|1^^^^^^open^0"
+#define WL0_WDS_SEC_WPA_RULE "^aes|^aes|^aes|^aes"
 
 /* APCLI */
 #define WL0_APCLI_RULE "1^GENERIC_AP_SSID^^disabled^0^0^0^-85^-95"
@@ -497,41 +500,41 @@
 wmm_enable^ack_enable^ac_be^ac_bk^ac_vi^ac_vo^cwmin_be^cwmax_be^aifs_be^txop_be^cwmin_bk^cwmax_bk
 ^aifs_bk^txop_bk^cwmin_vi^cwmax_vi^aifs_vi^txop_vi^cwmin_vo^cwmax_vo^aifs_vo^txop_vo^bss
 */
-#define WL0_AP_WMM "1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"
+#define WL0_AP_WMM "1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"
 					
-#define WL1_AP_WMM "1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^6^3^0^3^4^1^3008^2^3^1^1504^"
+#define WL1_AP_WMM "1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"
 					
-#define WL0_STA_WMM "1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"
+#define WL0_STA_WMM "|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"
 					
-#define WL1_STA_WMM "1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"\
-					"|1^0^0^0^0^0^4^10^7^0^4^10^3^0^3^4^2^3008^2^3^2^1504^"
+#define WL1_STA_WMM "|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"\
+					"|1^0^0^0^0^0^4^10^3^0^4^10^7^0^3^4^1^3008^2^3^1^1504^"
 
 
 /**
@@ -2100,11 +2103,11 @@ nvram_tuple_t nvram_factory_default[] = {
 		NVRAM_NONE,
 		0 
 	},   
-	{ "wl0_wds_sec_wep_rule", "|||", 
+	{ "wl0_wds_sec_wep_rule", WL0_WDS_SEC_WEP_RULE,
 		NVRAM_NONE,
 		0 
 	},
-	{ "wl0_wds_sec_wpa_rule", "^tkip|^tkip|^tkip|^tkip", 
+	{ "wl0_wds_sec_wpa_rule", WL0_WDS_SEC_WPA_RULE, 
 		NVRAM_NONE,
 		0 
 	},
@@ -2350,11 +2353,11 @@ nvram_tuple_t nvram_factory_default[] = {
 		NVRAM_NONE,
 		0 
 	},   
-	{ "wl1_wds_sec_wep_rule", "|||", 
+	{ "wl1_wds_sec_wep_rule", WL0_WDS_SEC_WEP_RULE, 
 		NVRAM_NONE,
 		0 
 	},
-	{ "wl1_wds_sec_wpa_rule", "^tkip|^tkip|^tkip|^tkip", 
+	{ "wl1_wds_sec_wpa_rule", WL0_WDS_SEC_WPA_RULE,
 		NVRAM_NONE,
 		0 
 	},
@@ -2510,11 +2513,16 @@ nvram_tuple_t nvram_factory_default[] = {
 		0 
 	},   
 
-	{ "wl_wds_rule", WL_WDS_RULE, 
+	{ "wl0_wds_rule", WL0_WDS_RULE, 
 		NVRAM_NONE,
 		0 
 	},
 
+    { "wl1_wds_rule", WL1_WDS_RULE,
+        NVRAM_NONE,
+        0
+    },
+                        
 	{ "wl_wisp_mode_rule", "wisp^ap", 
 		NVRAM_NONE,
 		0 

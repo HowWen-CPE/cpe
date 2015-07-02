@@ -4,6 +4,7 @@
 #include <linux/netdevice.h>
 #include <linux/cache.h>
 #include <linux/fs.h>
+#include <linux/uaccess.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/map.h>
 #include <linux/mtd/concat.h>
@@ -122,6 +123,7 @@ uint32_t nv_crc32(uint32_t crc, const char *buf, uint32_t len)
 /* ========================================================================= */
 int mtd_write_nm(char *name, loff_t to, size_t len, const u_char *buf)
 {
+
 	int ret = -1;
 	size_t rdlen, wrlen;
 	struct mtd_info *mtd;
@@ -129,8 +131,9 @@ int mtd_write_nm(char *name, loff_t to, size_t len, const u_char *buf)
 	u_char *bak = NULL;
 
 	mtd = get_mtd_device_nm(name);
-	if (IS_ERR(mtd))
-		return (int)mtd;
+	if (IS_ERR(mtd)) {
+		return file_write_nm(NVRAM_FILENAME, to, len, buf);
+	}
 	if (len > mtd->erasesize) {
 		put_mtd_device(mtd);
 		return -E2BIG;
@@ -142,7 +145,11 @@ int mtd_write_nm(char *name, loff_t to, size_t len, const u_char *buf)
 		return -ENOMEM;
 	}
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(3,3,0)
+	ret = mtd_read(mtd, 0, mtd->erasesize, &rdlen, bak);
+#else
 	ret = mtd->read(mtd, 0, mtd->erasesize, &rdlen, bak);
+#endif
 	if (ret != 0) {
 		put_mtd_device(mtd);
 		kfree(bak);
@@ -158,14 +165,22 @@ int mtd_write_nm(char *name, loff_t to, size_t len, const u_char *buf)
 	ei.addr = 0;
 	ei.len = mtd->erasesize;
 	ei.priv = 0;
+#if LINUX_VERSION_CODE > KERNEL_VERSION(3,3,0)
+	ret = mtd_erase(mtd, &ei);
+#else
 	ret = mtd->erase(mtd, &ei);
+#endif
 	if (ret != 0) {
 		put_mtd_device(mtd);
 		kfree(bak);
 		return ret;
 	}
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(3,3,0)
+	ret = mtd_write(mtd, 0, mtd->erasesize, &wrlen, bak);
+#else
 	ret = mtd->write(mtd, 0, mtd->erasesize, &wrlen, bak);
+#endif
 
 	put_mtd_device(mtd);
 	kfree(bak);
@@ -174,20 +189,76 @@ int mtd_write_nm(char *name, loff_t to, size_t len, const u_char *buf)
 
 int mtd_read_nm(char *name, loff_t from, size_t len, u_char *buf)
 {
+		
 	int ret;
 	size_t rdlen;
 	struct mtd_info *mtd;
 
 	mtd = get_mtd_device_nm(name);
-	if (IS_ERR(mtd))
-		return (int)mtd;
+	if (IS_ERR(mtd)) {
+		return file_read_nm(NVRAM_FILENAME, from, len, buf);
+	}
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(3,3,0)
+	ret = mtd_read(mtd, from, len, &rdlen, buf);
+#else
 	ret = mtd->read(mtd, from, len, &rdlen, buf);
+#endif
 	if (rdlen != len)
 		printk("warning: mtd_read_nm: rdlen is not equal to len\n");
 
 	put_mtd_device(mtd);
 	return ret;
+}
+
+int file_write_nm(char *name, loff_t to, size_t len, const u_char *buf)
+{
+	struct file *fp;
+	mm_segment_t fs;
+
+	fp = filp_open(name, O_RDWR|O_CREAT, 0644);
+	if(IS_ERR(fp)) {
+		printk("write create file error\n");
+		return (int)fp;
+	}
+
+	fs=get_fs();
+	set_fs(KERNEL_DS);
+	
+	//erase file first is no necessary
+	/*
+	u_char *erase; 
+	erase = kmalloc(fb[0].flash_max_len, GFP_KERNEL);
+	memset(erase, 0, fb[0].flash_max_len);
+	vfs_write(fp, erase, fb[0].flash_max_len, 0);
+	kfree(erase);
+	*/
+	
+	//write data
+	vfs_write(fp, buf, len, &to);
+	filp_close(fp,NULL);
+	set_fs(fs);
+	//FIXME return 1 as useFile in nvram_ioctl_t
+	return 1;
+}
+
+int file_read_nm(char *name, loff_t from, size_t len, u_char *buf)
+{
+	struct file *fp;
+	mm_segment_t fs;
+
+	fp = filp_open(name, O_RDWR|O_CREAT, 0644);
+	if(IS_ERR(fp)) {
+		printk("read create file error\n");
+		return (int)fp;
+	}
+
+	fs=get_fs();
+	set_fs(KERNEL_DS);
+	vfs_read(fp, buf, len, &from);
+	filp_close(fp,NULL);
+	set_fs(fs);
+	return 0;
 }
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(3,3,0)
@@ -246,7 +317,7 @@ ssize_t nvramdrv_ioctl(struct inode * inode, struct file * file,
 
 		case NVRAM_IOCTL_COMMIT:
 			nvr = (nvram_ioctl_t __user *)buf;
-			nvram_commit(nvr->index);
+			nvr->useFile = nvram_commit(nvr->index);
 			break;
 		case NVRAM_IOCTL_CLEAR:
 			nvr = (nvram_ioctl_t __user *)buf;
@@ -353,6 +424,7 @@ static int init_nvram_block()
 
 	//check crc
 	if (nv_crc32(0, fb[i].env.data, len) != fb[i].env.crc) {
+		printk("crc check error\n");
 		RANV_PRINT("Bad CRC %x, ignore values in flash.\n", (unsigned int)fb[i].env.crc);
 		memset(fb[i].env.data, 0, len);
 		fb[i].valid = 1;
@@ -510,6 +582,7 @@ int nvram_clear(int index)
 
 int nvram_commit(int index)
 {
+	int ret = 0;
 	unsigned long to;
 	int i, len;
 	char *p;
@@ -562,18 +635,18 @@ int nvram_commit(int index)
 	//write crc to flash
 	to = fb[index].flash_offset;
 	len = sizeof(fb[index].env.crc);
-	mtd_write_nm(NVRAM_MTDNAME, to, len, (unsigned char *)&fb[index].env.crc);
+	ret = mtd_write_nm(NVRAM_MTDNAME, to, len, (unsigned char *)&fb[index].env.crc);
 
 	//write data to flash
 	to = to + len;
 	len = fb[index].flash_max_len - len;
-	mtd_write_nm(NVRAM_MTDNAME, to, len, (unsigned char *)fb[index].env.data);
+	ret = mtd_write_nm(NVRAM_MTDNAME, to, len, (unsigned char *)fb[index].env.data);
 
 	fb[index].dirty = 0;
 
 	up(&nvram_sem);
 
-	return 0;
+	return ret;
 }
 
 int nvram_set(int index, char *name, char *value)

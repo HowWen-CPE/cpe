@@ -1,0 +1,125 @@
+--- a/drivers/wlan_modules/adf/include/net/adf_net.h
++++ b/drivers/wlan_modules/adf/include/net/adf_net.h
+@@ -626,4 +626,18 @@ adf_net_free_wlanunit(adf_net_handle_t h
+     __adf_net_free_wlanunit(hdl);
+ }
+ 
++
++/**
++ * @brief check if a wlan device exists by the provided interface name 
++ *
++ * @param[in] ifname
++ *
++ * @return success/Failure
++ */
++static adf_os_inline int
++adf_net_dev_exist_by_name(const char *name)
++{
++    return (__adf_net_dev_exist_by_name(name));
++}
++
+ #endif
+--- a/drivers/wlan_modules/adf/include/net/adf_net_types.h
++++ b/drivers/wlan_modules/adf/include/net/adf_net_types.h
+@@ -257,6 +257,7 @@ typedef struct {
+     a_uint8_t       dev_addr[ADF_NET_MAC_ADDR_MAX_LEN];
+     a_uint16_t       header_len;
+     a_uint16_t       mtu_size;
++    a_uint32_t      unit;
+ }adf_net_dev_info_t;
+ 
+ typedef struct adf_dma_info {
+--- a/drivers/wlan_modules/adf/net/linux/adf_net.c
++++ b/drivers/wlan_modules/adf/net/linux/adf_net.c
+@@ -493,6 +493,7 @@ __adf_net_create_vapdev(adf_drv_handle_t
+     sc->vlgrp       = NULL; /*Not part of any VLAN*/
+     sc->vid         = 0;
+     sc->cfg_api     = vap_cfg; 
++    sc->unit        = info->unit;
+ 
+     netdev->watchdog_timeo      = ADF_DEF_TX_TIMEOUT * HZ;
+     netdev->features           |= ( NETIF_F_HW_VLAN_FILTER | 
+@@ -640,6 +641,29 @@ __adf_net_delete_dev(adf_net_handle_t hd
+ }
+ EXPORT_SYMBOL(__adf_net_delete_dev);
+ 
++/**
++ * @brief: this returns a 1 if a device exists by the given
++ * interface name
++ */
++
++int
++__adf_net_dev_exist_by_name(const char *dev_name)
++{
++    struct net_device *dev;
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
++    dev = dev_get_by_name(dev_name);
++#else
++    dev = dev_get_by_name(&init_net, dev_name);
++#endif
++    if (dev)
++    {
++        dev_put(dev);
++        return 1;
++    }
++    else
++        return 0;
++}
++EXPORT_SYMBOL(__adf_net_dev_exist_by_name);
+ 
+ /**
+  * @brief this adds a IP ckecksum in the IP header of the packet
+@@ -932,11 +956,10 @@ void
+ __adf_net_free_wlanunit(adf_net_handle_t hdl)
+ {
+     __adf_softc_t *sc = hdl_to_softc(hdl);
+-    int unit;
+ 
+-     if(sc->netdev)
+-        __adf_net_ifc_name2unit(sc->netdev->name,&unit);
+-     __adf_net_delete_wlanunit(unit);
++    if(sc->netdev) {
++        __adf_net_delete_wlanunit(sc->unit);
++    }
+ }
+ EXPORT_SYMBOL(__adf_net_free_wlanunit);
+ 
+--- a/drivers/wlan_modules/adf/net/linux/adf_net_pvt.h
++++ b/drivers/wlan_modules/adf/net/linux/adf_net_pvt.h
+@@ -53,6 +53,7 @@ typedef struct __adf_softc {
+     struct net_device_stats     pkt_stats;
+     a_bool_t                    event_to_acfg;  /**< Send events to ACFG */
+     void                       *cfg_api;
++    a_uint32_t                 unit;
+ }__adf_softc_t;
+ 
+ 
+@@ -189,6 +190,10 @@ void
+ __adf_net_free_wlanunit(adf_net_handle_t hdl);
+ 
+ 
++int
++__adf_net_dev_exist_by_name(const char *name);
++
++
+ #define hdl_to_softc(_hdl)      ((__adf_softc_t *)(_hdl))
+ #define hdl_to_netdev(_hdl)     ((hdl_to_softc(_hdl))->netdev)
+ #define hdl_to_virt(_hdl)       (hdl_to_softc(_hdl)->virt)
+--- a/drivers/wlan_modules/os/linux/src/osif_umac.c
++++ b/drivers/wlan_modules/os/linux/src/osif_umac.c
+@@ -4702,8 +4702,14 @@ osif_ioctl_create_vap(struct net_device
+     }
+     else
+     {
+-        if (!adf_net_alloc_wlanunit(unit))
++        int dev_exist = adf_net_dev_exist_by_name(cp.icp_name);
++        if (dev_exist)
++        {
++            printk("%s,%d: %s already exist!\n", __func__, __LINE__, cp.icp_name);
++            
+             return -EINVAL;
++        }
++        unit = adf_net_new_wlanunit();
+         strncpy(name, cp.icp_name, sizeof(name) - 1);
+     }
+ 

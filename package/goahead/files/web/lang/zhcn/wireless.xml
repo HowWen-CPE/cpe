@@ -1,4 +1,10 @@
 ﻿<po>
+	<message msgid="Former remote MAC address is not allowed to be empty!" msgstr="前面的远程MAC地址不允许留空的！" />
+	<message msgid="Invalid MAC Address!" msgstr="无效MAC地址！" />
+	<message msgid="current basic page's radio switch is disabled, WDS is forbidden" msgstr="无线局域网射频开关是关闭的。WDS是禁止的。" />
+	<message msgid="mac address confliction" msgstr="MAC地址冲突。" />
+	<message msgid="wds enable mode switch error" msgstr="WDS模式不支持。" />
+	<message msgid="You should set a AP's fixed channel first before set wds" msgstr="首先，你应该设置固定频道。" />
 	<message msgid="general on" msgstr="开启"/>
 	<message msgid="general off" msgstr="关闭"/>
 	<message msgid="general apply" msgstr="应用"/>
@@ -79,6 +85,10 @@
 	<message msgid="secure mac delete" msgstr="删除"/>
 	<message msgid="secure mac address" msgstr="MAC 地址"/>
 	<message msgid="secure mac description" msgstr="备注" />
+	<message msgid="WDSAPMacAddr" msgstr="远端MAC地址" />
+	<message msgid="Local MAC Address" msgstr="本地MAC地址" />
+	<message msgid="WDS Setup" msgstr="WDS设置:" />
+	<message msgid="WDSMode" msgstr="模式切换" />
 	<message msgid="advance beacon interval" msgstr="信标间隔" />
 	<message msgid="advance title" msgstr="高级无线设置"/>
 	<message msgid="advance rts cts" msgstr="RTS/CTS 临界值"/>
@@ -277,7 +287,7 @@
 	<message msgid="addprof secure wep key3" msgstr="密钥 3"/>
 	<message msgid="addprof secure wep key4" msgstr="密钥 4"/>
 	<message msgid="addprof secure wpa" msgstr="WPA"/>
-	<message msgid="addprof secure wpa algorithm" msgstr="WPA 演算法"/>
+	<message msgid="addprof secure wpa algorithm" msgstr="认证类型"/>
 	<message msgid="addprof wpa tkip" msgstr="TKIP"/>
 	<message msgid="addprof wpa aes" msgstr="AES"/>
 	<message msgid="addprof secure wpa pass phrase" msgstr="共用密码"/>
@@ -321,6 +331,7 @@
 	<message msgid="packet statis port3" msgstr="端口3" />
 	<message msgid="packet statis port4" msgstr="端口4" />
 	<message msgid="packet statis port5" msgstr="端口5" />
+	<message msgid="packet statis port6" msgstr="端口6" />
 	<message msgid="packet statis wlan" msgstr="无线2.4G区域网络"/>	
 	<message msgid="packet statis wlan-1" msgstr="无线2.4G-1区域网络" />
 	<message msgid="packet statis wlan-2" msgstr="无线2.4G-2区域网络" />

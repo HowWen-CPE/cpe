@@ -1,4 +1,24 @@
 ﻿<po>
+	<message msgid="can not parse http header line1 ." msgstr="无法解析http头第1行。"/>
+	<message msgid="filename  parsed error." msgstr="文件名解析错误。 "/>
+	<message msgid="Firmware image header checksum error." msgstr="固件映像头校验和错误。 "/>
+	<message msgid="http header has no space line." msgstr="http头没有空行。 "/>
+	<message msgid="it doesn not have a http header." msgstr="它没有按没有一个HTTP标头。 "/>
+	<message msgid="string filename  error." msgstr="字符串文件名错误。 "/>
+	<message msgid="the last line of http header error." msgstr="最后一行http头的错误。 "/>
+	<message msgid="this is not a form-data." msgstr="这不是一个格式数据。 "/>
+	<message msgid="We dont support multi-field upload." msgstr="我们不支持多领域的上传。 "/>
+	<message msgid="Can't mmap firmware1." msgstr="不能mmap的固件。 "/>
+	<message msgid="Can't open firmware." msgstr="无法打开固件。 "/>
+	<message msgid="Can't stat firmware." msgstr="无法统计的固件。 "/>
+	<message msgid="Firmware data checksum error." msgstr="固件数据校验错误。 "/>
+	<message msgid="Firmware has a bad size." msgstr="固件有一个坏的大小。 "/>
+	<message msgid="Firmware header checksum error." msgstr="固件头校验和错误。 "/>
+	<message msgid="This firmware is not designed for this product." msgstr="此固件不适合这个产品。"/>
+	<message msgid="firmware transport timeout" msgstr="固件传送超时。请使用以太网络上传固件。"/>
+	<message msgid="firmware transport failure" msgstr="固件传输失败"/>
+	<message msgid="cannot ping well, check your network" msgstr="请检查您的网络"/>
+	<message msgid="Temporary file can not open, check your bridge setting" msgstr="临时文件无法打开，请检查您的设置"/>
 	<message msgid="upload title" msgstr="升级软件"/>
 	<message msgid="upload titleOnLine" msgstr="线上软件升级"/>
 	<message msgid="upload introduction1" msgstr="若要进行软件升级，请选择到软件升级程序(*.BIN)的位置，然后点击上传。 软件升级程序可以从网站上下载。 如果网站上的软件程序有经过压缩程序 (*.ZIP 文件)，请您必须先将程序解压缩后再进行上传。在某些情况下，您可能需要将设备重新设置。"/>

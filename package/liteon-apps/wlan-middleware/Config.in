@@ -1,0 +1,6 @@
+comment "Wlan Chip Vendor Information"
+config WLAN_CHIP_VENDOR
+	string "Liteon Generic Platform Product wlan chip vendor"
+	default "atheros"
+	help
+	    Configure your liteon generic platform product wlan chip vendor

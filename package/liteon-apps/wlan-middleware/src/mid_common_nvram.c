@@ -1,12 +1,12 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
+#include	<stdlib.h>
+#include	<stdio.h>
+#include	<string.h>
+#include	<assert.h>
 
-#include "nvram.h"
-#include "nvram_rule.h"
+#include	"nvram.h"
+#include	"nvram_rule.h"
 
-#include "mid_common.h"
+#include	"mid_common_nvram.h"
 //Get NVRAM System Mode
 int nvram_get_system_mode(int *opmode)
 {
@@ -51,18 +51,6 @@ int nvram_get_system_mode(int *opmode)
 }
 
 
-//mid_common_nvram is only usfull for WP838 temporary
-#if defined(GP_WP688)
-int nvram_get_wlan_mode(int radio, int *wlan_mode)
-{
-	return T_SUCCESS;
-}
-#elif defined(GP_WP838)
-/*>>>>>>>>>>NVRAM Get Functions Start>>>>>>>>>>*/
-/***********************************************/
-
-/*>>>>>>>>>>NVRAM Get Functions for Both AP and STA Start>>>>>>>>>>*/
-//Get NVRAM WLAN Mode
 int nvram_get_wlan_mode(int radio, int *wlan_mode)
 {
     char buf[NVRAM_BUF_LEN] = { 0 };
@@ -721,6 +709,7 @@ int nvram_get_ap_passphrase(int radio, int vap_id, char *key)
     return T_SUCCESS; 
 }
 
+
 /*Get NVRAM rekey mode*/
 int nvram_get_ap_rekey_mode(int radio, int vap_id, int *rekey_mode)
 {   
@@ -1248,11 +1237,9 @@ int nvram_get_sta_psk(int radio, char *key)
 					"key", buf, NVRAM_PSK_LEN, EZPLIB_USE_CLI);
 				break;
 			default:
-				#ifdef MID_DEBUG
 				fprintf(stderr, "%d@%s"
 					" psk is unnecessary for current secmode!\r\n"
 					, __LINE__, __FUNCTION__);
-				#endif
 				return T_FAILURE;
 		}
 	}
@@ -1478,4 +1465,182 @@ int nvram_get_sta_radius_password(int radio, char *radius_pwd)
 
 	return T_SUCCESS;
 }
-#endif //Endof GP_WP838
+
+/*<<<<<<<<<<NVRAM Get Functions for STA end <<<<<<<<<<*/
+
+
+/*>>>>>>>>>>NVRAM Get Functions for WDS Start>>>>>>>>>>*/
+
+/**
+ * \brief Get NVRAM WDS MODE for specific radio
+ * \return T_SUCCESS on success & T_FAILURE on failure
+ * \param[in] radio RADIO_2G or RADIO_5G
+ * \param[out] mode current WDS mode for the radio
+ * \author frank
+ * \date 2014-06-11
+ */
+int nvram_get_wds_mode(int radio, int *mode)
+{
+	char buf[NVRAM_BUF_LEN]={0};
+	
+	assert(mode);
+	
+	if(radio == RADIO_2G) {
+		ezplib_get_attr_val("wl0_wds_rule", 0, "mode", buf, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+	}
+	else if(radio == RADIO_5G) {
+		ezplib_get_attr_val("wl1_wds_rule", 0, "mode", buf, NVRAM_BUF_LEN, EZPLIB_USE_CLI);
+	}
+	else {
+		return T_FAILURE;
+	}
+	
+	if(!strcmp(buf,"disabled")) {
+		*mode = WDS_MODE_DISABLED;
+	}
+	else if(!strcmp(buf,"bridgeap")) {
+		*mode = WDS_MODE_BRIDGEAP;
+	}	
+	else if(!strcmp(buf,"bridge")) {
+		*mode = WDS_MODE_BRIDGE;
+	}
+	else if(!strcmp(buf,"repeater")) {
+		*mode = WDS_MODE_REPEATOR;
+	}
+	else {	
+		fprintf(stderr, "Unsupported wds mode: %s\r\n", buf);
+		return T_FAILURE;
+	}
+	return T_SUCCESS;
+}
+
+/**
+ * \brief Get NVRAM WDS Remote WDS MAC address
+ * \return T_SUCCESS on success & T_FAILURE on failure
+ * \param[in] radio RADIO_2G or RADIO_5G
+ * \param[in] vap_id vapid for WDS 0~3
+ * \param[out] mac Remote WDS MAC address
+ * \author frank
+ * \date 2014-06-11
+ */
+int nvram_get_wds_mac(int radio, int vap_id, char *mac)
+{
+	char buf[NVRAM_BUF_LEN+NVRAM_BUF_LEN] = {0};
+
+	assert(mac);
+	if(radio == RADIO_2G) {
+		ezplib_get_attr_val("wl0_wds_basic_rule", vap_id, "hwaddr", buf, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+	}
+	else if(radio == RADIO_5G) {
+		ezplib_get_attr_val("wl1_wds_basic_rule", vap_id, "hwaddr", buf, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+	}
+	else {
+		return T_FAILURE;
+	}
+	strncpy(mac, buf, 20);
+	return T_SUCCESS;
+}
+
+/**
+ * \brief Get NVRAM WDS secmode for specificed radio & vapid
+ * \return T_SUCCESS on success & T_FAILURE on failure
+ * \param[in] radio RADIO_2G or RADIO_5G
+ * \param[in] vap_id vapid for WDS 0~3
+ * \param[out] secmode in none|aes|tkip (wep is not implemented due to secure reason)
+ * \author frank
+ * \date 2014-06-11
+ */
+int nvram_get_wds_sec_mode(int radio, int vap_id, int *secmode)
+{
+	char buf[NVRAM_BUF_LEN] = {0};
+	assert(secmode);
+	if(radio == RADIO_2G) {
+		ezplib_get_attr_val("wl0_wds_basic_rule", vap_id, "secmode", buf, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+	}
+	else if(radio == RADIO_5G){
+		ezplib_get_attr_val("wl1_wds_basic_rule", vap_id, "secmode", buf, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+	}
+	else {
+		return T_FAILURE;
+	}
+
+	if(!strcmp(buf,"none")) {
+		*secmode = WDS_SEC_MODE_NONE;
+	}
+	else if(!strcmp(buf,"aes")) {
+		*secmode = WDS_SEC_MODE_AES;
+	}
+	else if(!strcmp(buf,"tkip")) {
+		*secmode = WDS_SEC_MODE_TKIP;
+	}
+	else {
+		fprintf(stderr, "Unsupported secmode :%s\r\n", buf);
+		return T_FAILURE;
+	}
+
+	return T_SUCCESS;	
+}
+
+/**
+ * \brief Get NVRAM WDS PSK key for WDS
+ * \return T_SUCCESS on success & T_FAILURE on failure
+ * \param[in] radio RADIO_2G or RADIO_5G
+ * \param[in] vap_id vapid for WDS 0~3
+ * \param[out] key in nvram with special chars processed
+ * \param[in] bProcSpecChar 0 for No Process Special Character, and 1 vice versa
+ * \author frank
+ * \date 2014-06-10
+ */
+int nvram_get_wds_passphrase(int radio, int vap_id, char *key, int bProcSpecChar)
+{   
+	char buf[NVRAM_PSK_LEN];
+	assert(key != NULL);
+
+	/*Get the Radio*/
+	if(RADIO_2G == radio) {
+		ezplib_get_attr_val("wl0_wds_sec_wpa_rule", vap_id, "key", buf, NVRAM_PSK_LEN, EZPLIB_USE_CLI);       
+	}
+	else if(RADIO_5G == radio){
+		ezplib_get_attr_val("wl1_wds_sec_wpa_rule", vap_id, "key", buf, NVRAM_PSK_LEN, EZPLIB_USE_CLI);       
+	}
+
+	strcpy(key, buf);
+
+	//Process special characters
+	if(bProcSpecChar) {
+		int i, j;
+		for(i=0,j=0;j<strlen(buf);i++,j++) {
+			if( '\"' == buf[j]
+					|| '`' == buf[j]
+					|| '\\' == buf[j]
+			  ) {
+				key[i] = '\\';
+				i++;
+			}
+			key[i] = buf[j];
+		}
+		key[i] = '\0';
+	}
+	return T_SUCCESS; 
+}
+
+/*<<<<<<<<<<NVRAM Get Functions for WDS Start<<<<<<<<<<*/
+
+#if defined(VLAN_ENABLE)
+int nvram_get_lan_bridge(int radio, int vap_id, char *bridge)
+{
+	int vlan_id=0;
+	int mag_vlan=0;
+	vlan_id=nvram_get_wireless_specified_vlan(radio,vap_id);
+	mag_vlan=nvram_get_manage_vlan();
+	if(vlan_id == mag_vlan)
+	{
+		sprintf(bridge, "br-lan0");
+	}
+	else
+	{
+		sprintf(bridge, "br-lan%d", vlan_id);
+	}
+	return T_SUCCESS;
+}
+#endif

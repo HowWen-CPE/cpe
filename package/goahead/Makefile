@@ -40,7 +40,7 @@ define Build/Compile
 	$(MAKE) -C $(PKG_BUILD_DIR) \
 		$(TARGET_CONFIGURE_OPTS) \
         CFLAGS="$(TARGET_CFLAGS) -ggdb3 -Wall -I. -I \
-        $(STAGING_DIR)/usr/include -I $(PKG_BUILD_DIR) -I $(BUILD_DIR)/wlan-middleware -I $(BUILD_DIR)/nvram $(EZP_CFLAGS) -D $(CONFIG_PRODUCT_NAME)"
+        $(STAGING_DIR)/usr/include -I $(PKG_BUILD_DIR) -I $(BUILD_DIR)/wlan-middleware -I $(BUILD_DIR)/nvram $(EZP_CFLAGS) -D $(CONFIG_PRODUCT_NAME)  -D $(CONFIG_WLAN_CHIP_VENDOR)"
 
 endef
 

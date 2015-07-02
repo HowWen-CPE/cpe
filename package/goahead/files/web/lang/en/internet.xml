@@ -176,6 +176,20 @@
 <message msgid="wan macop1" msgstr="Factory default " />
 <message msgid="wan macop2" msgstr="Clone the computer's MAC address - IP Address" />
 <message msgid="wan macop3" msgstr="Set WAN MAC Address" />
+<message msgid="service detection" msgstr="Network Service Detection" />
+<message msgid="Enable Detection Service" msgstr="Enable Network Service Detection" />
+<message msgid="retry count" msgstr="Retry Count  :" />
+<message msgid="retry timeout" msgstr="Retry timeout : " />
+<message msgid="default gateway" msgstr="Default Gateway" />
+<message msgid="isp host" msgstr="ISP Host: " />
+<message msgid="isp host1" msgstr="ISP HOST" />
+<message msgid="icmp host" msgstr="ICMP HOST  :" />
+<message msgid="retry Timeout" msgstr="seconds(Range:5-999)" />
+<message msgid="multiWAN Title" msgstr="Multi WAN" />
+<message msgid="multiWAN1" msgstr="WAN1" />
+<message msgid="multiWAN2" msgstr="WAN2" />
+<message msgid="link BackUp" msgstr="Smart Link Backup" />
+<message msgid="multiWAN Mode" msgstr="Primary WAN (Specify which WAN is primary)" />
 <message msgid="wan Apply" msgstr="Apply" />
 <message msgid="wan Reset" msgstr="Cancel" />
 <!-- igmp_snooping.asp --> 
@@ -515,6 +529,64 @@
 <message msgid="stp set 0" msgstr="Disable" />
 <message msgid="stp Apply" msgstr="Apply" />
 <message msgid="stp Reset" msgstr="Reset" />
+<!-- switch_qos.asp --> 
+<message msgid="QueueTitle" msgstr="Queue Setting" />
+<message msgid="QosQueueMode" msgstr="Queue Mode" />
+<message msgid="QosQueueMode_0" msgstr="Strict" />
+<message msgid="QosQueueMode_1" msgstr="WRR" />
+<message msgid="WrrWeight" msgstr="WRR Weight" />
+<message msgid="LowQueue" msgstr="Low queue" />
+<message msgid="NormalQueue" msgstr="Normal queue" />
+<message msgid="MediumQueue" msgstr="Medium queue" />
+<message msgid="HighQueue" msgstr="High queue" />
+<message msgid="ModeTitle" msgstr="Classification Mode Setting" />
+<message msgid="ModeLable" msgstr="Classification Mode" />
+<message msgid="ClassifyMode_0" msgstr="802.1p" />
+<message msgid="ClassifyMode_1" msgstr="DSCP" />
+<message msgid="Dot1pMap" msgstr="802.1p Priority Mapping" />
+<message msgid="Dot1pPriority" msgstr="802.1p Priority Config" />
+<message msgid="Dot1pAllDefault" msgstr="All Default Priority" />
+<message msgid="Dot1pAllLow" msgstr="All Low Priority" />
+<message msgid="Dot1pAllNormal" msgstr="All Normal Priority" />
+<message msgid="Dot1pAllMedium" msgstr="All Medium Priority" />
+<message msgid="Dot1pAllHigh" msgstr="All High Priority" />
+<message msgid="Dot1pPriority_Colum1" msgstr="Priority" />
+<message msgid="Dot1pPriority_Colum2" msgstr="Priority" />
+<message msgid="Dot1pPriority_Colum3" msgstr="Priority" />
+<message msgid="Dot1pPriority_Colum4" msgstr="Priority" />
+<message msgid="Dot1pClass_Colum1" msgstr="Class" />
+<message msgid="Dot1pClass_Colum2" msgstr="Class" />
+<message msgid="Dot1pClass_Colum3" msgstr="Class" />
+<message msgid="Dot1pClass_Colum4" msgstr="Class" />
+<message msgid="DscpMap" msgstr="DSCP Priority Mapping" />
+<message msgid="DscpPriority" msgstr="DSCP Priority Config" />
+<message msgid="DscpAllDefault" msgstr="All Default Priority" />
+<message msgid="DscpAllLow" msgstr="All Low Priority" />
+<message msgid="DscpAllNormal" msgstr="All Normal Priority" />
+<message msgid="DscpAllMedium" msgstr="All Medium Priority" />
+<message msgid="DscpAllHigh" msgstr="All High Priority" />
+<message msgid="DscpPriority_Colum1" msgstr="Priority" />
+<message msgid="DscpPriority_Colum2" msgstr="Priority" />
+<message msgid="DscpPriority_Colum3" msgstr="Priority" />
+<message msgid="DscpPriority_Colum4" msgstr="Priority" />
+<message msgid="DscpClass_Colum1" msgstr="Class" />
+<message msgid="DscpClass_Colum2" msgstr="Class" />
+<message msgid="DscpClass_Colum3" msgstr="Class" />
+<message msgid="DscpClass_Colum4" msgstr="Class" />
+<message msgid="Level_Low" msgstr="Low" />
+<message msgid="Level_Normal" msgstr="Normal" />
+<message msgid="Level_Medium" msgstr="Medium" />
+<message msgid="Level_High" msgstr="High" />
+<!-- lag.asp --> 
+<message msgid="trunking" msgstr="Trunking : " />
+<message msgid="trunking setting" msgstr="Trunking Setting" />
+<message msgid="trunking set 1" msgstr="Enable" />
+<message msgid="trunking set 0" msgstr="Disable" />
+<message msgid="lag name" msgstr="LAG Name : " />
+<message msgid="lag members" msgstr="LAG Members : " />
+<message msgid="trunking Apply" msgstr="Apply" />
+<message msgid="trunking Reset" msgstr="Reset" />
+<message msgid="- Require that connected switch have the appropriate ports grouped together."   msgstr="- Require that connected switch have the appropriate ports grouped together." />
 <!-- route_table.asp --> 
 <message msgid="route_table" msgstr="Routing Table" />
 <!-- vpn_ipsec.asp --> 
@@ -616,4 +688,7 @@
 <message msgid="User Name error. Chatacter Hyphen is not supported in this field." msgstr="User Name error. Character Hyphen,space are not supported in this field." />
 <message msgid="Password error. Chatacter Hyphen is not supported in this field." msgstr="Password error. Character Hyphen,space are not supported in this field." />
 <message msgid="Custom Server error. Chatacter Hyphen is not supported in this field." msgstr="Custom Server error. Character Hyphen,space are not supported in this field." />
+<!--lan.asp alert-->
+<message msgid="LAN IP conflict with DMZ server IP" msgstr="LAN IP conflicts with DMZ server IP." />
+<message msgid="If you set up this LAN IP,DMZ will be clear." msgstr="If you set up this LAN IP,DMZ will be clear." />
 </po>

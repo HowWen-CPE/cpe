@@ -16,7 +16,7 @@
 #define RULE_SEP "|"
 #define ATTR_SEP "^"
 
-#define MAX_ATTR_NUM    34
+#define MAX_ATTR_NUM    35		/*wl_advanced_rule_attr*/
 
 struct attr {
     char *name;

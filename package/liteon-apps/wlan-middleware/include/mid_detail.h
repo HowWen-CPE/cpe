@@ -1,11 +1,17 @@
 #ifndef __MDI_DETAIL_H_
 #define __MDI_DETAIL_H_
-#include    <stdlib.h>
-#include    <stdio.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include	<stdlib.h>
+#include	<stdio.h>
+#include	<string.h>
+#include	<sys/socket.h>
+#include	<netinet/in.h>
+#include	<arpa/inet.h>
+#include	<linux/wireless.h> /* for SIOC ioctls*/
+
+/* arch specified MACROS */
+#include	"mid_detail_arch.h"
+
+
 #ifndef DEBUG_MIDDLEWARE
     #define DEBUG_MIDDLEWARE
 #endif
@@ -28,19 +34,25 @@
                               printf("\n"); \
                               system(cmd); \
                             } while(0)
+	//add by bingley
+	//usage of DEBUG:
+	//DEBUG() would print file, function and line, or DEBUG("%s",var); would print var's value.
+#ifndef DEBUG
+#define DEBUG(x,...) printf("%s,%s,%d: "x"\n",__FILE__,__func__,__LINE__, ##__VA_ARGS__)
+#endif
 
 //DEBUG 
 #if defined(DEBUG_MIDDLEWARE) 
-  #define MID_ASSERT(cond, format)  do{ if(!(cond)) printf(__FILE__ ":%u:%s: " format "\n", __LINE__, __FUNCTION__); } while(0)
+#define MID_ASSERT(cond, format)  do{ if(!(cond)) printf(__FILE__ ":%u:%s: " format "\n", __LINE__, __FUNCTION__); } while(0)
 #else
-  #define MID_ASSERT(cond, format)
+#define MID_ASSERT(cond, format)
 #endif
 
 //ERROR Process 
 #if defined(DEBUG_MIDDLEWARE)
-  #define MID_ERROR(format)  do{ printf(__FILE__ ":%u:%s: " format "\n", __LINE__, __FUNCTION__); } while(0)
+#define MID_ERROR(format)  do{ printf(__FILE__ ":%u:%s: " format "\n", __LINE__, __FUNCTION__); } while(0)
 #else
-  #define MID_ERROR(format)
+#define MID_ERROR(format)
 #endif
 
 #define SINGLE_RADIO 1
@@ -49,7 +61,7 @@
 #define SINGLE_RADIO_5G 1
 #define SINGLE_RADIO_5G_ID 0
 
-#define MAC_LEN 15
+#define MAC_LEN	15
 #define ACL_UNCHANGED 0
 #define ACL_ADD 1
 #define ACL_DELETED 2
@@ -58,23 +70,56 @@
 #define APCLI_NOT_ASSOCIATED 0
 #define APCLI_ASSOCIATED 1
 
-#define VAP_NAME_LEN                32 
+#define VAP_NAME_LEN                32
 #define RADIOA_VAP_MAX_NUM          32
 #define EXT_CHANNEL_ABOVE           1
 #define EXT_CHANNEL_BELOW           0
 
-#define TMP_LEN 256 //from httpd common.h
-#define SSID_ENABLE             1
-#define SSID_DISABLE            0
+#define TMP_LEN 256		//from httpd common.h
 
-#define RADIO_2G                0
-#define RADIO_5G                1
+#define T_SUCCESS  0
+#define T_FAILURE -1
 
-#define RADIO_UP                1
-#define RADIO_DOWN              0
+#define SSID_ENABLE		1
+#define SSID_DISABLE	0
 
-#define VAP_UP            1
-#define VAP_DOWN                0
+#define RADIO_2G	0
+#define RADIO_5G	1
+
+#define RADIO_DOWN  0
+#define RADIO_UP	1
+
+#define VAP_DOWN	0
+#define VAP_UP		1
+
+#define IEEE8021X_DISABLE 0
+#define IEEE8021X_ENABLE 1
+
+#define BSS_COEX_DISABLE 0
+#define BSS_COEX_ENABLE 1
+
+#define MAC_REPEATER_DISABLE 0  
+#define MAC_REPEATER_ENABLE 1
+
+#define STA_DISABLE 0
+#define STA_ENABLE	1
+
+
+#define AP_ISOLATION_ENABLE		1
+#define AP_ISOLATION_DISABLE	0
+
+#define BSS_ISOLATION_ENABLE	1
+#define BSS_ISOLATION_DISABLE	0
+
+#define HIDE_SSID_ENABLE		1
+#define HIDE_SSID_DISABLE		0
+
+#define REKEY_MODE_TIME			1
+#define REKEY_MODE_PKT			2
+#define REKEY_MODE_DISABLE		0
+
+#define STA_NOT_ASSOCIATED		0 
+#define STA_ASSOCIATED			1
 
 #define ACL_POLICY_DISABLE      0
 #define ACL_POLICY_ALLOW        1
@@ -83,61 +128,71 @@
 
 #define WPA_COMPATIBLE  1
 
-#define IEEE8021X_ENABLE 1
-#define IEEE8021X_DISABLE 0
-
-#define BSS_COEX_DISABLE 0
-#define BSS_COEX_ENABLE 1
-
 #define BANDWIDTH_20 0
 #define BANDWIDTH_40 1
 #define BANDWIDTH_80 2
-
-#define MAC_REPEATER_ENABLE 1
-#define MAC_REPEATER_DISABLE 0  
-
-#define STA_ENABLE 1
-#define STA_DISABLE 0
-
-#define T_SUCCESS  0
-#define T_FAILURE  -1
 
 #define CHANNEL_AUTO 0
 #define CHANNEL_FIXED 1
 #define MAC_ADDR_LENGTH 6
 
+/*---------STA Security Mode---------*/
+#define AUTHMODE_UNDEFINED			-1
+#define AUTHMODE_NONE				0
+#define AUTHMODE_WPAPSK				1
+#define AUTHMODE_WPA2PSK			2
+#define AUTHMODE_WPAPSKWPA2PSK		3
+#define AUTHMODE_WPA				4
+#define AUTHMODE_WPA2				5
+#define AUTHMODE_WPAWPA2			6
+#define AUTHMODE_WEP				7
+
+/*---------ENCRY Mode---------*/
+#define ENCRY_NONE			0
+#define ENCRY_AES			1
+#define ENCRY_TKIP			2    
+#define ENCRY_TKIPAES		3    
+#define ENCRY_WEP			4    
+
+/*---------Operation Mode---------*/
 #define OP_MODE_NORMAL  0
 #define OP_MODE_AP      1
 #define OP_MODE_UR      5
-#define OP_MODE_WISP0    6
-#define OP_MODE_WISP1 7
+#define OP_MODE_WISP0   6
+#define OP_MODE_WISP1	7
 #define OP_MODE_STA0    8
 #define OP_MODE_STA1    9
 
+/*---------WLAN MODE Mode---------*/
 #define WLAN_MODE_AP    0
-#define WLAN_MODE_STA    1
-
-#if defined(GP_WP688)
-#define MAX_STA_NUM    32
-#elif defined(GP_WP838)
-#define MAX_STA_NUM    64
-#else
-#define MAX_STA_NUM    32
-#endif
+#define WLAN_MODE_STA	1
+#define WLAN_MODE_WDS	2
+#define WLAN_MODE_UNDEFINED	-1
 
 #define MAX_CHANNEL_NUM 32
 
-#define NVRAM_BUF_LEN    32
-#define NVRAM_SSID_LEN    33
-#define NVRAM_PSK_LEN    256
-#define NVRAM_8021X_NAME_LEN    65
-#define NVRAM_8021X_PWD_LEN    65
+#define NVRAM_BUF_LEN	32
+#define NVRAM_SSID_LEN	33
+#define NVRAM_PSK_LEN	256
+#define NVRAM_8021X_NAME_LEN	65
+#define NVRAM_8021X_PWD_LEN		65
+
+#define WDS_MODE_DISABLED	0
+#define WDS_MODE_BRIDGEAP	1
+#define WDS_MODE_BRIDGE		2
+#define WDS_MODE_REPEATOR	3
+
+#define WDS_SEC_MODE_NONE 0
+#define WDS_SEC_MODE_AES 1
+#define WDS_SEC_MODE_TKIP 2
+
+#define WDS_VAP_NUM 4
+
+
 
 #define YEAR 1970
 /*<<<<<<<<<<Common used Macros End<<<<<<<<<<*/
 
-#if defined(GP_WP688)
-#elif defined(GP_WP838)
 #define VAP_ENABLE    1
 #define VAP_DISABLE    0
 #define EAP_MODE_NONE 0
@@ -154,91 +209,11 @@
 #define POWER_REIGHT 16
 #define POWER_EIGHTH 18
 #define POWER_MIN 20
-#endif //End of #if defined(GP_WP688)
 
-#if defined(GP_WP688)
-#define AP_NAME_2G          "rai"
-#define WDS_NAME_2G         "wdsi"
-#define STA_NAME_2G               "apclii"
-#define AP_NAME_5G          "ra"
-#define WDS_NAME_5G         "wds"
-#define STA_NAME_5G               "apcli"
-#elif defined(GP_WP838)
-#define AP_NAME_2G          "ath"
-#define WDS_NAME_2G         ""
-#define STA_NAME_2G         "sta"
-#define AP_NAME_5G          "ath"
-#define WDS_NAME_5G         ""
-#define STA_NAME_5G         "sta"
-#endif //End of #if defined(GP_WP688)
-
-#if defined(GP_WP688)
-#define SECMODE_OPEN 0
-#define SECMODE_WEP 1
-#define SECMODE_WPA 2
-#define SECMODE_WPA2 3
-#define SECMODE_PSK 4
-#define SECMODE_PSK2 5
-#define STA_AUTHMODE_NONE    0
-#define STA_AUTHMODE_WPAPSK    1
-#define STA_AUTHMODE_WPA2PSK    2
-#define STA_AUTHMODE_WPA1PSKWPA2PSK    3
-#define STA_AUTHMODE_WPA    4
-#define STA_AUTHMODE_WPA2    5
-#define STA_AUTHMODE_WPA1WPA2    6
-#define STA_AUTHMODE_WEP    7
-#elif defined(GP_WP838)
-#define AUTHMODE_UNDEFINED    -1
-#define AUTHMODE_NONE    0
-#define AUTHMODE_WPAPSK    1
-#define AUTHMODE_WPA2PSK    2
-#define AUTHMODE_WPAPSKWPA2PSK    3
-#define AUTHMODE_WPA    4
-#define AUTHMODE_WPA2    5
-#define AUTHMODE_WPAWPA2    6
-#define AUTHMODE_WEP    7
-#endif //End of #if defined(GP_WP688)
-
-#if defined(GP_WP688)
-#define STA_ENCRY_NONE    0
-#define STA_ENCRY_AES    1
-#define STA_ENCRY_TKIP    2    
-#define STA_ENCRY_TKIPAES    3    
-#define STA_ENCRY_WEP    4    
-#elif defined(GP_WP838)
-#define ENCRY_NONE    0
-#define ENCRY_AES    1
-#define ENCRY_TKIP    2    
-#define ENCRY_TKIPAES    3    
-#define ENCRY_WEP    4    
-#endif //End of #if defined(GP_WP688)
-
-#if defined(GP_WP688)
-#elif defined(GP_WP838)
-#define ACL_UNCHANGED_MAC 0
-#define ACL_ADD_MAC 1
-#define ACL_DELETED_MAC 2
-#endif //End of #if defined(GP_WP688)
-
-#if defined(GP_WP688)
-#elif defined(GP_WP838)
-#define AP_ISOLATION_ENABLE 1
-#define AP_ISOLATION_DISABLE 0
-#define BSS_ISOLATION_ENABLE 1
-#define BSS_ISOLATION_DISABLE 0
-#define HIDE_SSID_ENABLE    1
-#define HIDE_SSID_DISABLE    0
-#define REKEY_MODE_TIME    1
-#define REKEY_MODE_PKT    2
-#define REKEY_MODE_DISABLE    0
-#define STA_NOT_ASSOCIATED 0 
-#define STA_ASSOCIATED 1
-#endif //End of #if defined(GP_WP688)
 
 #define	RADIO2_DEFAULT	"wifi0"
 #define	RADIO5_DEFAULT	"wifi1"
 
-#include <linux/wireless.h>
 
 #ifndef SIOCDEVPRIVATE
 /*SIOCDEVPRIVATE is defined in wireless.h, mark by frank*/
@@ -257,27 +232,12 @@
 #define RTPRIV_IOCTL_GET_RADAR_STATUS           (SIOCIWFIRSTPRIV + 0x0B)
 #endif
 
-#if defined(GP_WP688)
 
-#define NETWORK_TYPE_IN    1
-#define NETWORK_TYPE_AD    0    
-#define SITE_SURVEY_FILE "/proc/sitesurvey"
-#elif defined(GP_WP838)
-#define ATH_ACL_DISABLE    	0
-#define ATH_ACL_ALLOW    	1
-#define ATH_ACL_DENY    	2
-#define ATH_ACL_FLUSH    	3
-#define DFS_GET_NOL			14
-#define DFS_IS_CAC_DONE		20
-#define SIOCGATHPHYERR      0x89F5
-#endif //End of #if defined(GP_WP688)
-
-//const int days[12]={31,28,31,30,31,30,31,31,30,31,30,31};
-#define HOSTAPD_CFG_FILE "/tmp/ath"
-#define HOSTAPD_CFG_BACKUP "/tmp/bak.ath"
-#define HOSTAPD_PID_FILE "/var/run/hostapd_ath"
-#define WPA_SUPPLICANT_CFG_PATH "/tmp/"
-#define WPA_SUPPLICANT_PID_PATH "/var/run/"
+#define HOSTAPD_CFG_FILE			"/tmp/ath"
+#define HOSTAPD_CFG_BACKUP			"/tmp/bak.ath"
+#define HOSTAPD_PID_FILE			"/var/run/hostapd_ath"
+#define WPA_SUPPLICANT_CFG_PATH		"/tmp/"
+#define WPA_SUPPLICANT_PID_PATH		"/var/run/"
 
 #define CLI_BSS_F_FREE              0x01
 #define CLI_BSS_F_SSID_SUPRESS      0x02
@@ -361,6 +321,22 @@ typedef struct wmm_cfg_s
 	int bss;
 }wmm_cfg;
 
+/*
+	set wds
+*/
+typedef struct wds_cfg_s
+{
+	char ifname[8];					// interface name to set
+	int  wds_mode;					// WDS_MODE_DISABLED | WDS_MODE_BRIDGEAP | WDS_MODE_BRIDGE
+	char mac[WDS_VAP_NUM][32];          
+	char wds_list[256];
+	char psk_pass[WDS_VAP_NUM][65];	// psk pass phrase use tkip encrypt type or aes
+	int  secmode[WDS_VAP_NUM];		// WDS_SEC_MODE_NONE | WDS_SEC_MODE_AES | WDS_SEC_MODE_TKIP
+	char crypto[WDS_VAP_NUM][32];	// aes|tkip
+}wds_cfg;
+
+
+
 enum
 {
     CLI_CIPHER_AUTO = 0,
@@ -404,7 +380,6 @@ typedef struct _AP_INFO{
     char       bssid[32];
     char       rssi[32];
     int       auth_mode;
-	int		  enc_type;
 }AP_INFO;
 
 typedef struct _DFS_CHAN_ELEM{
@@ -416,46 +391,6 @@ typedef struct _DFS_CHAN_LIST{
     int       dfs_num;
 	DFS_CHAN_ELEM	chan_list[255];
 }DFS_CHAN_LIST;
-
-typedef struct _DFS_RADAR_LIST {
-    char    ad_name[16];    			/* if name, e.g. "ath0" */
-    unsigned short ad_id;
-#define    ATH_DIAG_DYN    0x8000       /* allocate buffer in caller */
-#define    ATH_DIAG_IN    0x4000        /* copy in parameters */
-#define    ATH_DIAG_OUT    0x0000       /* copy out results (always) */
-#define    ATH_DIAG_ID    0x0fff
-    unsigned short ad_in_size;        	/* pack to fit, yech */
-    void*    ad_in_data;
-    void*    ad_out_data;
-    unsigned int    ad_out_size;
-}DFS_RADAR_LIST;
-
-typedef struct _DFS_RADAR_HANDLER {
-	int	s;
-	DFS_RADAR_LIST atd;
-}DFS_RADAR_HANDLER;
-
-typedef struct _DFS_REQ_NOLELEM {
-    unsigned short		nol_freq; 	        /* NOL channel frequency */
-    unsigned short		nol_chwidth;
-    unsigned long		nol_start_ticks; 	/* OS ticks when the NOL timer started */
-    unsigned long       nol_timeout_ms; 	/* Nol timeout value in msec */
-}DFS_REQ_NOLELEM;
-
-typedef struct _DFS_REQ_NOLINFO {
-    unsigned int	ic_nchans;
-    DFS_REQ_NOLELEM dfs_nol[255];
-}DFS_REQ_NOLINFO;
-
-
-#if 0
-enum vap_mode_t
-{
-    MODE_AP,
-    MODE_WDS,
-    MODE_APCLI,
-};
-#endif
 
 /* wireless mode list */
 enum wireless_mode_t
@@ -623,97 +558,8 @@ typedef struct StationListInfo_s
     StationInfo_t sta_list[MAX_STA_NUM];
 }StationListInfo_t;
 
-int get_radio_status(int radio, int *radio_status);
-int get_wlan_rate(int radio,int *rate);
-int get_current_channel(int radio, Channel_t *channel_get);
-int get_channel_list(int radio, ChannelListInfo_t *channel_list);
-int get_sta_list(int radio, StationListInfo_t *sta_list_info);
-/*General***********************/
-int set_ap_isolation(int radio);
-int set_ssid(int radio, int mode, int vap_id);
-int set_security_ssid(int radio, int mode, int vap_id, security_cfg *ap_cfg);
-int set_hidden_ssid(int radio, int mode, int vap_id);
-int set_bss_isolation(int radio, int mode, int vap_id);
-int set_dtim(int radio);
-int set_power(int radio);
-int set_beacon_interval(int radio);
-/*Security***********************/
-int set_ap_security(int radio, int vap_id);
-int set_ap_security_dfs(int radio);
-/**WMM ****************************/
-int set_ap_wmm(int radio, int vap_id);
-int set_ap_wmm_enable(int radio, int vap_id, wmm_cfg  *wmmcfg);
-int set_ap_wmm_cwmin(int radio, int vap_id, wmm_cfg  *wmmcfg);
-int set_ap_wmm_cwmax(int radio, int vap_id, wmm_cfg  *wmmcfg);
-int set_ap_wmm_aifs(int radio, int vap_id, wmm_cfg  *wmmcfg);
-int set_ap_wmm_txop(int radio, int vap_id, wmm_cfg  *wmmcfg);
-int set_ap_wmm_ac(int radio, int vap_id, wmm_cfg  *wmmcfg);
-int set_ap_wmm_noack(int radio, int vap_id, wmm_cfg  *wmmcfg);
 
 
-/*ACL********************************/
-int set_acl(int radio, int vap_id);
-int get_ap_list(int radio, SCAN_AP_LIST *ap_list);
-int set_apcli_disconnect_ap(int radio);
 
-int get_bandwidth(int radio, int *htbw);
-int get_extchannel(int radio, Channel_t *extchannel_get);
-int get_wirelessmode(int radio, int *mode);
-int get_channel_select_mode(int radio, int *mode);
-int get_ssid(int radio, int mode, int vap_id, char *ssid);
-int get_dfschannel(DFS_CHAN_LIST *dfs_list);
-int get_radarchannel(DFS_REQ_NOLINFO *dfs_list);
-int get_cacstate(unsigned int *cac_state);
-/********************Rogue AP********************/
-int get_rogue_ap_list(SCAN_AP_LIST *ap_list);
-#if defined(GP_WP688)
-//int get_channel_select_mode(int radio, int *mode);
-//int get_extchannel(int radio, Channel_t *extchannel_get);
-//int get_ht_bandwidth(int radio);
-int get_wirelessmode(int radio, int *mode);
-//int get_ssid(int radio, int mode, int vap_id, char *ssid);
-int set_channel(int radio);
-int set_extchannel(int radio);
-int set_ht_bandwidth(int radio);
-int set_wirelessmode_channel(int radio);
-int set_enable_ssid(int radio, int mode, int vap_id);
-int set_disable_ssid(int radio, int mode, int vap_id);
-#elif defined(GP_WP838)
-int get_wifi_status(int radio, int *status);
-int get_vap_status(int radio, int vapid, int mode, int *vap_status);
-int get_max_txpower(int radio, int *max_txpower);
-int get_chainmask_num(int radio, int *chain_num);
-//int get_current_extchannel(int radio, Channel_t *ext_channel);
-int set_ap_wirelessmode_channel(int radio);
-#endif //End of #if defined(GP_WP688)
-
-int get_sta_assoc_ssid(int radio, char *ssid);
-int get_sta_assoc_bssid(int radio, char *bssid);
-int get_sta_assoc_authmode(int radio, int *auth_mode, int *enc_type);
-int get_sta_assoc_status(int radio, int *assoc);
-int get_sta_assoc_ap_info(int radio, AP_INFO *ap_info);
-int get_sta_assoc_rssi(int radio, char *rssi);
-int get_sta_assoc_rssi_for_preip(int radio, int *rssi1, int *rssi2);
-int get_sta_assoc_wmode(int radio, char *wmode);
-int get_ethernet_client_list(int radio, ETHERNET_CLIENT_LIST *client_list);
-
-#if defined(GP_WP688)
-//int get_sta_association(int radio, int *assoc);
-int set_config_sta(int radio);
-int set_device_mode(int radio);
-int config_apcli(int radio);
-int set_apcli_basic(int radio);
-#elif defined(GP_WP838)
-int get_sta_assoc_secmode(int radio);
-int get_sta_assoc_bssid(int radio, char *bssid);
-int get_sta_assoc_rssi(int radio, char *rssi);
-int get_sta_assoc_rssi_for_preip(int radio, int *rssi1, int *rssi2);
-//int get_sta_assoc_status(int radio, int *assoc);
-int config_sta(int radio);
-int set_sta_basic(int radio);
-
-#endif //End of #if defined(GP_WP688)
-
-int CheckHexString(char *p);
 
 #endif //End of __MDI_DETAIL_H_

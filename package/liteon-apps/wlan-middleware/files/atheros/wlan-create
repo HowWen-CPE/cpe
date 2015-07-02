@@ -1,37 +1,41 @@
-#!/bin/sh 
+#!/bin/sh -x
 HOSTAPD_VER=`hostapd -v 2>&1|grep hostapd|cut -f2 -d' '`
 
 ##
 ## Determine the number of radios installed
 ##
 
-NUMRADIO_AHB=${NUMRADIO_AHB:=0}
-NUMRADIO_PCI=`grep -c 168c /proc/bus/pci/devices`
-NUMRADIO=`expr ${NUMRADIO_PCI} + ${NUMRADIO_AHB}`
-echo "WLAN_CREATE_PRINT: NUMRADIO is ${NUMRADIO}"
+#NUMRADIO_AHB=${NUMRADIO_AHB:=0}
+#NUMRADIO_PCI=`grep -c 168c /proc/bus/pci/devices`
+#NUMRADIO=`expr ${NUMRADIO_PCI} + ${NUMRADIO_AHB}`
+#echo "WLAN_CREATE_PRINT: NUMRADIO is ${NUMRADIO}"
 
 ##
 ## Make sure the number is 1 or 2.  Any other is invalid
 ##
 
-if [ $NUMRADIO -gt 2 -o $NUMRADIO -lt 1 ]; then
-    echo "WLAN_CREATE_PRINT: INVALID CONFIGURATION, RADIO NOT INSTALLED"
-    exit 255
-fi
+#if [ $NUMRADIO -gt 2 -o $NUMRADIO -lt 1 ]; then
+#    echo "WLAN_CREATE_PRINT: INVALID CONFIGURATION, RADIO NOT INSTALLED"
+#    exit 255
+#fi
 
 ########################################################################
 #Functions
 ########################################################################
 
 
-if [ "${AP_STARTMODE}" = "single" ]; then
-my_vaps="'' _3 _5 _7 _9 _11 _13 _15 "
+if [ "${AP_STARTMODE}" = "wifi0" ]; then
+#my_vaps="'' _3 _5 _7 _9 _11 _13 _15 "
+# only 4 vaps (0 to 3) for single radio
+my_vaps="'' _2 _3 _4 "  
+elif [ "${AP_STARTMODE}" = "wifi1" ]; then
+my_vaps="'' _2 _4 _6 _9 _10 _12 _14 "
 elif [ "${AP_STARTMODE}" = "dual" ]; then
 my_vaps="'' _2 _3 _4 _5 _6 _7 _8 _9 _10 _11 _12 _13 _14 _15 _16"
 fi
 #WEP_INTERFACE=0
 #if [ "${AP_STARTMODE}" = "multi" -o "${AP_STARTMODE}" = "multi-ind" ]; then
-if [ "${AP_STARTMODE}" = "dual" -o "${AP_STARTMODE}" = "single" ]; then
+if [ "${AP_STARTMODE}" = "dual" -o "${AP_STARTMODE}" = "wifi0" -o "${AP_STARTMODE}" = "wifi1" ]; then
     #NUM_VAP=0
     VAP_ID=0
     VAP_ID_2G=0
@@ -42,6 +46,9 @@ if [ "${AP_STARTMODE}" = "dual" -o "${AP_STARTMODE}" = "single" ]; then
     STA_VAP_COUNT_RADIO_1=0
     for i in $my_vaps;
     do
+        echo "\n--------------------------------"
+        echo "  next index: ${i}"
+        
         ITER_SSID="AP_SSID$i"
         ITER_MODE="AP_MODE$i"
         #ITER_SECMODE="AP_SECMODE$i"
@@ -107,48 +114,58 @@ if [ "${AP_STARTMODE}" = "dual" -o "${AP_STARTMODE}" = "single" ]; then
       
 #>>>>>>Station Process Start>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>#      
             if [ "${ITER_MODE}" = "sta-wds" -o "${ITER_MODE}" = "sta" ]; then
-               if [ "${ITER_RADIO_ID}" = 0 -a "${STA_VAP_COUNT_RADIO_0}" != 1 ]; then
-                 if [ "${AP_STARTMODE}" = "multi-ind" ]; then
-                    if [ "${ITER_MODE}" = "sta-wds" ]; then
-                      ST_MODE="sta-wds-ind"
-                    else
-                      ST_MODE="sta-nwds-ind"
-                    fi
-                    makeVAP _$ST_MODE _"${ITER_SSID}" _$ITER_RADIO_ID:$ITER_RFPARAM _$VAP_ID _$BEACON_INTVAL _$BISOLATION
-                 else
-                    makeVAP _$ITER_MODE _"${ITER_SSID}" _$ITER_RADIO_ID:$ITER_RFPARAM _$VAP_ID _$BEACON_INTVAL _$BISOLATION
-                 fi
-                 echo "WLAN_CREATE_PRINT: makeVAP $ITER_MODE "$ITER_SSID" $ITER_RADIO_ID:$ITER_RFPARAM $VAP_ID $BEACON_INTVAL $BISOLATION....................."
-                 #NUM_VAP=$(($NUM_VAP+1))
-                 if [ "${ITER_RADIO_ID}" = 0 ]; then
-                     VAP_ID_2G=$(($VAP_ID_2G+2))
-                 elif [ "${ITER_RADIO_ID}" = 1 ]; then
-                     VAP_ID_5G=$(($VAP_ID_5G+2))
-                 fi
-
-                 #iwconfig | grep -c sta | grep -i $NUM_VAP > /dev/null               
-                 #if [ $? != 0 ]; then
-                 #   echo "WLAN_CREATE_PRINT: Unable to create VAP!"
-                 #   exit
-                 #fi
-                 STA_VAP_COUNT_RADIO_0=1
-           else if [ "${ITER_RADIO_ID}" = 1 -a "${STA_VAP_COUNT_RADIO_1}" != 1 ]; then
+                if [ "${ITER_RADIO_ID}" = 0 -a "${STA_VAP_COUNT_RADIO_0}" != 1 ]; then
                     if [ "${AP_STARTMODE}" = "multi-ind" ]; then
-                      if [ "${ITER_MODE}" = "sta-wds" ]; then
-                        ST_MODE="sta-wds-ind"
-                      else
-                        ST_MODE="sta-nwds-ind"
-                      fi
-                      makeVAP _$ST_MODE _"${ITER_SSID}" _$ITER_RADIO_ID:$ITER_RFPARAM _$VAP_ID _$BEACON_INTVAL _$BISOLATION
+                        if [ "${ITER_MODE}" = "sta-wds" ]; then
+                            ST_MODE="sta-wds-ind"
+                        else
+                            ST_MODE="sta-nwds-ind"
+                        fi
+                        makeVAP _$ST_MODE _"${ITER_SSID}" _$ITER_RADIO_ID:$ITER_RFPARAM _$VAP_ID _$BEACON_INTVAL _$BISOLATION
                     else
-                      makeVAP _$ITER_MODE _"${ITER_SSID}" _$ITER_RADIO_ID:$ITER_RFPARAM _$VAP_ID _$BEACON_INTVAL _$BISOLATION
+                        makeVAP _$ITER_MODE _"${ITER_SSID}" _$ITER_RADIO_ID:$ITER_RFPARAM _$VAP_ID _$BEACON_INTVAL _$BISOLATION
                     fi
                     echo "WLAN_CREATE_PRINT: makeVAP $ITER_MODE "$ITER_SSID" $ITER_RADIO_ID:$ITER_RFPARAM $VAP_ID $BEACON_INTVAL $BISOLATION....................."
                     #NUM_VAP=$(($NUM_VAP+1))
-                    if [ "${ITER_RADIO_ID}" = 0 ]; then
-                        VAP_ID_2G=$(($VAP_ID_2G+2))
-                    elif [ "${ITER_RADIO_ID}" = 1 ]; then
-                        VAP_ID_5G=$(($VAP_ID_5G+2))
+
+                    if [ "${AP_STARTMODE}" = "wifi0" ]; then
+                        VAP_ID_2G=$(($VAP_ID_2G+1))
+                    else
+                        if [ "${ITER_RADIO_ID}" = 0 ]; then
+                            VAP_ID_2G=$(($VAP_ID_2G+2))
+                        elif [ "${ITER_RADIO_ID}" = 1 ]; then
+                            VAP_ID_5G=$(($VAP_ID_5G+2))
+                        fi
+                    fi
+
+                    #iwconfig | grep -c sta | grep -i $NUM_VAP > /dev/null               
+                    #if [ $? != 0 ]; then
+                    #   echo "WLAN_CREATE_PRINT: Unable to create VAP!"
+                    #   exit
+                    #fi
+                    STA_VAP_COUNT_RADIO_0=1
+                else if [ "${ITER_RADIO_ID}" = 1 -a "${STA_VAP_COUNT_RADIO_1}" != 1 ]; then
+                    if [ "${AP_STARTMODE}" = "multi-ind" ]; then
+                        if [ "${ITER_MODE}" = "sta-wds" ]; then
+                            ST_MODE="sta-wds-ind"
+                        else
+                            ST_MODE="sta-nwds-ind"
+                        fi
+                        makeVAP _$ST_MODE _"${ITER_SSID}" _$ITER_RADIO_ID:$ITER_RFPARAM _$VAP_ID _$BEACON_INTVAL _$BISOLATION
+                    else
+                        makeVAP _$ITER_MODE _"${ITER_SSID}" _$ITER_RADIO_ID:$ITER_RFPARAM _$VAP_ID _$BEACON_INTVAL _$BISOLATION
+                    fi
+                    echo "WLAN_CREATE_PRINT: makeVAP $ITER_MODE "$ITER_SSID" $ITER_RADIO_ID:$ITER_RFPARAM $VAP_ID $BEACON_INTVAL $BISOLATION....................."
+                    #NUM_VAP=$(($NUM_VAP+1))
+
+                    if [ "${AP_STARTMODE}" = "wifi0" ]; then
+                        VAP_ID_2G=$(($VAP_ID_2G+1))
+                    else
+                        if [ "${ITER_RADIO_ID}" = 0 ]; then
+                            VAP_ID_2G=$(($VAP_ID_2G+2))
+                        elif [ "${ITER_RADIO_ID}" = 1 ]; then
+                            VAP_ID_5G=$(($VAP_ID_5G+2))
+                        fi
                     fi
 
                     #iwconfig | grep -c sta | grep -i $NUM_VAP > /dev/null               
@@ -157,42 +174,48 @@ if [ "${AP_STARTMODE}" = "dual" -o "${AP_STARTMODE}" = "single" ]; then
                     #    exit
                     #fi
                     STA_VAP_COUNT_RADIO_1=1
-             else
-                echo "WLAN_CREATE_PRINT: **Maximum sta / sta-wds VAPs exceeded!!!!"
-         fi
-         fi
-#<<<<<Station Process End<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<#
-            else       
-              if [ "${AP_STARTMODE}" = "multi-ind" ]; then
-                 if [ "${ITER_MODE}" = "ap-wds" ]; then
-                     AP_IN_MODE="ap-wds-ind"
                  else
-                     AP_IN_MODE="ap-nwds-ind"
+                    echo "WLAN_CREATE_PRINT: **Maximum sta / sta-wds VAPs exceeded!!!!"
                  fi
-                  makeVAP _$AP_IN_MODE _"${ITER_SSID}" _$ITER_RADIO_ID:$ITER_RFPARAM _$VAP_ID _$BEACON_INTVAL _$ITER_ACLPOLICY _$ITER_ACLLIST  _$ITER_HIDESSID _$ITER_ISOLATION _$BISOLATION
-              else
-                  makeVAP _$ITER_MODE _"${ITER_SSID}" _$ITER_RADIO_ID:$ITER_RFPARAM _$VAP_ID _$BEACON_INTVAL _$ITER_ACLPOLICY _$ITER_ACLLIST  _$ITER_HIDESSID _$ITER_ISOLATION _$BISOLATION
-                  echo "WLAN_CREATE_PRINT: makeVAP $ITER_MODE \"$ITER_SSID\" $ITER_RADIO_ID:$ITER_RFPARAM $VAP_ID $BEACON_INTVAL $ITER_ACLPOLICY $ITER_ACLLIST  $ITER_HIDESSID $ITER_ISOLATION $BISOLATION....................."
-              fi
+            fi  #sta-wds or sta end
+#<<<<<Station Process End<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<#
+        else     #ITER_SSID=NULL
+            if [ "${AP_STARTMODE}" = "multi-ind" ]; then
+                if [ "${ITER_MODE}" = "ap-wds" ]; then
+                    AP_IN_MODE="ap-wds-ind"
+                else
+                    AP_IN_MODE="ap-nwds-ind"
+                fi
+                makeVAP _$AP_IN_MODE _"${ITER_SSID}" _$ITER_RADIO_ID:$ITER_RFPARAM _$VAP_ID _$BEACON_INTVAL _$ITER_ACLPOLICY _$ITER_ACLLIST  _$ITER_HIDESSID _$ITER_ISOLATION _$BISOLATION
+            else
+                makeVAP _$ITER_MODE _"${ITER_SSID}" _$ITER_RADIO_ID:$ITER_RFPARAM _$VAP_ID _$BEACON_INTVAL _$ITER_ACLPOLICY _$ITER_ACLLIST  _$ITER_HIDESSID _$ITER_ISOLATION _$BISOLATION
+                echo "WLAN_CREATE_PRINT: makeVAP $ITER_MODE \"$ITER_SSID\" $ITER_RADIO_ID:$ITER_RFPARAM $VAP_ID $BEACON_INTVAL $ITER_ACLPOLICY $ITER_ACLLIST  $ITER_HIDESSID $ITER_ISOLATION $BISOLATION....................."
+            fi
 
-              #NUM_VAP=$(($NUM_VAP+1))
-              if [ "${ITER_RADIO_ID}" = 0 ]; then
-                  VAP_ID_2G=$(($VAP_ID_2G+2))
-              elif [ "${ITER_RADIO_ID}" = 1 ]; then
-                  VAP_ID_5G=$(($VAP_ID_5G+2))
-              fi
+            if [ "${AP_STARTMODE}" = "wifi0" ]; then
+                #NUM_VAP=$(($NUM_VAP+1))
+                VAP_ID_2G=$(($VAP_ID_2G+1))
+            else
+                if [ "${ITER_RADIO_ID}" = 0 ]; then
+                    VAP_ID_2G=$(($VAP_ID_2G+2))
+                elif [ "${ITER_RADIO_ID}" = 1 ]; then
+                    VAP_ID_5G=$(($VAP_ID_5G+2))
+                fi
+            fi
 
-              #iwconfig | grep -c ath | grep -i $NUM_VAP > /dev/null               
-              #if [ $? != 0 ]; then
-              #        echo "WLAN_CREATE_PRINT: Unable to create VAP!"
-              #        exit
-              #fi
-            fi 
+            #iwconfig | grep -c ath | grep -i $NUM_VAP > /dev/null               
+            #if [ $? != 0 ]; then
+            #    echo "WLAN_CREATE_PRINT: Unable to create VAP!"
+            #    exit
+            #fi
+            
+          fi 
         fi
         #if [ "${ITER_MODE}" = "sta-wds" -a "${ITER_SECMODE}" != "WPA" -a "${ITER_ROOTAP_MAC}" != "" ]; then
         #    iwconfig $VAP_NAME ap $ITER_ROOTAP_MAC
         #fi
     done
+
     #VAP_NUM=0
     VAP_ID=0
     VAP_ID_2G=0

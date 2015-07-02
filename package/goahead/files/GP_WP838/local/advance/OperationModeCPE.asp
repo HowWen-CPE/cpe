@@ -114,8 +114,8 @@ function initValue()
 		document.CfgOperationMode.OPMode[9].checked = true;
 	}
 
-	show_div(false, "div_hidden_some_op_modes");
-	show_div(false, "div_hidden_some_op_modes2");
+	//show_div(false, "div_hidden_some_op_modes");
+	//show_div(false, "div_hidden_some_op_modes2");
 	parent.adjustMyFrameHeight();
 }
 
@@ -195,7 +195,7 @@ function HasChanged()
 
 <!-- hidden some OP Modes -->
 <span id="div_hidden_some_op_modes" class="on"> 
-<li class="w_text">
+<li class="w_text" style="display:none">
 <table width="90%" border="0" align=center cellspacing="0">
 <tr>
 <td nowrap><input type="radio" name="OPMode" value="2" />Client Mode</td>
@@ -203,7 +203,7 @@ function HasChanged()
 </table>
 </li>
 
-<li class="w_text">
+<li class="w_text" style="display:none">
 <table width="90%" border="0" align=center cellspacing="0">
 <tr>
 <td nowrap><input type="radio" name="OPMode" value="3" />Bridge Mode (WDS)</td>
@@ -229,19 +229,8 @@ function HasChanged()
 </span>
 <!-- hidden some OP Modes -->
 
-<!-- Wireless Bridge Mode -->
-<li class="w_text">
-<table width="90%" border="0" align=center cellspacing="0">
-<tr>
-<td nowrap><input type="radio" name="OPMode" value="8" onClick="changmod_msg_STA()" />
-	<b><font id ="OPModeSTA">Wireless Client Mode</font></b>
-</td>
-</tr>
-</table>
-</li>
-
 <!-- open WISP0 Modes -->
-<li class="w_text">
+<li class="w_text" style="display:none">
 <table width="90%" border="0" align=center cellspacing="0">
 <tr>
 <td nowrap><input type="radio" name="OPMode" value="6" onClick="changmod_msg_WISP()" />
@@ -257,6 +246,17 @@ function HasChanged()
 <tr>
 <td nowrap><input type="radio" name="OPMode" value="7" onClick="changmod_msg_WISP()" />
 	<b><font id ="OPModeWISP">WISP1 Mode</font></b>
+</td>
+</tr>
+</table>
+</li>
+
+<!-- Wireless Bridge Mode -->
+<li class="w_text">
+<table width="90%" border="0" align=center cellspacing="0">
+<tr>
+<td nowrap><input type="radio" name="OPMode" value="8" onClick="changmod_msg_STA()" />
+	<b><font id ="OPModeSTA">Wireless Client Mode</font></b>
 </td>
 </tr>
 </table>
@@ -309,7 +309,7 @@ function HasChanged()
 </tr>
 <tr><td>&nbsp;</td></tr>
 
-<tr>
+<tr  style="display:none">
   <td class="i_note_a" id="OPModeNote1_3">
     WISP Mode: The device acts as a wireless client. It can connect to an existing network via an access point. Also router functions are added between the wireless WAN and the LAN.
   </td>

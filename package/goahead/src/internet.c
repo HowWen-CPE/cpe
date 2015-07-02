@@ -1157,6 +1157,29 @@ static int getWanIpAdd(int eid, webs_t wp, int argc, char_t **argv)
         return websWrite(wp, T("%s"), buf);
 }
 
+
+static int getWDSLocalMac(int eid, webs_t wp, int argc, char_t **argv)
+{
+    int ret = -1;
+    char ifname[16] = {0};
+    char hwaddr[64] = {0};
+	int radio = 0;
+	int vap_id = 0;
+	if (ejArgs(argc, argv, T("%d %d"), &radio, &vap_id) < 2) {
+		return websWrite(wp, T("Insufficient args\n"));
+	}
+
+	construct_wds(ifname, radio, vap_id);
+
+    if (!show_hwaddr(ifname, hwaddr, 64)) {
+        ret = websWrite(wp, "%s", hwaddr);
+        return 0;
+    } else {
+        ret = websWrite(wp, "Not Connected");
+        return ret;
+	}
+}
+
 /*
  * description: write LAN MAC address accordingly
  */
@@ -7607,6 +7630,7 @@ void formDefineInternet(void) {
 	websAspDefine(T("getWanProto"), getWanProto);
 	websAspDefine(T("getWanIpAdd"), getWanIpAdd);
 	websAspDefine(T("getLanMac"), getLanMac);
+	websAspDefine(T("getWDSLocalMac"), getWDSLocalMac);
 #if 1//Arthur Chow 2009-01-03
 	websAspDefine(T("getWlanMac"), getWlanMac);
 	websAspDefine(T("getWlan5GMac"), getWlan5GMac);

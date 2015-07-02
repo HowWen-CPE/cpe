@@ -1,5 +1,25 @@
 <po>
 <!-- firmware upload -->
+<message msgid="can not parse http header line1 ." msgstr="Can not parse 1st line of http header"/>
+<message msgid="filename  parsed error." msgstr="Filename parsed error."/>
+<message msgid="Firmware image header checksum error." msgstr="Firware image header checksum error."/>
+<message msgid="http header has no space line." msgstr="HTTP header has no space line."/>
+<message msgid="it doesn not have a http header." msgstr="it doesn't have a http header"/>
+<message msgid="string filename  error." msgstr="string filename error."/>
+<message msgid="the last line of http header error." msgstr="The last line of http header error."/>
+<message msgid="this is not a form-data." msgstr="This is not a form-data."/>
+<message msgid="We dont support multi-field upload." msgstr="We dont support multi-field upload."/>
+<message msgid="Can't mmap firmware1." msgstr="Can't mmap firmware1."/>
+<message msgid="Can't open firmware." msgstr="Can't open firmware."/>
+<message msgid="Can't stat firmware." msgstr="Can't stat firmware."/>
+<message msgid="Firmware data checksum error." msgstr="Firmware data checksum error."/>
+<message msgid="Firmware has a bad size." msgstr="Firmware has a bad size."/>
+<message msgid="Firmware header checksum error." msgstr="Firmware header checksum error."/>
+<message msgid="This firmware is not designed for this product." msgstr="This firmware is not designed for this product."/>
+<message msgid="firmware transport timeout" msgstr="Firmware transport timeout. Please use ethernet network to upload firmware."/>
+<message msgid="firmware transport failure" msgstr="firmware transport failure"/>
+<message msgid="cannot ping well, check your network" msgstr="Please check your network"/>
+<message msgid="Temporary file can not open, check your bridge setting" msgstr="Temporary file can not open, check your bridge setting"/>
 <message msgid="upload title" msgstr="Upgrade Firmware" />
 <message msgid="upload titleOnLine" msgstr="On-line Firmware Upgrade" />
 <message msgid="upload introduction1" msgstr="To upgrade the internal device firmware, browse to the location of the binary (.BIN) upgrade file and click Upload. Upgrade files can be downloaded from website. If the upgrade file is compressed (.ZIP file), you must first extract the binary (.BIN) file. In some cases, you may need to reconfigure. " />

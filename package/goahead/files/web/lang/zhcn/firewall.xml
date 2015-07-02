@@ -183,10 +183,12 @@
 <message msgid="Internal ip could not be lan ip" msgstr="内部IP不能是路由器的LAN IP!" />
 <message msgid="External mapping ip could not be wan ip" msgstr="外部映射IP不能是路由器的WAN IP!" />
 <message msgid="server ip could not be lan ip" msgstr="服务器IP不能是LAN IP!" />
+<message msgid="Invalid Extern server ip address!It should NOT be located in the same subnet of current LAN IP address." msgstr="无效的外部地址！它不能和当前LAN处于同一网段。" />
 <!-- alert message add by wind 2014-02-10 -->
 <message msgid="Invalid MTU! Valid MTU value is [1280,1460]." msgstr="MTU值无效! 合法的MTU范围是[1280,1460]。" />
 <message msgid="Authentication error.In the case that MPPE enable, authentication way must include MSCHAP or MSCHAPV2." msgstr="认证错误。使能MPPE加密时，必须至少包含MSCHAP或者MSCHAPV2。" />
 <message msgid="Authentication error.In the case that MPPE disable, you must enable anyone authentication way." msgstr="认证错误。不使能MPPE加密时，必须至少包含任一种认证方式。" />
+<message msgid="Please disable L2TP Server function." msgstr="请禁用L2TP服务器功能。" />
 <message msgid="Max VPN Client number should not be empty." msgstr="VPN客户端连接数不应该为空。" />
 <message msgid="Please disable PPTP Server function." msgstr="请禁用PPTP服务器功能。" />
 <message msgid="Please disable IPsec function." msgstr="请禁用IPsec功能。" />
@@ -292,6 +294,13 @@
 <message msgid="pppoe Set" msgstr="PPPOE 穿透"/>
 <message msgid="VPN Apply" msgstr="应用"/>
 <message msgid="VPN Reset" msgstr="取消"/>
+<!--attack prevention-->
+<message msgid="ip Spoof" msgstr="IP欺骗检查"/>
+<message msgid="ip Spoofing" msgstr="IP欺骗"/>
+<message msgid="dos Check" msgstr="Dos攻击检查"/>
+<message msgid="icmp Flood" msgstr="ICMP洪流"/>
+<message msgid="syn Flood" msgstr="SYN洪流"/>
+<message msgid="udp Flood" msgstr="UDP洪流"/>
 <!-- firmware upgrade-->
 <message msgid="firmware size is too large to write down" msgstr="固件大小超过flash限制"/>
 <message msgid="Port has been occupied" msgstr="端口被占用"/>

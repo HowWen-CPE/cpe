@@ -2,27 +2,33 @@
 #include    <stdlib.h>
 #include    <stdio.h>
 #include	<string.h>
-
 #include    <sys/ioctl.h>
 #include    <arpa/inet.h>
+#include	<syslog.h>
+#include 	<unistd.h>
+#include	<assert.h>
+
 #ifdef CONFIG_DEFAULTS_KERNEL_2_6_21
 #include    <linux/types.h>
 #include    <linux/socket.h>
 #include    <linux/if.h>
 #endif//End of #ifdef CONFIG_DEFAULTS_KERNEL_2_6_21
+
 #include    <linux/wireless.h>
-// Tommy, Add syslog, 2009/10/21 04:47
-#include <syslog.h>
 
 #include	"nvram.h"
 #include 	"nvram_rule.h"
 
 #include    "mid_detail.h"
-#include    "mid_common.h"
+#include	"mid_common.h"
+#include	"mid_common_nvram.h"
 
-#include 	<unistd.h>
-#include	<assert.h>
+#include	"mid_detail_ap_get.h"
+#include	"mid_detail_ap_set.h"
 
+/*wlan-chip-vendor specified 
+private functions declartions */
+int radio_up_down(int radio, int up, int mode);
 int get_acl_sync_list(int radio, int vap_id, ACL_LIST *acl_mac_list, ACL_LIST *asso_mac_list);
 
 /*************************************/
@@ -310,6 +316,147 @@ int set_dtim(int radio)
     return T_SUCCESS;
 }
 
+int get_max_txpower(int radio, int *max_txpower)
+{
+    char str[256] = {0},c;
+    char txpower_s[8] = {0};
+    char wifi_name[8] = {0};
+    int wlan_mode = 0;
+	int ret = 0;
+    FILE *fin;
+    char cmd[256] = {0};
+	char TempBuf_opmode[32] = {0};
+
+    if(RADIO_2G == radio)
+    {
+        //strcpy(wifi_name, "wifi0");
+		//iwpriv wifi0 getTxMaxPower2G | awk '{gsub(/getTxMaxPower2G:/,"");print $2}'
+		//sprintf(cmd, "iwpriv %s getTxMaxPower2G | awk '{gsub(/getTxMaxPower2G:/,\"\");print $2}' > /tmp/max_txpower", wifi_name);
+		ezplib_get_attr_val("wl_mode_rule", 0, "mode", TempBuf_opmode, 32, EZPLIB_USE_CLI);
+    }
+    else if(RADIO_5G == radio)
+    {
+        //strcpy(wifi_name, "wifi1");
+		//iwpriv wifi1 getTxMaxPower5G | awk '{gsub(/getTxMaxPower5G:/,"");print $2}'
+		//sprintf(cmd, "iwpriv %s getTxMaxPower5G | awk '{gsub(/getTxMaxPower5G:/,\"\");print $2}' > /tmp/max_txpower", wifi_name);
+		ezplib_get_attr_val("wl1_mode_rule", 0, "mode", TempBuf_opmode, 32, EZPLIB_USE_CLI);
+    }
+	else
+	{
+		printf("ERROR: Radio is Not 2.4G or 5G!\n");
+		return T_FAILURE;
+	}
+	
+    if(!strcmp(TempBuf_opmode,"ap"))
+	{
+		wlan_mode = WLAN_MODE_AP;          
+	}
+	else if(!strcmp(TempBuf_opmode,"client"))
+	{
+		wlan_mode = WLAN_MODE_STA;
+	}
+	else
+	{
+		printf("ERROR: WLAN OP MODE is Not AP or Client!\n");
+		return T_FAILURE;
+	}
+	
+	ret = construct_vap(wifi_name, radio, 0, wlan_mode);
+	if(T_FAILURE == ret)
+	{
+		printf("ERROR:Construct VAP failure!\n");
+		return T_FAILURE;
+	}
+
+	if((WLAN_MODE_STA == wlan_mode) && (RADIO_5G == radio))
+	{
+		//sprintf(cmd, "iwconfig %s txpower %d;sleep 5;iwconfig %s | awk '/Tx-Power/{print substr($4,10);}' > /tmp/max_txpower", wifi_name, 100, wifi_name);
+		printf("Wireless Client Mode: Txpower Shell\n");
+		return T_SUCCESS;
+	}
+	else
+	{
+		if (RADIO_5G == radio) 
+		{
+			sprintf(cmd, "iwconfig %s txpower %d;sleep 3;iwconfig %s | awk '/Tx-Power/{print substr($4,10);}' > /tmp/max_txpower", 
+			wifi_name, 100, wifi_name);
+		}
+		else
+		{
+			//iwpriv wifi0 getTxMaxPower2G | awk '{gsub(/getTxMaxPower2G:/,"");print $2}'
+			sprintf(cmd, "iwpriv wifi0 getTxMaxPower2G | awk '{gsub(/getTxMaxPower2G:/,\"\");print $2}' > /tmp/max_txpower");
+		}
+	}
+	
+    EXE_COMMAND(cmd);
+    fin = fopen("/tmp/max_txpower","r");
+            
+    while ((c=fgetc(fin)) != EOF){
+        ungetc(c,fin);        
+        readline(str,fin);
+        strcpy_delspace(str, txpower_s);
+        *max_txpower = atoi(txpower_s);
+    }
+
+    fclose(fin);
+    EXE_COMMAND("rm -f /tmp/max_txpower");    
+
+    return T_SUCCESS;
+}
+
+/************Get Txchainmask Num**********
+**1,2,4:	Signal Chain
+**3,5:	Double Chain
+**7:	Three Chain
+**************************************/
+int get_chainmask_num(int radio, int *chain_num)
+{
+	FILE *fin;
+	int chain_tmp = 0;
+	int chain_count = 0;
+	char c;
+    char str[256] = {0};
+    char chain_str[8] = {0};
+    char wifi_name[8] = {0};
+    char cmd[256] = {0};
+
+    if(RADIO_2G == radio)
+    {
+        strcpy(wifi_name, "wifi0");
+    }
+    else if(RADIO_5G == radio)
+    {
+        strcpy(wifi_name, "wifi1");
+    }
+    //iwpriv wifiN get_txchainmask | awk '{gsub(/get_txchainmask:/,"");print}' | awk '{print $2}'
+    sprintf(cmd, "iwpriv %s get_txchainmask | awk '{gsub(/get_txchainmask:/,\"\");print}' | awk '{print $2}' > /tmp/chainmask_num", wifi_name);
+    EXE_COMMAND(cmd);
+    fin = fopen("/tmp/chainmask_num","r");
+            
+    while ((c=fgetc(fin)) != EOF){
+        ungetc(c,fin);        
+        readline(str,fin);
+        strcpy_delspace(str, chain_str);
+        chain_tmp = atoi(chain_str);
+    }
+
+    fclose(fin);
+    EXE_COMMAND("rm -f /tmp/chainmask_num");    
+
+	while (chain_tmp){
+		chain_count++;
+		chain_tmp &= (chain_tmp - 1);
+	}
+
+	if ((chain_count < 1) || (chain_count > 3)){
+		printf("TxChainMask illegal value\n");
+		return T_FAILURE;
+	}
+	*chain_num = chain_count;
+	
+    return T_SUCCESS;
+}
+
 /* Set Output Power */
 int set_power(int radio)
 {
@@ -533,17 +680,14 @@ int judge_vap_up(int radio, int vap_id)
 	int unit = 0;
 	char buf[32]={0};
 	FILE *fp = NULL;
-	char filename[64] = {0};
 	
 	unit = convert_vap_id(radio, vap_id);
-	sprintf(filename, "%s%d.conf.pid", HOSTAPD_CFG_FILE, unit);
 	
 	EXE_doSystem("ifconfig | grep ath%d > /tmp/judge_ath",unit);
 
 	if((fp = fopen("/tmp/judge_ath","r")) != NULL)
 	{
 		fread(buf,1,32,fp);
-		printf("\n=====================buf=%s,len=%d=====================\n",buf,strlen(buf));
 		fclose(fp); 
 		fp = NULL;
 		if(strlen(buf) > 3)
@@ -1066,7 +1210,25 @@ int set_ap_wmm_enable(int radio, int vap_id, wmm_cfg  *wmmcfg)
     if(RADIO_2G == radio && wmmcfg->mode == WLAN_MODE_AP)
     {
     	printf("case radio2g, mode = ap\n");
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "wmm_enable", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "wmm_enable", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+		wmmcfg->wmm_enable = atoi(buf1);	
+
+		int i = 0;
+		int vap_num = 0;
+		int	vap_enable = 0;
+		char vap_name[8] = {0};
+		vap_num = nvram_get_vap_num(radio); 
+		for(i=0; i < vap_num; i++)
+		{
+			nvram_get_vap_status(radio, i, &vap_enable);
+			if(VAP_ENABLE == vap_enable)
+			{
+				construct_vap(vap_name, radio, i, wmmcfg->mode);
+				EXE_doSystem("iwpriv %s wmm %d",vap_name,wmmcfg->wmm_enable);
+			}
+		}
+
+		return T_SUCCESS;
     }
 	else if(RADIO_2G == radio && wmmcfg->mode == WLAN_MODE_STA)
     {
@@ -1074,7 +1236,7 @@ int set_ap_wmm_enable(int radio, int vap_id, wmm_cfg  *wmmcfg)
     }
     else if(RADIO_5G == radio && wmmcfg->mode == WLAN_MODE_AP)
     {
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "wmm_enable", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "wmm_enable", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);
 
 		//WLAN5G WMM Trigger DFS Mechanism: Void Driver Bug -> Destroy All 5G VAP
 		printf("case radio5g, mode = ap,buf1=%s\n",buf1);
@@ -1101,10 +1263,10 @@ int set_ap_wmm_enable(int radio, int vap_id, wmm_cfg  *wmmcfg)
     {
         ezplib_get_attr_val("wl1_sta_wmm_rule", vap_id, "wmm_enable", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
     }
-	printf("case radio2g, mode = ap,buf1=%s\n",buf1);
-	wmmcfg->wmm_enable = atoi(buf1);	
-
-	EXE_doSystem("iwpriv %s wmm %d",wmmcfg->vap_name,wmmcfg->wmm_enable);
+//	printf("case radio2g, mode = ap,buf1=%s\n",buf1);
+//	wmmcfg->wmm_enable = atoi(buf1);	
+//
+//	EXE_doSystem("iwpriv %s wmm %d",wmmcfg->vap_name,wmmcfg->wmm_enable);
 
 	return T_SUCCESS;
 
@@ -1119,10 +1281,10 @@ int set_ap_wmm_cwmin(int radio, int vap_id, wmm_cfg  *wmmcfg)
 	printf("\nwmmcfg->mode = %d\n",wmmcfg->mode);
     if(RADIO_2G == radio && wmmcfg->mode == WLAN_MODE_AP)
     {
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "cwmin_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "cwmin_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "cwmin_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "cwmin_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "cwmin_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "cwmin_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "cwmin_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "cwmin_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
     }/*
     else if(RADIO_2G == radio && wmmcfg->mode == WLAN_MODE_STA)
     {
@@ -1133,10 +1295,10 @@ int set_ap_wmm_cwmin(int radio, int vap_id, wmm_cfg  *wmmcfg)
     }*/
     else if(RADIO_5G == radio && wmmcfg->mode == WLAN_MODE_AP)
     {
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "cwmin_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "cwmin_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "cwmin_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "cwmin_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "cwmin_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "cwmin_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "cwmin_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "cwmin_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
     }/*
 	else if(RADIO_5G == radio && wmmcfg->mode == WLAN_MODE_STA)
     {
@@ -1151,23 +1313,24 @@ int set_ap_wmm_cwmin(int radio, int vap_id, wmm_cfg  *wmmcfg)
 	wmmcfg->cwmin_vi = atoi(buf3);	
 	wmmcfg->cwmin_vo = atoi(buf4);	
 	
-	
+	char vap_name[8] = {0};
+    construct_vap(vap_name, radio, vap_id, WLAN_MODE_AP);
 
-	EXE_doSystem("iwpriv %s setwmmparams 1 0 0 %d",wmmcfg->vap_name,wmmcfg->cwmin_be);
+	EXE_doSystem("iwpriv %s setwmmparams 1 0 0 %d",vap_name,wmmcfg->cwmin_be);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 1 1 0 %d",wmmcfg->vap_name,wmmcfg->cwmin_bk);
+	EXE_doSystem("iwpriv %s setwmmparams 1 1 0 %d",vap_name,wmmcfg->cwmin_bk);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 1 2 0 %d",wmmcfg->vap_name,wmmcfg->cwmin_vi);
+	EXE_doSystem("iwpriv %s setwmmparams 1 2 0 %d",vap_name,wmmcfg->cwmin_vi);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 1 3 0 %d",wmmcfg->vap_name,wmmcfg->cwmin_vo);
+	EXE_doSystem("iwpriv %s setwmmparams 1 3 0 %d",vap_name,wmmcfg->cwmin_vo);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 1 0 1 %d",wmmcfg->vap_name,wmmcfg->cwmin_be);
+	EXE_doSystem("iwpriv %s setwmmparams 1 0 1 %d",vap_name,wmmcfg->cwmin_be);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 1 1 1 %d",wmmcfg->vap_name,wmmcfg->cwmin_bk);
+	EXE_doSystem("iwpriv %s setwmmparams 1 1 1 %d",vap_name,wmmcfg->cwmin_bk);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 1 2 1 %d",wmmcfg->vap_name,wmmcfg->cwmin_vi);
+	EXE_doSystem("iwpriv %s setwmmparams 1 2 1 %d",vap_name,wmmcfg->cwmin_vi);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 1 3 1 %d",wmmcfg->vap_name,wmmcfg->cwmin_vo);	
+	EXE_doSystem("iwpriv %s setwmmparams 1 3 1 %d",vap_name,wmmcfg->cwmin_vo);	
 	
 	return T_SUCCESS;
 
@@ -1181,10 +1344,10 @@ int set_ap_wmm_cwmax(int radio, int vap_id, wmm_cfg  *wmmcfg)
 	printf("\nwmmcfg->mode = %d\n",wmmcfg->mode);
     if(RADIO_2G == radio && wmmcfg->mode == WLAN_MODE_AP)
     {
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "cwmax_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "cwmax_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "cwmax_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "cwmax_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "cwmax_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "cwmax_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "cwmax_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "cwmax_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
     }/*
     else if(RADIO_2G == radio && wmmcfg->mode == WLAN_MODE_STA)
     {
@@ -1195,10 +1358,10 @@ int set_ap_wmm_cwmax(int radio, int vap_id, wmm_cfg  *wmmcfg)
     }*/
     else if(RADIO_5G == radio && wmmcfg->mode == WLAN_MODE_AP)
     {
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "cwmax_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "cwmax_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "cwmax_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "cwmax_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "cwmax_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "cwmax_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "cwmax_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "cwmax_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
     }/*
 	else if(RADIO_5G == radio && wmmcfg->mode == WLAN_MODE_STA)
     {
@@ -1213,23 +1376,25 @@ int set_ap_wmm_cwmax(int radio, int vap_id, wmm_cfg  *wmmcfg)
 	wmmcfg->cwmax_vi = atoi(buf3);	
 	wmmcfg->cwmax_vo = atoi(buf4);	
 	
+	char vap_name[8] = {0};
+    construct_vap(vap_name, radio, vap_id, WLAN_MODE_AP);
 	
 
-	EXE_doSystem("iwpriv %s setwmmparams 2 0 0 %d",wmmcfg->vap_name,wmmcfg->cwmax_be);
+	EXE_doSystem("iwpriv %s setwmmparams 2 0 0 %d",vap_name,wmmcfg->cwmax_be);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 2 1 0 %d",wmmcfg->vap_name,wmmcfg->cwmax_bk);
+	EXE_doSystem("iwpriv %s setwmmparams 2 1 0 %d",vap_name,wmmcfg->cwmax_bk);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 2 2 0 %d",wmmcfg->vap_name,wmmcfg->cwmax_vi);
+	EXE_doSystem("iwpriv %s setwmmparams 2 2 0 %d",vap_name,wmmcfg->cwmax_vi);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 2 3 0 %d",wmmcfg->vap_name,wmmcfg->cwmax_vo);
+	EXE_doSystem("iwpriv %s setwmmparams 2 3 0 %d",vap_name,wmmcfg->cwmax_vo);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 2 0 1 %d",wmmcfg->vap_name,wmmcfg->cwmax_be);
+	EXE_doSystem("iwpriv %s setwmmparams 2 0 1 %d",vap_name,wmmcfg->cwmax_be);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 2 1 1 %d",wmmcfg->vap_name,wmmcfg->cwmax_bk);
+	EXE_doSystem("iwpriv %s setwmmparams 2 1 1 %d",vap_name,wmmcfg->cwmax_bk);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 2 2 1 %d",wmmcfg->vap_name,wmmcfg->cwmax_vi);
+	EXE_doSystem("iwpriv %s setwmmparams 2 2 1 %d",vap_name,wmmcfg->cwmax_vi);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 2 3 1 %d",wmmcfg->vap_name,wmmcfg->cwmax_vo);
+	EXE_doSystem("iwpriv %s setwmmparams 2 3 1 %d",vap_name,wmmcfg->cwmax_vo);
 	
 	return T_SUCCESS;
 
@@ -1244,10 +1409,10 @@ int set_ap_wmm_aifs(int radio, int vap_id, wmm_cfg  *wmmcfg)
 	printf("\nwmmcfg->mode = %d\n",wmmcfg->mode);
     if(RADIO_2G == radio && wmmcfg->mode == WLAN_MODE_AP)
     {
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "aifs_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "aifs_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "aifs_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "aifs_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "aifs_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "aifs_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "aifs_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "aifs_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
     }/*
     else if(RADIO_2G == radio && wmmcfg->mode == WLAN_MODE_STA)
     {
@@ -1258,10 +1423,10 @@ int set_ap_wmm_aifs(int radio, int vap_id, wmm_cfg  *wmmcfg)
     }*/
     else if(RADIO_5G == radio && wmmcfg->mode == WLAN_MODE_AP)
     {
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "aifs_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "aifs_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "aifs_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "aifs_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "aifs_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "aifs_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "aifs_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "aifs_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
     }/*
 	else if(RADIO_5G == radio && wmmcfg->mode == WLAN_MODE_STA)
     {
@@ -1276,23 +1441,25 @@ int set_ap_wmm_aifs(int radio, int vap_id, wmm_cfg  *wmmcfg)
 	wmmcfg->aifs_vi = atoi(buf3);	
 	wmmcfg->aifs_vo = atoi(buf4);	
 	
+	char vap_name[8] = {0};
+    construct_vap(vap_name, radio, vap_id, WLAN_MODE_AP);
 	
 
-	EXE_doSystem("iwpriv %s setwmmparams 3 0 0 %d",wmmcfg->vap_name,wmmcfg->aifs_be);
+	EXE_doSystem("iwpriv %s setwmmparams 3 0 0 %d",vap_name,wmmcfg->aifs_be);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 3 1 0 %d",wmmcfg->vap_name,wmmcfg->aifs_bk);
+	EXE_doSystem("iwpriv %s setwmmparams 3 1 0 %d",vap_name,wmmcfg->aifs_bk);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 3 2 0 %d",wmmcfg->vap_name,wmmcfg->aifs_vi);
+	EXE_doSystem("iwpriv %s setwmmparams 3 2 0 %d",vap_name,wmmcfg->aifs_vi);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 3 3 0 %d",wmmcfg->vap_name,wmmcfg->aifs_vo);
+	EXE_doSystem("iwpriv %s setwmmparams 3 3 0 %d",vap_name,wmmcfg->aifs_vo);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 3 0 1 %d",wmmcfg->vap_name,wmmcfg->aifs_be);
+	EXE_doSystem("iwpriv %s setwmmparams 3 0 1 %d",vap_name,wmmcfg->aifs_be);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 3 1 1 %d",wmmcfg->vap_name,wmmcfg->aifs_bk);
+	EXE_doSystem("iwpriv %s setwmmparams 3 1 1 %d",vap_name,wmmcfg->aifs_bk);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 3 2 1 %d",wmmcfg->vap_name,wmmcfg->aifs_vi);
+	EXE_doSystem("iwpriv %s setwmmparams 3 2 1 %d",vap_name,wmmcfg->aifs_vi);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 3 3 1 %d",wmmcfg->vap_name,wmmcfg->aifs_vo);
+	EXE_doSystem("iwpriv %s setwmmparams 3 3 1 %d",vap_name,wmmcfg->aifs_vo);
 	return T_SUCCESS;
 
 }
@@ -1306,10 +1473,10 @@ int set_ap_wmm_txop(int radio, int vap_id, wmm_cfg  *wmmcfg)
 	printf("\nwmmcfg->mode = %d\n",wmmcfg->mode);
     if(RADIO_2G == radio && wmmcfg->mode == WLAN_MODE_AP)
     {
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "txop_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "txop_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "txop_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl0_ap_wmm_rule", vap_id, "txop_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "txop_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "txop_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "txop_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_ap_wmm_rule", 0, "txop_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
     }/*
     else if(RADIO_2G == radio && wmmcfg->mode == WLAN_MODE_STA)
     {
@@ -1320,10 +1487,10 @@ int set_ap_wmm_txop(int radio, int vap_id, wmm_cfg  *wmmcfg)
     }*/
     else if(RADIO_5G == radio && wmmcfg->mode == WLAN_MODE_AP)
     {
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "txop_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "txop_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "txop_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl1_ap_wmm_rule", vap_id, "txop_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "txop_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "txop_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "txop_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_ap_wmm_rule", 0, "txop_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
     }/*
 	else if(RADIO_5G == radio && wmmcfg->mode == WLAN_MODE_STA)
     {
@@ -1338,23 +1505,25 @@ int set_ap_wmm_txop(int radio, int vap_id, wmm_cfg  *wmmcfg)
 	wmmcfg->txop_vi = atoi(buf3);	
 	wmmcfg->txop_vo = atoi(buf4);	
 	
+	char vap_name[8] = {0};
+    construct_vap(vap_name, radio, vap_id, WLAN_MODE_AP);
 	
 
-	EXE_doSystem("iwpriv %s setwmmparams 4 0 0 %d",wmmcfg->vap_name,wmmcfg->txop_be);
+	EXE_doSystem("iwpriv %s setwmmparams 4 0 0 %d",vap_name,wmmcfg->txop_be);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 4 1 0 %d",wmmcfg->vap_name,wmmcfg->txop_bk);
+	EXE_doSystem("iwpriv %s setwmmparams 4 1 0 %d",vap_name,wmmcfg->txop_bk);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 4 2 0 %d",wmmcfg->vap_name,wmmcfg->txop_vi);
+	EXE_doSystem("iwpriv %s setwmmparams 4 2 0 %d",vap_name,wmmcfg->txop_vi);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 4 3 0 %d",wmmcfg->vap_name,wmmcfg->txop_vo);
+	EXE_doSystem("iwpriv %s setwmmparams 4 3 0 %d",vap_name,wmmcfg->txop_vo);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 4 0 1 %d",wmmcfg->vap_name,wmmcfg->txop_be);
+	EXE_doSystem("iwpriv %s setwmmparams 4 0 1 %d",vap_name,wmmcfg->txop_be);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 4 1 1 %d",wmmcfg->vap_name,wmmcfg->txop_bk);
+	EXE_doSystem("iwpriv %s setwmmparams 4 1 1 %d",vap_name,wmmcfg->txop_bk);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 4 2 1 %d",wmmcfg->vap_name,wmmcfg->txop_vi);
+	EXE_doSystem("iwpriv %s setwmmparams 4 2 1 %d",vap_name,wmmcfg->txop_vi);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 4 3 1 %d",wmmcfg->vap_name,wmmcfg->txop_vo);
+	EXE_doSystem("iwpriv %s setwmmparams 4 3 1 %d",vap_name,wmmcfg->txop_vo);
 	
 	return T_SUCCESS;
 
@@ -1370,19 +1539,19 @@ int set_ap_wmm_ac(int radio, int vap_id, wmm_cfg  *wmmcfg)
 	printf("\nwmmcfg->mode = %d\n",wmmcfg->mode);
 	if(RADIO_2G == radio )
     {
-        ezplib_get_attr_val("wl0_sta_wmm_rule", vap_id, "ac_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
-        ezplib_get_attr_val("wl0_sta_wmm_rule", vap_id, "ac_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl0_sta_wmm_rule", vap_id, "ac_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl0_sta_wmm_rule", vap_id, "ac_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_sta_wmm_rule", 0, "ac_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+        ezplib_get_attr_val("wl0_sta_wmm_rule", 0, "ac_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_sta_wmm_rule", 0, "ac_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl0_sta_wmm_rule", 0, "ac_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
 		printf("wlan-middleware:ac_bk=%s,ac_be=%s,ac_vi=%s,ac_vo=%s\n",buf1,buf2,buf3,buf4);
 
 	}
 	else if(RADIO_5G == radio )
     {
-        ezplib_get_attr_val("wl1_sta_wmm_rule", vap_id, "ac_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
-        ezplib_get_attr_val("wl1_sta_wmm_rule", vap_id, "ac_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl1_sta_wmm_rule", vap_id, "ac_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
-        ezplib_get_attr_val("wl1_sta_wmm_rule", vap_id, "ac_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_sta_wmm_rule", 0, "ac_bk", buf1, NVRAM_BUF_LEN, EZPLIB_USE_CLI);		
+        ezplib_get_attr_val("wl1_sta_wmm_rule", 0, "ac_be", buf2, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_sta_wmm_rule", 0, "ac_vi", buf3, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
+        ezplib_get_attr_val("wl1_sta_wmm_rule", 0, "ac_vo", buf4, NVRAM_BUF_LEN, EZPLIB_USE_CLI);       
 		printf("wlan-middleware:ac_bk=%s,ac_be=%s,ac_vi=%s,ac_vo=%s\n",buf1,buf2,buf3,buf4);
 
 	}
@@ -1392,14 +1561,16 @@ int set_ap_wmm_ac(int radio, int vap_id, wmm_cfg  *wmmcfg)
 	wmmcfg->ac_vi = atoi(buf3);	
 	wmmcfg->ac_vo = atoi(buf4);	
 	
+	char vap_name[8] = {0};
+    construct_vap(vap_name, radio, vap_id, WLAN_MODE_AP);
 
-	EXE_doSystem("iwpriv %s setwmmparams 5 0 1 %d",wmmcfg->vap_name,wmmcfg->ac_be);
+	EXE_doSystem("iwpriv %s setwmmparams 5 0 1 %d",vap_name,wmmcfg->ac_be);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 5 1 1 %d",wmmcfg->vap_name,wmmcfg->ac_bk);
+	EXE_doSystem("iwpriv %s setwmmparams 5 1 1 %d",vap_name,wmmcfg->ac_bk);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 5 2 1 %d",wmmcfg->vap_name,wmmcfg->ac_vi);
+	EXE_doSystem("iwpriv %s setwmmparams 5 2 1 %d",vap_name,wmmcfg->ac_vi);
 	
-	EXE_doSystem("iwpriv %s setwmmparams 5 3 1 %d",wmmcfg->vap_name,wmmcfg->ac_vo);        
+	EXE_doSystem("iwpriv %s setwmmparams 5 3 1 %d",vap_name,wmmcfg->ac_vo);        
 
 	return T_SUCCESS;
 	
@@ -1480,11 +1651,22 @@ int set_ap_wmm(int radio, int vap_id)
 			/*Admission control is only set on station side, ap side cannot be set*/
 		if(rMode == WLAN_MODE_AP)
 		{
-			set_ap_wmm_cwmin(radio,vap_id,&wmmcfg);
-			set_ap_wmm_cwmax(radio,vap_id,&wmmcfg);
-			set_ap_wmm_aifs(radio,vap_id,&wmmcfg);
-			set_ap_wmm_txop(radio,vap_id,&wmmcfg);
-			set_ap_wmm_ac(radio,vap_id,&wmmcfg);
+			int vap_num = 0;
+			int i = 0;
+			int	vap_enable = 0;
+			vap_num = nvram_get_vap_num(radio); 
+			for(i=0; i < vap_num; i++)
+			{
+				nvram_get_vap_status(radio, i, &vap_enable);
+				if(VAP_ENABLE == vap_enable)
+				{
+					set_ap_wmm_cwmin(radio,i,&wmmcfg);
+					set_ap_wmm_cwmax(radio,i,&wmmcfg);
+					set_ap_wmm_aifs(radio,i,&wmmcfg);
+					set_ap_wmm_txop(radio,i,&wmmcfg);
+					set_ap_wmm_ac(radio,i,&wmmcfg);
+				}
+			}
 		}
 
 		set_ap_wmm_noack(radio,vap_id,&wmmcfg);
@@ -1657,45 +1839,6 @@ int set_acl(int radio, int vap_id)
 /*********************************/
 /*<<<<<<<<<<ACL Process<<<<<<<<<<*/
 /*********************************/
-#if 0
-/*****************************************************************/
-/*Op Mode Switch                                                 */
-/*****************************************************************/
-int set_device_mode(int radio, int op_mode)
-{
-    int device_mode;
-    char radio_name[RAL_VAP_NAME_LEN];
-    char cmd[128];
-    int ret;
-    switch(op_mode)
-        {
-            case OP_MODE_NORMAL:
-            case OP_MODE_AP:
-                device_mode = 0;
-                break;  
-            case OP_MODE_STA0:
-                device_mode = 1;
-                break;  
-            case OP_MODE_WISP:
-                device_mode = 2;
-                break;  
-            default:
-                printf("Error:Such operation mode is not supported current, please check it\n");
-                return T_FAILURE;
-        }   
-    /*Construct AP*/
-    ret = construct_main_ap(radio_name, radio);
-    if(T_FAILURE == ret)
-        {
-            printf("ERRO:Construct main AP failure!\n");
-            return T_FAILURE;
-        }
-    sprintf(cmd, "iwpriv %s set DeviceMode=%d", radio_name, device_mode);
-    printf("CMD in set_device_mode is %s\n", cmd);
-    EXE_COMMAND(cmd);
-    return T_SUCCESS;
-}
-#endif
 /*********************************/
 /*<<<<<<<<<<STA Process<<<<<<<<<<*/
 /*********************************/

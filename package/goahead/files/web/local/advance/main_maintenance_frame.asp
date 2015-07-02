@@ -175,8 +175,8 @@ if(lang=="zhcn")
 		d.add(7,1,_('Backup Restore'),'/local/advance/settings_gordon.asp', _('Maintenance')+' > '+_('Backup Restore'), 'InfoFrame');
 		d.add(8,1,_('Restart'),'/local/advance/reset_restart_gordon.asp', _('Maintenance')+' > '+_('Restart'), 'InfoFrame');
 		d.add(9,1,_('Factory Default'),'/local/advance/factory_default.asp', _('Maintenance')+' > '+_('Factory Default'), 'InfoFrame');
-//		d.add(10,1,_('Sys OP Mode'),'/local/advance/OperationMode.asp', _('Maintenance')+' > '+_('Sys OP Mode'), 'InfoFrame');		
-//		d.add(10,1,_('Sys OP Mode'),'/local/advance/OperationModeCPE.asp', _('Maintenance')+' > '+_('Network Mode'), 'InfoFrame');
+		//d.add(10,1,_('Sys OP Mode'),'/local/advance/OperationMode.asp', _('Maintenance')+' > '+_('Sys OP Mode'), 'InfoFrame');		
+		d.add(10,1,_('Sys OP Mode'),'/local/advance/OperationModeCPE.asp', _('Maintenance')+' > '+_('Network Mode'), 'InfoFrame');
 		document.write(d);
 		d.s(2);
 
