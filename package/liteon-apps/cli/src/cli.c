@@ -32,6 +32,8 @@
 #include <linux/if.h>
 //Added by Mario Huang end
 
+#undef DEBUG
+
 #ifdef  DEBUG
 #define CLIDEBUG(arg)  uiPrintf arg
 #else
